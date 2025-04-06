@@ -22,7 +22,11 @@ jobs:
         run: npm run build
       - name: Read version from package.json
         id: pkg
-        run: echo "VERSION=v$(node -p 'require(\"./package.json\").version')" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=v$VERSION" >> $GITHUB_OUTPUT
+      - name: Log version
+        run: echo "Using version: ${{ steps.pkg.outputs.VERSION }}"
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
