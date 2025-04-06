@@ -1,4 +1,5 @@
 import { EventEmitter } from "../io";
+import { applyAnchor } from "../mixins/anchor";
 
 /**
  * Base class for all interactive objects in the game loop.
@@ -8,12 +9,13 @@ export class GameObject {
   /**
    * @param {Game} game - Reference to the game instance
    */
-  constructor(game) {
+  constructor(game, options = {}) {
     this.game = game;
     this.ctx = game.ctx;
     this.active = true;
     this.events = new EventEmitter();
     this.interactive = false;
+    applyAnchor(this, options);
   }
 
   enableInteractivity(shape) {

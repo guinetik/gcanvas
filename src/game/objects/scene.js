@@ -1,8 +1,8 @@
 import { GameObject } from "../go";
 
 export class Scene extends GameObject {
-  constructor(game) {
-    super(game);
+  constructor(game, options = {}) {
+    super(game, options);
     this.children = [];
     this.interactive = true;
   }

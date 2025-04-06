@@ -2,17 +2,24 @@ import { Group, Rectangle, TextShape } from "../../shapes";
 import { GameObject } from "../go";
 
 export class Button extends GameObject {
-  constructor(game, {
-    x = 0,
-    y = 0,
-    width = 120,
-    height = 40,
-    text = "Button",
-    shape = null,
-    label = null,
-    onClick = null,
-  } = {}) {
-    super(game);
+  constructor(game, options = {}) {
+    // destructure locally
+    const {
+      x = 0,
+      y = 0,
+      width = 120,
+      height = 40,
+      text = "Button",
+      shape = null,
+      label = null,
+      onClick = null,
+      anchor,
+      padding,
+      ...rest
+    } = options;
+
+    // pass anchor config to GameObject
+    super(game, { anchor, padding, ...rest });
     this.x = x;
     this.y = y;
     this.width = width;
@@ -21,19 +28,23 @@ export class Button extends GameObject {
     this.state = "default"; // default, hover, pressed
 
     // Create shape if not provided
-    this.shape = shape ?? new Rectangle(0, 0, width, height, {
-      fillColor: "#eee",
-      strokeColor: "#ccc",
-      lineWidth: 2,
-    });
+    this.shape =
+      shape ??
+      new Rectangle(0, 0, width, height, {
+        fillColor: "#eee",
+        strokeColor: "#ccc",
+        lineWidth: 2,
+      });
 
     // Create label if not provided
-    this.label = label ?? new TextShape(0, 0, text, {
-      font: "16px monospace",
-      color: "#333",
-      align: "center",
-      baseline: "middle",
-    });
+    this.label =
+      label ??
+      new TextShape(0, 0, text, {
+        font: "16px monospace",
+        color: "#333",
+        align: "center",
+        baseline: "middle",
+      });
 
     // Center group
     this.group = new Group(x, y);
