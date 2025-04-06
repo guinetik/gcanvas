@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>GCanvas Demos</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        nav {
+            width: 200px;
+            background: #222;
+            color: white;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        nav a {
+            display: block;
+            color: white;
+            margin-bottom: 1rem;
+            text-decoration: none;
+        }
+
+        iframe {
+            flex: 1;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <h3>Demos</h3>
+        <a href="demos/shapes.html" target="demo-frame">Shapes</a>
+    </nav>
+    <iframe name="demo-frame" src="demos/shapes.html"></iframe>
+</body>
+
+</html>
