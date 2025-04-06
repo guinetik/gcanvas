@@ -28,7 +28,8 @@ jobs:
       - name: Read version from package.json
         id: pkg
         run: |
-          echo "VERSION=v$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+          VERSION="v$(node -p \"require('./package.json').version\")"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
