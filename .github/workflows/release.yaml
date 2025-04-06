@@ -25,8 +25,6 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "VERSION=v$VERSION" >> $GITHUB_OUTPUT
-      - name: Log version
-        run: echo "Using version: ${{ steps.pkg.outputs.VERSION }}"
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
