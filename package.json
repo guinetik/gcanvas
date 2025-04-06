@@ -1,0 +1,36 @@
+{
+  "name": "gcanvas",
+  "version": "1.0.0",
+  "description": "Canvas Utilities and 2d Primitives",
+  "main": "main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:debug": "vite build --mode debug",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guinetik/gcanvas.git"
+  },
+  "keywords": [
+    "canvas",
+    "html5",
+    "no-dependencies"
+  ],
+  "author": "guinetik",
+  "license": "ISC",
+  "exports": {
+    ".": {
+      "import": "./dist/gcanvas.es.js",
+      "require": "./dist/gcanvas.umd.js"
+    }
+  },
+  "bugs": {
+    "url": "https://github.com/guinetik/gcanvas/issues"
+  },
+  "homepage": "https://github.com/guinetik/gcanvas#readme",
+  "devDependencies": {
+    "vite": "^6.2.5"
+  }
+}
