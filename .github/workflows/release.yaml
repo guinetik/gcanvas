@@ -1,33 +1,40 @@
-name: Release GCanvas
+name: Release on Master Merge
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"] # Optional: only release on version tags like v1.0.0
+    branches:
+      - master
 
 jobs:
-  build-and-release:
+  release:
+    name: Build and Release
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "20"
 
-      - name: Install deps
+      - name: Install dependencies
         run: npm ci
 
       - name: Build library
         run: npm run build
 
-      - name: Create Release
+      - name: Read version from package.json
+        id: pkg
+        run: |
+          echo "VERSION=v$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          name: GCanvas ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
+          name: GCanvas ${{ steps.pkg.outputs.VERSION }}
+          tag_name: ${{ steps.pkg.outputs.VERSION }}
           files: |
             dist/gcanvas.*.js
         env:
