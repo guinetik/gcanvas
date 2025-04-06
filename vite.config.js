@@ -11,12 +11,15 @@ export default defineConfig(({ mode }) => {
       lib: {
         entry: libEntry,
         name: 'GCanvas',
-        fileName: () => isDebug ? 'gcanvas.debug.js' : 'gcanvas.umd.js',
-        formats: ['umd']
+        formats: isDebug ? ['umd'] : ['umd', 'es'],
+        fileName: (format) => {
+          if (isDebug) return 'gcanvas.debug.js';
+          return `gcanvas.${format}.js`;
+        },
       },
       minify: isDebug ? false : true,
+      emptyOutDir: true,
       outDir: 'dist',
-      emptyOutDir: false,
       rollupOptions: {
         output: {
           globals: {}
