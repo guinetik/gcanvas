@@ -20,53 +20,19 @@ export class GameObject {
     this.interactive = true;
     this.shape = shape;
     this._hovered = false;
-  
-    this.game.events.on("inputmove", this._handleHover.bind(this));
-    this.game.events.on("inputdown", this._handleEvent.bind(this, "inputdown"));
-    this.game.events.on("inputup", this._handleEvent.bind(this, "inputup"));
-  }
-
-  _handleHover(e) {
-    const { x, y } = e || { x: 0, y: 0 };
-    const hit = this.shape && this._hitTest(x, y);
-    //console.log("_handleHover", this._hovered, hit, x, y);
-    if (hit && !this._hovered) {
-      //console.log("hovered", this._hovered, hit, x, y);
-      this._hovered = true;
-      this.events.emit("mouseover", e);
-    } else if (!hit && this._hovered) {
-      this._hovered = false;
-      this.events.emit("mouseout", e);
-    }
-  }
-  
-  
-
-  _handleEvent(type, e) {
-    const x = e.x;
-    const y = e.y;
-    //console.log("handleEvent", type, x, y);
-    if (this.shape && this._hitTest(x, y)) {
-      //console.log("hit", type, x, y);
-      this.events.emit(type, e);
-    }
   }
 
   _hitTest(x, y) {
     if (this.shape.getBounds() == null) return false;
     const { x: cx, y: cy, width, height } = this.shape.getBounds();
-  
+
     const halfW = width / 2;
     const halfH = height / 2;
-  
+
     return (
-      x >= cx - halfW &&
-      x <= cx + halfW &&
-      y >= cy - halfH &&
-      y <= cy + halfH
+      x >= cx - halfW && x <= cx + halfW && y >= cy - halfH && y <= cy + halfH
     );
   }
-  
 
   on(event, callback) {
     this.events.on(event, callback);

@@ -77,7 +77,7 @@ export class FPSCounter extends Text {
       const { x, y } = FPSCounter.resolveAnchor(this.anchor, this.game, this.padding);
       this.x = x;
       this.y = y;
-      console.log(this.x, this.y);
+      //console.log(this.x, this.y);
     }
     
   }

@@ -4,6 +4,7 @@ export class Scene extends GameObject {
   constructor(game) {
     super(game);
     this.children = [];
+    this.interactive = true;
   }
 
   /**

@@ -16,16 +16,18 @@ export class Game {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
-    this.lastTime = 0;
-    this.pipeline = new Pipeline(this);
-    this.running = false;
-    // Initialize Painter with canvas context
-    Painter.init(this.ctx);
     // Initialize I/O
     this.events = new EventEmitter();
     Mouse.init(this);
     Touch.init(this);
     Input.init(this);
+    // Initialize game state
+    this.lastTime = 0;
+    this.running = false;
+    // Initialize pipeline
+    this.pipeline = new Pipeline(this);
+    // Initialize Painter with canvas context
+    Painter.init(this.ctx);
     //
     console.log("[Game] Constructor");
   }
