@@ -29,17 +29,14 @@ export class Shape {
   constructor(x, y, options = {}) {
     this.x = x;
     this.y = y;
-
     // Style
     this.fillColor = options.fillColor || null;
     this.strokeColor = options.strokeColor || null;
     this.lineWidth = options.lineWidth || 1;
-
     // Transform
     this.rotation = options.rotation || 0;
     this.scaleX = options.scaleX || 1;
     this.scaleY = options.scaleY || 1;
-
     // Constraints (drawing boundaries, not physics)
     this.minX = options.minX;
     this.maxX = options.maxX;
