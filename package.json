@@ -1,6 +1,6 @@
 {
   "name": "gcanvas",
-  "version": "v0.0.1-alpha",
+  "version": "0.0.1-alpha",
   "description": "Canvas Utilities and 2d Primitives",
   "main": "main.js",
   "scripts": {
