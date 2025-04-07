@@ -7,8 +7,8 @@ import {
   VerticalLayout,
   Button,
   ShapeGOFactory,
-} from "../../src/game/index.js";
-import { Rectangle, Group } from "../../src/shapes";
+  Rectangle
+} from "/gcanvas/gcanvas.es.min.js";
 
 export class LayoutDemo extends Game {
   constructor(canvas) {

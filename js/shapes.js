@@ -1,6 +1,4 @@
-import { Game, GameObject, FPSCounter, Text } from "../../src/game/index.js";
-import { Tween } from "../../src/motion/tween.js";
-import * as Shapes from "../../src/shapes/index.js";
+import { Game, GameObject, FPSCounter, Text, Tween, Shapes } from "/gcanvas/gcanvas.es.min.js";
 
 class ShapeGalleryGame extends Game {
   constructor(canvas) {

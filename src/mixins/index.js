@@ -1,1 +1,0 @@
-import { applyDraggable } from "/gcanvas/src/mixins/draggable.js";

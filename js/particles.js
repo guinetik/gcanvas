@@ -5,9 +5,9 @@ import {
   Button,
   Scene,
   Text,
-} from "../../src/game";
-import { Painter } from "../../src/painter";
-import * as Shapes from "../../src/shapes";
+  Painter,
+  Shapes
+} from "/gcanvas/gcanvas.es.min.js";
 
 class ParticlesGame extends Game {
   constructor(canvas) {
