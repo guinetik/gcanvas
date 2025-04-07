@@ -6,7 +6,7 @@ export function applyDraggable(go, shape, options = {}) {
   go.friction = options.friction ?? 0.2;
   go.enableInteractivity(shape);
   go.on("inputdown", (e) => {
-    console.log("started ", go.dragging);
+    //console.log("started ", go.dragging);
     go.dragging = true;
     go.dragOffset.x = shape.x - e.x;
     go.dragOffset.y = shape.y - e.y;
@@ -14,14 +14,14 @@ export function applyDraggable(go, shape, options = {}) {
   });
   game.events.on("inputmove", (e) => {
     if (go.dragging) {
-      console.log("dragging", go.dragging);
+      //console.log("dragging", go.dragging);
       go.target.x = e.x + go.dragOffset.x;
       go.target.y = e.y + go.dragOffset.y;
     }
   });
   game.events.on("inputup", () => {
     if (!go.dragging) return;
-    console.log("stop dragging", go.dragging);
+    //console.log("stop dragging", go.dragging);
     go.dragging = false;
     if (options.onDragEnd) options.onDragEnd();
   });
