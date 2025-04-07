@@ -20,7 +20,7 @@ export class Text extends GameObject {
    * @param {number} [options.lineWidth=1]
    */
   constructor(game, text, options = {}) {
-    super(game);
+    super(game, options);
     this.text = text;
 
     this.x = options.x || 0;

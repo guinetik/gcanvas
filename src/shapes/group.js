@@ -27,6 +27,32 @@ export class Group extends Shape {
   }
 
   /**
+   * Removes a shape from the group.
+   * @param {Shape} shape
+   */
+  remove(shape) {
+    this.children = this.children.filter((child) => child !== shape);
+  }
+
+  /**
+   *Removes a shape from the group without creating a new array.
+   * @param {Shape} shape
+   */
+  removeMutable(shape) {
+    const index = this.children.indexOf(shape);
+    if (index !== -1) {
+      this.children.splice(index, 1);
+    }
+  }
+
+  /**
+   * Removes all shapes from the group.
+   */
+  clear() {
+    this.children = [];
+  }
+
+  /**
    * Renders all child shapes using the group's transform.
    */
   draw() {
@@ -37,44 +63,43 @@ export class Group extends Shape {
 
   getBounds() {
     if (this.children.length === 0) return null;
-  
+
     const boxes = this.children
-      .map(child => {
-        const b = typeof child.getBounds === "function" ? child.getBounds() : null;
+      .map((child) => {
+        const b =
+          typeof child.getBounds === "function" ? child.getBounds() : null;
         if (!b) return null;
-  
+
         const halfW = b.width / 2;
         const halfH = b.height / 2;
-  
+
         return {
           minX: b.x - halfW,
           maxX: b.x + halfW,
           minY: b.y - halfH,
-          maxY: b.y + halfH
+          maxY: b.y + halfH,
         };
       })
-      .filter(b => b !== null);
+      .filter((b) => b !== null);
     //console.log("boxes", boxes);
     if (boxes.length === 0) return null;
-  
-    const minX = Math.min(...boxes.map(b => b.minX));
-    const maxX = Math.max(...boxes.map(b => b.maxX));
-    const minY = Math.min(...boxes.map(b => b.minY));
-    const maxY = Math.max(...boxes.map(b => b.maxY));
-  
+
+    const minX = Math.min(...boxes.map((b) => b.minX));
+    const maxX = Math.max(...boxes.map((b) => b.maxX));
+    const minY = Math.min(...boxes.map((b) => b.minY));
+    const maxY = Math.max(...boxes.map((b) => b.maxY));
+
     const width = maxX - minX;
     const height = maxY - minY;
-  
+
     const centerX = minX + width / 2;
     const centerY = minY + height / 2;
-  
+
     return {
       x: this.x + centerX, // translate from local to world
       y: this.y + centerY,
       width,
-      height
+      height,
     };
   }
-  
-  
 }

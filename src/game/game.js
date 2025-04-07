@@ -16,19 +16,18 @@ export class Game {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
-    this.lastTime = 0;
-    this.pipeline = new Pipeline(this);
-    this.running = false;
-    // Initialize Painter with canvas context
-    Painter.init(this.ctx);
-    // Make canvas fullscreen
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
     // Initialize I/O
     this.events = new EventEmitter();
     Mouse.init(this);
     Touch.init(this);
     Input.init(this);
+    // Initialize game state
+    this.lastTime = 0;
+    this.running = false;
+    // Initialize pipeline
+    this.pipeline = new Pipeline(this);
+    // Initialize Painter with canvas context
+    Painter.init(this.ctx);
     //
     console.log("[Game] Constructor");
   }
@@ -39,6 +38,57 @@ export class Game {
    */
   init() {
     console.log("[Game] Initialized");
+  }
+
+  /**
+   * Enables fluid resizing of the canvas.
+   * @param {HTMLElement} container - The container element to observe for resizing.
+   * If not provided, the window will be used.
+   */
+  enableFluidSize(container = window) {
+    if (container === window) {
+      const resizeCanvas = () => {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      };
+
+      resizeCanvas(); // initial resize
+      window.addEventListener("resize", resizeCanvas);
+      this._fluidResizeCleanup = () =>
+        window.removeEventListener("resize", resizeCanvas);
+    } else {
+      if (!("ResizeObserver" in window)) {
+        console.warn("ResizeObserver not supported in this browser.");
+        return;
+      }
+
+      const resizeCanvas = () => {
+        const rect = container.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
+      };
+
+      const observer = new ResizeObserver(() => {
+        resizeCanvas();
+      });
+
+      observer.observe(container);
+      resizeCanvas();
+
+      this._fluidResizeCleanup = () => observer.disconnect();
+    }
+  }
+
+  /**
+   * Disables fluid resizing.
+   * If the canvas was resized using a container, it will stop observing it.
+   * If it was resized using the window, it will remove the event listener.
+   */
+  disableFluidSize() {
+    if (this._fluidResizeCleanup) {
+      this._fluidResizeCleanup();
+      this._fluidResizeCleanup = null;
+    }
   }
 
   /**
@@ -97,8 +147,38 @@ export class Game {
    * Clears canvas and renders game objects via pipeline.
    */
   render() {
-    if (this.running)
-      Painter.clear();
+    if (this.running) this.clear();
     this.pipeline.render();
+  }
+
+  /**
+   * Clears the canvas.
+   * By default, the canvas is cleared before each render.
+   * This method can be overridden to customize the clear behavior.
+   */
+  clear() {
+    Painter.clear();
+  }
+
+  /**
+   * Returns the canvas width.
+   */
+  get width() {
+    return this.canvas.width;
+  }
+
+  /**
+   * Returns the canvas height.
+   */
+  get height() {
+    return this.canvas.height;
+  }
+
+  /**
+   * Set the canvas background color.
+   * @param {string} color
+   */
+  set backgroundColor(color) {
+    this.canvas.style.backgroundColor = color;
   }
 }

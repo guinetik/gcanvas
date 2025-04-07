@@ -1,20 +1,18 @@
-import { Text } from "./text.js";
+import { Text } from "../objects/text.js";
 
-/**
- * FPSCounter - Live FPS display in-game.
- */
 export class FPSCounter extends Text {
   constructor(game, options = {}) {
     super(game, "0 FPS", {
-      x: options.x || 10,
-      y: options.y || 10,
+      x: 0,
+      y: 0,
       font: options.font || "12px monospace",
       color: options.color || "#0f0",
-      align: options.align || "left",
-      baseline: options.baseline || "top",
+      align: options.align,
+      baseline: options.baseline,
       stroke: options.stroke || false,
       strokeColor: options.strokeColor || "#000",
       lineWidth: options.lineWidth || 1,
+      anchor: options.anchor || "top-left",
     });
 
     this.fps = 0;
@@ -32,5 +30,7 @@ export class FPSCounter extends Text {
       this._frames = 0;
       this._accum = 0;
     }
+
+    super.update?.(dt); // in case anchor calls it
   }
 }
