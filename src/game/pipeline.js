@@ -79,9 +79,16 @@ export class Pipeline {
   _dispatchToScene(scene, type, e) {
     for (let i = scene.children.length - 1; i >= 0; i--) {
       const child = scene.children[i];
-      if (child.interactive && child.shape && child._hitTest?.(e.x, e.y)) {
+      if (child instanceof Scene) {
+        const hit = this._dispatchToScene(child, type, e); // recurse
+        if (hit) return true;
+      } else if (
+        child.interactive &&
+        child.shape &&
+        child._hitTest?.(e.x, e.y)
+      ) {
         child.events.emit(type, e);
-        return true; // stop bubbling
+        return true;
       }
     }
     return false;

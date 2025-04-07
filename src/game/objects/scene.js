@@ -4,7 +4,8 @@ export class Scene extends GameObject {
   constructor(game, options = {}) {
     super(game, options);
     this.children = [];
-    this.interactive = true;
+    this.x = options.x ?? 0;
+    this.y = options.y ?? 0;
   }
 
   /**
@@ -51,7 +52,11 @@ export class Scene extends GameObject {
    */
   update(dt) {
     for (let child of this.children) {
+      if (typeof child.x === "number") child.x += this.x;
+      if (typeof child.y === "number") child.y += this.y;
       if (child.update) child.update(dt);
+      if (typeof child.x === "number") child.x -= this.x;
+      if (typeof child.y === "number") child.y -= this.y;
     }
   }
 
