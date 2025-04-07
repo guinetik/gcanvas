@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Basic Game Template</title>
+  <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+  <div id="info">
+    <strong>Basic Template</strong> — A minimal demo to kickstart new games. <br>
+    A <strong>Game</strong> manages the canvas, lifecycle, input, and rendering loop. <br>
+    A <strong>GameObject</strong> is any interactive or drawable entity (e.g. shape, text, button, particle). <br>
+    A <strong>Scene</strong> is a container that groups GameObjects and controls update & render order. <br>
+    The <strong>Pipeline</strong> is the main ordered list of GameObjects (or Scenes) that the game runs every frame. <br>
+    This template sets up one game scene and one UI scene, with a "Hello World" box in the center and an FPS counter in the corner.
+  </div>  
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group } from "../src/index";
+    // Template for a Hello World game
+    class DemoGame extends Game {
+      constructor(canvas) {
+        super(canvas);
+        this.enableFluidSize();
+        this.backgroundColor = "black";
+      }
+
+      init() {
+        // Set up scenes
+        this.scene = new Scene(this);
+        this.ui = new Scene(this);
+        this.pipeline.add(this.scene); // game layer
+        this.pipeline.add(this.ui);    // UI layer
+        // Hello World box in the game scene
+        this.scene.add(new HelloWorldBox(this));
+        // FPS counter in the UI scene
+        this.ui.add(new FPSCounter(this, { anchor: "bottom-right" }));
+      }
+    }
+
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new DemoGame(canvas);
+      game.init();
+      game.start();
+    });
+
+    //
+    class HelloWorldBox extends GameObject {
+      constructor(game) {
+        super(game);
+
+        const box = new Rectangle(0, 0, 200, 80, {
+          fillColor: "#111",
+          strokeColor: "#0f0",
+          lineWidth: 2,
+        });
+
+        const label = new TextShape(0, 0, "Hello World!", {
+          font: "18px monospace",
+          color: "#0f0",
+          align: "center",
+          baseline: "middle"
+        });
+
+        this.group = new Group(game.width / 2, game.height / 2);
+        this.group.add(box);
+        this.group.add(label);
+      }
+
+      render() {
+        this.group.draw();
+      }
+    }
+  </script>
+</body>
+
+</html>

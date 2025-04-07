@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Layout Demo</title>
+  <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+  <div id="info" class="light">
+    <strong>Layout Demo</strong><br>
+    <span>Demonstrates dynamic switching between <code>HorizontalLayout</code> and
+      <code>VerticalLayout</code>.<br>
+      Use the right side buttons to switch layout direction.<br>
+      Use the bottom buttons to add or remove random rectangles from the layout group.<br>
+      Layout auto-sizes and aligns children with spacing and padding.
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { LayoutDemo } from "./js/layout.js";
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new LayoutDemo(canvas);
+      game.init();
+      game.start();
+    });
+  </script>
+</body>
+
+</html>
