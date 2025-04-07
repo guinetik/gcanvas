@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>gcanvas Scene System Demo</title>
+    <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+    <div id="info" class="light">
+        <strong>Scene Demo</strong><br>
+        <span>This demo shows how to layer game objects using <code>Scene</code>.<br />
+            It also features the <code>Draggable</code> mix-in to allow dragging of game objects.<br>
+            Click on a square to bring it to the front of the scene.<br>
+            Drag the squares around the canvas.<br>
+        </span>
+    </div>
+    <canvas id="game"></canvas>
+    <script type="module">
+        import { Game, Scene, Button, FPSCounter, GameObject, VerticalLayout } from '../src/game';
+        import { Rectangle, Group } from "../src/shapes";
+        // Demo Game with Scenes
+        class DemoGame extends Game {
+            constructor(canvas) {
+                super(canvas);
+                this.enableFluidSize();
+            }
+
+            init() {
+                this.scene = new Scene(this);
+                this.ui = new Scene(this);
+                this.pipeline.add(this.scene); // scene below
+                this.pipeline.add(this.ui);    // UI on top
+                this.ui.add(new FPSCounter(this, { anchor: "bottom-right" }));
+                this.buttons = this.ui.add(new VerticalLayout(game, {
+                    spacing: 10,
+                    padding: 10,
+                }));
+                this.buttons.add(new Button(this, {
+                    text: "Add Layer",
+                    onClick: this.addLayer.bind(this)
+                }));
+                this.buttons.add(new Button(this, {
+                    text: "Clear",
+                    onClick: () => {
+                        this.scene.clear();
+                    }
+                }));
+                // Add random layers
+                for (let i = 0; i < 100; i++) {
+                    this.addLayer();
+                }
+            }
+
+            update(dt) {
+                this.buttons.x = 50;
+                this.buttons.y = (this.height - this.buttons.height) / 2;
+                super.update(dt);
+            }
+
+            addLayer() {
+                const layer = new LayerBox(this, this.scene);
+                this.scene.add(layer);
+            }
+        }
+        //
+        import { applyDraggable } from "../src/mixins/draggable.js";
+        // LayerBox class
+        export class LayerBox extends GameObject {
+            constructor(game, scene) {
+                super(game);
+                this.scene = scene;
+                // Create a random rectangle
+                const size = 100;
+                const x = Math.random() * (game.width - size);
+                const y = Math.random() * (game.height - size);
+                const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                // Create a rectangle and group
+                this.rect = new Rectangle(0, 0, size, size, {
+                    fillColor: color,
+                    strokeColor: "#fff",
+                    lineWidth: 2,
+                });
+                // Set the rectangle position
+                this.group = new Group(x, y);
+                this.group.add(this.rect);
+                // Apply draggable mixin
+                applyDraggable(this, this.group, {
+                    onDragStart: () => this.scene.bringToFront(this),
+                });
+            }
+            // Override the update method to update the group
+            render() {
+                this.group.draw();
+            }
+        }
+        // Initialize the game
+        window.addEventListener("load", () => {
+            const canvas = document.getElementById("game");
+            const game = new DemoGame(canvas);
+            game.init();
+            game.start();
+        });
+    </script>
+</body>
+
+</html>
