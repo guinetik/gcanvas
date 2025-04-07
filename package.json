@@ -1,14 +1,18 @@
 {
   "name": "gcanvas",
-  "version": "0.0.1-alpha-1",
+  "version": "1.0.0-gh-pages",
   "description": "Canvas Utilities and 2d Primitives",
   "main": "main.js",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build && npm run minify",
-    "minify": "terser dist/gcanvas.umd.js -o dist/gcanvas.umd.min.js --compress --mangle && terser dist/gcanvas.es.js -o dist/gcanvas.es.min.js --compress --mangle",
     "build:debug": "vite build --mode debug",
-    "preview": "vite preview"
+    "build:concat": "node ./scripts/concat.js",
+    "build:demo": "node scripts/build-demo.js",
+    "minify": "terser dist/gcanvas.umd.js -o dist/gcanvas.umd.min.js --compress --mangle && terser dist/gcanvas.es.js -o dist/gcanvas.es.min.js --compress --mangle",
+    "preview": "vite preview",
+    "deploy:demo": "gh-pages --dist public --branch gh-pages"
   },
   "repository": {
     "type": "git",
@@ -32,6 +36,7 @@
   },
   "homepage": "https://github.com/guinetik/gcanvas#readme",
   "devDependencies": {
+    "gh-pages": "^6.3.0",
     "terser": "^5.39.0",
     "vite": "^6.2.5"
   }
