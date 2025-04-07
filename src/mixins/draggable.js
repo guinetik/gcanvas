@@ -17,7 +17,7 @@ export function applyDraggable(go, shape, options = {}) {
       go.target.y = e.y + go.dragOffset.y;
     }
   });
-  go.on("inputup", () => {
+  game.events.on("inputup", () => {
     go.dragging = false;
     if (options.onDragEnd) options.onDragEnd();
   });
