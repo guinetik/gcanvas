@@ -18,7 +18,7 @@
     </div>
     <canvas id="game"></canvas>
     <script type="module">
-        import { Game, Scene, Button, FPSCounter, GameObject, VerticalLayout, Rectangle, Group } from "/dist/gcanvas.es.min.js";
+        import { Game, Scene, Button, FPSCounter, GameObject, VerticalLayout, Rectangle, Group, applyDraggable } from "/gcanvas/gcanvas.es.min.js";
         // Demo Game with Scenes
         class DemoGame extends Game {
             constructor(canvas) {
@@ -63,8 +63,6 @@
                 this.scene.add(layer);
             }
         }
-        //
-        import { applyDraggable } from "/gcanvas/gcanvas.es.min.js";
         // LayerBox class
         export class LayerBox extends GameObject {
             constructor(game, scene) {
