@@ -94,7 +94,7 @@ export class Pipeline {
     for (let i = this.gameObjects.length - 1; i >= 0; i--) {
       const obj = this.gameObjects[i];
       if(type === "inputdown") {
-        console.log("inputdown", obj);
+        //console.log("inputdown", obj);
       }
       if (obj instanceof Scene) {
         // If it's a Scene, see if any of its children were hit.
