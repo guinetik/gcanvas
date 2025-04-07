@@ -28,11 +28,15 @@ jobs:
       - name: Show version used
         run: |
           echo "Publishing version: ${{ steps.pkg.outputs.VERSION }}"
-      - name: Build Changelog
-        id: build_changelog
-        uses: mikepenz/release-changelog-builder-action@v5
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0)
+          echo "Last tag was: $LAST_TAG"
+          LOG=$(git log $LAST_TAG..HEAD --pretty=format:"- %s")
+          echo "LOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$LOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -40,7 +44,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.pkg.outputs.VERSION }}
-          body: ${{steps.build_changelog.outputs.changelog}}
+          body: ${{ steps.changelog.outputs.LOG }}
           release_name: GCanvas ${{ steps.pkg.outputs.VERSION }}
           draft: false
           prerelease: false
