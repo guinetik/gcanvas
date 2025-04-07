@@ -1,5 +1,5 @@
-import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Shape } from "/gcanvas/src/shapes/shape.js";
+import { Painter } from "/gcanvas/src/painter.js";
 
 export class Cloud extends Shape {
   constructor(x, y, size = 40, options = {}) {

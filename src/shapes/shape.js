@@ -1,4 +1,4 @@
-import { Painter } from "../painter.js";
+import { Painter } from "/gcanvas/src/painter.js";
 /**
  * Shape - Abstract base class for all drawable canvas primitives.
  *

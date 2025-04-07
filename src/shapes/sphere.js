@@ -1,5 +1,5 @@
-import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Shape } from "/gcanvas/src/shapes/shape.js";
+import { Painter } from "/gcanvas/src/painter.js";
 
 /**
  * Sphere - A 3D-looking isometric sphere with rotation support.

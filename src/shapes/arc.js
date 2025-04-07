@@ -1,5 +1,5 @@
-import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Shape } from "/gcanvas/src/shapes/shape.js";
+import { Painter } from "/gcanvas/src/painter.js";
 
 /**
  * Arc - A circular arc (partial circle outline) without connecting to center.

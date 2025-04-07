@@ -1,5 +1,5 @@
-import { Group, Rectangle, TextShape } from "../../shapes";
-import { GameObject } from "../go";
+import { Group, Rectangle, TextShape } from "/gcanvas/src/shapes.js";
+import { GameObject } from "/gcanvas/src/game/go.js";
 
 export class Button extends GameObject {
   constructor(game, options = {}) {

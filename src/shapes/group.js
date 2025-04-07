@@ -1,4 +1,4 @@
-import { Shape } from "./shape.js";
+import { Shape } from "/gcanvas/src/shapes/shape.js";
 
 /**
  * Group - A container that can transform and draw a collection of shapes together.

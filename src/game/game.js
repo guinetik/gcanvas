@@ -1,9 +1,9 @@
-import { Pipeline } from "./pipeline.js";
-import { Painter } from "../painter.js";
-import { EventEmitter } from "../io";
-import { Mouse } from "../io";
-import { Input } from "../io";
-import { Touch } from "../io";
+import { Pipeline } from "/gcanvas/src/game/pipeline.js";
+import { Painter } from "/gcanvas/src/painter.js";
+import { EventEmitter } from "/gcanvas/src/io.js";
+import { Mouse } from "/gcanvas/src/io.js";
+import { Input } from "/gcanvas/src/io.js";
+import { Touch } from "/gcanvas/src/io.js";
 /**
  * Core Game class. Provides lifecycle management, update/render loop,
  * and a game object pipeline.

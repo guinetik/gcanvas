@@ -1,4 +1,4 @@
-import { Rectangle } from "./rect.js";
+import { Rectangle } from "/gcanvas/src/shapes/rect.js";
 /**
  * Square - A shortcut for creating rectangles with equal width/height.
  */

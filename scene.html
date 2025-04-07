@@ -18,8 +18,8 @@
     </div>
     <canvas id="game"></canvas>
     <script type="module">
-        import { Game, Scene, Button, FPSCounter, GameObject, VerticalLayout } from '/gcanvas/src/game';
-        import { Rectangle, Group } from "/gcanvas/src/shapes";
+        import { Game, Scene, Button, FPSCounter, GameObject, VerticalLayout } from '../src/game';
+        import { Rectangle, Group } from "../src/shapes";
         // Demo Game with Scenes
         class DemoGame extends Game {
             constructor(canvas) {
@@ -65,7 +65,7 @@
             }
         }
         //
-        import { applyDraggable } from "/gcanvas/src/mixins/draggable.js";
+        import { applyDraggable } from "../src/mixins/draggable.js";
         // LayerBox class
         export class LayerBox extends GameObject {
             constructor(game, scene) {

@@ -1,4 +1,4 @@
-import { Scene } from "./objects/scene";
+import { Scene } from "/gcanvas/src/game/objects/scene.js";
 
 /**
  * Pipeline - Manages and updates/render game objects each frame.

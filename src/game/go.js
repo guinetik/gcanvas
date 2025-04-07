@@ -1,5 +1,5 @@
-import { EventEmitter } from "../io";
-import { applyAnchor } from "../mixins/anchor";
+import { EventEmitter } from "/gcanvas/src/io.js";
+import { applyAnchor } from "/gcanvas/src/mixins/anchor.js";
 
 /**
  * Base class for all interactive objects in the game loop.

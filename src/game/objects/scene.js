@@ -1,4 +1,4 @@
-import { GameObject } from "../go";
+import { GameObject } from "/gcanvas/src/game/go.js";
 
 export class Scene extends GameObject {
   constructor(game, options = {}) {

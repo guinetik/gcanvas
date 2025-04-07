@@ -1,4 +1,4 @@
-import { Text } from "../objects/text.js";
+import { Text } from "/gcanvas/src/game/objects/text.js";
 
 export class FPSCounter extends Text {
   constructor(game, options = {}) {

@@ -1,5 +1,5 @@
-import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Shape } from "/gcanvas/src/shapes/shape.js";
+import { Painter } from "/gcanvas/src/painter.js";
 
 export class Star extends Shape {
   constructor(x, y, radius = 40, spikes = 5, inset = 0.5, options = {}) {

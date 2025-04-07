@@ -1,5 +1,5 @@
-import { GameObject } from "../go.js";
-import { Painter } from "../../painter.js";
+import { GameObject } from "/gcanvas/src/game/go.js";
+import { Painter } from "/gcanvas/src/painter.js";
 
 /**
  * Text - A GameObject for drawing styled text.

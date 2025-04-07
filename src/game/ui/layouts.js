@@ -1,5 +1,5 @@
-import { Scene } from "../../game/";
-import { Rectangle } from "../../shapes";
+import { Scene } from "/gcanvas/src/game.js";
+import { Rectangle } from "/gcanvas/src/shapes.js";
 
 export class LayoutGroup extends Scene {
   constructor(game, options = {}) {
