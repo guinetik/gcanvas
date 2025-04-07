@@ -1,43 +1,33 @@
 name: Release on Master Merge
-
 on:
   push:
     branches:
       - master
-
 permissions:
   contents: write
-
 jobs:
   release:
     name: Build and Release GCanvas
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "20"
-
       - name: Install dependencies
         run: npm ci
-
       - name: Build library
         run: npm run build
-
       - name: Read version from package.json
         id: pkg
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "VERSION=v$VERSION" >> $GITHUB_OUTPUT
-
       - name: Show version used
         run: |
           echo "Publishing version: ${{ steps.pkg.outputs.VERSION }}"
-
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -48,23 +38,21 @@ jobs:
           release_name: GCanvas ${{ steps.pkg.outputs.VERSION }}
           draft: false
           prerelease: false
-
       - name: Upload UMD build
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/gcanvas.umd.js
-          asset_name: gcanvas.umd.js
+          asset_path: dist/gcanvas.umd.min.js
+          asset_name: gcanvas.umd.min.js
           asset_content_type: application/javascript
-
       - name: Upload ESM build
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/gcanvas.es.js
-          asset_name: gcanvas.es.js
+          asset_path: dist/gcanvas.es.min.js
+          asset_name: gcanvas.es.min.js
           asset_content_type: application/javascript
