@@ -18,7 +18,7 @@
     </div>
     <canvas id="game"></canvas>
     <script type="module">
-        import { Game, Scene, Button, FPSCounter, GameObject, VerticalLayout, Rectangle, Group, applyDraggable } from "/gcanvas/gcanvas.es.min.js";
+        import { Game, Scene, Button, FPSCounter, GameObject, VerticalLayout, Rectangle, Group, applyDraggable, Tween } from "/gcanvas/gcanvas.es.min.js";
         // Demo Game with Scenes
         class DemoGame extends Game {
             constructor(canvas) {
@@ -47,7 +47,7 @@
                     }
                 }));
                 // Add random layers
-                for (let i = 0; i < 100; i++) {
+                for (let i = 0; i < 1; i++) {
                     this.addLayer();
                 }
             }
@@ -68,6 +68,7 @@
             constructor(game, scene) {
                 super(game);
                 this.scene = scene;
+                this.scene.interactive = true;
                 // Create a random rectangle
                 const size = 100;
                 const x = Math.random() * (game.width - size);
@@ -80,17 +81,83 @@
                     lineWidth: 2,
                 });
                 // Set the rectangle position
+                this.x = x;
+                this.y = y;
                 this.group = new Group(x, y);
                 this.group.add(this.rect);
                 // Apply draggable mixin
                 applyDraggable(this, this.group, {
-                    onDragStart: () => this.scene.bringToFront(this),
+                    onDragStart: () => {
+                        this.scene.dragging = true;
+                        this.scene.bringToFront(this);
+                        this.targetScale = 1.2;
+                        this.scaleTime = 0;
+                        this.rect.shadowColor = "rgba(0, 0, 0, 0.5)";
+                        this.rect.shadowBlur = 12;
+                        this.rect.shadowOffsetX = 4;
+                        this.rect.shadowOffsetY = 4;
+                    },
+                    onDragEnd: () => {
+                        this.scene.dragging = false;
+                        this.scene.bringToFront(this);
+                        this.targetScale = 1.0;
+                        this.scaleTime = 0;
+                        this.rect.shadowColor = null;
+                    },
+                });
+                //
+                this.startScale = 0;
+                this.targetScale = 1;
+                this.scaleTime = 0;
+                this.scaleDuration = 1; // seconds
+                //
+                this.on("mouseover", () => {
+                    if (!this.scene.dragging) {
+                        this.startScale = this.group.scaleX;
+                        this.targetScale = 1.1;
+                        this.scaleTime = 0;
+                    }
+                });
+                this.on("mouseout", () => {
+                    if (!this.scene.dragging) {
+                        this.startScale = this.group.scaleX;
+                        this.targetScale = 1;
+                        this.scaleTime = 0;
+                    }
                 });
             }
             // Override the update method to update the group
             render() {
                 this.group.draw();
             }
+
+            update(dt) {
+                // Smooth scale animation
+                // Animate scale using bounce
+                if (this.scaleTime < this.scaleDuration) {
+                    this.scaleTime += dt;
+                    const t = Math.min(this.scaleTime / this.scaleDuration, 1);
+                    const eased = Tween.easeOutElastic(t);
+                    const scale = Tween.tween(this.startScale, this.targetScale, eased);
+                    this.group.scaleX = this.group.scaleY = scale;
+                }
+                this.group.x = this.x;
+                this.group.y = this.y;
+
+                const halfW = 50
+                const halfH = 50;
+                const maxX = this.game.width - halfW - 10;
+                const maxY = this.game.height - halfH;
+                const minX = halfW;
+                const minY = halfH;
+
+                // Clamp to screen bounds
+                this.x = Math.max(minX, Math.min(maxX, this.x));
+                this.y = Math.max(minY, Math.min(maxY, this.y));
+
+                super.update(dt);
+            }
+
         }
         // Initialize the game
         window.addEventListener("load", () => {
