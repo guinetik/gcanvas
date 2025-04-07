@@ -7,7 +7,7 @@ import {
   VerticalLayout,
   Button,
   ShapeGOFactory,
-  Rectangle
+  Rectangle,
 } from "/gcanvas/gcanvas.es.min.js";
 
 export class LayoutDemo extends Game {
@@ -19,7 +19,6 @@ export class LayoutDemo extends Game {
   init() {
     // Create UI
     this.ui = new Scene(this);
-    this.pipeline.add(this.ui);
     this.ui.add(
       new FPSCounter(this, { color: "black", anchor: "bottom-right" })
     );
@@ -27,27 +26,25 @@ export class LayoutDemo extends Game {
     this.items = [];
     this.mode = "vertical";
     // Create Right Side navigation buttons
-    this.rightSide = new Scene(this, {
-      x: this.width - 120,
+    this.rightSide = new VerticalLayout(this, {
+      x: this.width - 150,
       y: this.height / 2 - 40,
     });
     this.rightSide.add(
       new Button(this, {
-        y: 0,
         text: "Vertical",
         onClick: () => this.setLayout("vertical"),
       })
     );
     this.rightSide.add(
       new Button(this, {
-        y: 50,
         text: "Horizontal",
         onClick: () => this.setLayout("horizontal"),
       })
     );
     this.ui.add(this.rightSide);
     // Create bottom navigation buttons
-    this.bottomNav = new Scene(this);
+    this.bottomNav = new HorizontalLayout(this);
     this.bottomNav.add(
       new Button(this, {
         text: "ADD",
@@ -56,12 +53,15 @@ export class LayoutDemo extends Game {
     );
     this.bottomNav.add(
       new Button(this, {
-        x: 150,
         text: "REMOVE",
         onClick: () => this.removeItem(),
       })
     );
     this.ui.add(this.bottomNav);
+    //
+    this.bottomNav.interactive = true;
+    this.rightSide.interactive = true;
+    this.pipeline.add(this.ui);
     // Create initial layout
     this.createLayout();
     // Add a few items
@@ -128,9 +128,9 @@ export class LayoutDemo extends Game {
   }
 
   update(dt) {
-    this.rightSide.x = this.width - 120;
+    this.rightSide.x = this.width - 150;
     this.rightSide.y = this.height / 2 - 40;
-    this.bottomNav.x = this.width / 2 - 80;
+    this.bottomNav.x = this.width / 2 - 120;
     this.bottomNav.y = this.height - 60;
     this.layout.x = (this.width - this.layout.width) / 2;
     this.layout.y = (this.height - this.layout.height) / 2;
