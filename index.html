@@ -29,7 +29,7 @@
     <a href="layouts.html" target="demo-frame">Scene Layouts</a>
     <a href="isometric.html" target="demo-frame">Isometric</a>
   </nav>
-  <iframe name="demo-frame" src="shapes.html"></iframe>
+  <iframe name="demo-frame" id="demo-frame" src="shapes.html"></iframe>
 
   <!-- Simple script to highlight the active link -->
   <script>
@@ -47,5 +47,70 @@
       });
     });
   </script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const links = document.querySelectorAll("nav a");
+    const iframe = document.getElementById("demo-frame");
+
+    /**
+     * Parse the hash in the form "#/shapes" => returns "shapes".
+     * Default to "shapes" if there's no valid hash.
+     */
+    function getRouteFromHash() {
+      if (location.hash.startsWith("#/")) {
+        return location.hash.slice(2); // remove "#/"
+      }
+      return "shapes"; // fallback route
+    }
+
+    /**
+     * Load the given route into the iframe, e.g. route="shapes" => "shapes.html"
+     * Also highlight the corresponding link.
+     */
+    function loadRoute(route) {
+      // Set iframe src
+      iframe.src = route + ".html";
+
+      // Highlight the active link
+      links.forEach(link => {
+        // link.href might be "shapes.html"
+        // remove ".html" => "shapes"
+        const linkRoute = link.getAttribute("href").replace(".html", "");
+        link.classList.toggle("active", linkRoute === route);
+      });
+    }
+
+    /**
+     * On initial load (and whenever the hash changes), parse the route and load it.
+     */
+    function handleHashChange() {
+      const route = getRouteFromHash();
+      loadRoute(route);
+    }
+
+    // 1) On page load, handle the existing hash (if any).
+    handleHashChange();
+
+    // 2) Listen for future hash changes
+    window.addEventListener("hashchange", handleHashChange);
+
+    // 3) Intercept clicks on nav links so we can
+    //    set location.hash instead of letting them navigate directly.
+    links.forEach(link => {
+      link.addEventListener("click", e => {
+        e.preventDefault(); // stop normal link navigation
+
+        // e.g. "shapes.html"
+        const href = link.getAttribute("href");
+        // remove ".html" => "shapes"
+        const routeName = href.replace(".html", "");
+
+        // set the hash: "#/shapes"
+        location.hash = "/" + routeName;
+      });
+    });
+  });
+</script>
 </body>
 </html>
