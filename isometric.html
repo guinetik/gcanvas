@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Isometric Scene</title>
+  <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+  <div id="info" class="light">
+    <strong>Isometric Scene</strong> — An <code>IsometricScene</code> is a 2D scene with an isometric projection.<br>
+    All objects are drawn in 2D, but the scene is rendered in an isometric view.<br>
+    Use W, A, S, D or the arrow keys to move the ball around the grid.<br>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module">
+    import { IsometricGame } from './js/isometric.js';
+
+    window.addEventListener("load", () => {
+        const canvas = document.getElementById("game");
+        const game = new IsometricGame(canvas);
+        game.init();
+        game.start();
+    });
+</script>
+</body>
+
+</html>

@@ -18,7 +18,7 @@
     <canvas id="game"></canvas>
 
     <script type="module">
-        import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group } from "/gcanvas/gcanvas.es.min.js";
+        import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group, Keys } from "/gcanvas/gcanvas.es.min.js";
 
         class EventLogger extends GameObject {
             constructor(game) {
@@ -80,6 +80,47 @@
                             inside = false;
                         } else if (type == "mouseover") {
                             inside = true;
+                        }
+                    });
+                });
+                //
+                //
+                /**
+                 * Log Keys. We'll listen for key down events on some set of logical keys
+                 * and do exactly the same inside/outside labeling. We also handle “_up” suffix.
+                 */
+                const keyList = [
+                    Keys.W, Keys.A, Keys.S, Keys.D,
+                    Keys.UP, Keys.DOWN, Keys.LEFT, Keys.RIGHT,
+                    Keys.SPACE, Keys.SHIFT, Keys.ENTER, Keys.ESC,
+                    "keyup", "keydown"
+                ];
+
+                keyList.forEach(logicalKey => {
+                    // Key down event => just “logicalKey” 
+                    this.game.events.on(logicalKey, (e) => {
+                        if (!lock) {
+                            if (e.type == "keydown") {
+                                // Only log if key is NOT one of the logical keys in keyList
+                                if (keyList.indexOf(e.key) == -1) {
+                                    this.label.text = `KeyDown ${e.key}`;
+                                }
+                            } else {
+                                this.label.text = `KeyDown ${logicalKey}`;
+                            }
+                        }
+                    });
+                    // Key up event => “logicalKey + "_up” 
+                    this.game.events.on(logicalKey + "_up", (e) => {
+                        if (!lock) {
+                            if (e.type == "keyup") {
+                                // Only log if key is NOT one of the logical keys in keyList
+                                if (keyList.indexOf(e.key) == -1) {
+                                    this.label.text = `KeyUp ${e.key}`;
+                                    return;
+                                }
+                            }
+                            this.label.text = `KeyUp ${logicalKey}`;
                         }
                     });
                 });

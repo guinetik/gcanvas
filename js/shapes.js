@@ -3,6 +3,7 @@ import { Game, GameObject, FPSCounter, Text, Tween, Shapes } from "/gcanvas/gcan
 class ShapeGalleryGame extends Game {
   constructor(canvas) {
     super(canvas);
+    this.backgroundColor = "#fff";
     this.enableFluidSize();
     this.shapeEntries = [
       {
