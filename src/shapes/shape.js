@@ -1,16 +1,11 @@
 import { Painter } from "../painter.js";
+import { Transformable } from "./transformable.js";
+
 /**
- * Shape - Abstract base class for all drawable canvas primitives.
- *
- * Responsibilities:
- * - Holds rendering properties (position, style, transform)
- * - Knows how to draw itself using Painter
- *
- * Limitations:
- * - This is NOT a game object. It has no awareness of game state, time, or scenes.
- * - For use with drawing utilities or wrapping into GameObjects manually.
+ * Shape - Abstract base for all drawable canvas primitives.
+ * Now extends Transformable to have x, y, width, etc. standard properties.
  */
-export class Shape {
+export class Shape extends Transformable {
   /**
    * @param {number} x - X coordinate
    * @param {number} y - Y coordinate
@@ -27,16 +22,13 @@ export class Shape {
    * @param {number} [options.maxY]
    */
   constructor(x, y, options = {}) {
+    super(options); // Call Transformable constructor
     this.x = x;
     this.y = y;
     // Style
     this.fillColor = options.fillColor || null;
     this.strokeColor = options.strokeColor || null;
     this.lineWidth = options.lineWidth || 1;
-    // Transform
-    this.rotation = options.rotation || 0;
-    this.scaleX = options.scaleX || 1;
-    this.scaleY = options.scaleY || 1;
     // Shadow
     this.shadowColor = options.shadowColor ?? null;
     this.shadowBlur = options.shadowBlur ?? 0;
@@ -68,35 +60,33 @@ export class Shape {
   }
 
   /**
-   * Internal render helper to wrap drawing calls in canvas transform state.
-   * @param {Function} drawFn - Function that performs canvas drawing
+   * Render helper to wrap drawing calls in a canvas transform state.
+   * Also respects this.opacity and this.visible from Transformable.
    */
-  renderWithTransform(drawFn) { 
+  renderWithTransform(drawFn) {
+    if (!this.visible) return;
     Painter.ctx.save();
+    Painter.ctx.globalAlpha = this.opacity;
     Painter.ctx.translate(this.x, this.y);
     Painter.ctx.rotate(this.rotation);
     Painter.ctx.scale(this.scaleX, this.scaleY);
-  
-    if (this.shadowColor) {
-      Painter.setShadow(
-        this.shadowColor,
-        this.shadowBlur,
-        this.shadowOffsetX,
-        this.shadowOffsetY
-      );
-    }
-  
     drawFn();
-  
-    Painter.clearShadow();
-    Painter.restore();
+    Painter.ctx.restore();
   }
 
   /**
-   * Abstract method for bounding box detection.
-   * Must be implemented by all concrete shapes.
+   * A default bounding box that uses (this.x, this.y, this.width, this.height).
+   * If your shape has a different geometry, you might override this or
+   * compute differently for circles, polygons, etc.
+   *
+   * @returns {{x: number, y: number, width: number, height: number}}
    */
   getBounds() {
-    return null;
+    return {
+      x: this.x,
+      y: this.y,
+      width: this.width,
+      height: this.height,
+    };
   }
 }

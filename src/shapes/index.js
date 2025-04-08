@@ -1,3 +1,4 @@
+export { Transformable } from "./transformable.js";
 export { Arc } from "./arc.js";
 export { Shape } from "./shape.js";
 export { Circle } from "./circle.js";
