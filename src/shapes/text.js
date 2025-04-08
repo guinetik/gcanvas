@@ -36,11 +36,11 @@ export class TextShape extends Shape {
   }
 
   getBounds() {
-    const width = Painter.measureText(this.text);
+    this.width = Painter.measureText(this.text);
     return {
       x: this.x,
       y: this.y,
-      width,
+      width: this.width,
       height: parseInt(this.font), // rough height guess from font size
     };
   }
