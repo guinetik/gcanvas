@@ -169,11 +169,11 @@ export class Painter {
     ctx.beginPath();
     for (const cmd of commands) {
       const [type, ...args] = cmd;
-      if (type === 'M') ctx.moveTo(...args);
-      else if (type === 'L') ctx.lineTo(...args);
-      else if (type === 'C') ctx.bezierCurveTo(...args);
-      else if (type === 'Q') ctx.quadraticCurveTo(...args);
-      else if (type === 'Z') ctx.closePath();
+      if (type === "M") ctx.moveTo(...args);
+      else if (type === "L") ctx.lineTo(...args);
+      else if (type === "C") ctx.bezierCurveTo(...args);
+      else if (type === "Q") ctx.quadraticCurveTo(...args);
+      else if (type === "Z") ctx.closePath();
     }
     if (fill) {
       ctx.fillStyle = fill;
@@ -185,7 +185,6 @@ export class Painter {
       ctx.stroke();
     }
   }
-  
 
   /**
    * Draw a stroked ellipse
@@ -284,7 +283,18 @@ export class Painter {
     if (color) Painter.ctx.fillStyle = color;
     Painter.ctx.fill();
   }
-
+  /**
+   * Set stroke options
+   * @param {*} options The options for the stroke
+   */
+  static strokeOptions(options) {
+    if (options.color) Painter.ctx.strokeStyle = options.color;
+    if (options.lineWidth !== undefined)
+      Painter.ctx.lineWidth = options.lineWidth;
+    if (options.lineCap) Painter.ctx.lineCap = options.lineCap;
+    if (options.lineJoin) Painter.ctx.lineJoin = options.lineJoin;
+    if (options.strokeStyle) Painter.ctx.strokeStyle = options.strokeStyle;
+  }
   /**
    * Stroke the current path
    * @param {string|CanvasGradient} [color] - Stroke color
@@ -581,6 +591,46 @@ export class Painter {
    */
   static horizontalGradient(x, y, width, height, colorStops) {
     return Painter.linearGradient(x, y, x + width, y, colorStops);
+  }
+
+  /**
+   * Convert HSL color to RGB
+   * @param {number} h - Hue (0-360)
+   * @param {number} s - Saturation (0-100)
+   * @param {number} l - Lightness (0-100)
+   * @returns {Array<number>} RGB color array [r, g, b]
+   */
+  static hslToRgb(h, s, l) {
+    // Convert HSL percentages to decimals
+    s /= 100;
+    l /= 100;
+
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+
+    let r, g, b;
+
+    if (h < 60) {
+      [r, g, b] = [c, x, 0];
+    } else if (h < 120) {
+      [r, g, b] = [x, c, 0];
+    } else if (h < 180) {
+      [r, g, b] = [0, c, x];
+    } else if (h < 240) {
+      [r, g, b] = [0, x, c];
+    } else if (h < 300) {
+      [r, g, b] = [x, 0, c];
+    } else {
+      [r, g, b] = [c, 0, x];
+    }
+
+    // Convert to RGB values (0-255)
+    return [
+      Math.round((r + m) * 255),
+      Math.round((g + m) * 255),
+      Math.round((b + m) * 255),
+    ];
   }
 
   // =========================================================================

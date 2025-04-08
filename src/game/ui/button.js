@@ -145,6 +145,11 @@ export class Button extends GameObject {
     switch (state) {
       case "default":
         //console.log("default");
+        if (this.game.cursor) {
+          setTimeout(() => {
+            this.game.cursor.activate();
+          }, 0);
+        }
         this.bg.fillColor = "#eee"; // dark matte
         this.bg.strokeColor = "#ccc"; // subtle outer stroke
         this.label.color = "#333"; // light text
@@ -153,13 +158,19 @@ export class Button extends GameObject {
       case "hover":
         //console.log("hover");
         //console.log(this.group.children.includes(this.bg));
+        if (this.game.cursor) {
+          this.game.cursor.deactivate();
+        }
         this.bg.fillColor = "#222"; // slightly lifted
-        this.bg.strokeColor = "#16F529"; 
+        this.bg.strokeColor = "#16F529";
         this.label.color = "#16F529";
         this.game.canvas.style.cursor = "pointer";
         break;
       case "pressed":
         //console.log("pressed");
+        if (this.game.cursor) {
+          this.game.cursor.deactivate();
+        }
         this.bg.fillColor = "#111"; // pressed in
         this.bg.strokeColor = "#00aaff"; // deeper accent
         this.label.color = "#00aaff"; // same as stroke

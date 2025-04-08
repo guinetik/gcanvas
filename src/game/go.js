@@ -223,6 +223,7 @@ export class ShapeGOFactory {
        * @param {number} dt - Delta time in seconds since the last frame.
        */
       update(dt) {
+        //console.log("ShapeGOFactory.update", this);
         if (this.shape) {
           this.shape.x = this.x;
           this.shape.y = this.y;
