@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Basic Game Template</title>
+    <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+    <div id="info">
+        <strong>Bezier Blob</strong> — An animated character that follows your mouse using Bezier curves for organic
+        movement. <br>
+        The blob uses <strong>BezierShape</strong> with dynamic control points that react to velocity and direction.
+        <br>
+        <strong>Physics simulation</strong> gives the blob natural spring-like motion as it follows the cursor. <br>
+        Eyes and pupils track your mouse position independently from the blob's body movement. <br>
+        Move your mouse quickly to see the blob stretch and squish with momentum!
+    </div>
+    <canvas id="game"></canvas>
+    <script type="module" src="./js/bezier.js"></script>
+    <script type="module">
+        import { BezierBlobGame } from './js/blob.js';
+
+        window.addEventListener("load", () => {
+            const canvas = document.getElementById("game");
+            const game = new BezierBlobGame(canvas);
+            game.init();
+            game.start();
+        });
+    </script>
+</body>
+
+</html>
