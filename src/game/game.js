@@ -1,49 +1,94 @@
+/**************************************************************
+ * Game.js
+ *
+ * The core class providing the main game loop (update & render),
+ * pipeline management, and input initialization.
+ * Intended to be subclassed for your specific game logic.
+ ***************************************************************/
+
 import { Pipeline } from "./pipeline.js";
 import { Painter } from "../painter.js";
 import { EventEmitter } from "../io";
 import { Mouse } from "../io";
 import { Input } from "../io";
 import { Touch } from "../io";
+
 /**
- * Core Game class. Provides lifecycle management, update/render loop,
- * and a game object pipeline.
- * Intended to be subclassed for specific games.
+ * Core Game class. Provides lifecycle management, the update/render loop,
+ * and a Pipeline to manage GameObjects.
+ *
+ * Usage:
+ * 1. Subclass Game and override init(), update(dt), and render() if needed.
+ * 2. Create a new instance, passing in a <canvas> element.
+ * 3. Call .init() and then .start() to begin the game loop.
  */
 export class Game {
   /**
-   * @param {HTMLCanvasElement} canvas - Canvas DOM element
+   * Instantiate a new Game.
+   * @param {HTMLCanvasElement} canvas - The canvas element to render onto.
    */
   constructor(canvas) {
+    /**
+     * The main canvas used for rendering.
+     * @type {HTMLCanvasElement}
+     */
     this.canvas = canvas;
+
+    /**
+     * The 2D rendering context.
+     * @type {CanvasRenderingContext2D}
+     */
     this.ctx = canvas.getContext("2d");
-    // Initialize I/O
+
+    /**
+     * A centralized event emitter for the entire Game.
+     * Handles mouse/keyboard/touch input as well as custom events.
+     * @type {EventEmitter}
+     */
     this.events = new EventEmitter();
+
+    // Initialize pointer & input subsystems with reference to this game.
     Mouse.init(this);
     Touch.init(this);
     Input.init(this);
-    // Initialize game state
+
+    /**
+     * Tracks the timestamp of the previous frame for calculating delta time.
+     * @type {number}
+     * @private
+     */
     this.lastTime = 0;
+
+    /**
+     * Flag indicating if the game loop is currently running.
+     * @type {boolean}
+     */
     this.running = false;
-    // Initialize pipeline
+
+    /**
+     * The pipeline that manages updating and rendering all GameObjects.
+     * @type {Pipeline}
+     */
     this.pipeline = new Pipeline(this);
-    // Initialize Painter with canvas context
+
+    // Initialize Painter with this game's 2D context.
     Painter.init(this.ctx);
-    //
+
     console.log("[Game] Constructor");
   }
 
   /**
-   * Hook to set up game state and objects.
-   * Should be overridden by subclasses.
+   * Hook to set up initial game state, add objects, etc.
+   * Called in restart() and can be called manually if desired.
+   * Override in subclasses to initialize custom logic or objects.
    */
   init() {
     console.log("[Game] Initialized");
   }
 
   /**
-   * Enables fluid resizing of the canvas.
-   * @param {HTMLElement} container - The container element to observe for resizing.
-   * If not provided, the window will be used.
+   * Enables automatic resizing of the canvas to either the window or a given container.
+   * @param {HTMLElement} [container=window] - Element to observe for resizing. Defaults to window.
    */
   enableFluidSize(container = window) {
     if (container === window) {
@@ -51,27 +96,26 @@ export class Game {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
       };
-
-      resizeCanvas(); // initial resize
+      resizeCanvas(); // set initial size
       window.addEventListener("resize", resizeCanvas);
-      this._fluidResizeCleanup = () =>
+
+      this._fluidResizeCleanup = () => {
         window.removeEventListener("resize", resizeCanvas);
+      };
     } else {
+      // If ResizeObserver is available, use it to track container size changes
       if (!("ResizeObserver" in window)) {
         console.warn("ResizeObserver not supported in this browser.");
         return;
       }
-
       const resizeCanvas = () => {
         const rect = container.getBoundingClientRect();
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
       };
-
       const observer = new ResizeObserver(() => {
         resizeCanvas();
       });
-
       observer.observe(container);
       resizeCanvas();
 
@@ -80,9 +124,8 @@ export class Game {
   }
 
   /**
-   * Disables fluid resizing.
-   * If the canvas was resized using a container, it will stop observing it.
-   * If it was resized using the window, it will remove the event listener.
+   * Disables fluid resizing of the canvas.
+   * If previously set, removes the event listener or observer.
    */
   disableFluidSize() {
     if (this._fluidResizeCleanup) {
@@ -92,7 +135,8 @@ export class Game {
   }
 
   /**
-   * Starts the game loop.
+   * Starts the main game loop using requestAnimationFrame.
+   * The loop() method is bound so it can be used as a callback.
    */
   start() {
     this.running = true;
@@ -102,7 +146,7 @@ export class Game {
   }
 
   /**
-   * Stops the game loop.
+   * Stops the main game loop.
    */
   stop() {
     this.running = false;
@@ -110,7 +154,8 @@ export class Game {
   }
 
   /**
-   * Clears the pipeline and re-initializes the game.
+   * Clears the pipeline, calls init() again, and restarts the game loop.
+   * Useful for resetting the game state.
    */
   restart() {
     this.pipeline.clear();
@@ -120,63 +165,73 @@ export class Game {
   }
 
   /**
-   * Main game loop.
-   * @param {DOMHighResTimeStamp} timestamp
+   * The main game loop. Called automatically by requestAnimationFrame.
+   * @param {DOMHighResTimeStamp} timestamp - The current time at which requestAnimationFrame fired.
+   *   Used to measure elapsed time between frames.
+   * @private
    */
   loop(timestamp) {
     if (!this.running) return;
 
+    // Compute delta time (dt) in seconds since last frame.
     const dt = (timestamp - this.lastTime) / 1000;
     this.lastTime = timestamp;
 
+    // Update and render the game state.
     this.update(dt);
     this.render();
 
+    // Schedule the next frame.
     requestAnimationFrame(this.loop);
   }
 
   /**
-   * Game update logic — propagates to pipeline.
-   * @param {number} dt - Delta time
+   * Updates the game logic and propagates to the pipeline.
+   * @param {number} dt - Delta time in seconds since the last frame.
+   *   This is used to make movement or animations frame-rate independent.
    */
   update(dt) {
     this.pipeline.update(dt);
   }
 
   /**
-   * Clears canvas and renders game objects via pipeline.
+   * Renders the game by first clearing the canvas, then asking
+   * the pipeline to render all GameObjects.
    */
   render() {
-    if (this.running) this.clear();
+    if (this.running) {
+      this.clear();
+    }
     this.pipeline.render();
   }
 
   /**
-   * Clears the canvas.
-   * By default, the canvas is cleared before each render.
-   * This method can be overridden to customize the clear behavior.
+   * Clears the entire canvas. Called each frame before rendering.
+   * Override to customize clear behavior (e.g. keep background images).
    */
   clear() {
     Painter.clear();
   }
 
   /**
-   * Returns the canvas width.
+   * Returns the current width of the canvas.
+   * @type {number}
    */
   get width() {
     return this.canvas.width;
   }
 
   /**
-   * Returns the canvas height.
+   * Returns the current height of the canvas.
+   * @type {number}
    */
   get height() {
     return this.canvas.height;
   }
 
   /**
-   * Set the canvas background color.
-   * @param {string} color
+   * Sets the canvas background color via CSS.
+   * @param {string} color - Any valid CSS color string.
    */
   set backgroundColor(color) {
     this.canvas.style.backgroundColor = color;

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>EventEmitter Demo</title>
+    <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+    <div id="info">
+        <strong>EventEmitter Demo</strong> — Shows how <code>Game.events</code> handles unified input events. <br>
+        Events from <strong>mouse</strong>, <strong>touch</strong>, and <strong>input</strong> are emitted using a
+        single system. <br>
+        This demo logs the last event that happened inside a box on screen. Try clicking, moving, or touching!
+    </div>
+
+    <canvas id="game"></canvas>
+
+    <script type="module">
+        import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group } from "../src/index";
+
+        class EventLogger extends GameObject {
+            constructor(game) {
+                super(game);
+
+                this.label = new TextShape(0, 0, "Waiting for event...", {
+                    font: "16px monospace",
+                    color: "#0f0",
+                    align: "center",
+                    baseline: "middle",
+                });
+
+                this.box = new Rectangle(0, 0, 280, 80, {
+                    fillColor: "#111",
+                    strokeColor: "#0f0",
+                    lineWidth: 2,
+                });
+
+                this.group = new Group(game.width / 2, game.height / 2);
+                this.group.add(this.box);
+                this.group.add(this.label);
+
+                const events = ["wheel", "inputdown", "inputup", "inputmove", "click"];
+
+                const groupEvents = [
+                    "mouseover", "mouseout", "click", "touchstart", "touchend", "touchmove",
+                    "inputdown", "inputup", "inputmove"
+                ];
+
+                let lock = false;
+                var inside = false;
+
+                this.enableInteractivity(this.group);
+
+                events.forEach(type => {
+                    this.game.events.on(type, (e) => {
+                        if (!lock && !inside) {
+                            this.label.text = `Ouside the Box: ${type}`;
+                        }
+                    });
+                });
+
+                const unlockAfterTimeout = (time) => {
+                    setTimeout(() => {
+                        lock = false;
+                    }, time);
+                };
+
+                groupEvents.forEach(type => {
+                    this.on(type, (e) => {
+                        if (!lock) {
+                            this.label.text = `Inside the Box: ${type}`;
+                        }
+                        if (type == "mouseout" || type == "mouseover") {
+                            lock = true;
+                            unlockAfterTimeout(1000);
+                        }
+                        if (type == "mouseout") {
+                            inside = false;
+                        } else if (type == "mouseover") {
+                            inside = true;
+                        }
+                    });
+                });
+            }
+
+            render() {
+                this.group.draw();
+            }
+        }
+
+        class EventDemoGame extends Game {
+            constructor(canvas) {
+                super(canvas);
+                this.enableFluidSize();
+                this.backgroundColor = "black";
+            }
+
+            init() {
+                this.scene = new Scene(this);
+                this.ui = new Scene(this);
+                this.pipeline.add(this.scene);
+                this.pipeline.add(this.ui);
+
+                this.scene.add(new EventLogger(this));
+                this.ui.add(new FPSCounter(this, { anchor: "bottom-right" }));
+            }
+
+            clear() {
+                this.ctx.fillStyle = "black";
+                this.ctx.fillRect(0, 0, this.width, this.height);
+            }
+        }
+
+        window.addEventListener("load", () => {
+            const canvas = document.getElementById("game");
+            const game = new EventDemoGame(canvas);
+            game.init();
+            game.start();
+        });
+    </script>
+</body>
+
+</html>

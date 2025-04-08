@@ -1,17 +1,9 @@
-import {
-  Game,
-  GameObject,
-  FPSCounter,
-  ShapeGOFactory,
-  Text,
-} from "../src/game";
-import { Tween } from "../src/motion/tween.js";
-import { Painter } from "../src/painter.js";
-import * as Shapes from "../src/shapes";
+import { Game, GameObject, FPSCounter, Text, Tween, Shapes } from "../../src/index";
 
 class ShapeGalleryGame extends Game {
   constructor(canvas) {
     super(canvas);
+    this.enableFluidSize();
     this.shapeEntries = [
       {
         name: "Line",
@@ -245,7 +237,7 @@ class ShapeGalleryGame extends Game {
 
   init() {
     super.init();
-    this.pipeline.add(new FPSCounter(this, {color:"black"}));
+    this.pipeline.add(new FPSCounter(this, { color: "black" }));
     // Title
     this.pipeline.add(
       new Text(this, "GCanvas Shape Gallery", {
@@ -317,13 +309,18 @@ class ShapeGalleryGame extends Game {
           group.add(bg);
           group.add(shape);
 
-          const label = new Shapes.TextShape(0, (cellSize - 10) / 2 - 12, entry.name, {
-            font: "12px monospace",
-            color: "#333",
-            align: "center",
-            baseline: "bottom"
-          });
-          
+          const label = new Shapes.TextShape(
+            0,
+            (cellSize - 10) / 2 - 12,
+            entry.name,
+            {
+              font: "12px monospace",
+              color: "#333",
+              align: "center",
+              baseline: "bottom",
+            }
+          );
+
           group.add(label);
 
           this.group = group;
@@ -350,7 +347,7 @@ class ShapeGalleryGame extends Game {
             const entry = this.entry;
             const game = this.game;
             const e = this;
-            console.log(e);
+            //console.log(e);
             function animate() {
               if (!e.startTime) e.startTime = game.lastTime;
               const elapsed = game.lastTime - e.startTime;

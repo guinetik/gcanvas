@@ -1,16 +1,45 @@
-import { GameObject } from "../go";
+/*************************************************************
+ * Scene.js
+ *
+ * A container-like GameObject that manages a list of child 
+ * GameObjects. It acts as a local coordinate system, allowing
+ * children to inherit the Scene's position for rendering and
+ * update. Useful for grouping related objects (e.g., a level).
+ *************************************************************/
 
+import { GameObject } from "../go.js";
+
+/**
+ * Scene - A specialized GameObject that can contain child GameObjects,
+ * updating and rendering them as a group. The Scene’s own position
+ * (x, y) is temporarily added to each child for the duration of 
+ * update calls, effectively shifting children by the Scene’s offset.
+ */
 export class Scene extends GameObject {
+  /**
+   * @param {Game} game - The main game instance.
+   * @param {object} [options] - Optional parameters for position, etc.
+   * @param {number} [options.x=0] - The Scene’s x-position.
+   * @param {number} [options.y=0] - The Scene’s y-position.
+   */
   constructor(game, options = {}) {
     super(game, options);
+
+    /**
+     * A list of child GameObjects that this Scene manages.
+     * @type {Array<GameObject>}
+     */
     this.children = [];
+
+    // Re-assign explicitly in case user omitted them in the parent constructor call.
     this.x = options.x ?? 0;
     this.y = options.y ?? 0;
   }
 
   /**
-   * Add a GameObject to the Scene
-   * @param {GameObject} go
+   * Add a GameObject to this Scene, allowing it to be updated and rendered.
+   * @param {GameObject} go - The child GameObject to add.
+   * @returns {GameObject} The same GameObject, for chaining or reference.
    */
   add(go) {
     this.children.push(go);
@@ -18,21 +47,24 @@ export class Scene extends GameObject {
   }
 
   /**
-   * Remove a GameObject
+   * Remove a GameObject from the Scene.
+   * @param {GameObject} go - The child GameObject to remove.
    */
   remove(go) {
     this.children = this.children.filter((child) => child !== go);
   }
 
   /**
-   * Clear all GameObjects
+   * Remove all child GameObjects.
    */
   clear() {
     this.children = [];
   }
 
   /**
-   * Bring a GameObject to the front (top of render order)
+   * Bring a specific child GameObject to the front (end of the list),
+   * ensuring it’s rendered after others (on top).
+   * @param {GameObject} go - The child to bring forward.
    */
   bringToFront(go) {
     this.remove(go);
@@ -40,7 +72,9 @@ export class Scene extends GameObject {
   }
 
   /**
-   * Send a GameObject to the back (bottom of render order)
+   * Send a specific child GameObject to the back (start of the list),
+   * ensuring it’s rendered before others (behind them).
+   * @param {GameObject} go - The child to push behind.
    */
   sendToBack(go) {
     this.remove(go);
@@ -48,24 +82,38 @@ export class Scene extends GameObject {
   }
 
   /**
-   * Delegate update to children
+   * Called each frame to update this Scene and its children.
+   * Temporarily offsets each child by the Scene’s own (x, y) before
+   * updating, then reverts the child’s coordinates afterward.
+   * @param {number} dt - Delta time in seconds since the last frame.
    */
   update(dt) {
     for (let child of this.children) {
+      // Shift the child's coordinates by the Scene's position
       if (typeof child.x === "number") child.x += this.x;
       if (typeof child.y === "number") child.y += this.y;
-      if (child.update) child.update(dt);
+
+      // Delegate the update to the child
+      if (child.update) {
+        child.update(dt);
+      }
+
+      // Revert the child's position
       if (typeof child.x === "number") child.x -= this.x;
       if (typeof child.y === "number") child.y -= this.y;
     }
   }
 
   /**
-   * Delegate render to children
+   * Called each frame to render the Scene’s children in order.
+   * Children are drawn at their normal coordinates but conceptually
+   * offset by (x, y) if the user checks them inside child.render().
    */
   render() {
     for (let child of this.children) {
-      if (child.render) child.render();
+      if (child.render) {
+        child.render();
+      }
     }
   }
 }

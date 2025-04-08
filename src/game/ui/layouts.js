@@ -31,6 +31,16 @@ export class LayoutGroup extends Scene {
     super.render();
   }
 
+  getBounds() {
+    //console.log("getBounds", this.x, this.y, this.width, this.height);
+    return {
+      x: this.x,
+      y: this.y,
+      width: this.width,
+      height: this.height,
+    };
+  }
+
   update(dt) {
     // Call layout logic
     super.update?.(dt); // does layout-specific update

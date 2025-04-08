@@ -37,6 +37,11 @@ export class Shape {
     this.rotation = options.rotation || 0;
     this.scaleX = options.scaleX || 1;
     this.scaleY = options.scaleY || 1;
+    // Shadow
+    this.shadowColor = options.shadowColor ?? null;
+    this.shadowBlur = options.shadowBlur ?? 0;
+    this.shadowOffsetX = options.shadowOffsetX ?? 0;
+    this.shadowOffsetY = options.shadowOffsetY ?? 0;
     // Constraints (drawing boundaries, not physics)
     this.minX = options.minX;
     this.maxX = options.maxX;
@@ -66,13 +71,25 @@ export class Shape {
    * Internal render helper to wrap drawing calls in canvas transform state.
    * @param {Function} drawFn - Function that performs canvas drawing
    */
-  renderWithTransform(drawFn) {
+  renderWithTransform(drawFn) { 
     Painter.ctx.save();
     Painter.ctx.translate(this.x, this.y);
     Painter.ctx.rotate(this.rotation);
     Painter.ctx.scale(this.scaleX, this.scaleY);
+  
+    if (this.shadowColor) {
+      Painter.setShadow(
+        this.shadowColor,
+        this.shadowBlur,
+        this.shadowOffsetX,
+        this.shadowOffsetY
+      );
+    }
+  
     drawFn();
-    Painter.ctx.restore();
+  
+    Painter.clearShadow();
+    Painter.restore();
   }
 
   /**
