@@ -600,7 +600,7 @@ export class Painter {
    * @param {number} l - Lightness (0-100)
    * @returns {Array<number>} RGB color array [r, g, b]
    */
-  hslToRgb(h, s, l) {
+  static hslToRgb(h, s, l) {
     // Convert HSL percentages to decimals
     s /= 100;
     l /= 100;

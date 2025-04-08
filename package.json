@@ -1,6 +1,6 @@
 {
   "name": "gcanvas",
-  "version": "1.0.0-gh-pages",
+  "version": "0.0.2-alpha",
   "description": "Canvas Utilities and 2d Primitives",
   "main": "main.js",
   "type": "module",
