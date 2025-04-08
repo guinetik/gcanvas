@@ -93,7 +93,7 @@ export class Pipeline {
     // Check from topmost to bottommost object to find the first that was hit.
     for (let i = this.gameObjects.length - 1; i >= 0; i--) {
       const obj = this.gameObjects[i];
-      if(type === "inputdown") {
+      if (type === "inputdown") {
         //console.log("inputdown", obj);
       }
       if (obj instanceof Scene) {
@@ -144,17 +144,19 @@ export class Pipeline {
    * @private
    */
   _dispatchToScene(scene, type, e) {
+    //if(type === "inputdown") console.log("inputdown", scene);
     for (let i = scene.children.length - 1; i >= 0; i--) {
       const child = scene.children[i];
       if (child instanceof Scene) {
         // Recurse deeper if child is also a Scene
         const hit = this._dispatchToScene(child, type, e);
-        if (hit) return true;
-      } else if (
-        child.interactive &&
-        child._hitTest?.(e.x, e.y)
-      ) {
+        if (hit) {
+          //if(type === "inputdown") console.log("HIT", child, type);
+          return true;
+        }
+      } else if (child.interactive && child._hitTest?.(e.x, e.y)) {
         // Found a child that was hit
+        //if(type === "inputdown") console.log("Dispatching to child", child, type);
         child.events.emit(type, e);
         return true;
       }
