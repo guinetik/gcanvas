@@ -14,6 +14,7 @@ export class LayoutDemo extends Game {
   constructor(canvas) {
     super(canvas);
     this.enableFluidSize();
+    this.backgroundColor = "white";
   }
 
   init() {

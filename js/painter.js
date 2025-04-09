@@ -21,10 +21,9 @@ class PaintScene extends Scene {
         this.lineCursor = new TextShape(0, 0, "✒️", { font: "30px monospace" })
         this.lineCursorP = new Circle(0, 0, 5, { fillColor: "red" });
         this.cursor = new Cursor(game, this.pencilCursor, this.pencilCursor, { x: 0, y: 0 });
-        this.add(this.cursor);
         this.cursor.offsetX = 10;
         this.cursor.offsetY = -25
-        this.cursor.activate();
+        this.game.cursor = this.cursor;
     }
 
     /**

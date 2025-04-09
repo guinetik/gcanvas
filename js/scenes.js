@@ -19,7 +19,6 @@ import {
 export class SceneLayoutDemo extends GameObject {
   constructor(game, options = {}) {
     super(game, options);
-
     /**
      * A HorizontalLayout is essentially a Scene that positions its children
      * in a row. It inherits from Scene -> GameObject -> Transformable,
@@ -104,7 +103,6 @@ export class SceneLayoutDemo extends GameObject {
    * Scenes (and Layouts) handle rendering their children. Just call layout.render().
    */
   render() {
-    // You can skip drawing if !this.visible or whatever. Otherwise:
     this.layout.render();
   }
 }
