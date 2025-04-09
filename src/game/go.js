@@ -147,66 +147,71 @@ export class GameObject extends Transformable {
  * managed, updated, and rendered like any other
  * GameObject in the system.
  ************************************************/
-/**
- * ShapeGOFactory - Produces a simple GameObject wrapper around a Shape.
- * This is useful if you want to add a Shape to the Game's pipeline but you
- * don’t need extensive custom behavior other than basic positioning and
- * drawing.
- */
 export class ShapeGOFactory {
   /**
-   * Create a new GameObject that manages a Shape’s position and rendering.
-   * @param {Game} game - The main Game instance.
-   * @param {Shape} shape - The shape to wrap as a GameObject.
-   * @returns {GameObject} A new GameObject subclass instance containing the provided shape.
+   * Create a GameObject wrapper around a Shape.
+   * @param {Game} game
+   * @param {Shape} shape
+   * @param {Object} [opts]
+   * @returns {GameObject}
    */
-  static create(game, shape) {
-    // Extract relevant positional options from the Shape
-    const options = {
+  static create(game, shape, opts = {}) {
+    return new GameObjectShapeWrapper(game, shape, opts);
+  }
+}
+
+
+/**
+ * A GameObject that wraps a Shape for syncing transform and rendering.
+ */
+export class GameObjectShapeWrapper extends GameObject {
+  /**
+   * @param {Game} game - The Game instance.
+   * @param {Shape} shape - The shape to wrap.
+   * @param {Object} [opts={}] - Additional GameObject options to override.
+   */
+  constructor(game, shape, opts = {}) {
+    const defaults = {
       x: shape?.x ?? 0,
       y: shape?.y ?? 0,
       width: shape?.width ?? 0,
       height: shape?.height ?? 0,
+      scaleX: shape?.scaleX ?? 1,
+      scaleY: shape?.scaleY ?? 1
     };
+    const options = { ...defaults, ...opts };
+    super(game, options);
+    /**
+     * The shape this GO holds
+     *  @type {Shape} 
+    */
+    this.shape = shape;
+    console.log("creating GameObjectShapeWrapper", shape, "with", options);
+  }
 
-    // Return a dynamically created subclass of GameObject
-    return new (class extends GameObject {
-      constructor() {
-        super(game, options);
+  /**
+   * Sync this GameObject's state into the Shape.
+   * @param {number} dt - Delta time
+   */
+  update(dt) {
+    if (!this.shape || !this.active) return;
 
-        /**
-         * The Shape being wrapped by this GameObject.
-         * @type {Shape}
-         */
-        this.shape = shape;
-      }
+    this.shape.x = this.x;
+    this.shape.y = this.y;
+    this.shape.width = this.width;
+    this.shape.height = this.height;
+    this.shape.opacity = this.opacity;
+    this.shape.visible = this.visible;
+    this.shape.scaleX = this.scaleX;
+    this.shape.scaleY = this.scaleY;
+  }
 
-      /**
-       * Keep the Shape’s position, width, and height in sync with the GameObject.
-       * @param {number} dt - Delta time in seconds since the last frame.
-       */
-      update(dt) {
-        //console.log("ShapeGOFactory.update", this);
-        if (this.shape && this.active) {
-          this.shape.x = this.x;
-          this.shape.y = this.y;
-          this.shape.width = this.width;
-          this.shape.height = this.height;
-          this.shape.opacity = this.opacity;
-          this.shape.visible = this.visible;
-          this.shape.scaleX = this.scaleX;
-          this.shape.scaleY = this.scaleY;
-        }
-      }
-
-      /**
-       * Render the Shape if it exists.
-       */
-      render() {
-        if (this.shape && this.visible) {
-          this.shape.draw();
-        }
-      }
-    })();
+  /**
+   * Render the wrapped shape.
+   */
+  render() {
+    if (this.shape && this.visible) {
+      this.shape.draw();
+    }
   }
 }
