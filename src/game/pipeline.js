@@ -6,7 +6,7 @@
  * including special handling for Scenes (nested children).
  ***************************************************************/
 
-import { Scene} from "./objects";
+import { Scene } from "./objects";
 /**
  * @typedef {import("./go.js").GameObject} GameObject
  * @typedef {import("./game.js").Game} Game
@@ -171,6 +171,7 @@ export class Pipeline {
    * @returns {GameObject} Returns the same object for convenience.
    */
   add(gameObject) {
+    gameObject.parent = this;
     this.gameObjects = [...this.gameObjects, gameObject];
     return gameObject;
   }

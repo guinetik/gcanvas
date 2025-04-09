@@ -6,8 +6,6 @@
  * children to inherit the Scene's position for rendering and
  * update. Useful for grouping related objects (e.g., a level).
  *************************************************************/
-
-import { Painter } from "../../painter.js";
 import { GameObject } from "../go.js";
 
 /**
@@ -43,6 +41,7 @@ export class Scene extends GameObject {
    * @returns {GameObject} The same GameObject, for chaining or reference.
    */
   add(go) {
+    go.parent = this; // Set the parent to this Scene
     this.children.push(go);
     return go;
   }
@@ -53,6 +52,7 @@ export class Scene extends GameObject {
    */
   remove(go) {
     this.children = this.children.filter((child) => child !== go);
+    go.parent = null; // Clear the parent reference
   }
 
   /**
@@ -95,12 +95,26 @@ export class Scene extends GameObject {
       if (typeof child.y === "number") child.y += this.y;
       const opacity = child.opacity ?? 1;
       child.opacity = this.opacity * opacity;
+      ///
+      // TODO NOT WORKING
+      // Set child's scale to the Scene's scale
+      const scaleX = child.scaleX ?? 1;
+      const scaleY = child.scaleY ?? 1;
+      child.scaleX *= this.scaleX;
+      child.scaleY *= this.scaleY;
+      // Set the child's rotation to the Scene's rotation
+      const rotation = child.rotation ?? 0;
+      child.rotation += this.rotation;
       // Delegate the update to the child
       if (child.update) {
         child.update(dt);
       }
       // Restore the child's opacity
       child.opacity = opacity;
+      child.rotation = rotation;
+      // Restore the child's scale
+      child.scaleX = scaleX;
+      child.scaleY = scaleY;
       // Revert the child's position
       if (typeof child.x === "number") child.x -= this.x;
       if (typeof child.y === "number") child.y -= this.y;

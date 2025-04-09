@@ -28,32 +28,31 @@ export class GameObject extends Transformable {
      * @type {Game}
      */
     this.game = game;
-
     /**
      * Reference to the 2D rendering context.
      * @type {CanvasRenderingContext2D}
      */
     this.ctx = game.ctx;
-
     /**
      * Determines whether this object is active in the pipeline.
      * If false, update() and render() calls are skipped.
      * @type {boolean}
      */
     this.active = true;
-
     /**
      * Internal event emitter for distributing events (e.g. mouseover, inputdown).
      * @type {EventEmitter}
      */
     this.events = new EventEmitter();
-
     /**
      * Whether this GameObject can handle pointer events (hit-testing).
      * @type {boolean}
      */
     this.interactive = false;
-
+    /**
+     * The parent GameObject, generally another GameObject that added this to the pipeline.
+     */
+    this.parent = null; // Parent GameObject, if any
     // If user set anchor in options, apply it
     applyAnchor(this, options);
   }
@@ -188,7 +187,7 @@ export class ShapeGOFactory {
        */
       update(dt) {
         //console.log("ShapeGOFactory.update", this);
-        if (this.shape) {
+        if (this.shape && this.active) {
           this.shape.x = this.x;
           this.shape.y = this.y;
           this.shape.width = this.width;
@@ -201,7 +200,7 @@ export class ShapeGOFactory {
        * Render the Shape if it exists.
        */
       render() {
-        if (this.shape) {
+        if (this.shape && this.visible) {
           this.shape.draw();
         }
       }
