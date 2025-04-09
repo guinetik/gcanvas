@@ -370,22 +370,20 @@ export class Tween {
 
   /**
    * Parabolic arc interpolation
-   * @param {number} start - Start Y value
-   * @param {number} peak - Peak Y value
-   * @param {number} end - End Y value
+   * @param {number} start - Start value
+   * @param {number} peak - Peak value
+   * @param {number} end - End value
    * @param {number} t - Interpolation factor (0-1)
-   * @returns {number} Interpolated Y value
+   * @returns {number} Interpolated value
    */
   static parabolicArc(start, peak, end, t) {
-    // Convert linear t (0-1) to parabolic t (-1 to 1)
-    const parabolicT = 2 * t - 1;
-
-    // Calculate quadratic y = a*t^2 + b*t + c
-    // Where: y(0) = start, y(0.5) = peak, y(1) = end
-    const a = (start + end - 2 * peak) / 2;
-    const b = peak - start - a;
+    // Calculate quadratic coefficients
+    // For a parabola that passes through three points: (0,start), (0.5,peak), (1,end)
+    const a = start + end - 2 * peak;
+    const b = 2 * (peak - start);
     const c = start;
 
+    // Apply the quadratic formula: a*t^2 + b*t + c
     return a * t * t + b * t + c;
   }
 
@@ -435,20 +433,181 @@ export class Tween {
     // Calculate spring force
     const delta = target - current;
     const spring = delta * stiffness;
-
     // Apply damping
     velocity = velocity * damping + spring;
-
     // Update current value
     const next = current + velocity;
-
     // Check if we're done
     const done = Math.abs(delta) < precision && Math.abs(velocity) < precision;
-
     return {
       value: done ? target : next,
       velocity,
       done,
     };
+  }
+
+  /**
+   * Spiral motion animation
+   * @param {number} centerX - X coordinate of spiral center
+   * @param {number} centerY - Y coordinate of spiral center
+   * @param {number} startRadius - Starting radius of the spiral
+   * @param {number} endRadius - Ending radius of the spiral
+   * @param {number} startAngle - Starting angle in radians
+   * @param {number} revolutions - Number of complete revolutions
+   * @param {number} t - Interpolation factor (0-1)
+   * @returns {Object} {x, y} coordinates
+   */
+  static spiral(
+    centerX,
+    centerY,
+    startRadius,
+    endRadius,
+    startAngle,
+    revolutions,
+    t
+  ) {
+    // Calculate current radius using linear interpolation
+    const radius = Tween.go(startRadius, endRadius, t);
+
+    // Calculate current angle (start angle + number of revolutions)
+    const angle = startAngle + t * revolutions * Math.PI * 2;
+
+    // Convert polar coordinates to Cartesian
+    const x = centerX + radius * Math.cos(angle);
+    const y = centerY + radius * Math.sin(angle);
+
+    return { x, y };
+  }
+
+  /**
+   * Orbit motion animation (circular or elliptical)
+   * @param {number} centerX - X coordinate of orbit center
+   * @param {number} centerY - Y coordinate of orbit center
+   * @param {number} radiusX - X radius of the orbit (horizontal)
+   * @param {number} radiusY - Y radius of the orbit (vertical)
+   * @param {number} startAngle - Starting angle in radians
+   * @param {number} t - Interpolation factor (0-1)
+   * @param {boolean} [clockwise=true] - Direction of orbit
+   * @returns {Object} {x, y} coordinates
+   */
+  static orbit(
+    centerX,
+    centerY,
+    radiusX,
+    radiusY,
+    startAngle,
+    t,
+    clockwise = true
+  ) {
+    // Calculate current angle
+    const direction = clockwise ? 1 : -1;
+    const angle = startAngle + direction * t * Math.PI * 2;
+
+    // Convert polar coordinates to Cartesian
+    const x = centerX + radiusX * Math.cos(angle);
+    const y = centerY + radiusY * Math.sin(angle);
+
+    return { x, y };
+  }
+
+  /**
+   * Bezier curve motion animation
+   * @param {Array<number>} p0 - Start point [x, y]
+   * @param {Array<number>} p1 - Control point 1 [x, y]
+   * @param {Array<number>} p2 - Control point 2 [x, y]
+   * @param {Array<number>} p3 - End point [x, y]
+   * @param {number} t - Interpolation factor (0-1)
+   * @returns {Object} {x, y} coordinates
+   */
+  static bezier(p0, p1, p2, p3, t) {
+    // Cubic Bezier formula
+    const cx = 3 * (p1[0] - p0[0]);
+    const bx = 3 * (p2[0] - p1[0]) - cx;
+    const ax = p3[0] - p0[0] - cx - bx;
+
+    const cy = 3 * (p1[1] - p0[1]);
+    const by = 3 * (p2[1] - p1[1]) - cy;
+    const ay = p3[1] - p0[1] - cy - by;
+
+    const x = ax * Math.pow(t, 3) + bx * Math.pow(t, 2) + cx * t + p0[0];
+    const y = ay * Math.pow(t, 3) + by * Math.pow(t, 2) + cy * t + p0[1];
+
+    return { x, y };
+  }
+
+  /**
+   * Bounce animation - object drops and bounces with diminishing height
+   * @param {number} maxHeight - Maximum height (negative y value)
+   * @param {number} groundY - Ground position (positive y value)
+   * @param {number} bounceCount - Number of bounces to perform
+   * @param {number} t - Interpolation factor (0-1)
+   * @returns {number} Current Y position
+   */
+  static bounce(maxHeight, groundY, bounceCount, t) {
+    // A simpler approach with predictable results
+
+    // Divide the animation into segments based on bounce count
+    const segmentSize = 1 / (bounceCount + 1);
+    const segment = Math.min(Math.floor(t / segmentSize), bounceCount);
+    const segmentT = (t % segmentSize) / segmentSize;
+
+    // Calculate bounce height for this segment
+    const bounceHeight = maxHeight * Math.pow(0.6, segment);
+
+    // Use a simple sine wave for each bounce
+    // Sin goes from 0 to 1 to 0, we want -maxHeight to groundY to -maxHeight
+    // Transform the sin function to get bounce effect
+    const normalized = Math.sin(segmentT * Math.PI);
+    const position = groundY - normalized * (groundY - bounceHeight);
+
+    return position;
+  }
+
+  /**
+   * Shake animation with decreasing intensity
+   * @param {number} centerX - Center X position
+   * @param {number} centerY - Center Y position
+   * @param {number} maxOffsetX - Maximum X offset
+   * @param {number} maxOffsetY - Maximum Y offset
+   * @param {number} frequency - Frequency of shakes
+   * @param {number} decay - How quickly the shake decreases (0-1)
+   * @param {number} t - Interpolation factor (0-1)
+   * @returns {Object} {x, y} coordinates
+   */
+  static shake(centerX, centerY, maxOffsetX, maxOffsetY, frequency, decay, t) {
+    // Apply decay to reduce shake over time
+    const intensity = Math.pow(1 - t, decay);
+
+    // Create randomized but deterministic shake using sine/cosine at different frequencies
+    const angleX = t * Math.PI * 2 * frequency;
+    const angleY = t * Math.PI * 2 * frequency * 1.3; // Different frequency for Y
+
+    // Add multiple sine waves at different frequencies for more organic motion
+    const xOffset =
+      intensity *
+      maxOffsetX *
+      (Math.sin(angleX) * 0.6 +
+        Math.sin(angleX * 2.5) * 0.3 +
+        Math.sin(angleX * 5.6) * 0.1);
+
+    const yOffset =
+      intensity *
+      maxOffsetY *
+      (Math.cos(angleY) * 0.6 +
+        Math.cos(angleY * 2.7) * 0.3 +
+        Math.cos(angleY * 6.3) * 0.1);
+
+    // Make sure we end at the center
+    let finalX = centerX + xOffset;
+    let finalY = centerY + yOffset;
+
+    // Gradually return to center in the last 10% of the animation
+    if (t > 0.9) {
+      const returnT = (t - 0.9) / 0.1;
+      finalX = centerX + xOffset * (1 - returnT);
+      finalY = centerY + yOffset * (1 - returnT);
+    }
+
+    return { x: finalX, y: finalY };
   }
 }
