@@ -7,6 +7,7 @@
  ***************************************************************/
 
 import { Scene } from "./objects";
+import { Tweenetik } from "../motion";
 /**
  * @typedef {import("./go.js").GameObject} GameObject
  * @typedef {import("./game.js").Game} Game
@@ -193,6 +194,7 @@ export class Pipeline {
     this.gameObjects
       .filter((obj) => obj.active)
       .forEach((obj) => obj.update(dt));
+    Tweenetik.updateAll(dt);
   }
 
   /**

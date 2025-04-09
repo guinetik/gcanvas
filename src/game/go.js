@@ -193,6 +193,9 @@ export class ShapeGOFactory {
           this.shape.width = this.width;
           this.shape.height = this.height;
           this.shape.opacity = this.opacity;
+          this.shape.visible = this.visible;
+          this.shape.scaleX = this.scaleX;
+          this.shape.scaleY = this.scaleY;
         }
       }
 
