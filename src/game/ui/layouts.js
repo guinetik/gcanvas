@@ -22,7 +22,7 @@ export class LayoutScene extends Scene {
         this.height,
         {
           strokeColor: "#0f0",
-          fillColor: "rgba(0,0,0,0.5)",
+          fillColor: "rgba(0,0,0,0.1)",
           lineWidth: 1,
         }
       );

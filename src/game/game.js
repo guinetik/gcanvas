@@ -13,6 +13,7 @@ import { Mouse } from "../io";
 import { Input } from "../io";
 import { Touch } from "../io";
 import { Keys } from "../io";
+import { Cursor } from "./ui/cursor.js";
 
 /**
  * Core Game class. Provides lifecycle management, the update/render loop,
@@ -46,6 +47,11 @@ export class Game {
      */
     this.events = new EventEmitter();
     /**
+     * The pipeline is a collection of GameObjects that are updated and rendered each frame.
+     * @type {Cursor}
+     */
+    this._cursor = null;
+    /**
      * Tracks the timestamp of the previous frame for calculating delta time.
      * @type {number}
      * @private
@@ -57,10 +63,11 @@ export class Game {
      */
     this.running = false;
     /**
-     * The pipeline that manages updating and rendering all GameObjects.
+     * The pipeline is a collection of GameObjects that are updated and rendered each frame.
      * @type {Pipeline}
      */
     this.pipeline = new Pipeline(this);
+    //
     // Initialize Painter with this game's 2D context.
     Painter.init(this.ctx);
     //
@@ -273,5 +280,39 @@ export class Game {
    */
   set backgroundColor(color) {
     this.canvas.style.backgroundColor = color;
+  }
+
+  /**
+   * Sets the cursor for the game.
+   * @param {Cursor} cursor - The cursor to set.
+   */
+  set cursor(cursor) {
+    if (this._cursor) {
+      this._cursor.destroy();
+      this.pipeline.remove(this._cursor);
+    }
+    this._cursor = cursor;
+    this._cursor.activate();
+    // add the cursor to the pipeline
+    this.pipeline.add(cursor);
+  }
+
+  /**
+   * Returns the current cursor.
+   * @returns {Cursor}
+   */
+  get cursor() {
+    return this._cursor;
+  }
+
+  /**
+   * Deactivates the current cursor and removes it from the pipeline.
+   */
+  resetCursor() {
+    if (this._cursor) {
+      this._cursor.destroy();
+      this.pipeline.remove(this._cursor);
+      this._cursor = null;
+    }
   }
 }
