@@ -7,11 +7,7 @@
  ***************************************************************/
 
 import { Scene } from "./objects";
-import { Tweenetik } from "../motion";
-/**
- * @typedef {import("./go.js").GameObject} GameObject
- * @typedef {import("./game.js").Game} Game
- */
+import { Tweenetik } from "../motion"
 /**
  * Pipeline - Maintains a list of GameObjects, updating and rendering them
  * each frame. It also centralizes and dispatches pointer events (inputdown,
