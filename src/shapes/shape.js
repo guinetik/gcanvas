@@ -40,6 +40,10 @@ export class Shape extends Transformable {
     this.maxX = options.maxX;
     this.minY = options.minY;
     this.maxY = options.maxY;
+    // Rotation
+    this.rotation = options.rotation ?? 0;
+    this.scaleX = options.scaleX ?? 1;
+    this.scaleY = options.scaleY ?? 1;
   }
 
   /**
@@ -77,10 +81,14 @@ export class Shape extends Transformable {
     }
     Painter.ctx.save();
     Painter.ctx.globalAlpha = this.opacity;
+    if(this.shadowColor) {
+      Painter.dropShadow(this.shadowColor, this.shadowBlur, this.shadowOffsetX, this.shadowOffsetY);
+    }
     Painter.ctx.translate(this.x, this.y);
     Painter.ctx.rotate(this.rotation);
     Painter.ctx.scale(this.scaleX, this.scaleY);
     drawFn();
+    Painter.clearShadow();
     Painter.ctx.restore();
   }
 
