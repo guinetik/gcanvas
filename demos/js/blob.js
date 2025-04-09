@@ -327,7 +327,7 @@ class BlobScene extends Scene {
         // Update excitement level based on speed
         // Use tween for smooth transitions
         const targetExcitement = Math.min(speed / 2, 1);
-        physics.excitementLevel = Tween.tween(
+        physics.excitementLevel = Tween.go(
             physics.excitementLevel,
             targetExcitement,
             dt * 2 // How fast it reacts to speed changes
@@ -348,7 +348,7 @@ class BlobScene extends Scene {
         }
         // Update blob color based on excitement
         for (let i = 0; i < 3; i++) {
-            physics.currentColor[i] = Tween.tween(
+            physics.currentColor[i] = Tween.go(
                 physics.baseColor[i],
                 physics.excitedColor[i],
                 physics.excitementLevel
@@ -387,7 +387,7 @@ class BlobScene extends Scene {
                 if (anim.startColor && anim.targetColor) {
                     // Set base color to the interpolated value
                     for (let i = 0; i < 3; i++) {
-                        this.blobPhysics.baseColor[i] = Tween.tween(
+                        this.blobPhysics.baseColor[i] = Tween.go(
                             anim.startColor[i],
                             anim.targetColor[i],
                             easedT
@@ -486,10 +486,10 @@ class BlobScene extends Scene {
         // Apply smoothing with Tween - this creates a more natural lag in eye movement
         const eyeResponseSpeed = 80; // Higher = faster response
         // Tween the pupil positions to follow the calculated offsets
-        this.leftPupil.x = Tween.tween(this.leftPupil.x, this.leftEye.x + leftPupilX, dt * eyeResponseSpeed);
-        this.leftPupil.y = Tween.tween(this.leftPupil.y, this.leftEye.y + leftPupilY, dt * eyeResponseSpeed);
-        this.rightPupil.x = Tween.tween(this.rightPupil.x, this.rightEye.x + rightPupilX, dt * eyeResponseSpeed);
-        this.rightPupil.y = Tween.tween(this.rightPupil.y, this.rightEye.y + rightPupilY, dt * eyeResponseSpeed);
+        this.leftPupil.x = Tween.go(this.leftPupil.x, this.leftEye.x + leftPupilX, dt * eyeResponseSpeed);
+        this.leftPupil.y = Tween.go(this.leftPupil.y, this.leftEye.y + leftPupilY, dt * eyeResponseSpeed);
+        this.rightPupil.x = Tween.go(this.rightPupil.x, this.rightEye.x + rightPupilX, dt * eyeResponseSpeed);
+        this.rightPupil.y = Tween.go(this.rightPupil.y, this.rightEye.y + rightPupilY, dt * eyeResponseSpeed);
         // Position mouth
         this.mouth.x = physics.currentX;
         this.mouth.y = physics.currentY + 10;
@@ -631,24 +631,6 @@ class BlobScene extends Scene {
         }
     }
 
-    // Add this function to the BlobScene class
-
-    /**
-     * Generate a random pleasing color in RGB format
-     * @returns {Array<number>} RGB color array [r, g, b]
-     */
-    generateRandomColor() {
-        // Generate vibrant, pleasing colors by using HSL first
-        // then converting to RGB
-        // Random hue (0-360)
-        const hue = Math.floor(Math.random() * 360);
-        // High saturation for vibrant colors (70-100%)
-        const saturation = 70 + Math.floor(Math.random() * 30);
-        // Medium-high lightness for visibility (50-70%)
-        const lightness = 50 + Math.floor(Math.random() * 20);
-        // Convert HSL to RGB
-        return Painter.hslToRgb(hue, saturation, lightness);
-    }
     /**
      * Update the triggerAnimation method to handle color randomization
      */
@@ -661,7 +643,7 @@ class BlobScene extends Scene {
         if (animType === "color") {
             // Generate a new target color
             anim.startColor = [...this.blobPhysics.baseColor]; // Copy current base color
-            anim.targetColor = this.generateRandomColor(); // New random color
+            anim.targetColor = Painter.randomColorHSL(); // New random color
             // Store target color for when animation completes
             this.targetColor = anim.targetColor;
         }
