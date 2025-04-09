@@ -15,10 +15,8 @@ export class Line extends Shape {
   }
 
   draw() {
-    this.applyConstraints();
-
+    super.draw();
     const half = this.length / 2;
-
     this.renderWithTransform(() => {
       Painter.line(-half, -half, half, half, this.strokeColor, this.lineWidth);
     });

@@ -23,6 +23,7 @@ export class Shape extends Transformable {
    */
   constructor(x, y, options = {}) {
     super(options); // Call Transformable constructor
+    this.crisp = options.crisp ?? true; // For pixel-perfect rendering
     this.x = x;
     this.y = y;
     // Style
@@ -49,6 +50,12 @@ export class Shape extends Transformable {
     if (this.maxX !== undefined) this.x = Math.min(this.x, this.maxX);
     if (this.minY !== undefined) this.y = Math.max(this.y, this.minY);
     if (this.maxY !== undefined) this.y = Math.min(this.y, this.maxY);
+    if (this.crisp) {
+      this.x = Math.round(this.x);
+      this.y = Math.round(this.y);
+      this.width = Math.round(this.width);
+      this.height = Math.round(this.height);
+    }
   }
 
   /**
@@ -56,7 +63,7 @@ export class Shape extends Transformable {
    * Subclasses must override this.
    */
   draw() {
-    throw new Error("Shape.draw() must be implemented by subclass");
+    this.applyConstraints();
   }
 
   /**
@@ -64,7 +71,10 @@ export class Shape extends Transformable {
    * Also respects this.opacity and this.visible from Transformable.
    */
   renderWithTransform(drawFn) {
-    if (!this.visible) return;
+    if (!this.visible) {
+      //console.warn("Shape is not visible, skipping render.");
+      return; // Don't render if not visible
+    }
     Painter.ctx.save();
     Painter.ctx.globalAlpha = this.opacity;
     Painter.ctx.translate(this.x, this.y);

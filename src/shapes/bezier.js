@@ -19,7 +19,7 @@ export class BezierShape extends Shape {
   }
 
   draw() {
-    this.applyConstraints();
+    super.draw();
     this.renderWithTransform(() => {
       Painter.path(this.path, this.fillColor, this.strokeColor, this.lineWidth);
     });

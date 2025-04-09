@@ -8,8 +8,7 @@ export class Cloud extends Shape {
   }
 
   draw() {
-    this.applyConstraints();
-
+    super.draw();
     const r = this.size;
 
     // Construct the path using cubic Bézier segments

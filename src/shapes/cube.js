@@ -85,8 +85,7 @@ export class Cube extends Shape {
    * Internal draw logic
    */
   draw() {
-    this.applyConstraints();
-
+    super.draw();
     const s = this.size;
     // Half size for positioning around center point
     const hs = s / 2;

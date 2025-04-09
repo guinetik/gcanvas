@@ -89,8 +89,7 @@ export class Prism extends Shape {
    * Internal draw logic
    */
   draw() {
-    this.applyConstraints();
-
+    super.draw();
     const w = this.width / 2;   // Half width for positioning
     const h = this.height / 2;  // Half height for positioning
     const d = this.depth / 2;   // Half depth for positioning

@@ -21,6 +21,7 @@ export class Transformable {
    * @param {TransformOptions} [options={}] - Transformation-related options.
    */
   constructor(options = {}) {
+    this.options = options;
     /**
      * X-coordinate (center or anchor).
      * @type {number}

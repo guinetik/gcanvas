@@ -26,7 +26,7 @@ export class TextShape extends Shape {
   }
 
   draw() {
-    this.applyConstraints();
+    super.draw();
     this.renderWithTransform(() => {
       Painter.setFont(this.font);
       Painter.setTextAlign(this.align);
