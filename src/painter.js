@@ -523,6 +523,109 @@ export class Painter {
     return `hsla(${h}, ${s}%, ${l}%, ${a})`;
   }
 
+  /**
+   * Generate a random pleasing color in RGB format
+   * @returns {Array<number>} RGB color array [r, g, b]
+   */
+  static randomColorRGB() {
+    // Generate vibrant, pleasing colors by using HSL first
+    // then converting to RGB
+    // Random hue (0-360)
+    const hue = Math.floor(Math.random() * 360);
+    // High saturation for vibrant colors (70-100%)
+    const saturation = 70 + Math.floor(Math.random() * 30);
+    // Medium-high lightness for visibility (50-70%)
+    const lightness = 50 + Math.floor(Math.random() * 20);
+    // Convert HSL to RGB
+    return Painter.hslToRgb(hue, saturation, lightness);
+  }
+
+  static randomColorHSL() {
+    return `hsl(${Math.random() * 360}, 100%, 50%)`;
+  }
+
+  static randomColorHEX() {
+    let n = (Math.random() * 0xfffff * 1000000).toString(16);
+    return "#" + n.slice(0, 6);
+  }
+
+  static parseColorString(str) {
+    str = str.trim().toLowerCase();
+  
+    // 1) Check if it's hsl(...) form
+    if (str.startsWith("hsl")) {
+      // e.g. "hsl(130, 100%, 50%)"
+      // Remove "hsl(" and ")" => "130, 100%, 50%"
+      const inner = str.replace(/hsla?\(|\)/g, "");
+      const [hue, satPercent, lightPercent] = inner.split(",").map((c) => c.trim());
+      const h = parseFloat(hue);
+      const s = parseFloat(satPercent) / 100;
+      const l = parseFloat(lightPercent) / 100;
+      return Painter.hslToRgb(h, s, l); // Convert HSL->RGB
+    }
+  
+    // 2) Check if it's #RRGGBB
+    if (str.startsWith("#")) {
+      // e.g. "#ff00ff" => r=255,g=0,b=255
+      return hexToRgb(str);
+    }
+  
+    // 3) If it's rgb(...) form, parse that
+    if (str.startsWith("rgb")) {
+      // e.g. "rgb(255, 128, 50)"
+      // Remove "rgb(" + ")"
+      const inner = str.replace(/rgba?\(|\)/g, "");
+      const [r, g, b] = inner.split(",").map((x) => parseInt(x.trim()));
+      return [r, g, b];
+    }
+  
+    // Fallback: assume black
+    return [0, 0, 0];
+  }
+  
+  /**
+   * Convert [r,g,b] => "rgb(r, g, b)" string
+   */
+  static rgbArrayToCSS([r, g, b]) {
+    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+  }
+  
+  /**
+   * Convert HSL => [r,g,b] (0..255).
+   * Formulas from standard color conversion references.
+   */
+  static hslToRgb(h, s, l) {
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const hPrime = h / 60;
+    const x = c * (1 - Math.abs((hPrime % 2) - 1));
+    let [r, g, b] = [0, 0, 0];
+  
+    if (hPrime >= 0 && hPrime < 1) [r, g, b] = [c, x, 0];
+    else if (hPrime >= 1 && hPrime < 2) [r, g, b] = [x, c, 0];
+    else if (hPrime >= 2 && hPrime < 3) [r, g, b] = [0, c, x];
+    else if (hPrime >= 3 && hPrime < 4) [r, g, b] = [0, x, c];
+    else if (hPrime >= 4 && hPrime < 5) [r, g, b] = [x, 0, c];
+    else if (hPrime >= 5 && hPrime < 6) [r, g, b] = [c, 0, x];
+  
+    const m = l - c / 2;
+    return [
+      (r + m) * 255,
+      (g + m) * 255,
+      (b + m) * 255
+    ];
+  }
+  
+  /**
+   * Convert a hex color like "#ff00ff" => [255, 0, 255].
+   */
+  static hexToRgb(hex) {
+    const clean = hex.replace("#", "");
+    const r = parseInt(clean.substring(0, 2), 16);
+    const g = parseInt(clean.substring(2, 4), 16);
+    const b = parseInt(clean.substring(4, 6), 16);
+    return [r, g, b];
+  }
+
   // =========================================================================
   // GRADIENT METHODS
   // =========================================================================
@@ -591,46 +694,6 @@ export class Painter {
    */
   static horizontalGradient(x, y, width, height, colorStops) {
     return Painter.linearGradient(x, y, x + width, y, colorStops);
-  }
-
-  /**
-   * Convert HSL color to RGB
-   * @param {number} h - Hue (0-360)
-   * @param {number} s - Saturation (0-100)
-   * @param {number} l - Lightness (0-100)
-   * @returns {Array<number>} RGB color array [r, g, b]
-   */
-  static hslToRgb(h, s, l) {
-    // Convert HSL percentages to decimals
-    s /= 100;
-    l /= 100;
-
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    const m = l - c / 2;
-
-    let r, g, b;
-
-    if (h < 60) {
-      [r, g, b] = [c, x, 0];
-    } else if (h < 120) {
-      [r, g, b] = [x, c, 0];
-    } else if (h < 180) {
-      [r, g, b] = [0, c, x];
-    } else if (h < 240) {
-      [r, g, b] = [0, x, c];
-    } else if (h < 300) {
-      [r, g, b] = [x, 0, c];
-    } else {
-      [r, g, b] = [c, 0, x];
-    }
-
-    // Convert to RGB values (0-255)
-    return [
-      Math.round((r + m) * 255),
-      Math.round((g + m) * 255),
-      Math.round((b + m) * 255),
-    ];
   }
 
   // =========================================================================
