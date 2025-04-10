@@ -83,7 +83,6 @@ export class SceneLayoutDemo extends GameObject {
    * - Animate the entire layout with rotation and scale
    */
   update(dt) {
-    super.update(dt);
     this.layout.x = (game.width - this.layout.width) / 2; // We'll start it roughly in the center
     this.layout.y = (game.height - this.layout.height) / 2;
     // Scenes (and Layouts) automatically update their children,
@@ -97,6 +96,7 @@ export class SceneLayoutDemo extends GameObject {
     this.layout.scaleY = 1 + pulse;
     // Let the layout do its normal updates
     this.layout.update(dt);
+    super.update(dt);
   }
 
   /**

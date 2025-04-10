@@ -9,6 +9,9 @@ import {
   Scene,
   ShapeGOFactory,
   TileLayout,
+  Motion,
+  Tweenetik,
+  Easing,
 } from "../../src/index";
 
 class ShapeGalleryGame extends Game {
@@ -21,7 +24,7 @@ class ShapeGalleryGame extends Game {
         name: "Line",
         class: Shapes.Line,
         args: [0, 0, 40],
-        options: { strokeColor: "black", lineWidth: 3, "anchor":"center" },
+        options: { strokeColor: "black", lineWidth: 3, anchor: "center" },
       },
       {
         name: "Rectangle",
@@ -295,7 +298,12 @@ class ShapeGalleryGame extends Game {
     //const originX = 0;
     //const originY = 0;
 
-    const gallery = new TileLayout(this, {debug:true, anchor:"center", columns:5, debug:false});
+    const gallery = new TileLayout(this, {
+      debug: true,
+      anchor: "center",
+      columns: 5,
+      debug: false,
+    });
 
     this.shapeEntries.forEach((entry, index) => {
       //const col = index % cols;
@@ -303,7 +311,7 @@ class ShapeGalleryGame extends Game {
       //const x = originX + col * (cellSize + spacing) + cellSize / 2;
       //const y = originY + row * (cellSize + spacing) + cellSize / 2;
       //
-      const group = new Shapes.Group(0,0);
+      const group = new Shapes.Group(0, 0);
       group.width = group.height = cellSize;
       const bg = new Shapes.Rectangle(0, 0, cellSize - 10, cellSize - 10, {
         strokeColor: "rgba(0,0,0,0.1)",
@@ -335,8 +343,28 @@ class ShapeGalleryGame extends Game {
       go.rotationVelocity = 0;
       go.startTime = 0;
       go.width = go.height = cellSize;
-      go.on("mouseover", () => (go.hovered = true));
-      go.on("mouseout", () => (go.hovered = false));
+      const game = this;
+      go.on("mouseover", () => {
+        go.scaleX = go.scaleY = 1;
+        game.canvas.style.cursor = "pointer";
+        Tweenetik.to(
+          go, // the shape to scale
+          { scaleX: 1.3, scaleY: 1.3 },
+          1, // duration
+          Easing.easeOutElastic,
+          { onComplete: () => (go.tweening = false) }
+        );
+        go.tweening = true;
+      });
+      go.on("mouseout", () => {
+        game.canvas.style.cursor = "default";
+        Tweenetik.to(
+          go, // the shape to scale
+          { scaleX: 1, scaleY: 1 },
+          1, // duration
+          Easing.easeOutElastic
+        );
+      });
       function update(dt) {
         if (
           go.entry.name === "Sphere" ||
@@ -363,15 +391,6 @@ class ShapeGalleryGame extends Game {
           }
           animate();
         }
-        const target = go.hovered ? 0.8 : 0;
-        const spring = Tween.spring(go.rotation, target, {
-          velocity: go.rotationVelocity,
-          stiffness: 0.15,
-          damping: 0.7,
-        });
-        go.rotation = spring.value;
-        go.rotationVelocity = spring.velocity;
-        group.rotation = go.rotation;
       }
       function render() {
         group.draw();
@@ -380,7 +399,7 @@ class ShapeGalleryGame extends Game {
       go.update = (dt) => {
         originalUpdate(dt);
         update(dt);
-      }
+      };
       go.render = render;
       gallery.add(go);
     });

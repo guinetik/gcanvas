@@ -5,7 +5,9 @@ import {
   ShapeGOFactory,
   GameObject,
   FPSCounter,
-  Tween
+  Tween,
+  Motion,
+  Easing,
 } from "../../src/index";
 /**
  * OpacityMotionDemo
@@ -98,16 +100,20 @@ export class OpacityDemo extends Scene {
     //
     // The scene's opacity should be applied to all children.
     // The Demo will pulse the opacity of the entire scene using Tween.
-    // Keep track of total time elapsed
-      this.elapsed = (this.elapsed ?? 0) + dt;
-      // Define the period (in seconds) for a full pulse cycle (0->1->0).
-      // For example, 2 seconds => 1 second going up, 1 second going down.
-      const period = 10;
-      // Map elapsed to a 0..1 progress that repeats every `period`.
-      const t = (this.elapsed % period) / period;
-      // Use the Tween.pulse function to go from min=0 to max=1, then back to 0.
-      this.opacity = Tween.pulse(0, 1, t);
-    //
+    // Initialize scene timer
+    this.elapsed = (this.elapsed ?? 0) + dt;
+    // Use Motion.pulse to animate opacity between 0 and 1
+    const result = Motion.pulse(
+      0, // min
+      1, // max
+      this.elapsed, // elapsed time
+      10, // duration (2s up, 2s down for 0-1-0 over 4s)
+      true, // loop
+      true, // yoyo
+      Easing.easeInOutSine // optional
+    );
+    // Apply to scene
+    this.opacity = result.value;
     super.update(dt);
   }
 }
