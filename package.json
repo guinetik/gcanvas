@@ -12,7 +12,7 @@
     "build:demo": "node scripts/build-demo.js",
     "minify": "terser dist/gcanvas.umd.js -o dist/gcanvas.umd.min.js --compress --mangle && terser dist/gcanvas.es.js -o dist/gcanvas.es.min.js --compress --mangle",
     "preview": "vite preview",
-    "docs": "jsdoc -c jsdoc.json",
+    "docs": "jsdoc -c jsdoc.json --verbose",
     "deploy:demo": "gh-pages --dist public --branch gh-pages"
   },
   "repository": {
