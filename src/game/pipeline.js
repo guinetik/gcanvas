@@ -6,8 +6,8 @@
  * including special handling for Scenes (nested children).
  ***************************************************************/
 
-import { Scene } from "./objects/scene.js";
-
+import { Scene } from "./objects";
+import { Tweenetik } from "../motion"
 /**
  * Pipeline - Maintains a list of GameObjects, updating and rendering them
  * each frame. It also centralizes and dispatches pointer events (inputdown,
@@ -24,10 +24,9 @@ export class Pipeline {
      * @type {Game}
      */
     this.game = game;
-
     /**
      * The master list of top-level GameObjects to update and render.
-     * @type {Array<GameObject>}
+     * @type {GameObject[]}
      */
     this.gameObjects = [];
 
@@ -89,7 +88,6 @@ export class Pipeline {
    */
   dispatchInputEvent(type, e) {
     let handled = false;
-
     // Check from topmost to bottommost object to find the first that was hit.
     for (let i = this.gameObjects.length - 1; i >= 0; i--) {
       const obj = this.gameObjects[i];
@@ -170,6 +168,7 @@ export class Pipeline {
    * @returns {GameObject} Returns the same object for convenience.
    */
   add(gameObject) {
+    gameObject.parent = this;
     this.gameObjects = [...this.gameObjects, gameObject];
     return gameObject;
   }
@@ -184,19 +183,24 @@ export class Pipeline {
 
   /**
    * Update all active game objects. Called each frame by the Game.
+   * Only active objects are updated.
    * @param {number} dt - Delta time in seconds since the last frame.
    */
   update(dt) {
     this.gameObjects
       .filter((obj) => obj.active)
       .forEach((obj) => obj.update(dt));
+    Tweenetik.updateAll(dt);
   }
 
   /**
    * Render all active game objects. Called each frame by the Game.
+   * Only visible objects are rendered.
    */
   render() {
-    this.gameObjects.filter((obj) => obj.active).forEach((obj) => obj.render());
+    this.gameObjects
+      .filter((obj) => obj.visible)
+      .forEach((obj) => obj.render());
   }
 
   /**

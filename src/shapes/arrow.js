@@ -8,7 +8,7 @@ export class Arrow extends Shape {
   }
 
   draw() {
-    this.applyConstraints();
+    super.draw();
     const halfW = this.width / 2;
     const headLength = this.length * 0.4;
     const shaftLength = this.length - headLength;

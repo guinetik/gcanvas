@@ -44,8 +44,6 @@ class BezierDemoGame extends Game {
       x: 0,
       y: 0,
     });
-    this.pipeline.add(this.cursor);
-    this.cursor.activate();
   }
 }
 

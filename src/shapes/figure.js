@@ -29,41 +29,64 @@ export class StickFigure extends Shape {
   }
 
   draw() {
-    this.applyConstraints();
-
+    super.draw();
     const s = this.scale;
-
     // Layout
     const headR = 10 * s;
     const headCenterY = -30 * s;
-
     const neckY = headCenterY + headR;
     const torsoTop = neckY;
     const torsoBottom = torsoTop + 40 * s;
-
     const armY = torsoTop + 10 * s;
     const shoulderX = 15 * s;
-
     const hipX = 10 * s;
     const legY = torsoBottom + 40 * s;
-
     const jointR = 3 * s;
-
     this.renderWithTransform(() => {
       // Head
       Painter.fillCircle(0, headCenterY, headR, this.headColor);
-      Painter.strokeCircle(0, headCenterY, headR, this.strokeColor, this.lineWidth);
-
+      Painter.strokeCircle(
+        0,
+        headCenterY,
+        headR,
+        this.strokeColor,
+        this.lineWidth
+      );
       // Torso
-      Painter.line(0, torsoTop, 0, torsoBottom, this.strokeColor, this.lineWidth);
-
+      Painter.line(
+        0,
+        torsoTop,
+        0,
+        torsoBottom,
+        this.strokeColor,
+        this.lineWidth
+      );
       // Arms
-      Painter.line(-shoulderX, armY, shoulderX, armY, this.strokeColor, this.lineWidth);
-
+      Painter.line(
+        -shoulderX,
+        armY,
+        shoulderX,
+        armY,
+        this.strokeColor,
+        this.lineWidth
+      );
       // Legs
-      Painter.line(0, torsoBottom, -hipX, legY, this.strokeColor, this.lineWidth);
-      Painter.line(0, torsoBottom, hipX, legY, this.strokeColor, this.lineWidth);
-
+      Painter.line(
+        0,
+        torsoBottom,
+        -hipX,
+        legY,
+        this.strokeColor,
+        this.lineWidth
+      );
+      Painter.line(
+        0,
+        torsoBottom,
+        hipX,
+        legY,
+        this.strokeColor,
+        this.lineWidth
+      );
       // Joints (optional)
       if (this.showJoints) {
         const joints = [
@@ -72,7 +95,7 @@ export class StickFigure extends Shape {
           [shoulderX, armY],
           [0, torsoBottom],
           [-hipX, legY],
-          [hipX, legY]
+          [hipX, legY],
         ];
         joints.forEach(([jx, jy]) =>
           Painter.fillCircle(jx, jy, jointR, this.jointColor)
@@ -88,7 +111,7 @@ export class StickFigure extends Shape {
       x: this.x,
       y: this.y,
       width: w,
-      height: h
+      height: h,
     };
   }
 }

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Tween</title>
+  <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+  <div id="info">
+    <strong>Tween Demo</strong> - A box animated over time. The library features two motion-related classes:
+    <span style="color:#CCC">
+      <li><code>Tween</code> - Contains motion primitives, lerps and easing functions.</li>
+      <li><code>Tweenetik</code> - A shorcut class that leverates Tween to interpolate object properties over time</li>
+      <pre>
+Tweenetik.to(
+  mySprite,                         // an object or sprite
+  { scaleX: scale, scaleY: scale},  // the properties & end-values
+  2.0,                              // duration in seconds
+  Easing.easeOutBounce,             // easing function
+  {
+    delay: 0.5,                     // optional 0.5s delay
+    onStart: () => console.log("Tween started!"),
+    onComplete: () => console.log("Tween done!"),
+    onUpdate: () => console.log("Updated frame"),
+  }
+);</pre>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module">
+    import { MyGame } from './js/tweendemo.js';
+
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new MyGame(canvas);
+      game.init();
+      game.start();
+    });
+  </script>
+</body>
+
+</html>

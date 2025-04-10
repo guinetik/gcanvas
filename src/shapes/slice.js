@@ -9,7 +9,7 @@ export class PieSlice extends Shape {
   }
 
   draw() {
-    this.applyConstraints();
+    super.draw();
     this.renderWithTransform(() => {
       Painter.ctx.beginPath();
       Painter.ctx.moveTo(0, 0);

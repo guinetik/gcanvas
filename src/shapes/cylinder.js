@@ -87,8 +87,7 @@ export class Cylinder extends Shape {
    * Internal draw logic
    */
   draw() {
-    this.applyConstraints();
-
+    super.draw();
     const r = this.radius;
     const h = this.height / 2; // Half height for positioning
 

@@ -1,84 +1,97 @@
-import { Game, GameObject, FPSCounter, Text, Tween, Shapes } from "../../src/index";
+import {
+  Game,
+  GameObject,
+  FPSCounter,
+  Text,
+  Tween,
+  Shapes,
+  Painter,
+  Scene,
+  ShapeGOFactory,
+  TileLayout,
+  Motion,
+  Tweenetik,
+  Easing,
+} from "../../src/index";
 
 class ShapeGalleryGame extends Game {
   constructor(canvas) {
     super(canvas);
+    this.backgroundColor = "#fff";
     this.enableFluidSize();
     this.shapeEntries = [
       {
         name: "Line",
         class: Shapes.Line,
         args: [0, 0, 40],
-        options: { strokeColor: "black", lineWidth: 3 },
+        options: { strokeColor: "black", lineWidth: 3, anchor: "center" },
       },
       {
         name: "Rectangle",
         class: Shapes.Rectangle,
         args: [0, 0, 60, 40],
-        options: { fillColor: "blue" },
+        options: { fillColor: Painter.randomColorHSL() },
       },
       {
         name: "Square",
         class: Shapes.Square,
         args: [0, 0, 50],
-        options: { fillColor: "green" },
+        options: { fillColor: Painter.randomColorHSL() },
+      },
+      {
+        name: "Rounded Rect",
+        class: Shapes.RoundedRectangle,
+        args: [0, 0, 50, 50, 10],
+        options: { fillColor: Painter.randomColorHSL() },
+      },
+      {
+        name: "Diamond",
+        class: Shapes.Diamond,
+        args: [0, 0, 60, 60],
+        options: { fillColor: Painter.randomColorHSL() },
       },
       {
         name: "Triangle",
         class: Shapes.Triangle,
         args: [0, 0, 50],
-        options: { fillColor: "purple" },
-      },
-
-      {
-        name: "Diamond",
-        class: Shapes.Diamond,
-        args: [0, 0, 60, 60],
-        options: { fillColor: "orange" },
+        options: { fillColor: Painter.randomColorHSL() },
       },
       {
         name: "Hexagon",
         class: Shapes.Hexagon,
         args: [0, 0, 30],
-        options: { fillColor: "teal" },
+        options: { fillColor: Painter.randomColorHSL() },
       },
       {
         name: "Polygon",
         class: Shapes.Polygon,
         args: [0, 0, 9, 30],
-        options: { fillColor: "pink" },
+        options: { fillColor: Painter.randomColorHSL() },
       },
       {
         name: "Star",
         class: Shapes.Star,
         args: [0, 0, 30, 5, 0.5],
-        options: { fillColor: "gold" },
-      },
-
-      {
-        name: "PieSlice",
-        class: Shapes.PieSlice,
-        args: [0, 0, 30, 0, Math.PI],
-        options: { fillColor: "cyan" },
+        options: { fillColor: Painter.randomColorHSL() },
       },
       {
         name: "PieSlice",
         class: Shapes.PieSlice,
         args: [0, 0, 30, 0, Math.PI * 1.5],
-        options: { fillColor: "cyan" },
+        options: { fillColor: Painter.randomColorHSL() },
       },
       {
         name: "Circle",
         class: Shapes.Circle,
-        args: [0, 0, 30],
-        options: { fillColor: "red" },
+        args: [0, 0, 25],
+        options: { fillColor: Painter.randomColorHSL() },
       },
       {
         name: "Arc",
         class: Shapes.Arc,
-        args: [0, 0, 30, 0, Math.PI * 1.5],
+        args: [0, 0, 25, 0, Math.PI * 1.5],
         options: {
-          strokeColor: "#ff5733",
+          strokeColor: Painter.randomColorHSL(),
           lineWidth: 5,
         },
       },
@@ -96,7 +109,7 @@ class ShapeGalleryGame extends Game {
         ],
         options: {
           fillColor: null,
-          strokeColor: "#007acc",
+          strokeColor: Painter.randomColorHSL(),
           lineWidth: 3,
         },
       },
@@ -114,8 +127,10 @@ class ShapeGalleryGame extends Game {
           ],
         ],
         options: {
-          fillColor: "#84e0a4",
-          strokeColor: "#2b8a3e",
+          scaleX: 0.75,
+          scaleY: 0.75,
+          fillColor: Painter.randomColorHSL(),
+          strokeColor: "#000",
           lineWidth: 2,
         },
       },
@@ -129,8 +144,10 @@ class ShapeGalleryGame extends Game {
       {
         name: "Cube",
         class: Shapes.Cube,
-        args: [0, 0, 40],
+        args: [0, -10, 40],
         options: {
+          scaleX: 0.7,
+          scaleY: 0.7,
           faceTopColor: "#f00",
           faceLeftColor: "#0f0",
           faceRightColor: "#00f",
@@ -144,8 +161,10 @@ class ShapeGalleryGame extends Game {
       {
         name: "Prism",
         class: Shapes.Prism,
-        args: [0, 0, 40, 40, 40],
+        args: [0, -10, 40, 40, 40],
         options: {
+          scaleX: 0.7,
+          scaleY: 0.7,
           faceFrontColor: "#6495ED",
           faceBackColor: "#4169E1",
           faceBottomColor: "#1E90FF",
@@ -183,8 +202,10 @@ class ShapeGalleryGame extends Game {
       {
         name: "Sphere",
         class: Shapes.Sphere,
-        args: [0, 0, 25, 40],
+        args: [0, -10, 25, 40],
         options: {
+          scaleX: 0.7,
+          scaleY: 0.7,
           color: "#FF6347", // Tomato base color
           hSegments: 16, // Fewer segments for wireframe
           vSegments: 12,
@@ -267,122 +288,122 @@ class ShapeGalleryGame extends Game {
 
   createGallery() {
     const cellSize = 120;
-    const padding = 20;
-    const spacing = 16; // space between grid items
-    const cols = Math.ceil(Math.sqrt(this.shapeEntries.length));
-    const rows = Math.ceil(this.shapeEntries.length / cols);
+    // Migrating to TileLayout those variables become irrelevant, but its good to have for a quick tile setup on another thing
+    //const padding = 20;
+    //const spacing = 16; // space between grid items
+    //const cols = Math.ceil(Math.sqrt(this.shapeEntries.length));
+    //const rows = Math.ceil(this.shapeEntries.length / cols);
+    //const gridWidth = cols * cellSize + (cols - 1) * spacing;
+    //const gridHeight = rows * cellSize + (rows - 1) * spacing;
+    //const originX = 0;
+    //const originY = 0;
 
-    const gridWidth = cols * cellSize + (cols - 1) * spacing;
-    const gridHeight = rows * cellSize + (rows - 1) * spacing;
-
-    const originX = padding + (this.canvas.width - 2 * padding - gridWidth) / 2;
-    const originY =
-      padding + (this.canvas.height - 2 * padding - gridHeight) / 2;
+    const gallery = new TileLayout(this, {
+      debug: true,
+      anchor: "center",
+      columns: 5,
+      debug: false,
+    });
 
     this.shapeEntries.forEach((entry, index) => {
-      const col = index % cols;
-      const row = Math.floor(index / cols);
-      const x = originX + col * (cellSize + spacing) + cellSize / 2;
-      const y = originY + row * (cellSize + spacing) + cellSize / 2;
-
-      const cellRect = new Shapes.Rectangle(
-        x,
-        y,
-        cellSize - 10,
-        cellSize - 10,
+      //const col = index % cols;
+      //const row = Math.floor(index / cols);
+      //const x = originX + col * (cellSize + spacing) + cellSize / 2;
+      //const y = originY + row * (cellSize + spacing) + cellSize / 2;
+      //
+      const group = new Shapes.Group(0, 0);
+      group.width = group.height = cellSize;
+      const bg = new Shapes.Rectangle(0, 0, cellSize - 10, cellSize - 10, {
+        strokeColor: "rgba(0,0,0,0.1)",
+        lineWidth: 1,
+      });
+      const shape = new entry.class(...entry.args, entry.options);
+      entry.shape = shape;
+      const label = new Shapes.TextShape(
+        0,
+        (cellSize - 10) / 2 - 12,
+        entry.name,
         {
-          strokeColor: "rgba(0,0,0,0.1)",
-          lineWidth: 1,
+          font: "12px monospace",
+          color: "#333",
+          align: "center",
+          baseline: "bottom",
         }
       );
+      group.add(bg);
+      group.add(shape);
+      group.add(label);
+      //
+      //
+      const go = ShapeGOFactory.create(this, group);
+      go.entry = entry;
+      go.enableInteractivity(group);
+      go.hovered = false;
+      go.rotation = 0;
+      go.rotationVelocity = 0;
+      go.startTime = 0;
+      go.width = go.height = cellSize;
+      const game = this;
+      go.on("mouseover", () => {
+        go.scaleX = go.scaleY = 1;
+        game.canvas.style.cursor = "pointer";
+        Tweenetik.to(
+          go, // the shape to scale
+          { scaleX: 1.3, scaleY: 1.3 },
+          1, // duration
+          Easing.easeOutElastic,
+          { onComplete: () => (go.tweening = false) }
+        );
+        go.tweening = true;
+      });
+      go.on("mouseout", () => {
+        game.canvas.style.cursor = "default";
+        Tweenetik.to(
+          go, // the shape to scale
+          { scaleX: 1, scaleY: 1 },
+          1, // duration
+          Easing.easeOutElastic
+        );
+      });
+      function update(dt) {
+        if (
+          go.entry.name === "Sphere" ||
+          go.entry.name == "Cube" ||
+          go.entry.name === "Prism" ||
+          go.entry.name === "Cylinder" ||
+          go.entry.name === "Cone"
+        ) {
+          const entry = go.entry;
+          const game = go.game;
+          //console.log(e);
+          function animate() {
+            if (!go.startTime) go.startTime = game.lastTime;
+            const elapsed = game.lastTime - go.startTime;
+            // Calculate rotation angles
+            // Calculate rotation angles (convert to radians)
+            const rotationSpeed = 0.001;
+            const xRotation = (Math.sin(elapsed * 0.0005) * Math.PI) / 4;
+            const yRotation = (elapsed * rotationSpeed) % (Math.PI * 2);
+            const zRotation = (Math.cos(elapsed * 0.0003) * Math.PI) / 6;
 
-      const gallery = new (class extends GameObject {
-        constructor(game) {
-          super(game);
-          // create group with center at (x, y)
-          const group = new Shapes.Group(x, y);
-          const bg = new Shapes.Rectangle(0, 0, cellSize - 10, cellSize - 10, {
-            strokeColor: "rgba(0,0,0,0.1)",
-            lineWidth: 1,
-          });
-          const shape = new entry.class(...entry.args, entry.options);
-          group.add(bg);
-          group.add(shape);
-
-          const label = new Shapes.TextShape(
-            0,
-            (cellSize - 10) / 2 - 12,
-            entry.name,
-            {
-              font: "12px monospace",
-              color: "#333",
-              align: "center",
-              baseline: "bottom",
-            }
-          );
-
-          group.add(label);
-
-          this.group = group;
-          this.entry = entry;
-          this.entry.shape = shape;
-          this.enableInteractivity(this.group);
-
-          this.hovered = false;
-          this.rotation = 0;
-          this.rotationVelocity = 0;
-          this.startTime = 0;
-          this.on("mouseover", () => (this.hovered = true));
-          this.on("mouseout", () => (this.hovered = false));
-        }
-
-        update(dt) {
-          if (
-            this.entry.name === "Sphere" ||
-            this.entry.name == "Cube" ||
-            this.entry.name === "Prism" ||
-            this.entry.name === "Cylinder" ||
-            this.entry.name === "Cone"
-          ) {
-            const entry = this.entry;
-            const game = this.game;
-            const e = this;
-            //console.log(e);
-            function animate() {
-              if (!e.startTime) e.startTime = game.lastTime;
-              const elapsed = game.lastTime - e.startTime;
-              // Calculate rotation angles
-              // Calculate rotation angles (convert to radians)
-              const rotationSpeed = 0.001;
-              const xRotation = (Math.sin(elapsed * 0.0005) * Math.PI) / 4;
-              const yRotation = (elapsed * rotationSpeed) % (Math.PI * 2);
-              const zRotation = (Math.cos(elapsed * 0.0003) * Math.PI) / 6;
-
-              // Apply rotations
-              entry.shape.setRotation(xRotation, yRotation, zRotation);
-            }
-            animate();
+            // Apply rotations
+            entry.shape.setRotation(xRotation, yRotation, zRotation);
           }
-          const target = this.hovered ? 0.8 : 0;
-          const spring = Tween.spring(this.rotation, target, {
-            velocity: this.rotationVelocity,
-            stiffness: 0.15,
-            damping: 0.7,
-          });
-
-          this.rotation = spring.value;
-          this.rotationVelocity = spring.velocity;
-
-          this.group.rotation = this.rotation;
+          animate();
         }
-
-        render() {
-          this.group.draw();
-        }
-      })(this);
-
-      this.pipeline.add(gallery);
+      }
+      function render() {
+        group.draw();
+      }
+      const originalUpdate = go.update;
+      go.update = (dt) => {
+        originalUpdate(dt);
+        update(dt);
+      };
+      go.render = render;
+      gallery.add(go);
     });
+    this.pipeline.add(gallery);
   }
 }
 

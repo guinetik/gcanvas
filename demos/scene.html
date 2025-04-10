@@ -18,12 +18,13 @@
     </div>
     <canvas id="game"></canvas>
     <script type="module">
-        import { Game, Scene, Button, FPSCounter, GameObject, VerticalLayout, Rectangle, Group, applyDraggable, Tween } from "../src/index.js";
+        import { Game, Scene, Button, FPSCounter, GameObject, VerticalLayout, Rectangle, Group, applyDraggable, Painter, Tween, Easing } from "../src/index.js";
         // Demo Game with Scenes
         class DemoGame extends Game {
             constructor(canvas) {
                 super(canvas);
                 this.enableFluidSize();
+                this.backgroundColor = "white";
             }
 
             init() {
@@ -73,7 +74,7 @@
                 const size = 100;
                 const x = Math.random() * (game.width - size);
                 const y = Math.random() * (game.height - size);
-                const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                const color = Painter.randomColorHSL();
                 // Create a rectangle and group
                 this.rect = new Rectangle(0, 0, size, size, {
                     fillColor: color,
@@ -137,8 +138,8 @@
                 if (this.scaleTime < this.scaleDuration) {
                     this.scaleTime += dt;
                     const t = Math.min(this.scaleTime / this.scaleDuration, 1);
-                    const eased = Tween.easeOutElastic(t);
-                    const scale = Tween.tween(this.startScale, this.targetScale, eased);
+                    const eased = Easing.easeOutElastic(t);
+                    const scale = Tween.lerp(this.startScale, this.targetScale, eased);
                     this.group.scaleX = this.group.scaleY = scale;
                 }
                 this.group.x = this.x;

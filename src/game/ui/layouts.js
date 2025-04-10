@@ -1,7 +1,7 @@
 import { Scene } from "../../game/";
 import { Rectangle } from "../../shapes";
 
-export class LayoutGroup extends Scene {
+export class LayoutScene extends Scene {
   constructor(game, options = {}) {
     super(game, options);
     this.spacing = options.spacing ?? 10;
@@ -17,7 +17,7 @@ export class LayoutGroup extends Scene {
     if (this.debug) {
       const debugRect = new Rectangle(
         this.x + this.width / 2,
-        this.y + this.height / 2,
+        Math.round(this.y + this.height / 2),
         this.width,
         this.height,
         {
@@ -26,6 +26,7 @@ export class LayoutGroup extends Scene {
           lineWidth: 1,
         }
       );
+      //console.log("Debug Rect", debugRect.x, debugRect.y, debugRect.width, debugRect.height);
       debugRect.draw();
     }
     super.render();
@@ -50,7 +51,7 @@ export class LayoutGroup extends Scene {
   }
 }
 
-export class HorizontalLayout extends LayoutGroup {
+export class HorizontalLayout extends LayoutScene {
   update(dt) {
     // Start at left padding
     let x = this.padding;
@@ -59,7 +60,6 @@ export class HorizontalLayout extends LayoutGroup {
     for (let child of this.children) {
       maxHeight = Math.max(maxHeight, child.height ?? 0);
     }
-
     // Iterate and position each child
     for (let i = 0; i < this.children.length; i++) {
       const child = this.children[i];
@@ -67,7 +67,7 @@ export class HorizontalLayout extends LayoutGroup {
       const middleY = this.y + (child.height ?? 0) / 2;
       // Position X in world coordinates
       child.x = this.x + x + (child.width ?? 0) / 2;
-
+      //console.log("child.x", i, child.x, child.y);
       // Align vertically
       switch (this.align) {
         case "center":
@@ -81,17 +81,15 @@ export class HorizontalLayout extends LayoutGroup {
         default:
           child.y = middleY + this.padding;
       }
-
       // Advance X
       x += child.width ?? 0;
       if (i < this.children.length - 1) {
         x += this.spacing;
       }
     }
-
     // Auto-size the layout group
     if (this.autoSize) {
-      this.width = x - this.spacing + this.padding * 2;
+      this.width = x + this.padding;
       this.height = maxHeight + 2 * this.padding;
     }
 
@@ -99,7 +97,7 @@ export class HorizontalLayout extends LayoutGroup {
   }
 }
 
-export class VerticalLayout extends LayoutGroup {
+export class VerticalLayout extends LayoutScene {
   update(dt) {
     // Set the initial y position equal to the padding
     let y = this.padding;
@@ -137,10 +135,93 @@ export class VerticalLayout extends LayoutGroup {
     }
     // If autoSize is enabled, update the layout's width and height
     if (this.autoSize) {
-      this.height = y - this.spacing + this.padding * 2;
-      this.width = maxWidth + 2 * this.padding;
+      this.height = y + this.padding;
+      this.width  = maxWidth + 2 * this.padding;
     }
     // Call the parent class's update method
     super.update(dt);
   }
 }
+/**
+ * TileLayout
+ *
+ * Assumes all children have the same width and height (a uniform tile size).
+ * Lays them out in rows & columns, filling each row until it hits 'columns',
+ * then continuing to the next row. The grid automatically adjusts its overall
+ * width & height if autoSize is true.
+ */
+export class TileLayout extends LayoutScene {
+  /**
+   * @param {Game} game
+   * @param {object} options
+   * @param {number} [options.columns=4] - How many squares per row
+   * @param {number} [options.spacing=10] - Spacing between squares
+   * @param {number} [options.padding=0] - Extra padding on the outside
+   * @param {boolean} [options.autoSize=true] - Whether to update this.width/height to match the content
+   * @param {...any} rest - Additional LayoutGroup options
+   */
+  constructor(game, options = {}) {
+    super(game, options);
+    this.columns = options.columns ?? 4; // default 4 columns
+  }
+
+  update(dt) {
+    // If no children, nothing to lay out.
+    if (!this.children.length) {
+      super.update(dt);
+      return;
+    }
+
+    // For uniform squares, just read the first child's width & height
+    // (assuming they're identical for all children).
+    const tileSize = this.children[0].width || 0;
+
+    // Starting position:
+    let x = this.padding;
+    let y = this.padding;
+    let colIndex = 0;
+
+    // Arrange each child in row-major order
+    for (let i = 0; i < this.children.length; i++) {
+      const child = this.children[i];
+
+      // Center the child on (x + tileSize/2, y + tileSize/2)
+      child.x = this.x + x + tileSize / 2;
+      child.y = this.y + y + tileSize / 2;
+
+      // Move to the next column
+      colIndex++;
+      if (colIndex < this.columns) {
+        // Still in the same row
+        x += tileSize + this.spacing;
+      } else {
+        // Wrap to the next row
+        colIndex = 0;
+        x = this.padding;
+        y += tileSize + this.spacing;
+      }
+    }
+
+    // If autoSize, compute width/height to snugly fit the grid
+    if (this.autoSize) {
+      // Number of total rows used
+      const rowCount = Math.ceil(this.children.length / this.columns);
+
+      // Total width = columns * tileSize + (columns - 1)*spacing + 2*padding
+      this.width =
+        this.columns * tileSize +
+        (this.columns - 1) * this.spacing +
+        this.padding * 2;
+
+      // Total height = rowCount * tileSize + (rowCount - 1)*spacing + 2*padding
+      this.height =
+        rowCount * tileSize +
+        (rowCount - 1) * this.spacing +
+        this.padding * 2;
+    }
+
+    // Call our parent to handle child updates, debug rect, etc.
+    super.update(dt);
+  }
+}
+

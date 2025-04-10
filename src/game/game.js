@@ -12,6 +12,9 @@ import { EventEmitter } from "../io";
 import { Mouse } from "../io";
 import { Input } from "../io";
 import { Touch } from "../io";
+import { Keys } from "../io";
+import { Cursor } from "./ui/cursor.js";
+import { Tweenetik } from "../motion/tweenetik.js";
 
 /**
  * Core Game class. Provides lifecycle management, the update/render loop,
@@ -33,47 +36,45 @@ export class Game {
      * @type {HTMLCanvasElement}
      */
     this.canvas = canvas;
-
     /**
      * The 2D rendering context.
      * @type {CanvasRenderingContext2D}
      */
     this.ctx = canvas.getContext("2d");
-
     /**
      * A centralized event emitter for the entire Game.
      * Handles mouse/keyboard/touch input as well as custom events.
      * @type {EventEmitter}
      */
     this.events = new EventEmitter();
-
-    // Initialize pointer & input subsystems with reference to this game.
-    Mouse.init(this);
-    Touch.init(this);
-    Input.init(this);
-
+    /**
+     * The pipeline is a collection of GameObjects that are updated and rendered each frame.
+     * @type {Cursor}
+     */
+    this._cursor = null;
     /**
      * Tracks the timestamp of the previous frame for calculating delta time.
      * @type {number}
      * @private
      */
     this.lastTime = 0;
-
     /**
      * Flag indicating if the game loop is currently running.
      * @type {boolean}
      */
     this.running = false;
-
     /**
-     * The pipeline that manages updating and rendering all GameObjects.
+     * The pipeline is a collection of GameObjects that are updated and rendered each frame.
      * @type {Pipeline}
      */
     this.pipeline = new Pipeline(this);
-
+    //
     // Initialize Painter with this game's 2D context.
     Painter.init(this.ctx);
-
+    //
+    // Initialize pointer & input subsystems with reference to this game.
+    this.initIO();
+    this.initMotion();
     console.log("[Game] Constructor");
   }
 
@@ -84,6 +85,64 @@ export class Game {
    */
   init() {
     console.log("[Game] Initialized");
+  }
+
+  /**
+   * Initialize Mouse events.
+   * This is called automatically in the constructor.
+   * Override to add custom mouse event handlers, or disable them.
+   */
+  initMouse() {
+    Mouse.init(this);
+  }
+
+  /**
+   * Initialize Touch events.
+   * This is called automatically in the constructor.
+   * Override to add custom touch event handlers, or disable them.
+   */
+  initTouch() {
+    Touch.init(this);
+  }
+
+  /**
+   * Initialize Input Events.
+   * An Input event is a combined event for mouse and touch that streamlines hover and click interactions.
+   * This is called automatically in the constructor.
+   * Override to add custom input event handlers, or disable them.
+   */
+  initInput() {
+    Input.init(this);
+  }
+
+  /**
+   * Initialize Keyboard events.
+   * This is called automatically in the constructor.
+   * Override to add custom keyboard event handlers, or disable them.
+   */
+  initKeyboard() {
+    Keys.init(this);
+  }
+
+  /**
+   * Initialize I/O Events.
+   * This is a convenience method to set up all input systems at once.
+   * This is called automatically in the constructor.
+   * Override to add custom event handlers, or disable them.
+   */
+  initIO() {
+    this.initMouse();
+    this.initTouch();
+    this.initInput();
+    this.initKeyboard();
+  }
+
+  initMotion() {
+    /**
+     * Holds all currently active Tweenetik instances.
+     * Always call Tweenetik.updateAll(dt) in your game loop to drive them.
+     */
+    Tweenetik._active = [];
   }
 
   /**
@@ -98,7 +157,6 @@ export class Game {
       };
       resizeCanvas(); // set initial size
       window.addEventListener("resize", resizeCanvas);
-
       this._fluidResizeCleanup = () => {
         window.removeEventListener("resize", resizeCanvas);
       };
@@ -172,15 +230,12 @@ export class Game {
    */
   loop(timestamp) {
     if (!this.running) return;
-
     // Compute delta time (dt) in seconds since last frame.
     const dt = (timestamp - this.lastTime) / 1000;
     this.lastTime = timestamp;
-
     // Update and render the game state.
     this.update(dt);
     this.render();
-
     // Schedule the next frame.
     requestAnimationFrame(this.loop);
   }
@@ -235,5 +290,39 @@ export class Game {
    */
   set backgroundColor(color) {
     this.canvas.style.backgroundColor = color;
+  }
+
+  /**
+   * Sets the cursor for the game.
+   * @param {Cursor} cursor - The cursor to set.
+   */
+  set cursor(cursor) {
+    if (this._cursor) {
+      this._cursor.destroy();
+      this.pipeline.remove(this._cursor);
+    }
+    this._cursor = cursor;
+    this._cursor.activate();
+    // add the cursor to the pipeline
+    this.pipeline.add(cursor);
+  }
+
+  /**
+   * Returns the current cursor.
+   * @returns {Cursor}
+   */
+  get cursor() {
+    return this._cursor;
+  }
+
+  /**
+   * Deactivates the current cursor and removes it from the pipeline.
+   */
+  resetCursor() {
+    if (this._cursor) {
+      this._cursor.destroy();
+      this.pipeline.remove(this._cursor);
+      this._cursor = null;
+    }
   }
 }
