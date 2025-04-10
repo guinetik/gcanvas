@@ -24,7 +24,8 @@ export class Rectangle extends Shape {
    * Renders the rectangle using Painter.
    */
   draw() {
-    super.draw();
+    this.applyConstraints();
+
     this.renderWithTransform(() => {
       const x = -this.width / 2;
       const y = -this.height / 2;
