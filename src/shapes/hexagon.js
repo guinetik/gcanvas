@@ -7,7 +7,7 @@ export class Hexagon extends Shape {
   }
 
   draw() {
-    super.draw();
+    this.applyConstraints();
     const points = Array.from({ length: 6 }, (_, i) => {
       const angle = (Math.PI / 3) * i;
       return {

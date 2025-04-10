@@ -14,13 +14,12 @@ export class BezierShape extends Shape {
    * @param {object} options - fillColor, strokeColor, etc
    */
   constructor(x, y, path = [], options = {}) {
-    console.log("new Bezier", options);
     super(x, y, options);
     this.path = path;
   }
 
   draw() {
-    super.draw();
+    this.applyConstraints();
     this.renderWithTransform(() => {
       Painter.path(this.path, this.fillColor, this.strokeColor, this.lineWidth);
     });

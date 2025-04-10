@@ -21,7 +21,8 @@ export class Cross extends Shape {
   }
 
   draw() {
-    super.draw();
+    this.applyConstraints();
+
     this.renderWithTransform(() => {
       const s = this.size / 2;
       const t = this.thickness / 2;

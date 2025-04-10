@@ -9,7 +9,8 @@ export class Polygon extends Shape {
   }
 
   draw() {
-    super.draw();
+    this.applyConstraints();
+
     const points = [];
     const step = (2 * Math.PI) / this.sides;
 

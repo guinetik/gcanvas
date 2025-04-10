@@ -29,7 +29,8 @@ export class Diamond extends Shape {
    * Renders the diamond using four corner points.
    */
   draw() {
-    super.draw();
+    this.applyConstraints();
+
     this.renderWithTransform(() => {
       const halfW = this.width / 2;
       const halfH = this.height / 2;

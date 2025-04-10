@@ -9,7 +9,8 @@ export class Heart extends Shape {
   }
 
   draw() {
-    super.draw();
+    this.applyConstraints();
+
     const w = this.width;
     const h = this.height;
     const topCurveHeight = h * 0.3;

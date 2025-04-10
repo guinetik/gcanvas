@@ -22,7 +22,7 @@ export class Arc extends Shape {
   }
 
   draw() {
-    super.draw();
+    this.applyConstraints();
     this.renderWithTransform(() => {
       const ctx = Painter.ctx;
       ctx.beginPath();

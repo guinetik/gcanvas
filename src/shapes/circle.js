@@ -27,8 +27,9 @@ export class Circle extends Shape {
   /**
    * Renders the circle using the Painter API.
    */
-  draw() { 
-    super.draw();
+  draw() {
+    this.applyConstraints();
+
     this.renderWithTransform(() => {
       if (this.fillColor) {
         Painter.fillCircle(0, 0, this.radius, this.fillColor);

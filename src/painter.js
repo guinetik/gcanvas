@@ -116,136 +116,6 @@ export class Painter {
   }
 
   /**
-   * Draw a rounded rectangle
-   * @param {number} x - X coordinate (top-left)
-   * @param {number} y - Y coordinate (top-left)
-   * @param {number} width - Width
-   * @param {number} height - Height
-   * @param {number|number[]} radii - Corner radius or array of radii for each corner
-   * @param {string|CanvasGradient} [fillColor] - Fill color
-   * @param {string|CanvasGradient} [strokeColor] - Stroke color
-   * @param {number} [lineWidth] - Line width
-   * @returns {void}
-   */
-  static roundRect(
-    x,
-    y,
-    width,
-    height,
-    radii = 0,
-    fillColor,
-    strokeColor,
-    lineWidth
-  ) {
-    // Handle radius either as a single value or array
-    let radiusArray;
-    if (typeof radii === "number") {
-      radiusArray = [radii, radii, radii, radii]; // [topLeft, topRight, bottomRight, bottomLeft]
-    } else if (Array.isArray(radii)) {
-      // Ensure we have exactly 4 values
-      radiusArray =
-        radii.length === 4
-          ? radii
-          : [
-              radii[0] || 0,
-              radii[1] || radii[0] || 0,
-              radii[2] || radii[0] || 0,
-              radii[3] || radii[1] || radii[0] || 0,
-            ];
-    } else {
-      radiusArray = [0, 0, 0, 0];
-    }
-
-    const [tlRadius, trRadius, brRadius, blRadius] = radiusArray;
-    const right = x + width;
-    const bottom = y + height;
-
-    Painter.ctx.beginPath();
-
-    // Start from the top-left corner and draw clockwise
-    Painter.ctx.moveTo(x + tlRadius, y);
-
-    // Top edge and top-right corner
-    Painter.ctx.lineTo(right - trRadius, y);
-    Painter.ctx.arc(right - trRadius, y + trRadius, trRadius, -Math.PI / 2, 0);
-
-    // Right edge and bottom-right corner
-    Painter.ctx.lineTo(right, bottom - brRadius);
-    Painter.ctx.arc(
-      right - brRadius,
-      bottom - brRadius,
-      brRadius,
-      0,
-      Math.PI / 2
-    );
-
-    // Bottom edge and bottom-left corner
-    Painter.ctx.lineTo(x + blRadius, bottom);
-    Painter.ctx.arc(
-      x + blRadius,
-      bottom - blRadius,
-      blRadius,
-      Math.PI / 2,
-      Math.PI
-    );
-
-    // Left edge and top-left corner
-    Painter.ctx.lineTo(x, y + tlRadius);
-    Painter.ctx.arc(
-      x + tlRadius,
-      y + tlRadius,
-      tlRadius,
-      Math.PI,
-      -Math.PI / 2
-    );
-
-    Painter.ctx.closePath();
-
-    if (fillColor) {
-      Painter.ctx.fillStyle = fillColor;
-      Painter.ctx.fill();
-    }
-
-    if (strokeColor) {
-      Painter.ctx.strokeStyle = strokeColor;
-      if (lineWidth !== undefined) Painter.ctx.lineWidth = lineWidth;
-      Painter.ctx.stroke();
-    }
-  }
-
-  /**
-   * Draw a filled rounded rectangle
-   * @param {number} x - X coordinate (top-left)
-   * @param {number} y - Y coordinate (top-left)
-   * @param {number} width - Width
-   * @param {number} height - Height
-   * @param {number|number[]} radii - Corner radius or array of radii
-   * @param {string|CanvasGradient} [color] - Fill color
-   * @returns {void}
-   */
-  static fillRoundRect(x, y, width, height, radii = 0, color) {
-    if (color) Painter.ctx.fillStyle = color;
-    Painter.roundRect(x, y, width, height, radii, color, null);
-  }
-
-  /**
-   * Draw a stroked rounded rectangle
-   * @param {number} x - X coordinate (top-left)
-   * @param {number} y - Y coordinate (top-left)
-   * @param {number} width - Width
-   * @param {number} height - Height
-   * @param {number|number[]} radii - Corner radius or array of radii
-   * @param {string|CanvasGradient} [color] - Stroke color
-   * @param {number} [lineWidth] - Line width
-   * @returns {void}
-   */
-  static strokeRoundRect(x, y, width, height, radii = 0, color, lineWidth) {
-    if (color) Painter.ctx.strokeStyle = color;
-    if (lineWidth !== undefined) Painter.ctx.lineWidth = lineWidth;
-    Painter.roundRect(x, y, width, height, radii, null, color, lineWidth);
-  }
-
-  /**
    * Draw a filled circle
    * @param {number} x - Center X
    * @param {number} y - Center Y
@@ -653,138 +523,6 @@ export class Painter {
     return `hsla(${h}, ${s}%, ${l}%, ${a})`;
   }
 
-  /**
-   * Generate a random pleasing color in RGB format
-   * @returns {Array<number>} RGB color array [r, g, b]
-   */
-  static randomColorRGB() {
-    // Generate vibrant, pleasing colors by using HSL first
-    // then converting to RGB
-    // Random hue (0-360)
-    const hue = Math.floor(Math.random() * 360);
-    // High saturation for vibrant colors (70-100%)
-    const saturation = 70 + Math.floor(Math.random() * 30);
-    // Medium-high lightness for visibility (50-70%)
-    const lightness = 50 + Math.floor(Math.random() * 20);
-    // Convert HSL to RGB
-    return Painter.hslToRgb(hue, saturation, lightness);
-  }
-
-  static randomColorHSL() {
-    return `hsl(${Math.random() * 360}, 100%, 50%)`;
-  }
-
-  static randomColorHEX() {
-    let n = (Math.random() * 0xfffff * 1000000).toString(16);
-    return "#" + n.slice(0, 6);
-  }
-
-  static parseColorString(str) {
-    str = str.trim().toLowerCase();
-
-    // 1) Check if it's hsl(...) form
-    if (str.startsWith("hsl")) {
-      // e.g. "hsl(130, 100%, 50%)"
-      // Remove "hsl(" and ")" => "130, 100%, 50%"
-      const inner = str.replace(/hsla?\(|\)/g, "");
-      const [hue, satPercent, lightPercent] = inner
-        .split(",")
-        .map((c) => c.trim());
-      const h = parseFloat(hue);
-      const s = parseFloat(satPercent) / 100;
-      const l = parseFloat(lightPercent) / 100;
-      return Painter.hslToRgb(h, s, l); // Convert HSL->RGB
-    }
-
-    // 2) Check if it's #RRGGBB
-    if (str.startsWith("#")) {
-      // e.g. "#ff00ff" => r=255,g=0,b=255
-      return hexToRgb(str);
-    }
-
-    // 3) If it's rgb(...) form, parse that
-    if (str.startsWith("rgb")) {
-      // e.g. "rgb(255, 128, 50)"
-      // Remove "rgb(" + ")"
-      const inner = str.replace(/rgba?\(|\)/g, "");
-      const [r, g, b] = inner.split(",").map((x) => parseInt(x.trim()));
-      return [r, g, b];
-    }
-
-    // Fallback: assume black
-    return [0, 0, 0];
-  }
-
-  /**
-   * Convert [r,g,b] => "rgb(r, g, b)" string
-   */
-  static rgbArrayToCSS([r, g, b]) {
-    return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
-  }
-
-  /**
-   * Convert HSL => [r,g,b] (0..255).
-   * Formulas from standard color conversion references.
-   */
-  static hslToRgb(h, s, l) {
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const hPrime = h / 60;
-    const x = c * (1 - Math.abs((hPrime % 2) - 1));
-    let [r, g, b] = [0, 0, 0];
-
-    if (hPrime >= 0 && hPrime < 1) [r, g, b] = [c, x, 0];
-    else if (hPrime >= 1 && hPrime < 2) [r, g, b] = [x, c, 0];
-    else if (hPrime >= 2 && hPrime < 3) [r, g, b] = [0, c, x];
-    else if (hPrime >= 3 && hPrime < 4) [r, g, b] = [0, x, c];
-    else if (hPrime >= 4 && hPrime < 5) [r, g, b] = [x, 0, c];
-    else if (hPrime >= 5 && hPrime < 6) [r, g, b] = [c, 0, x];
-
-    const m = l - c / 2;
-    return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
-  }
-
-  static rgbToHsl(r, g, b) {
-    r /= 255;
-    g /= 255;
-    b /= 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const delta = max - min;
-
-    let h = 0,
-      s = 0,
-      l = (max + min) / 2;
-
-    if (delta !== 0) {
-      s = delta / (1 - Math.abs(2 * l - 1));
-      switch (max) {
-        case r:
-          h = 60 * (((g - b) / delta + 6) % 6);
-          break;
-        case g:
-          h = 60 * ((b - r) / delta + 2);
-          break;
-        case b:
-          h = 60 * ((r - g) / delta + 4);
-          break;
-      }
-    }
-
-    return [h % 360, s, l];
-  }
-
-  /**
-   * Convert a hex color like "#ff00ff" => [255, 0, 255].
-   */
-  static hexToRgb(hex) {
-    const clean = hex.replace("#", "");
-    const r = parseInt(clean.substring(0, 2), 16);
-    const g = parseInt(clean.substring(2, 4), 16);
-    const b = parseInt(clean.substring(4, 6), 16);
-    return [r, g, b];
-  }
-
   // =========================================================================
   // GRADIENT METHODS
   // =========================================================================
@@ -856,23 +594,43 @@ export class Painter {
   }
 
   /**
-   * Create a conic gradient
-   * @param {number} x - Center X
-   * @param {number} y - Center Y
-   * @param {number} startAngle - Start angle in radians
-   * @param {Array<{offset: number, color: string}>} colorStops - Array of color stops
-   * @returns {CanvasGradient} The created gradient
+   * Convert HSL color to RGB
+   * @param {number} h - Hue (0-360)
+   * @param {number} s - Saturation (0-100)
+   * @param {number} l - Lightness (0-100)
+   * @returns {Array<number>} RGB color array [r, g, b]
    */
-  static conicGradient(x, y, startAngle, colorStops) {
-    // For browsers that support it
-    if (typeof Painter.ctx.createConicGradient === "function") {
-      const gradient = Painter.ctx.createConicGradient(startAngle, x, y);
-      for (const stop of colorStops) {
-        gradient.addColorStop(stop.offset, stop.color);
-      }
-      return gradient;
+  static hslToRgb(h, s, l) {
+    // Convert HSL percentages to decimals
+    s /= 100;
+    l /= 100;
+
+    const c = (1 - Math.abs(2 * l - 1)) * s;
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+    const m = l - c / 2;
+
+    let r, g, b;
+
+    if (h < 60) {
+      [r, g, b] = [c, x, 0];
+    } else if (h < 120) {
+      [r, g, b] = [x, c, 0];
+    } else if (h < 180) {
+      [r, g, b] = [0, c, x];
+    } else if (h < 240) {
+      [r, g, b] = [0, x, c];
+    } else if (h < 300) {
+      [r, g, b] = [x, 0, c];
+    } else {
+      [r, g, b] = [c, 0, x];
     }
-    return null;
+
+    // Convert to RGB values (0-255)
+    return [
+      Math.round((r + m) * 255),
+      Math.round((g + m) * 255),
+      Math.round((b + m) * 255),
+    ];
   }
 
   // =========================================================================
@@ -887,7 +645,7 @@ export class Painter {
    * @param {number} [offsetY=0] - Shadow Y offset
    * @returns {void}
    */
-  static dropShadow(color, blur, offsetX = 0, offsetY = 0) {
+  static setShadow(color, blur, offsetX = 0, offsetY = 0) {
     Painter.ctx.shadowColor = color;
     Painter.ctx.shadowBlur = blur;
     Painter.ctx.shadowOffsetX = offsetX;
@@ -921,323 +679,5 @@ export class Painter {
    */
   static setBlendMode(operation) {
     Painter.ctx.globalCompositeOperation = operation;
-  }
-
-  /**
-   * Draw a dashed line
-   * @param {number} x1 - Start X
-   * @param {number} y1 - Start Y
-   * @param {number} x2 - End X
-   * @param {number} y2 - End Y
-   * @param {Array<number>} dash - Dash pattern array [dash, gap, dash, gap, ...]
-   * @param {string|CanvasGradient} [color] - Line color
-   * @param {number} [lineWidth] - Line width
-   * @returns {void}
-   */
-  static dashedLine(x1, y1, x2, y2, dash, color, lineWidth) {
-    Painter.ctx.beginPath();
-    if (color) Painter.ctx.strokeStyle = color;
-    if (lineWidth !== undefined) Painter.ctx.lineWidth = lineWidth;
-
-    // Set the dash pattern
-    Painter.ctx.setLineDash(dash);
-
-    Painter.ctx.moveTo(x1, y1);
-    Painter.ctx.lineTo(x2, y2);
-    Painter.ctx.stroke();
-
-    // Reset the dash pattern
-    Painter.ctx.setLineDash([]);
-  }
-
-  /**
-   * Draw a dotted line
-   * @param {number} x1 - Start X
-   * @param {number} y1 - Start Y
-   * @param {number} x2 - End X
-   * @param {number} y2 - End Y
-   * @param {number} dotSize - Size of dots
-   * @param {number} gap - Gap between dots
-   * @param {string|CanvasGradient} [color] - Line color
-   * @returns {void}
-   */
-  static dottedLine(x1, y1, x2, y2, dotSize = 2, gap = 5, color) {
-    return Painter.dashedLine(x1, y1, x2, y2, [dotSize, gap], color, dotSize);
-  }
-
-  /**
-   * Draw quadratic curve
-   * @param {number} x1 - Start X
-   * @param {number} y1 - Start Y
-   * @param {number} cpx - Control point X
-   * @param {number} cpy - Control point Y
-   * @param {number} x2 - End X
-   * @param {number} y2 - End Y
-   * @param {string|CanvasGradient} [color] - Stroke color
-   * @param {number} [lineWidth] - Line width
-   * @returns {void}
-   */
-  static quadraticCurve(x1, y1, cpx, cpy, x2, y2, color, lineWidth) {
-    Painter.ctx.beginPath();
-    Painter.ctx.moveTo(x1, y1);
-    Painter.ctx.quadraticCurveTo(cpx, cpy, x2, y2);
-    if (color) Painter.ctx.strokeStyle = color;
-    if (lineWidth !== undefined) Painter.ctx.lineWidth = lineWidth;
-    Painter.ctx.stroke();
-  }
-
-  /**
-   * Create and draw a pattern
-   * @param {HTMLImageElement|HTMLCanvasElement} image - Image to create pattern from
-   * @param {string} repetition - 'repeat', 'repeat-x', 'repeat-y', or 'no-repeat'
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @param {number} width - Width
-   * @param {number} height - Height
-   * @returns {void}
-   */
-  static fillPattern(image, repetition, x, y, width, height) {
-    const pattern = Painter.ctx.createPattern(image, repetition);
-    Painter.ctx.fillStyle = pattern;
-    Painter.ctx.fillRect(x, y, width, height);
-  }
-
-  /**
-   * Draw filled and stroked text with outline
-   * @param {string} text - Text to draw
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @param {string} fillColor - Fill color
-   * @param {string} strokeColor - Stroke color
-   * @param {number} strokeWidth - Stroke width
-   * @param {string} [font] - Font specification
-   * @returns {void}
-   */
-  static outlinedText(text, x, y, fillColor, strokeColor, strokeWidth, font) {
-    if (font) Painter.ctx.font = font;
-
-    // Draw the stroke first
-    Painter.ctx.strokeStyle = strokeColor;
-    Painter.ctx.lineWidth = strokeWidth;
-    Painter.ctx.strokeText(text, x, y);
-
-    // Then draw the fill
-    Painter.ctx.fillStyle = fillColor;
-    Painter.ctx.fillText(text, x, y);
-  }
-
-  /**
-   * Draw text with a maximum width, wrapping to new lines as needed
-   * @param {string} text - Text to draw
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @param {number} maxWidth - Maximum width before wrapping
-   * @param {number} lineHeight - Line height for wrapped text
-   * @param {string} [color] - Text color
-   * @param {string} [font] - Font specification
-   * @returns {number} Total height of drawn text
-   */
-  static wrappedText(text, x, y, maxWidth, lineHeight, color, font) {
-    if (color) Painter.ctx.fillStyle = color;
-    if (font) Painter.ctx.font = font;
-
-    const words = text.split(" ");
-    let line = "";
-    let testLine = "";
-    let lineCount = 1;
-
-    for (let i = 0; i < words.length; i++) {
-      testLine = line + words[i] + " ";
-      const metrics = Painter.ctx.measureText(testLine);
-      const testWidth = metrics.width;
-
-      if (testWidth > maxWidth && i > 0) {
-        Painter.ctx.fillText(line, x, y);
-        line = words[i] + " ";
-        y += lineHeight;
-        lineCount++;
-      } else {
-        line = testLine;
-      }
-    }
-
-    Painter.ctx.fillText(line, x, y);
-    return lineCount * lineHeight;
-  }
-
-  /**
-   * Set line dash pattern
-   * @param {Array<number>} segments - Array of line, gap lengths
-   * @returns {void}
-   */
-  static setLineDash(segments) {
-    Painter.ctx.setLineDash(segments);
-  }
-
-  /**
-   * Reset line dash to solid line
-   * @returns {void}
-   */
-  static resetLineDash() {
-    Painter.ctx.setLineDash([]);
-  }
-
-  /**
-   * Clip to a rectangular region
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @param {number} width - Width
-   * @param {number} height - Height
-   * @returns {void}
-   */
-  static clipRect(x, y, width, height) {
-    Painter.ctx.beginPath();
-    Painter.ctx.rect(x, y, width, height);
-    Painter.ctx.clip();
-  }
-
-  /**
-   * Clip to a circular region
-   * @param {number} x - Center X
-   * @param {number} y - Center Y
-   * @param {number} radius - Circle radius
-   * @returns {void}
-   */
-  static clipCircle(x, y, radius) {
-    Painter.ctx.beginPath();
-    Painter.ctx.arc(x, y, radius, 0, Math.PI * 2);
-    Painter.ctx.clip();
-  }
-
-  /**
-   * Apply a blur filter to a region
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @param {number} width - Width
-   * @param {number} height - Height
-   * @param {number} blur - Blur amount (pixels)
-   * @returns {void}
-   */
-  static blurRegion(x, y, width, height, blur) {
-    // Save current filter
-    const currentFilter = Painter.ctx.filter;
-
-    // Apply blur filter
-    Painter.ctx.filter = `blur(${blur}px)`;
-
-    // Draw the region from the canvas back onto itself with the filter
-    const imageData = Painter.ctx.getImageData(x, y, width, height);
-    Painter.ctx.putImageData(imageData, x, y);
-
-    // Restore previous filter
-    Painter.ctx.filter = currentFilter;
-  }
-
-  /**
-   * Draw text along a path (like an arc)
-   * @param {string} text - Text to draw
-   * @param {Array} path - Array of points {x, y} defining the path
-   * @param {string} [color] - Text color
-   * @param {string} [font] - Font specification
-   * @param {boolean} [reverse=false] - Whether to draw text in reverse direction
-   * @returns {void}
-   */
-  static textOnPath(text, path, color, font, reverse = false) {
-    if (path.length < 2) return;
-
-    if (color) Painter.ctx.fillStyle = color;
-    if (font) Painter.ctx.font = font;
-
-    // Get characters and their widths
-    const chars = text.split("");
-    const charWidths = chars.map((char) => Painter.ctx.measureText(char).width);
-
-    if (reverse) {
-      chars.reverse();
-      charWidths.reverse();
-      path.reverse();
-    }
-
-    // Calculate total length of the path
-    let pathLength = 0;
-    for (let i = 1; i < path.length; i++) {
-      const dx = path[i].x - path[i - 1].x;
-      const dy = path[i].y - path[i - 1].y;
-      pathLength += Math.sqrt(dx * dx + dy * dy);
-    }
-
-    // Calculate total width of text
-    const textWidth = charWidths.reduce((total, width) => total + width, 0);
-
-    // Calculate starting offset to center text on path
-    let offset = (pathLength - textWidth) / 2;
-    if (offset < 0) offset = 0;
-
-    // Draw each character
-    let currentOffset = offset;
-    for (let i = 0; i < chars.length; i++) {
-      const charWidth = charWidths[i];
-
-      // Find position and angle on path
-      const { x, y, angle } = getPositionOnPath(path, currentOffset);
-
-      // Draw the character
-      Painter.ctx.save();
-      Painter.ctx.translate(x, y);
-      Painter.ctx.rotate(angle);
-      Painter.ctx.fillText(chars[i], 0, 0);
-      Painter.ctx.restore();
-
-      currentOffset += charWidth;
-    }
-  }
-
-  // Helper function for textOnPath
-  static getPositionOnPath(path, offset) {
-    let currentLength = 0;
-
-    for (let i = 1; i < path.length; i++) {
-      const p1 = path[i - 1];
-      const p2 = path[i];
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
-      const segmentLength = Math.sqrt(dx * dx + dy * dy);
-
-      if (currentLength + segmentLength >= offset) {
-        // Calculate position between p1 and p2
-        const t = (offset - currentLength) / segmentLength;
-        const x = p1.x + dx * t;
-        const y = p1.y + dy * t;
-        const angle = Math.atan2(dy, dx);
-
-        return { x, y, angle };
-      }
-
-      currentLength += segmentLength;
-    }
-
-    // If offset is beyond path length, return last point
-    const lastPoint = path[path.length - 1];
-    const secondLastPoint = path[path.length - 2];
-    const angle = Math.atan2(
-      lastPoint.y - secondLastPoint.y,
-      lastPoint.x - secondLastPoint.x
-    );
-
-    return {
-      x: lastPoint.x,
-      y: lastPoint.y,
-      angle,
-    };
-  }
-
-  /**
-   * Create an HTML5 Canvas Pattern
-   * @param {HTMLImageElement|HTMLCanvasElement} image - Image source
-   * @param {string} [repetition='repeat'] - Repetition style ('repeat', 'repeat-x', 'repeat-y', 'no-repeat')
-   * @returns {CanvasPattern} The created pattern
-   */
-  static createPattern(image, repetition = "repeat") {
-    return Painter.ctx.createPattern(image, repetition);
   }
 }
