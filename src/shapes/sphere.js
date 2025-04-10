@@ -159,10 +159,8 @@ export class Sphere extends Shape {
    * Internal draw logic
    */
   draw() {
-    this.applyConstraints();
-
+    super.draw();
     const r = this.radius;
-
     /**
      * Apply 3D rotation to a point
      * @param {number} x

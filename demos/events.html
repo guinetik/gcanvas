@@ -10,7 +10,7 @@
 <body>
     <div id="info">
         <strong>EventEmitter Demo</strong> — Shows how <code>Game.events</code> handles unified input events. <br>
-        Events from <strong>mouse</strong>, <strong>touch</strong>, and <strong>input</strong> are emitted using a
+        Events from <strong>mouse</strong>, <strong>touch</strong>, <strong>keyboard</strong> and <strong>input</strong> are emitted using a
         single system. <br>
         This demo logs the last event that happened inside a box on screen. Try clicking, moving, or touching!
     </div>
@@ -18,7 +18,7 @@
     <canvas id="game"></canvas>
 
     <script type="module">
-        import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group } from "../src/index";
+        import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group, Keys } from "../src/index";
 
         class EventLogger extends GameObject {
             constructor(game) {
@@ -80,6 +80,47 @@
                             inside = false;
                         } else if (type == "mouseover") {
                             inside = true;
+                        }
+                    });
+                });
+                //
+                //
+                /**
+                 * Log Keys. We'll listen for key down events on some set of logical keys
+                 * and do exactly the same inside/outside labeling. We also handle “_up” suffix.
+                 */
+                const keyList = [
+                    Keys.W, Keys.A, Keys.S, Keys.D,
+                    Keys.UP, Keys.DOWN, Keys.LEFT, Keys.RIGHT,
+                    Keys.SPACE, Keys.SHIFT, Keys.ENTER, Keys.ESC,
+                    "keyup", "keydown"
+                ];
+
+                keyList.forEach(logicalKey => {
+                    // Key down event => just “logicalKey” 
+                    this.game.events.on(logicalKey, (e) => {
+                        if (!lock) {
+                            if (e.type == "keydown") {
+                                // Only log if key is NOT one of the logical keys in keyList
+                                if (keyList.indexOf(e.key) == -1) {
+                                    this.label.text = `KeyDown ${e.key}`;
+                                }
+                            } else {
+                                this.label.text = `KeyDown ${logicalKey}`;
+                            }
+                        }
+                    });
+                    // Key up event => “logicalKey + "_up” 
+                    this.game.events.on(logicalKey + "_up", (e) => {
+                        if (!lock) {
+                            if (e.type == "keyup") {
+                                // Only log if key is NOT one of the logical keys in keyList
+                                if (keyList.indexOf(e.key) == -1) {
+                                    this.label.text = `KeyUp ${e.key}`;
+                                    return;
+                                }
+                            }
+                            this.label.text = `KeyUp ${logicalKey}`;
                         }
                     });
                 });

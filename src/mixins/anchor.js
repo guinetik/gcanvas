@@ -10,14 +10,59 @@ export function applyAnchor(go, options = {}) {
 
     switch (anchor) {
       case "top-left":
-        return { x: padding, y: padding, align: "left", baseline: "top" };
+        return {
+          x: padding,
+          y: padding,
+          align: "left",
+          baseline: "top",
+        };
+      case "top-center":
+        return {
+          x: (w - go.width) / 2,
+          y: padding,
+          align: "center",
+          baseline: "top",
+        };
       case "top-right":
-        return { x: w - padding, y: padding, align: "right", baseline: "top" };
+        return {
+          x: w - go.width - padding,
+          y: padding,
+          align: "right",
+          baseline: "top",
+        };
+      case "center-left":
+        return {
+          x: padding,
+          y: (h - go.height) / 2,
+          align: "left",
+          baseline: "middle",
+        };
+      case "center":
+        return {
+          x: (w - go.width) / 2,
+          y: (h - go.height) / 2,
+          align: "center",
+          baseline: "middle",
+        };
+      case "center-right":
+        return {
+          x: w - go.width - padding,
+          y: h / 2,
+          align: "right",
+          baseline: "middle",
+        };
       case "bottom-left":
         return {
           x: padding,
           y: h - padding,
           align: "left",
+          baseline: "bottom",
+        };
+      case "bottom-center":
+        return {
+          x: (w - go.width)/2,
+          y: h - go.height -padding,
+          align: "center",
           baseline: "bottom",
         };
       case "bottom-right":
@@ -28,7 +73,13 @@ export function applyAnchor(go, options = {}) {
           baseline: "bottom",
         };
       default:
-        return { x: 10, y: 10, align: "left", baseline: "top" };
+        // Fallback if anchor is not recognized
+        return {
+          x: 10,
+          y: 10,
+          align: "left",
+          baseline: "top",
+        };
     }
   };
 

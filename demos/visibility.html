@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Opacity</title>
+  <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+  <div id="info">
+    <strong>Visibility Toggle Demo</strong> - Shows how game objects can be dynamically shown or hidden. Each subclass
+    of <code>Transformable</code> contains the visible property. Whenever an object is part of a pipeline, it is only
+    rendered on the screen if visibility is true.
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module">
+    import { MyGame } from './js/visibility.js';
+
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new MyGame(canvas);
+      game.init();
+      game.start();
+    });
+  </script>
+</body>
+
+</html>
