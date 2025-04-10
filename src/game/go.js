@@ -204,6 +204,8 @@ export class GameObjectShapeWrapper extends GameObject {
     this.shape.visible = this.visible;
     this.shape.scaleX = this.scaleX;
     this.shape.scaleY = this.scaleY;
+    this.shape.offsetX = this.offsetX;
+    this.shape.offsetY = this.offsetY;
   }
 
   /**

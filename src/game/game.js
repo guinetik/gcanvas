@@ -14,6 +14,7 @@ import { Input } from "../io";
 import { Touch } from "../io";
 import { Keys } from "../io";
 import { Cursor } from "./ui/cursor.js";
+import { Tweenetik } from "../motion/tweenetik.js";
 
 /**
  * Core Game class. Provides lifecycle management, the update/render loop,
@@ -73,6 +74,7 @@ export class Game {
     //
     // Initialize pointer & input subsystems with reference to this game.
     this.initIO();
+    this.initMotion();
     console.log("[Game] Constructor");
   }
 
@@ -133,6 +135,14 @@ export class Game {
     this.initTouch();
     this.initInput();
     this.initKeyboard();
+  }
+
+  initMotion() {
+    /**
+     * Holds all currently active Tweenetik instances.
+     * Always call Tweenetik.updateAll(dt) in your game loop to drive them.
+     */
+    Tweenetik._active = [];
   }
 
   /**

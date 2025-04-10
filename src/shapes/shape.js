@@ -2,8 +2,81 @@ import { Painter } from "../painter.js";
 import { Transformable } from "./transformable.js";
 
 /**
- * Shape - Abstract base for all drawable canvas primitives.
- * Now extends Transformable to have x, y, width, etc. standard properties.
+ * @class Shape
+ * @extends Transformable
+ * @description Abstract base class for all drawable canvas shapes.
+ *
+ * Shape extends Transformable to add drawing capabilities and styling options.
+ * It provides the foundation for all visual elements that can be rendered on the canvas,
+ * with consistent handling of fills, strokes, shadows, and transformations.
+ *
+ * Key features:
+ * - Inherits all transformation properties (position, size, rotation, etc.)
+ * - Adds styling options (fill color, stroke color, line width)
+ * - Adds shadow effects (color, blur, offset)
+ * - Provides boundary constraint capabilities
+ * - Includes helper methods for canvas state management during rendering
+ *
+ * This is an abstract class - you should use one of its concrete implementations
+ * or extend it to create your own custom shape.
+ *
+ * @property {string|CanvasGradient|null} fillColor - Fill color or gradient
+ * @property {string|CanvasGradient|null} strokeColor - Stroke (outline) color or gradient
+ * @property {number} lineWidth - Width of the stroke line
+ * @property {string|null} shadowColor - Shadow color
+ * @property {number} shadowBlur - Amount of shadow blur
+ * @property {number} shadowOffsetX - Horizontal shadow offset
+ * @property {number} shadowOffsetY - Vertical shadow offset
+ * @property {number|undefined} minX - Minimum allowed X position
+ * @property {number|undefined} maxX - Maximum allowed X position
+ * @property {number|undefined} minY - Minimum allowed Y position
+ * @property {number|undefined} maxY - Maximum allowed Y position
+ * @property {boolean} crisp - Whether to round coordinates for pixel-perfect rendering
+ *
+ * @example
+ * // Creating a custom shape
+ * class Diamond extends Shape {
+ *   constructor(x, y, width, height, options = {}) {
+ *     super(x, y, {
+ *       fillColor: options.fillColor || '#3498db',
+ *       strokeColor: options.strokeColor || '#2980b9',
+ *       lineWidth: options.lineWidth || 2,
+ *       ...options
+ *     });
+ *
+ *     this.width = width;
+ *     this.height = height;
+ *   }
+ *
+ *   draw() {
+ *     super.draw(); // Apply constraints
+ *
+ *     this.renderWithTransform(() => {
+ *       Painter.ctx.beginPath();
+ *       Painter.ctx.moveTo(0, -this.height/2);  // Top
+ *       Painter.ctx.lineTo(this.width/2, 0);    // Right
+ *       Painter.ctx.lineTo(0, this.height/2);   // Bottom
+ *       Painter.ctx.lineTo(-this.width/2, 0);   // Left
+ *       Painter.ctx.closePath();
+ *
+ *       if (this.fillColor) {
+ *         Painter.ctx.fillStyle = this.fillColor;
+ *         Painter.ctx.fill();
+ *       }
+ *
+ *       if (this.strokeColor) {
+ *         Painter.ctx.strokeStyle = this.strokeColor;
+ *         Painter.ctx.lineWidth = this.lineWidth;
+ *         Painter.ctx.stroke();
+ *       }
+ *     });
+ *   }
+ * }
+ *
+ * @method draw() - Abstract method that concrete shapes must implement
+ * @method renderWithTransform(callback) - Helper to handle canvas transform state
+ * @method applyConstraints() - Applies position constraints and pixel alignment
+ * @method getBounds() - Returns the bounding box for hit testing
  */
 export class Shape extends Transformable {
   /**
@@ -81,8 +154,13 @@ export class Shape extends Transformable {
     }
     Painter.ctx.save();
     Painter.ctx.globalAlpha = this.opacity;
-    if(this.shadowColor) {
-      Painter.dropShadow(this.shadowColor, this.shadowBlur, this.shadowOffsetX, this.shadowOffsetY);
+    if (this.shadowColor) {
+      Painter.dropShadow(
+        this.shadowColor,
+        this.shadowBlur,
+        this.shadowOffsetX,
+        this.shadowOffsetY
+      );
     }
     Painter.ctx.translate(this.x, this.y);
     Painter.ctx.rotate(this.rotation);

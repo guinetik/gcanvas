@@ -63,6 +63,24 @@ export class Transformable {
      * @type {number}
      */
     this.scaleY = options.scaleY ?? 1;
+    /**
+     * Horizontal Offset
+     * This is a specialized coordinate usually used to sum to an existing this.x to calculate a final positio for the shape.
+     * This is useful when you have an anchor but want to apply an offset in a way not supported by the default anchor padding.
+     * Subclasses  must implement ways to use this field, it is not auto plugged in. 
+     * If you plan to make use of it, override the update method of the gameobject to do this.x += this.offsetX
+     * @type {number}
+     */
+    this.offsetX = options.offsetX ?? 1;
+    /**
+     * Vertical Offset
+     * This is a specialized coordinate usually used to sum to an existing this.y to calculate a final positio for the shape.
+     * This is useful when you have an anchor but want to apply an offset in a way not supported by the default anchor padding.
+     * Subclasses  must implement ways to use this field, it is not auto plugged in. 
+     * If you plan to make use of it, override the update method of the gameobject to do this.y += this.offsetY
+     * @type {number}
+     */
+    this.offsetY = options.offsetY ?? 1;
 
     /**
      * Opacity from 0 (transparent) to 1 (fully visible).
