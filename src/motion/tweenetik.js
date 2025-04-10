@@ -1,12 +1,34 @@
 // Tweenetik.js
+import { Easing } from "./easing.js";
 import { Tween } from "./tween.js";
+/**
+ * Tweenetik module for declarative, time-managed UI animations.
+ *
+ * @class Tweenetik
+ * @description
+ * Tweenetik provides a lightweight, self-managed tweening system that animates object properties over time.
+ * Unlike {@link Motion}, which returns stateless values for use in real-time game loops,
+ * Tweenetik mutates the target object directly and manages its own internal time progression.
+ * <br/>
+ * It is ideal for UI transitions, hover effects, attention animations, or any element
+ * that animates independently of the simulation/game loop logic.
+ * <br/>
+ * Tweenetik is declarative: you configure a tween once and let it run in the background.
+ * You must call {@link Tweenetik.updateAll} on each frame to drive all active tweens.
+ * <br/>
+ * @example
+ * Tweenetik.to(button, { scaleX: 1.2, scaleY: 1.2 }, 0.5, Easing.easeOutBack);
+ *
+ * @see {@link Tween} for interpolation utilities
+ * @see {@link Motion} for stateless simulation-driven animations
+ */
 
 export class Tweenetik {
   /**
    * @param {Object} target - The object whose properties will be tweened.
    * @param {Object} toProps - An object containing the property values we want to end up at (e.g. { x: 100, y: 200 }).
    * @param {number} duration - How long (in seconds) the tween should take.
-   * @param {Function} easingFn - One of the easing functions from the Tween class (e.g. Tween.easeOutBounce).
+   * @param {Function} easingFn - One of the easing functions from the Tween class (e.g. Easing.easeOutBounce).
    * @param {Object} [options]
    * @param {number} [options.delay=0] - Delay in seconds before starting.
    * @param {Function} [options.onStart] - Callback invoked once when the tween actually begins.
@@ -17,7 +39,7 @@ export class Tweenetik {
     this.target = target;
     this.toProps = { ...toProps };
     this.duration = duration;
-    this.easingFn = easingFn || Tween.easeOutQuad;
+    this.easingFn = easingFn || Easing.easeOutQuad;
 
     // Options
     this.delay = options.delay || 0;
@@ -87,7 +109,7 @@ export class Tweenetik {
       const startVal = this._startProps[prop];
       const endVal = this.toProps[prop];
       // Use Tween.go(...) to interpolate
-      this.target[prop] = Tween.go(startVal, endVal, eased);
+      this.target[prop] = Tween.lerp(startVal, endVal, eased);
     }
 
     // onUpdate callback (each frame)
@@ -116,9 +138,3 @@ export class Tweenetik {
     Tweenetik._active = Tweenetik._active.filter((t) => !t._finished);
   }
 }
-
-/**
- * Holds all currently active Tweenetik instances.
- * Always call Tweenetik.updateAll(dt) in your game loop to drive them.
- */
-Tweenetik._active = [];

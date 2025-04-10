@@ -743,6 +743,37 @@ export class Painter {
     return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
   }
 
+  static rgbToHsl(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    let h = 0,
+      s = 0,
+      l = (max + min) / 2;
+
+    if (delta !== 0) {
+      s = delta / (1 - Math.abs(2 * l - 1));
+      switch (max) {
+        case r:
+          h = 60 * (((g - b) / delta + 6) % 6);
+          break;
+        case g:
+          h = 60 * ((b - r) / delta + 2);
+          break;
+        case b:
+          h = 60 * ((r - g) / delta + 4);
+          break;
+      }
+    }
+
+    return [h % 360, s, l];
+  }
+
   /**
    * Convert a hex color like "#ff00ff" => [255, 0, 255].
    */
