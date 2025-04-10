@@ -8,6 +8,7 @@ import {
   FPSCounter,
   Tween,
   Tweenetik,
+  Easing,
 } from "/gcanvas/gcanvas.es.min.js";
 export class TweenDemo extends Scene {
   constructor(game, options = {}) {
@@ -35,11 +36,11 @@ export class TweenDemo extends Scene {
     this.growing = false;
     this.tween();
   }
-
+  
   tween() {
     this.growing = !this.growing;
     const scale = this.growing ? 2 : 1;
-    const easing = this.growing ? Tween.easeOutElastic : Tween.easeInElastic;
+    const easing = this.growing ? Easing.easeOutElastic : Easing.easeInElastic;
     // Tweenetik is a simple tweening library that works with any object
     Tweenetik.to(
       this.box,                         // an object or sprite
