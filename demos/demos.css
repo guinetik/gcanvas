@@ -1,55 +1,31 @@
-/* General layout */
 body {
   margin: 0;
   display: flex;
-  height: 100vh; /* 100% viewport height */
-  background: black; /* optional if you want a black background behind everything */
+  height: 100vh;
 }
 
-/* Side navigation */
 nav {
   width: 200px;
   background: #222;
   color: white;
   padding: 1rem;
   box-sizing: border-box;
-  overflow-y: auto; /* enable scrolling inside nav if content is tall */
-  overflow-x: hidden; /* usually don't want horizontal scroll in nav */
-  font-family: monospace;
 }
 
-/* Links inside nav */
 nav a {
   display: block;
-  color: #ccc;
-  margin-bottom: 0.5rem;
+  color: white;
+  margin-bottom: 1rem;
   text-decoration: none;
-  padding: 0.25rem;
-  transition: background 0.2s ease;
 }
 
-/* Hover effect for nav links */
-nav a:hover {
-  background: #333;
-}
-
-/* Active link highlight */
-nav a.active {
-  background: #333;
-  color: #0f0; /* or whatever highlight color you prefer */
-  border-left: 4px solid #0f0;
-  padding-left: 0.5rem; /* shift text so it doesn't overlap border */
-}
-
-/* The iframe takes up remaining space */
 iframe {
   flex: 1;
   border: none;
-  /* we let the page inside handle its own scrolling if needed */
 }
 
 .light {
-  background: rgba(0, 0, 0, 0.5) !important;
+  background: rgba(240, 240, 240, 0.5) !important;
   color: #ffffff !important;
 }
 
@@ -64,10 +40,10 @@ iframe {
 .light code {
   background: #000;
   color: #FFF;
-  padding: 0.2em 0.3em;
-  box-decoration-break: clone;
-  display: inline;
-  line-height: 1.8;
+  padding: 0.2em 0.3em; /* Add some padding around the highlighted text */
+  box-decoration-break: clone; /* For multi-line highlights */
+  display: inline; /* Ensure background only covers text */
+  line-height: 1.8; /* Better spacing for highlight */
 }
 
 .light code {
@@ -75,7 +51,6 @@ iframe {
   background: #0f0;
 }
 
-/* #info overlay (optional) */
 #info {
   position: absolute;
   font-family: monospace;
@@ -95,7 +70,3 @@ iframe {
 strong {
   color: #fff;
 }
-
-​path {
-  fill: blue;
-}​

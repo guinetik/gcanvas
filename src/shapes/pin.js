@@ -8,7 +8,8 @@ export class Pin extends Shape {
   }
 
   draw() {
-    super.draw();
+    this.applyConstraints();
+
     const r = this.radius;
     const h = r * 2.5;
     const baseY = 0;

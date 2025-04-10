@@ -8,7 +8,8 @@ export class Triangle extends Shape {
   }
 
   draw() {
-    super.draw();
+    this.applyConstraints();
+
     const half = this.size / 2;
     const points = [
       { x: 0, y: -half },

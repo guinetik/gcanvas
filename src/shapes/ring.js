@@ -9,7 +9,8 @@ export class Ring extends Shape {
   }
 
   draw() {
-    super.draw();
+    this.applyConstraints();
+
     this.renderWithTransform(() => {
       Painter.ctx.beginPath();
       Painter.ctx.arc(0, 0, this.outerRadius, 0, Math.PI * 2);

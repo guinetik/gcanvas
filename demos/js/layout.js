@@ -14,7 +14,6 @@ export class LayoutDemo extends Game {
   constructor(canvas) {
     super(canvas);
     this.enableFluidSize();
-    this.backgroundColor = "white";
   }
 
   init() {
@@ -129,12 +128,12 @@ export class LayoutDemo extends Game {
   }
 
   update(dt) {
-    super.update(dt);
     this.rightSide.x = this.width - 150;
     this.rightSide.y = this.height / 2 - 40;
     this.bottomNav.x = this.width / 2 - 120;
     this.bottomNav.y = this.height - 60;
     this.layout.x = (this.width - this.layout.width) / 2;
     this.layout.y = (this.height - this.layout.height) / 2;
+    super.update(dt);
   }
 }

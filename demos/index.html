@@ -2,132 +2,33 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <title>GCanvas Demos</title>
-  <link rel="stylesheet" href="demos.css" />
+    <meta charset="UTF-8" />
+    <title>GCanvas Demos</title>
+    <link rel="stylesheet" href="demos.css" />
 </head>
 
 <body>
-  <nav>
-    <!-- <svg>
-      <path
-        d="m 562.6845,164.9387 v -20.9177 -8.5136 h 17.1383 v -6.0917 h -11.9492 v -14.0263 h -5.1891 v 14.2982 5.8198 h -25.0713 v 8.9127 h 17.4776 v 20.5186 z m 21.7455,14.0269 v -14.2985 -5.8201 h 25.0713 v -8.9132 H 592.0231 V 129.4157 H 584.43 v 20.9172 8.5141 h -17.138 v 6.0928 h 11.9474 v 14.0258 z">
-      </path>
-    </svg> -->
-    <h3>Demos</h3>
-    <h1>Shapes</h1>
-    <a href="shapes.html" target="demo-frame" class="active">Shape Gallery</a>
-    <a href="group.html" target="demo-frame">Groups</a>
-    <a href="visibility.html" target="demo-frame">Visibility</a>
-    <a href="opacity.html" target="demo-frame">Opacity</a>
-    <a href="particles.html" target="demo-frame">Shape Particles</a>
-    <hr />
-    <h1>Painter</h1>
-    <a href="painter.html" target="demo-frame">Painter</a>
-    <a href="bezier.html" target="demo-frame">Bezier Curves</a>
-    <a href="beziersignature.html" target="demo-frame">Bezier Signature</a>
-    <a href="blob.html" target="demo-frame">Bezier Blob</a>
-    <a href="svgtween.html" target="demo-frame">SVG Motion</a>
-    <hr />
-    <h1>Game</h1>
-    <a href="basic.html" target="demo-frame">Basic</a>
-    <a href="loop.html" target="demo-frame">Game Loop</a>
-    <a href="events.html" target="demo-frame">Event Handlers</a>
-    <hr />
-    <h1>Motion</h1>
-    <a href="animations.html" target="demo-frame">Animations</a>
-    <a href="tween.html" target="demo-frame">Tween</a>
-    <hr />
-    <h1>Scene</h1>
-    <a href="scene.html" target="demo-frame">Scene</a>
-    <a href="scenes.html" target="demo-frame">Transforms</a>
-    <a href="layouts.html" target="demo-frame">Scene Layouts</a>
-    <a href="tiles.html" target="demo-frame">Tile Layout</a>
-    <a href="isometric.html" target="demo-frame">Isometric</a>
-  </nav>
-  <iframe name="demo-frame" id="demo-frame" src="shapes.html"></iframe>
-
-  <!-- Simple script to highlight the active link -->
-  <script>
-    // Wait for the DOM to load
-    document.addEventListener("DOMContentLoaded", () => {
-      const links = document.querySelectorAll("nav a");
-
-      links.forEach(link => {
-        link.addEventListener("click", () => {
-          // Remove .active from all links
-          links.forEach(l => l.classList.remove("active"));
-          // Add .active to the clicked link
-          link.classList.add("active");
-        });
-      });
-    });
-  </script>
-
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const links = document.querySelectorAll("nav a");
-      const iframe = document.getElementById("demo-frame");
-
-      /**
-       * Parse the hash in the form "#/shapes" => returns "shapes".
-       * Default to "shapes" if there's no valid hash.
-       */
-      function getRouteFromHash() {
-        if (location.hash.startsWith("#/")) {
-          return location.hash.slice(2); // remove "#/"
-        }
-        return "shapes"; // fallback route
-      }
-
-      /**
-       * Load the given route into the iframe, e.g. route="shapes" => "shapes.html"
-       * Also highlight the corresponding link.
-       */
-      function loadRoute(route) {
-        // Set iframe src
-        iframe.src = route + ".html";
-
-        // Highlight the active link
-        links.forEach(link => {
-          // link.href might be "shapes.html"
-          // remove ".html" => "shapes"
-          const linkRoute = link.getAttribute("href").replace(".html", "");
-          link.classList.toggle("active", linkRoute === route);
-        });
-      }
-
-      /**
-       * On initial load (and whenever the hash changes), parse the route and load it.
-       */
-      function handleHashChange() {
-        const route = getRouteFromHash();
-        loadRoute(route);
-      }
-
-      // 1) On page load, handle the existing hash (if any).
-      handleHashChange();
-
-      // 2) Listen for future hash changes
-      window.addEventListener("hashchange", handleHashChange);
-
-      // 3) Intercept clicks on nav links so we can
-      //    set location.hash instead of letting them navigate directly.
-      links.forEach(link => {
-        link.addEventListener("click", e => {
-          e.preventDefault(); // stop normal link navigation
-
-          // e.g. "shapes.html"
-          const href = link.getAttribute("href");
-          // remove ".html" => "shapes"
-          const routeName = href.replace(".html", "");
-
-          // set the hash: "#/shapes"
-          location.hash = "/" + routeName;
-        });
-      });
-    });
-  </script>
+    <nav>
+        <h3>Demos</h3>
+        <h1>Shapes</h1>
+        <a href="shapes.html" target="demo-frame">Shapes</a>
+        <a href="particles.html" target="demo-frame">Shape Particles</a>
+        <hr />
+        <h1>Game</h1>
+        <a href="basic.html" target="demo-frame">Basic</a>
+        <a href="loop.html" target="demo-frame">Game Loop</a>
+        <a href="events.html" target="demo-frame">Event Handlers</a>
+        <hr />
+        <h1>Painter</h1>
+        <a href="painter.html" target="demo-frame">Painter</a>
+        <a href="bezier.html" target="demo-frame">Bezier Curves</a>
+        <a href="blob.html" target="demo-frame">Bezier Blob</a>
+        <hr />
+        <h1>Scene</h1>
+        <a href="scene.html" target="demo-frame">Scene</a>
+        <a href="layouts.html" target="demo-frame">Scene Layouts</a>
+    </nav>
+    <iframe name="demo-frame" src="shapes.html"></iframe>
 </body>
 
 </html>
