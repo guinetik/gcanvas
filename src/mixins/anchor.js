@@ -1,100 +1,131 @@
+import { GameObject } from "../game/index.js";
+import { Position } from "../util/position.js";
+
+/**
+ * Applies anchor positioning to a game object
+ *
+ * @param {GameObject} go - The game object to anchor
+ * @param {Object} options - Anchor configuration options
+ * @param {string} [options.anchor] - Anchor position (use Position constants)
+ * @param {number} [options.anchorMargin=10] - Margin from the edge when anchoring
+ * @param {number} [options.anchorOffsetX=0] - Additional X offset to apply after anchoring
+ * @param {number} [options.anchorOffsetY=0] - Additional Y offset to apply after anchoring
+ * @param {GameObject|boolean} [options.anchorRelative=false] - Object to anchor relative to, or true to use parent
+ * @param {boolean} [options.anchorSetTextAlign=true] - Whether to set text alignment properties if available
+ * @returns {GameObject} The original game object for chaining
+ */
 export function applyAnchor(go, options = {}) {
-  go.anchor = options.anchor ?? null;
-  go.padding = options.padding ?? 10;
+  // Ensure we're only applying anchor to GameObjects
+  if (!go || !(go instanceof GameObject)) {
+    console.warn("applyAnchor can only be applied to GameObject instances");
+    return go;
+  }
 
-  const game = go.game;
-
-  const resolve = (anchor, padding) => {
-    const w = game.width;
-    const h = game.height;
-
-    switch (anchor) {
-      case "top-left":
-        return {
-          x: padding,
-          y: padding,
-          align: "left",
-          baseline: "top",
-        };
-      case "top-center":
-        return {
-          x: (w - go.width) / 2,
-          y: padding,
-          align: "center",
-          baseline: "top",
-        };
-      case "top-right":
-        return {
-          x: w - go.width - padding,
-          y: padding,
-          align: "right",
-          baseline: "top",
-        };
-      case "center-left":
-        return {
-          x: padding,
-          y: (h - go.height) / 2,
-          align: "left",
-          baseline: "middle",
-        };
-      case "center":
-        return {
-          x: (w - go.width) / 2,
-          y: (h - go.height) / 2,
-          align: "center",
-          baseline: "middle",
-        };
-      case "center-right":
-        return {
-          x: w - go.width - padding,
-          y: h / 2,
-          align: "right",
-          baseline: "middle",
-        };
-      case "bottom-left":
-        return {
-          x: padding,
-          y: h - padding,
-          align: "left",
-          baseline: "bottom",
-        };
-      case "bottom-center":
-        return {
-          x: (w - go.width)/2,
-          y: h - go.height -padding,
-          align: "center",
-          baseline: "bottom",
-        };
-      case "bottom-right":
-        return {
-          x: w - padding,
-          y: h - padding,
-          align: "right",
-          baseline: "bottom",
-        };
-      default:
-        // Fallback if anchor is not recognized
-        return {
-          x: 10,
-          y: 10,
-          align: "left",
-          baseline: "top",
-        };
-    }
+  // Store anchor properties in a separate namespace to avoid conflicts
+  go._anchor = {
+    position: options.anchor ?? null,
+    margin: options.anchorMargin ?? 10,
+    offsetX: options.anchorOffsetX ?? 0,
+    offsetY: options.anchorOffsetY ?? 0,
+    relative: options.anchorRelative ?? false,
+    setTextAlign: options.anchorSetTextAlign !== false,
+    lastUpdate: 0, // Track when we last updated positioning
   };
 
-  const anchorUpdate = go.update?.bind(go);
+  // Keep a reference to the original update method
+  const originalUpdate = go.update?.bind(go);
 
+  // Override the update method
   go.update = function (dt) {
-    if (go.anchor) {
-      const { x, y, align, baseline } = resolve(go.anchor, go.padding);
-      go.x = x;
-      go.y = y;
+    //console.log("Anchor.update", go.name || go.constructor.name, go.boundsDirty);
+    // Skip anchor updates if bounds aren't dirty
+    const relativeObj =
+      go._anchor.relative === true && go.parent
+        ? go.parent
+        : go._anchor.relative;
 
-      if ("align" in go) go.align = align;
-      if ("baseline" in go) go.baseline = baseline;
+    // Only update positioning when bounds are dirty (geometry changed)
+    // or when related objects have changed
+    if (
+      go._anchor.position &&
+      (go.boundsDirty ||
+        (relativeObj && relativeObj.boundsDirty) ||
+        (go.parent && go.parent.boundsDirty))
+    ) {
+      // Calculate position
+      let position;
+
+      if (relativeObj) {
+        // Position relative to another object
+        const containerObj = {
+          x: relativeObj.x,
+          y: relativeObj.y,
+          width: relativeObj.width,
+          height: relativeObj.height,
+        };
+
+        position = Position.calculate(
+          go._anchor.position,
+          go,
+          containerObj,
+          go._anchor.margin,
+          go._anchor.offsetX,
+          go._anchor.offsetY
+        );
+      } else {
+        // Position absolute to the game canvas
+        position = Position.calculateAbsolute(
+          go._anchor.position,
+          go,
+          go.game,
+          go._anchor.margin,
+          go._anchor.offsetX,
+          go._anchor.offsetY
+        );
+      }
+      // Apply the calculated position
+      if (go.parent && !isPipelineRoot(go)) {
+        // If object has a parent AND is not directly in the pipeline
+        if (relativeObj === go.parent) {
+          // If anchored relative to parent, use local coordinates
+          // (parent position is already accounted for in rendering)
+          go.x = position.x - relativeObj.x;
+          go.y = position.y - relativeObj.y;
+        } else {
+          // If anchored to something else or absolutely, convert to local coordinates
+          go.x = position.x - go.parent.x;
+          go.y = position.y - go.parent.y;
+        }
+      } else {
+        // No parent or directly in pipeline - use absolute coordinates
+        go.x = position.x;
+        go.y = position.y;
+      }
+
+      // Set text alignment if applicable and enabled
+      if (go._anchor.setTextAlign) {
+        if ("align" in go) go.align = position.align;
+        if ("baseline" in go) go.baseline = position.baseline;
+      }
+
+      // Remember the time we last updated
+      go._anchor.lastUpdate = go.game ? go.game.lastTime : Date.now();
     }
 
-    anchorUpdate?.(dt);
+    // Call the original update method
+    if (originalUpdate) originalUpdate(dt);
   };
+
+  // Helper function to determine if an object is directly in the pipeline
+  function isPipelineRoot(gameObject) {
+    return (
+      gameObject.game &&
+      gameObject.game.pipeline &&
+      gameObject.game.pipeline.gameObjects &&
+      gameObject.game.pipeline.gameObjects.includes(gameObject)
+    );
+  }
+
+  // Return the object for chaining
+  return go;
 }
