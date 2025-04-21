@@ -30,7 +30,7 @@
  *     
  *     // Check mouse position in update loop
  *     this.events.on("mousemove", () => {
- *       console.log(`Mouse at ${Mouse.x}, ${Mouse.y}`);
+ *       this.logger.log(`Mouse at ${Mouse.x}, ${Mouse.y}`);
  *     });
  *     
  *     // Listen for unified input events (works with both mouse and touch)
@@ -73,15 +73,14 @@
  * 
  * const weapon = new WeaponSystem();
  * weapon.events.on('fired', (data) => {
- *   console.log(`Fired! Ammo remaining: ${data.ammo}`);
+ *   this.logger.log(`Fired! Ammo remaining: ${data.ammo}`);
  * });
  * weapon.events.on('empty', () => {
- *   console.log('Out of ammo! Reload!');
+ *   this.logger.log('Out of ammo! Reload!');
  * });
  */
-
+export {EventEmitter} from "./events.js";
+export {Input} from "./input.js";
 export {Mouse} from "./mouse.js";
 export {Keys} from "./keys.js";
 export {Touch} from "./touch.js";
-export {Input} from "./input.js";
-export {EventEmitter} from "./events.js";

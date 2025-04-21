@@ -11,12 +11,12 @@
  *
  *   // Listen for a press:
  *   this.events.on(Keys.W, (evt) => {
- *     console.log("W pressed!", evt);
+ *     this.logger.log("W pressed!", evt);
  *   });
  *
  *   // Listen for release:
  *   this.events.on(Keys.W + "_up", (evt) => {
- *     console.log("W released!");
+ *     this.logger.log("W released!");
  *   });
  *
  *   // Check if pressed in your update(dt):
