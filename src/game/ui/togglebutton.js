@@ -8,10 +8,10 @@ import { Button } from "./button.js";
  *     text: "Tool 1",
  *     startToggled: true,  // if you want it initially on
  *     onToggle: (isOn) => {
- *       console.log("Tool 1 toggled?", isOn);
+ *       this.logger.log("Tool 1 toggled?", isOn);
  *     },
  *     onClick: () => {
- *       console.log("A normal click as well");
+ *       this.logger.log("A normal click as well");
  *     }
  *   });
  */
@@ -19,6 +19,7 @@ export class ToggleButton extends Button {
   constructor(game, options = {}) {
     // We'll intercept the user's onClick, so we can handle toggling
     const userOnClick = options.onClick;
+    
 
     super(game, {
       ...options,
@@ -40,7 +41,9 @@ export class ToggleButton extends Button {
         this.refreshToggleVisual();
       },
     });
-
+    this.colorActiveBg = options.colorActiveBg || "#444";
+    this.colorActiveStroke = options.colorActiveStroke || "#0f0";
+    this.colorActiveText = options.colorActiveText || "#0f0";
     // Track toggled state. Default is false unless 'startToggled' is set
     this.toggled = !!options.startToggled;
 
@@ -60,14 +63,14 @@ export class ToggleButton extends Button {
   refreshToggleVisual() {
     if (this.toggled) {
       // E.g. "active" styling
-      this.bg.fillColor = "#444";
-      this.bg.strokeColor = "#0f0";
-      this.label.color = "#0f0";
+      this.bg.fillColor = this.colorActiveBg;
+      this.bg.strokeColor = this.colorActiveStroke;
+      this.label.color = this.colorActiveText;
     } else {
       // Revert to normal styling
-      this.bg.fillColor = "#eee";
-      this.bg.strokeColor = "#ccc";
-      this.label.color = "#333";
+      this.bg.fillColor = this.colors.default.bg;
+      this.bg.strokeColor = this.colors.default.stroke;
+      this.label.color = this.colors.default.text;
     }
   }
 
@@ -82,9 +85,9 @@ export class ToggleButton extends Button {
     // If we're toggled on, ensure it stays in the toggled visuals
     // after the parent sets hover/pressed colors.
     if (this.toggled) {
-      this.bg.fillColor = "#444";
-      this.bg.strokeColor = "#0f0";
-      this.label.color = "#0f0";
+      this.bg.fillColor = this.colorActiveBg;
+      this.bg.strokeColor = this.colorActiveStroke;
+      this.label.color = this.colorActiveText;
     }
   }
 }

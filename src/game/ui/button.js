@@ -7,7 +7,7 @@
  ***************************************************************/
 
 import { Group, Rectangle, TextShape, Shape } from "../../shapes";
-import { GameObject } from "../go";
+import { GameObject } from "../objects/go";
 
 /**
  * Button - A clickable UI element as a GameObject.
@@ -29,7 +29,7 @@ import { GameObject } from "../go";
  *   width: 150,
  *   height: 50,
  *   text: "Click Me",
- *   onClick: () => console.log("Button pressed!")
+ *   onClick: () => this.logger.log("Button pressed!")
  * });
  * game.pipeline.add(btn);
  * ```
@@ -44,14 +44,33 @@ export class Button extends GameObject {
    * @param {number} [options.width=120] - Width of the Button.
    * @param {number} [options.height=40] - Height of the Button.
    * @param {string} [options.text="Button"] - Label text for the Button.
+   * @param {string} [options.font="14px monospace"] - Font for the text.
+   * @param {string} [options.textColor="#000"] - Text color for the Button.
+   * @param {string} [options.textAlign="center"] - Alignment of the text.
+   * @param {string} [options.textBaseline="middle"] - Baseline of the text.
    * @param {Rectangle|Shape} [options.shape=null] - Custom shape for the Button background. Defaults to a Rectangle.
    * @param {TextShape} [options.label=null] - Custom text shape. Defaults to a center-aligned TextShape.
    * @param {Function} [options.onClick=null] - Callback to invoke upon button click.
+   * @param {Function} [options.onHover=null] - Callback to invoke upon button hover.
+   * @param {Function} [options.onPressed=null] - Callback to invoke upon button pressed.
+   * @param {Function} [options.onRelease=null] - Callback to invoke upon button release.
    * @param {string} [options.anchor] - Optional anchor for positioning (e.g. "top-left").
    * @param {number} [options.padding] - Extra padding if using anchor.
+   * @param {string} [options.colorDefaultBg="#eee"] - Background color in default state.
+   * @param {string} [options.colorDefaultStroke="#999"] - Stroke color in default state.
+   * @param {string} [options.colorDefaultText="#333"] - Text color in default state.
+   * @param {string} [options.colorHoverBg="#222"] - Background color in hover state.
+   * @param {string} [options.colorHoverStroke="#16F529"] - Stroke color in hover state.
+   * @param {string} [options.colorHoverText="#16F529"] - Text color in hover state.
+   * @param {string} [options.colorPressedBg="#111"] - Background color in pressed state.
+   * @param {string} [options.colorPressedStroke="#00aaff"] - Stroke color in pressed state.
+   * @param {string} [options.colorPressedText="#00aaff"] - Text color in pressed state.
    * @param {...any} rest - Additional properties passed to the superclass.
    */
   constructor(game, options = {}) {
+    // Pass options to the GameObject constructor
+    super(game, options);
+    
     // Extract button-specific config
     const {
       x = 0,
@@ -59,64 +78,178 @@ export class Button extends GameObject {
       width = 120,
       height = 40,
       text = "Button",
+      font = "14px monospace",
+      textColor = "#000",
+      textAlign = "center",
+      textBaseline = "middle",
       shape = null,
       label = null,
       onClick = null,
-      anchor,
-      padding,
-      ...rest
+      onHover = null,
+      onPressed = null,
+      onRelease = null,
+      padding = 10,
+      colorDefaultBg = "#eee",
+      colorDefaultStroke = "#999",
+      colorDefaultText = "#333",
+      colorHoverBg = "#222",
+      colorHoverStroke = "#16F529",
+      colorHoverText = "#16F529",
+      colorPressedBg = "#111",
+      colorPressedStroke = "#00aaff",
+      colorPressedText = "#00aaff",
     } = options;
-
-    // Pass anchor/padding to the GameObject constructor
-    super(game, { anchor, padding, ...rest });
 
     // Basic position and sizing
     this.x = x;
     this.y = y;
     this.width = width;
     this.height = height;
+    this.padding = padding;
+    this.textAlign = textAlign;
+    this.textBaseline = textBaseline;
+    
+    // Initialize the button components
+    this.initColorScheme({
+      colorDefaultBg,
+      colorDefaultStroke,
+      colorDefaultText,
+      colorHoverBg,
+      colorHoverStroke,
+      colorHoverText,
+      colorPressedBg,
+      colorPressedStroke,
+      colorPressedText
+    });
+    
+    this.initBackground(shape);
+    this.initLabel(text, font, textColor, label);
+    this.initGroup();
+    this.initEvents(onClick, onHover, onPressed, onRelease);
+    
+    // Initialize to default state
+    this.setState("default");
+  }
 
-    /**
-     * Current interaction state of the Button: "default", "hover", or "pressed".
-     * @type {string}
-     */
-    this.state = "default";
+  /**
+   * Initialize the color scheme for different button states
+   * @param {object} colors - Configuration for button colors in different states
+   * @private
+   */
+  initColorScheme(colors) {
+    this.colors = {
+      default: {
+        bg: colors.colorDefaultBg,
+        stroke: colors.colorDefaultStroke,
+        text: colors.colorDefaultText
+      },
+      hover: {
+        bg: colors.colorHoverBg,
+        stroke: colors.colorHoverStroke,
+        text: colors.colorHoverText
+      },
+      pressed: {
+        bg: colors.colorPressedBg,
+        stroke: colors.colorPressedStroke,
+        text: colors.colorPressedText
+      }
+    };
+  }
 
-    /**
-     * The shape serving as the Button's background.
-     * @type {Shape}
-     */
-    this.bg =
-      shape ??
-      new Rectangle(0, 0, width, height, {
-        fillColor: "#eee",
-        strokeColor: "#ccc",
-        lineWidth: 2,
-      });
+  /**
+   * Initialize the background shape of the button
+   * @param {Shape|null} shape - Custom shape or null to use default Rectangle
+   * @private
+   */
+  initBackground(shape) {
+    this.bg = shape ?? new Rectangle({
+      width: this.width,
+      height: this.height,
+      color: this.colors.default.bg,
+      stroke: this.colors.default.stroke,
+      lineWidth: 2
+    });
+  }
 
-    /**
-     * The text shape used as the Button’s label.
-     * @type {TextShape}
-     */
-    this.label =
-      label ??
-      new TextShape(0, 0, text, {
-        font: "16px monospace",
-        color: "#333",
-        align: "center",
-        baseline: "middle",
-      });
+  /**
+   * Initialize the text label of the button
+   * @param {string} text - Button text
+   * @param {string} font - Text font
+   * @param {string} textColor - Text color
+   * @param {TextShape|null} label - Custom label or null to create a new one
+   * @private
+   */
+  initLabel(text, font, textColor, label) {
+    this.label = label ?? new TextShape(text, {
+      font: font,
+      color: textColor,
+      align: this.textAlign,
+      baseline: this.textBaseline
+    });
+    
+    this.alignText();
+  }
 
-    /**
-     * Internal container grouping shape + label.
-     * @type {Group}
-     */
-    this.group = new Group(x, y);
+  /**
+   * Update label position based on alignment and baseline settings
+   * @private
+   */
+  alignText() {
+    if (!this.label) return;
+
+    const halfWidth = this.width / 2;
+    const halfHeight = this.height / 2;
+
+    // Horizontal alignment
+    switch (this.textAlign) {
+      case "left":
+        this.label.x = -halfWidth + this.padding;
+        break;
+      case "right":
+        this.label.x = halfWidth - this.padding;
+        break;
+      case "center":
+      default:
+        this.label.x = 0; // Center aligned means x=0 in center-based coords
+        break;
+    }
+
+    // Vertical alignment
+    switch (this.textBaseline) {
+      case "top":
+        this.label.y = -halfHeight + this.padding;
+        break;
+      case "bottom":
+        this.label.y = halfHeight - this.padding;
+        break;
+      case "middle":
+      default:
+        this.label.y = 0; // Middle aligned means y=0 in center-based coords
+        break;
+    }
+  }
+
+  /**
+   * Initialize the group that will contain both background and label
+   * @private
+   */
+  initGroup() {
+    this.group = new Group();
     this.group.add(this.bg);
     this.group.add(this.label);
-    // Enable pointer interactivity using the group for hit-testing.
-    this.enableInteractivity(this.group);
-    // Event handlers for pointer interaction
+  }
+
+  /**
+   * Set up event handlers for mouse/touch interactions
+   * @param {Function|null} onClick - Callback to execute when button is clicked
+   * @private
+   */
+  initEvents(onClick, onHover, onPressed, onRelease) {
+    this.interactive = true;
+    this.onHover = onHover;
+    this.onPressed = onPressed;
+    this.onRelease = onRelease;
+    
     this.on("mouseover", this.setState.bind(this, "hover"));
     this.on("mouseout", this.setState.bind(this, "default"));
     this.on("inputdown", this.setState.bind(this, "pressed"));
@@ -128,9 +261,6 @@ export class Button extends GameObject {
       // Return to hover state if the pointer is still over the button
       this.setState("hover");
     });
-
-    // Initialize to default state
-    this.setState("default");
   }
 
   /**
@@ -138,61 +268,129 @@ export class Button extends GameObject {
    * @param {string} state - "default", "hover", or "pressed".
    */
   setState(state) {
-    //console.log("setState", state);
     if (this.state === state) return;
     this.state = state;
+    
     // Adjust shape & label appearance based on the new state
     switch (state) {
       case "default":
-        //console.log("default");
         if (this.game.cursor) {
           setTimeout(() => {
             this.game.cursor.activate();
           }, 0);
         }
-        this.bg.fillColor = "#eee"; // dark matte
-        this.bg.strokeColor = "#ccc"; // subtle outer stroke
-        this.label.color = "#333"; // light text
+        this.bg.color = this.colors.default.bg;
+        this.bg.stroke = this.colors.default.stroke;
+        this.label.color = this.colors.default.text;
         this.game.canvas.style.cursor = "default";
+        this.onRelease?.();
         break;
+        
       case "hover":
-        //console.log("hover");
-        //console.log(this.group.children.includes(this.bg));
         if (this.game.cursor) {
           this.game.cursor.deactivate();
         }
-        this.bg.fillColor = "#222"; // slightly lifted
-        this.bg.strokeColor = "#16F529";
-        this.label.color = "#16F529";
+        this.bg.color = this.colors.hover.bg;
+        this.bg.stroke = this.colors.hover.stroke;
+        this.label.color = this.colors.hover.text;
         this.game.canvas.style.cursor = "pointer";
+        this.onHover?.();
         break;
+        
       case "pressed":
-        //console.log("pressed");
         if (this.game.cursor) {
           this.game.cursor.deactivate();
         }
-        this.bg.fillColor = "#111"; // pressed in
-        this.bg.strokeColor = "#00aaff"; // deeper accent
-        this.label.color = "#00aaff"; // same as stroke
+        this.bg.color = this.colors.pressed.bg;
+        this.bg.stroke = this.colors.pressed.stroke;
+        this.label.color = this.colors.pressed.text;
         this.game.canvas.style.cursor = "pointer";
+        this.onPressed?.();
         break;
     }
   }
 
   /**
-   * Update the Button each frame. Sync the group's coordinates
-   * with this GameObject's x and y.
-   * @param {number} dt - Delta time in seconds.
+   * Update method called each frame
+   * @param {number} dt - Delta time in seconds
    */
   update(dt) {
-    this.group.x = this.x;
-    this.group.y = this.y;
+    super.update(dt);
+    
+    // Check if we need to reposition the label
+    if (this._boundsDirty) {
+      this.alignText();
+    }
+  }
+
+  /**
+   * Get the text of the Button.
+   * @returns {string} The text of the Button.
+   */
+  get text() {
+    return this.label.text;
+  }
+
+  /**
+   * Set the text of the Button.
+   * @param {string} text - The new text for the Button.
+   */
+  set text(text) {
+    this.label.text = text;
+    this._boundsDirty = true;
+  }
+
+  /**
+   * Change text alignment
+   * @param {string} align - New text alignment: "left", "center", or "right"
+   */
+  setTextAlign(align) {
+    this.textAlign = align;
+    this.label.align = align;
+    this._boundsDirty = true;
+  }
+
+  /**
+   * Change text baseline
+   * @param {string} baseline - New text baseline: "top", "middle", or "bottom"
+   */
+  setTextBaseline(baseline) {
+    this.textBaseline = baseline;
+    this.label.baseline = baseline;
+    this._boundsDirty = true;
+  }
+
+  /**
+   * Set the font for the button label
+   * @param {string} font - CSS font string (e.g., "14px Arial")
+   */
+  setFont(font) {
+    this.label.font = font;
+    this._boundsDirty = true;
+  }
+
+  /**
+   * Resize the button and update child elements
+   * @param {number} width - New button width
+   * @param {number} height - New button height
+   */
+  resize(width, height) {
+    this.width = width;
+    this.height = height;
+    
+    // Update background size
+    this.bg.width = width;
+    this.bg.height = height;
+    
+    // Reposition the label
+    this._boundsDirty = true;
   }
 
   /**
    * Render the Button each frame by drawing the underlying Group.
    */
-  render() {
-    this.group.draw();
+  draw() {
+    super.draw();
+    this.group.render();
   }
 }
