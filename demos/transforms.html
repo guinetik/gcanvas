@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Basic Game Template</title>
+  <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+  <div id="info">
+    <strong>Shape Transforms</strong> — Demonstrates Renderable and Transforms. <br>
+  </div>
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group } from "../src/index";
+    // Template for a Hello World game
+    class DemoGame extends Game {
+      constructor(canvas) {
+        super(canvas);
+        this.enableFluidSize();
+        this.backgroundColor = "black";
+      }
+
+      onResize() {
+        if (this.scene) {
+          // Because we're using anchor the positions are calculated automatically, but we need to refresh the scene size to be proportional to the canvas size.
+          this.scene.width = this.width - 20;
+          this.scene.height = this.height - 20;
+          this.ui.width = this.width - 10;
+          this.ui.height = this.height - 10;
+        }
+      }
+
+      init() {
+        super.init();
+        // Set up scenes
+        // The UI scene is slightly smaller than the game scene with an yellow debug box
+        this.ui = new Scene(this, { width: this.width - 10, height: this.height - 10, debug: true, debugColor: "yellow", anchor: "center" });
+        // The main scene is slightly smaller than the UI scene with a magenta debug box
+        this.scene = new Scene(this, { width: this.width - 20, height: this.height - 20, debug: true, debugColor: "magenta", anchor: "center" });
+        // Add the scenes to the pipeline.UI On top of the game scene. 
+        // When the game runs, we should see a magenta box inside a yellow box.
+        this.pipeline.add(this.scene);
+        this.pipeline.add(this.ui);
+        // Hello World box in the game scene
+        this.scene.add(new HelloWorldBox(this));
+        // FPS counter in the UI scene
+        this.ui.add(new FPSCounter(this, { anchor: "bottom-right" }));
+      }
+    }
+
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new DemoGame(canvas);
+      game.setFPS(60);
+      game.start();
+      //setTimeout(game.stop.bind(game), 1000);
+    });
+
+    //
+    class HelloWorldBox extends GameObject {
+      constructor(game) {
+        super(game);
+        this.outer = new Rectangle({ width: 100, height: 100, color: "yellow", x: 100, name: "outer green rect", debug: true, debugColor: "green" });
+        this.group = new Group({ debug: true });
+        this.group.add(new Rectangle({ width: 400, height: 300, color: "#323232", name: "grey rect" }));
+        this.group.add(new Rectangle({ width: 100, height: 100, color: "#0f0", x: 0, name: "inner green rect" }));
+        this.group.add(this.outer);
+      }
+
+      update(dt) {
+        super.update(dt);
+        //this.outer.rotation += dt;
+      }
+
+      draw() {
+        super.draw();
+        this.group.render();
+      }
+    }
+  </script>
+</body>
+
+</html>

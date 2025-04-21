@@ -3,14 +3,14 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Bezier Rider</title>
+  <title>Bezier Signature</title>
   <link rel="stylesheet" href="demos.css" />
 </head>
 
 <body>
   <div id="info">
-    <strong>Bezier Motion</strong> —
-    A <code>BezierShape</code>
+    <strong>Bezier Signature</strong> — A <code>BezierShape</code> receives an array of path commands and draws them as a
+    bezier curve. This can be done all frames at once or they can be iterated over time, like a signature animation.
   </div>
   <canvas id="game"></canvas>
   <script type="module">
@@ -19,7 +19,6 @@
     window.addEventListener("load", () => {
       const canvas = document.getElementById("game");
       const game = new MyGame(canvas);
-      game.init();
       game.start();
     });
   </script>

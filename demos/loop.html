@@ -21,45 +21,38 @@
 
     <script type="module">
         import { Game, Scene, GameObject, FPSCounter, Painter, Circle } from "../src/index";
-
         class BouncingBall extends GameObject {
             constructor(game) {
                 super(game);
-
                 this.radius = 20;
+                this.circle = new Circle(this.radius, {
+                    color: "#0f0",
+                    debug: false
+                });
                 this.x = game.width / 2;
                 this.y = game.height / 2;
                 this.vx = 150;
                 this.vy = 100;
-
-                this.circle = new Circle(this.x, this.y, this.radius, {
-                    fillColor: "#0f0"
-                });
             }
 
             update(dt) {
                 this.x += this.vx * dt;
                 this.y += this.vy * dt;
-
                 const w = this.game.width;
                 const h = this.game.height;
-
                 if (this.x - this.radius < 0 || this.x + this.radius > w) this.vx *= -1;
                 if (this.y - this.radius < 0 || this.y + this.radius > h) this.vy *= -1;
-
                 // Clamp and update shape position
                 this.x = Math.max(this.radius, Math.min(w - this.radius, this.x));
                 this.y = Math.max(this.radius, Math.min(h - this.radius, this.y));
-
-                this.circle.x = this.x;
-                this.circle.y = this.y;
+                super.update(dt);
             }
 
-            render() {
-                this.circle.draw();
+            draw() {
+                super.draw();
+                this.circle.render();
             }
         }
-
 
         class LoopGame extends Game {
             constructor(canvas) {
@@ -69,25 +62,18 @@
             }
 
             init() {
-                this.scene = new Scene(this);
-                this.ui = new Scene(this);
-                this.pipeline.add(this.scene);
-                this.pipeline.add(this.ui);
-
-                this.scene.add(new BouncingBall(this));
-                this.ui.add(new FPSCounter(this, { anchor: "bottom-left" }));
-            }
-
-            clear() {
-                this.ctx.fillStyle = "black";
-                this.ctx.fillRect(0, 0, this.width, this.height);
+                super.init();
+                this.pipeline.add(new BouncingBall(this));
+                this.pipeline.add(new FPSCounter(this, { anchor: "bottom-left" }));
             }
         }
 
         window.addEventListener("load", () => {
             const canvas = document.getElementById("game");
             const game = new LoopGame(canvas);
-            game.init();
+            //game.enableLogging();
+            game.enablePauseOnBlur(true);
+            game.setFPS(60);
             game.start();
         });
     </script>

@@ -21,62 +21,15 @@
   <canvas id="game"></canvas>
 
   <script type="module">
-    import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group } from "../src/index";
-    // Template for a Hello World game
-    class DemoGame extends Game {
-      constructor(canvas) {
-        super(canvas);
-        this.enableFluidSize();
-        this.backgroundColor = "black";
-      }
-
-      init() {
-        // Set up scenes
-        this.scene = new Scene(this);
-        this.ui = new Scene(this);
-        this.pipeline.add(this.scene); // game layer
-        this.pipeline.add(this.ui);    // UI layer
-        // Hello World box in the game scene
-        this.scene.add(new HelloWorldBox(this));
-        // FPS counter in the UI scene
-        this.ui.add(new FPSCounter(this, { anchor: "bottom-right" }));
-      }
-    }
-
+    import { DemoGame } from "./js/basic.js";
     window.addEventListener("load", () => {
       const canvas = document.getElementById("game");
       const game = new DemoGame(canvas);
-      game.init();
+      //game.enableLogging();
+      game.enablePauseOnBlur(true);
+      game.setFPS(60);
       game.start();
     });
-
-    //
-    class HelloWorldBox extends GameObject {
-      constructor(game) {
-        super(game);
-
-        const box = new Rectangle(0, 0, 200, 80, {
-          fillColor: "#111",
-          strokeColor: "#0f0",
-          lineWidth: 2,
-        });
-
-        const label = new TextShape(0, 0, "Hello World!", {
-          font: "18px monospace",
-          color: "#0f0",
-          align: "center",
-          baseline: "middle"
-        });
-
-        this.group = new Group(game.width / 2, game.height / 2);
-        this.group.add(box);
-        this.group.add(label);
-      }
-
-      render() {
-        this.group.draw();
-      }
-    }
   </script>
 </body>
 

@@ -15,6 +15,10 @@ export class TileDemo extends Scene {
   constructor(game, options = {}) {
     super(game, options);
     this.elapsedTime = this.lastChangeTime = 0;
+  }
+
+  init() {
+    const game = this.game;
     // 1) Create a tile grid anchored at center
     this.grid = new TileLayout(game, {
       anchor: "center",
@@ -26,8 +30,10 @@ export class TileDemo extends Scene {
     });
     // Add 50 squares, each 50x50
     for (let i = 0; i < 50; i++) {
-      const rect = new Rectangle(0, 0, 50, 50, {
-        fillColor: Painter.randomColorHSL(),
+      const rect = new Rectangle({
+        width: 50,
+        height: 50,
+        color: Painter.colors.randomColorHSL(),
         strokeColor: "white",
       });
       const go = ShapeGOFactory.create(game, rect);
@@ -38,19 +44,24 @@ export class TileDemo extends Scene {
     // 2) Create a HorizontalLayout at bottom-center for UI buttons
     const bottomUI = new HorizontalLayout(game, {
       anchor: "bottom-center",
+      anchorMargin: 10,
       spacing: 10,
       padding: 15,
       debug: false,
       align: "center",
     });
+    bottomUI.height = 40;
+    bottomUI.width = 40 + 40 + 40 + 40 + 15;
     this.add(bottomUI);
 
     // 3) “Add Tile” button
     const addTileBtn = new Button(game, {
       text: "Add Tile",
       onClick: () => {
-        const rect = new Rectangle(0, 0, 50, 50, {
-          fillColor: Painter.randomColorHSL(),
+        const rect = new Rectangle({
+          width: 50,
+          height: 50,
+          color: Painter.colors.randomColorHSL(),
         });
         const tileGO = ShapeGOFactory.create(game, rect);
         this.grid.add(tileGO);
@@ -77,6 +88,7 @@ export class TileDemo extends Scene {
       width: 100,
       onClick: () => {
         this.grid.columns++;
+        this.grid.markBoundsDirty();
       },
     });
     bottomUI.add(addColumn);
@@ -86,6 +98,7 @@ export class TileDemo extends Scene {
       width: 100,
       onClick: () => {
         this.grid.columns = Math.max(1, this.grid.columns - 1);
+        this.grid.markBoundsDirty();
       },
     });
     bottomUI.add(removeColumn);
@@ -120,8 +133,8 @@ export class TileDemo extends Scene {
       // Start tweening on selected tiles
       for (const tile of selectedTiles) {
         tile.isTweening = true;
-        tile.startColor = tile.shape.fillColor; // Store current color
-        tile.targetColor = Painter.randomColorHSL();
+        tile.startColor = tile.shape.color; // Store current color
+        tile.targetColor = Painter.colors.randomColorHSL();
         tile.tweenProgress = 0;
         tile.tweenSpeed = 0.5 + Math.random(); // Random speed
       }
@@ -130,8 +143,8 @@ export class TileDemo extends Scene {
     // Update all tweening tiles
     for (const tile of this.grid.children) {
       if (tile.isTweening) {
-        const currentRGB = Painter.parseColorString(tile.startColor);
-        const targetRGB = Painter.parseColorString(tile.targetColor);
+        const currentRGB = Painter.colors.parseColorString(tile.startColor);
+        const targetRGB = Painter.colors.parseColorString(tile.targetColor);
 
         tile.tweenProgress += tile.tweenSpeed * dt;
         const newRGB = Tween.tweenColor(
@@ -140,7 +153,7 @@ export class TileDemo extends Scene {
           Math.min(tile.tweenProgress, 1)
         );
 
-        tile.shape.fillColor = Painter.rgbArrayToCSS(newRGB);
+        tile.shape.color = Painter.colors.rgbArrayToCSS(newRGB);
 
         // Check if tween is complete
         if (tile.tweenProgress >= 1) {

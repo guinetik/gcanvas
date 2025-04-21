@@ -24,8 +24,10 @@
     window.addEventListener("load", () => {
       const canvas = document.getElementById("game");
       const game = new LayoutDemo(canvas);
-      game.init();
+      //game.setFPS(1)
+      //game.enableLogging(true);
       game.start();
+      //setTimeout(game.stop.bind(game), 3000);
     });
   </script>
 </body>

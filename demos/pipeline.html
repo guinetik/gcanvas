@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GCanvas Rendering Pipeline Documentation</title>
+  <style>
+    :root {
+      --primary-color: #4a90e2;
+      --secondary-color: #50b36e;
+      --dark-color: #333;
+      --light-color: #f6f7f9;
+      --code-bg: #272822;
+      --code-color: #f8f8f2;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: var(--dark-color);
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: var(--light-color);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 20px;
+      background-color: var(--primary-color);
+      color: white;
+      border-radius: 8px;
+    }
+
+    h1 {
+      font-size: 2.8em;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      font-size: 2em;
+      margin-top: 40px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    h3 {
+      font-size: 1.5em;
+      margin-top: 30px;
+      color: var(--secondary-color);
+    }
+
+    h4 {
+      font-size: 1.2em;
+      margin-top: 20px;
+    }
+
+    p {
+      margin-bottom: 15px;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      color: var(--code-color);
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      margin: 15px 0;
+    }
+
+    code {
+      font-family: 'Courier New', Courier, monospace;
+      background-color: #eee;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+    }
+
+    .pipeline-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 30px 0;
+    }
+
+    .pipeline-steps {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .pipeline-step {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      position: relative;
+    }
+
+    .pipeline-step:not(:last-child):after {
+      content: "→";
+      position: absolute;
+      right: -15px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 20px;
+      color: var(--dark-color);
+    }
+
+    .feature-list {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    .feature-list li {
+      position: relative;
+      padding-left: 30px;
+      margin-bottom: 10px;
+    }
+
+    .feature-list li:before {
+      content: "✓";
+      color: var(--secondary-color);
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-weight: bold;
+    }
+
+    .note {
+      background-color: #fff9c4;
+      padding: 15px;
+      border-left: 4px solid #fbc02d;
+      margin: 20px 0;
+    }
+
+    .example {
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+
+    .example-title {
+      font-weight: bold;
+      color: white;
+      background-color: var(--secondary-color);
+      padding: 10px 15px;
+      margin: 0;
+      border-radius: 5px 5px 0 0;
+    }
+
+    .example-code {
+      padding: 15px;
+      margin: 0;
+      border-radius: 0;
+    }
+
+    .canvas-demo {
+      width: 100%;
+      height: 250px;
+      background-color: #181818;
+      border-top: 1px solid #ddd;
+      position: relative;
+    }
+
+    .canvas-label {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .shape-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .shape-item {
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .shape-item h4 {
+      margin-top: 0;
+    }
+
+    @media (max-width: 768px) {
+      .pipeline-steps {
+        flex-direction: column;
+      }
+
+      .pipeline-step:not(:last-child):after {
+        content: "↓";
+        position: absolute;
+        bottom: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        right: auto;
+        top: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>GCanvas Rendering Pipeline</h1>
+    <p>A comprehensive guide to understanding the shape rendering architecture</p>
+  </header>
+
+  <section>
+    <h2>Overview</h2>
+    <p>
+      GCanvas is a modular 2D rendering and game framework built on top of the HTML5 Canvas API. At its core, it uses a
+      layered approach to rendering that provides a clean, declarative way to draw and manipulate shapes on the canvas.
+    </p>
+    <p>
+      The rendering pipeline in GCanvas follows a hierarchical structure that builds from basic positioning to complex
+      visual elements. This hierarchy provides a consistent interface and allows for sophisticated compositions and
+      transformations.
+    </p>
+
+    <div class="pipeline-container">
+      <div class="pipeline-steps">
+        <div class="pipeline-step">Euclidian</div>
+        <div class="pipeline-step">Geometry2d</div>
+        <div class="pipeline-step">Renderable</div>
+        <div class="pipeline-step">Transformable</div>
+        <div class="pipeline-step">Shape</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The Rendering Pipeline</h2>
+    <p>
+      The rendering pipeline consists of a chain of classes that inherit from each other, with each layer adding more
+      functionality. Let's explore each layer in detail:
+    </p>
+
+    <h3 id="euclidian">1. Euclidian</h3>
+    <p>
+      The <code>Euclidian</code> class is the foundation of all visual elements in GCanvas. It provides the most basic
+      properties needed for positioning and sizing objects.
+    </p>
+
+    <h4>Key Features:</h4>
+    <ul class="feature-list">
+      <li>Basic positioning (x, y coordinates)</li>
+      <li>Basic dimensions (width, height)</li>
+      <li>Debug rendering capabilities</li>
+      <li>Property validation to prevent errors</li>
+    </ul>
+
+    <div class="example">
+      <div class="example-title">Example: Creating a basic Euclidian object</div>
+      <pre class="example-code"><code>// Create a basic Euclidian object
+const basicShape = new Euclidian({
+  x: 100,
+  y: 100,
+  width: 50,
+  height: 30
+});
+
+// Position and size can be accessed and modified
+console.log(basicShape.x, basicShape.y); // 100, 100
+console.log(basicShape.width, basicShape.height); // 50, 30
+
+// The object validates properties to prevent errors
+basicShape.width = 80; // Valid
+// basicShape.width = "invalid"; // Error: Invalid property value: width invalid</code></pre>
+      <div class="canvas-demo">
+        <canvas id="euclidian-canvas" width="400" height="250"></canvas>
+        <div class="canvas-label">Euclidian visualization</div>
+      </div>
+    </div>
+
+    <h3 id="geometry2d">2. Geometry2d</h3>
+    <p>
+      The <code>Geometry2d</code> class extends <code>Euclidian</code> by adding spatial constraints and bounding box
+      calculations. This allows for controlled positioning and more advanced spatial operations.
+    </p>
+
+    <h4>Key Features:</h4>
+    <ul class="feature-list">
+      <li>Bounds constraints (minX, maxX, minY, maxY)</li>
+      <li>Bounds calculation and caching</li>
+      <li>Local position calculation</li>
+      <li>Crisp rendering option for pixel-perfect alignment</li>
+    </ul>
+
+    <div class="example">
+      <div class="example-title">Example: Using Geometry2d with constraints</div>
+      <pre class="example-code"><code>// Create a Geometry2d object with constraints
+const constrainedShape = new Geometry2d({
+  x: 100,
+  y: 100,
+  width: 50,
+  height: 30,
+  minX: 50,
+  maxX: 150,
+  minY: 50,
+  maxY: 150,
+  crisp: true // Ensures positions and dimensions are whole numbers
+});
+
+// Constraints are applied when updating
+constrainedShape.x = 40; // Will be constrained to minX (50)
+constrainedShape.update();
+console.log(constrainedShape.x); // 50
+
+// Get bounding box information
+const bounds = constrainedShape.getBounds();
+console.log(bounds); // { x: 50, y: 100, width: 50, height: 30 }
+
+// Get local (top-left) position relative to center
+const local = constrainedShape.getLocalPosition();
+console.log(local); // { x: 25, y: 85 }</code></pre>
+      <div class="canvas-demo">
+        <canvas id="geometry2d-canvas" width="400" height="250"></canvas>
+        <div class="canvas-label">Geometry2d constraints</div>
+      </div>
+    </div>
+
+    <h3 id="renderable">3. Renderable</h3>
+    <p>
+      The <code>Renderable</code> class extends <code>Geometry2d</code> by adding visual properties and rendering
+      capabilities. It handles the visibility, opacity, and shadows of visual elements.
+    </p>
+
+    <h4>Key Features:</h4>
+    <ul class="feature-list">
+      <li>Visibility control</li>
+      <li>Opacity management</li>
+      <li>Shadow effects</li>
+      <li>Activity state tracking</li>
+      <li>Tick counter for animations</li>
+    </ul>
+
+    <div class="example">
+      <div class="example-title">Example: Creating a Renderable object with visual properties</div>
+      <pre class="example-code"><code>// Create a Renderable object
+const renderableShape = new Renderable({
+  x: 100,
+  y: 100,
+  width: 50,
+  height: 30,
+  visible: true,
+  opacity: 0.7,
+  shadowColor: "rgba(0,0,0,0.5)",
+  shadowBlur: 5,
+  shadowOffsetX: 3,
+  shadowOffsetY: 3
+});
+
+// Control visibility
+renderableShape.visible = false; // Hide the object
+renderableShape.visible = true;  // Show the object
+
+// Control opacity (0-1)
+renderableShape.opacity = 0.5;   // 50% opacity
+
+// The render() method will apply these properties
+// and then call draw() to render the actual shape</code></pre>
+      <div class="canvas-demo">
+        <canvas id="renderable-canvas" width="400" height="250"></canvas>
+        <div class="canvas-label">Renderable with opacity and shadows</div>
+      </div>
+    </div>
+
+    <h3 id="transformable">4. Transformable</h3>
+    <p>
+      The <code>Transformable</code> class extends <code>Renderable</code> by adding transformation capabilities. It
+      handles rotation and scaling of visual elements.
+    </p>
+
+    <h4>Key Features:</h4>
+    <ul class="feature-list">
+      <li>Rotation (in radians)</li>
+      <li>Scaling (scaleX, scaleY)</li>
+      <li>Transform application</li>
+      <li>Transformed bounds calculation</li>
+    </ul>
+
+    <div class="example">
+      <div class="example-title">Example: Applying transformations to an object</div>
+      <pre class="example-code"><code>// Create a Transformable object
+const transformableShape = new Transformable({
+  x: 100,
+  y: 100,
+  width: 50,
+  height: 30,
+  rotation: Math.PI / 4, // 45 degrees
+  scaleX: 1.5,
+  scaleY: 0.8
+});
+
+// Rotation and scaling can be adjusted
+transformableShape.rotation = Math.PI / 6; // 30 degrees
+transformableShape.scaleX = 2.0;
+transformableShape.scaleY = 2.0;
+
+// The applyTransforms() method applies these transformations
+// by modifying the canvas context state</code></pre>
+      <div class="canvas-demo">
+        <canvas id="transformable-canvas" width="400" height="250"></canvas>
+        <div class="canvas-label">Transformable with rotation and scaling</div>
+      </div>
+    </div>
+
+    <h3 id="shape">5. Shape</h3>
+    <p>
+      The <code>Shape</code> class extends <code>Transformable</code> and serves as the base class for all visual
+      elements in GCanvas. It adds styling properties and is extended by specific shape implementations like
+      <code>Circle</code>, <code>Rectangle</code>, etc.
+    </p>
+
+    <h4>Key Features:</h4>
+    <ul class="feature-list">
+      <li>Fill color</li>
+      <li>Stroke color and styling</li>
+      <li>Line width, join, and cap properties</li>
+      <li>Final rendering implementation</li>
+    </ul>
+
+    <div class="example">
+      <div class="example-title">Example: Creating a Shape with styling properties</div>
+      <pre class="example-code"><code>// Create a Shape object (base class for visual elements)
+const shape = new Shape({
+  x: 100,
+  y: 100,
+  width: 50,
+  height: 30,
+  color: "#ff0000",        // Fill color
+  stroke: "#000000",       // Stroke color
+  lineWidth: 2,            // Stroke width
+  lineJoin: "round",       // Line join style
+  lineCap: "round"         // Line cap style
+});
+
+// Specific shape classes (Circle, Rectangle, etc.) extend Shape
+// and implement their own draw() method 
+ctx.fill();
+ctx.stroke();
+ctx.restore();
+
+// Draw triangle
+ctx.save();
+ctx.translate(triangle.x, triangle.y);
+ctx.beginPath();
+ctx.moveTo(0, -triangle.size/2);
+ctx.lineTo(triangle.size/2, triangle.size/2);
+ctx.lineTo(-triangle.size/2, triangle.size/2);
+ctx.closePath();
+ctx.fillStyle = triangle.color;
+ctx.strokeStyle = triangle.stroke;
+ctx.lineWidth = triangle.lineWidth;
+ctx.fill();
+ctx.stroke();
+ctx.restore();</code></pre>
+      <div class="canvas-demo">
+        <canvas id="shape-canvas" width="400" height="250"></canvas>
+        <div class="canvas-label">Shape implementations (Rectangle, Circle, Triangle)</div>
+      </div>
+    </div>
+
+    
+    </div>
+  </section>
+  <section>
+    <h2>Available Shapes</h2>
+    <p>
+      GCanvas provides a variety of shape classes that extend the base <code>Shape</code> class. Each specialized
+      shape implements its own <code>draw()</code> method to render the specific geometry.
+    </p>
+
+    <div class="shape-grid">
+      <div class="shape-item">
+        <h4>Circle</h4>
+        <p>Circular shape with radius</p>
+      </div>
+      <div class="shape-item">
+        <h4>Rectangle</h4>
+        <p>Rectangular shape with width and height</p>
+      </div>
+      <div class="shape-item">
+        <h4>Square</h4>
+        <p>Square shape with equal sides</p>
+      </div>
+      <div class="shape-item">
+        <h4>Triangle</h4>
+        <p>Triangular shape</p>
+      </div>
+      <div class="shape-item">
+        <h4>Star</h4>
+        <p>Star shape with configurable points</p>
+      </div>
+      <div class="shape-item">
+        <h4>Polygon</h4>
+        <p>Multi-sided shape</p>
+      </div>
+      <div class="shape-item">
+        <h4>TextShape</h4>
+        <p>Text rendering with styling</p>
+      </div>
+      <div class="shape-item">
+        <h4>Heart</h4>
+        <p>Heart-shaped geometry</p>
+      </div>
+      <div class="shape-item">
+        <h4>Line</h4>
+        <p>Simple line segment</p>
+      </div>
+      <div class="shape-item">
+        <h4>Cross</h4>
+        <p>Cross shape</p>
+      </div>
+      <div class="shape-item">
+        <h4>Cloud</h4>
+        <p>Cloud-like shape</p>
+      </div>
+      <div class="shape-item">
+        <h4>Cube</h4>
+        <p>3D cube with perspective</p>
+      </div>
+      <div class="shape-item">
+        <h4>Cylinder</h4>
+        <p>3D cylinder with perspective</p>
+      </div>
+      <div class="shape-item">
+        <h4>Cone</h4>
+        <p>3D cone with perspective</p>
+      </div>
+      <div class="shape-item">
+        <h4>Sphere</h4>
+        <p>3D sphere with shading</p>
+      </div>
+      <div class="shape-item">
+        <h4>Prism</h4>
+        <p>3D prism with perspective</p>
+      </div>
+      <div class="shape-item">
+        <h4>Ring</h4>
+        <p>Ring or donut shape</p>
+      </div>
+      <div class="shape-item">
+        <h4>Diamond</h4>
+        <p>Diamond shape</p>
+      </div>
+      <div class="shape-item">
+        <h4>SVGPath</h4>
+        <p>SVG path rendering</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Composing Shapes with Group</h2>
+    <p>
+      The <code>Group</code> class is a special container that inherits from <code>Transformable</code>. It allows
+      multiple shapes to be grouped together and transformed as a single unit.
+    </p>
+
+    <h4>Key Features:</h4>
+    <ul class="feature-list">
+      <li>Container for multiple shapes</li>
+      <li>Coordinates of children are relative to the group</li>
+      <li>Transformations (rotation, scale) apply to all children</li>
+      <li>Opacity cascades to all children</li>
+      <li>Calculates combined bounds based on all children</li>
+    </ul>
+
+    <div class="example">
+      <div class="example-title">Example: Creating a group of shapes</div>
+      <pre class="example-code"><code>// Create a Group to hold multiple shapes
+const group = new Group({
+  x: 100,
+  y: 100
+});
+
+// Add shapes to the group
+const rect = new Rectangle({
+  width: 100,
+  height: 50,
+  color: "#ff0000"
+});
+
+const circle = new Circle(25, {
+  x: 50,
+  y: 0,
+  color: "#0000ff"
+});
+
+const text = new TextShape("Hello", {
+  x: 0,
+  y: 0,
+  color: "#ffffff",
+  align: "center",
+  baseline: "middle"
+});
+
+// Add shapes to the group
+group.add(rect);
+group.add(circle);
+group.add(text);
+
+// Moving the group moves all contained shapes
+group.x = 200;
+group.y = 150;
+
+// Rotating or scaling the group affects all shapes
+group.rotation = Math.PI / 6;  // 30 degrees
+group.scaleX = 1.5;
+group.scaleY = 1.5;
+
+// Changes to the group's opacity affect all children
+group.opacity = 0.7;
+
+// Draw the group and all its children
+group.draw();</code></pre>
+<div class="canvas-demo">
+  <canvas id="shape-canvas" width="400" height="250"></canvas>
+  <div class="canvas-label">Shape implementations (Rectangle, Circle, Triangle)</div>
+</div>
+
+    </div>
+  </section>
+</body>
+
+</html>

@@ -5,18 +5,27 @@ import {
   Rectangle,
   Circle,
   TextShape,
-  FPSCounter
+  FPSCounter,
 } from "../../src/index";
 
 export class MyGame extends Game {
   constructor(canvas) {
     super(canvas);
     this.enableFluidSize();
+    this.backgroundColor = "black";
+  }
+
+  update(dt) {
+    super.update(dt);
+    this.groupDemo.x = this.width / 2;
+    this.groupDemo.y = this.height / 2;
+    this.pipeline.update(dt);
   }
 
   init() {
     super.init();
-    this.pipeline.add(new GroupDemo(this));
+    this.groupDemo = new GroupDemo(this);
+    this.pipeline.add(this.groupDemo);
     this.pipeline.add(
       new FPSCounter(this, {
         anchor: "bottom-right",
@@ -34,22 +43,26 @@ export class MyGame extends Game {
  */
 export class GroupDemo extends GameObject {
   constructor(game) {
-    super(game, { x: 0, y: 0 });
+    super(game);
     // Create a Group at the center of the canvas:
-    this.group = new Group(game.width / 2, game.height / 2);
+    this.group = new Group({debug:true});
+    this.group.width = 450;
+    this.group.height = 450;
     // 1) A central rectangle
-    const centerRect = new Rectangle(0, 0, 145, 60, {
-      fillColor: "#222",
-      strokeColor: "#fff",
-      lineWidth: 2,
+    const centerRect = new Rectangle({
+      width: 145,
+      height: 60,
+      color: "#222",
+      debug:true,
     });
     this.group.add(centerRect);
     // 2) Some text in the middle
-    const centerText = new TextShape(0, 0, "Grouped Demo!", {
+    const centerText = new TextShape("Grouped Demo!", {
       font: "18px sans-serif",
-      color: "#0f0",
+      color: "#FFF",
       align: "center",
       baseline: "middle",
+      opacity:0.5,
     });
     this.group.add(centerText);
     // 3) Create a radial pattern of circles around the origin
@@ -60,9 +73,11 @@ export class GroupDemo extends GameObject {
       const angle = (Math.PI * 2 * i) / this.circleCount; // distribute evenly
       const x = Math.cos(angle) * circleRadius;
       const y = Math.sin(angle) * circleRadius;
-      const circle = new Circle(x, y, 20, {
-        fillColor: "#ff0",
-        strokeColor: "#000",
+      const circle = new Circle(20, {
+        x: x,
+        y: y,
+        color: "#ff0",
+        stroke: "#FFF",
         lineWidth: 2,
         visible: true, // Start them all visible
       });
@@ -100,16 +115,15 @@ export class GroupDemo extends GameObject {
     this.circles.forEach((circle, i) => {
       // Animate color
       const hue = (this.elapsed * 50 + i * 40) % 360;
-      circle.fillColor = `hsl(${hue}, 90%, 60%)`;
+      circle.color = `hsl(${hue}, 90%, 60%)`;
       // one circle is invisible; all others remain visible
       circle.visible = i !== flashIndex;
     });
+    this.group.update(dt);
   }
 
-  /**
-   * render() - Draw the group each frame.
-   */
-  render() {
-    this.group.draw();
+  draw() {
+    this.logger.log("GroupDemo: render");
+    this.group.render();
   }
 }
