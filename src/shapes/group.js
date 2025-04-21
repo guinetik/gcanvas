@@ -1,173 +1,151 @@
 import { Painter } from "../painter/painter";
 import { Transformable } from "./transformable";
 import { ZOrderedCollection } from "../util";
-
 /**
  * Group - A powerful container for composing and manipulating multiple transformable objects
- *
+ * 
  * ### Core Capabilities
- *
+ * 
  * - Aggregate multiple transformable objects into a single unit
  * - Efficient bounding box calculation with memoization
- * - Performant object management with z-ordering
+ * - Performant object management 
  * - Property inheritance from group to children
  *
  * ### Rendering Behavior
- *
- * - Applies group's transformations to all children
- * - Renders children in order of z-index
+ * 
+ * - Applies group's transformations to all children 
+ * - Renders children in order of addition
  * - Supports both Shape and GameObject hierarchies
- *
- * ### Performance Considerations
- *
- * - Lazy bounding box calculation
- * - Z-index based rendering
- * - Efficient child tracking
  *
  * @extends Transformable
  */
 export class Group extends Transformable {
   /**
    * Creates a new Group instance
-   *
+   * 
    * @param {Object} [options={}] - Additional rendering options
-   * @param {boolean} [options.sortByZIndex=true] - Whether to sort children by z-index
-   * @param {number} [options.width] - Optional explicit width
-   * @param {number} [options.height] - Optional explicit height
+   * @param {boolean} [options.inheritOpacity=true] - Whether opacity should cascade to children 
+   * @param {boolean} [options.inheritVisible=true] - Whether visibility should cascade to children
+   * @param {boolean} [options.inheritScale=false] - Whether scale should cascade to children
    */
   constructor(options = {}) {
-    // Call parent constructor with all options
+    // Call parent constructor with all options 
     super(options);
 
-    // Create the z-ordered collection for children
+    // Create the z-ordered collection
     this._collection = new ZOrderedCollection({
-      sortByZIndex: options.sortByZIndex !== false
+      sortByZIndex: options.sortByZIndex || true
     });
     this._collection._owner = this; // Give collection a reference to its owner
 
-    // Store explicit dimensions if provided in constructor
-    if (options.width !== undefined) {
-      this._explicitWidth = options.width;
-    }
+    // Initialize state tracking 
+    this._childrenVersion = 0;
+    this._cachedBounds = null;
 
-    if (options.height !== undefined) {
-      this._explicitHeight = options.height;
-    }
+    options.width = Math.max(0, options.width || 0);
+    options.height = Math.max(0, options.height || 0);
+
+    // Track if dimensions were explicitly set in constructor
+    this.userDefinedWidth = options.width;
+    this.userDefinedHeight = options.height;
+    
+    // Only consider dimensions as user-defined if they were explicitly provided in options
+    this.userDefinedDimensions = options.width !== undefined && options.height !== undefined && 
+                               (options.width > 0 || options.height > 0);
   }
 
   /**
-   * Adds an object to the group with type and duplicate checking
-   *
+   * Add object to group with type checking
    * @param {Transformable} object - Object to add
-   * @throws {TypeError} If argument is not a Transformable
-   * @throws {Error} If object is already in the group
-   * @returns {Transformable} The added object for chaining
+   * @returns {Transformable} The added object
    */
   add(object) {
     if (object == null || object == undefined) {
       throw new Error("Object is null or undefined");
     }
-    // Type checking
     if (!(object instanceof Transformable)) {
       throw new TypeError("Group can only add Transformable instances");
     }
-
-    return this._collection.add(object);
+    object.parent = this;
+    this._collection.add(object);
+    this._childrenVersion++;
+    this.markBoundsDirty();
+    return object;
   }
 
   /**
-   * Removes an object from the group
-   *
+   * Remove object from group
    * @param {Transformable} object - Object to remove
-   * @returns {boolean} Whether the object was successfully removed
+   * @returns {boolean} Whether object was removed
    */
   remove(object) {
     const result = this._collection.remove(object);
     if (result) {
+      object.parent = null;
+      this._childrenVersion++;
       this.markBoundsDirty();
     }
     return result;
   }
 
   /**
-   * Removes all objects from the group
+   * Clear all objects from group
    */
   clear() {
     this._collection.clear();
+    this._childrenVersion++;
     this.markBoundsDirty();
   }
 
-  /**
-   * Brings an object to the front of the group
-   * @param {Transformable} object - Object to bring to front
-   */
+  // Z-ordering methods
   bringToFront(object) {
-    this._collection.bringToFront(object);
+    return this._collection.bringToFront(object);
   }
 
-  /**
-   * Sends an object to the back of the group
-   * @param {Transformable} object - Object to send to back
-   */
   sendToBack(object) {
-    this._collection.sendToBack(object);
+    return this._collection.sendToBack(object);
   }
 
-  /**
-   * Moves an object forward in the group's order
-   * @param {Transformable} object - Object to move forward
-   */
   bringForward(object) {
-    this._collection.bringForward(object);
+    return this._collection.bringForward(object);
   }
 
-  /**
-   * Moves an object backward in the group's order
-   * @param {Transformable} object - Object to move backward
-   */
   sendBackward(object) {
-    this._collection.sendBackward(object);
+    return this._collection.sendBackward(object);
   }
 
   /**
-   * Group.render() - Renders the group and its children
-   * Ensures proper transformation hierarchy
+   * Render group and all children with transformations
    */
   draw() {
     super.draw();
-    this.logger.log("Group.draw children:", this.children.length);
+    this.logger.log("Group.draw chilren:", this.children.length);
     
     // Get sorted children
     const sortedChildren = this._collection.getSortedChildren();
-    
+
     // For each child, completely isolate its rendering context
     for (let i = 0; i < sortedChildren.length; i++) {
       const child = sortedChildren[i];
       if (child.visible) {
-        // Save the entire canvas state
         Painter.save();
-        // Render the child in isolation
         child.render();
-        // Restore the entire canvas state
         Painter.restore();
       }
     }
   }
 
   /**
-   * Updates all children with an update method
-   *
+   * Update all children with active update methods
    * @param {number} dt - Delta time in seconds
    */
   update(dt) {
     this.logger.groupCollapsed("Group.update");
-    
-    // Get sorted children
     const sortedChildren = this._collection.getSortedChildren();
-    
+
     for (let i = 0; i < sortedChildren.length; i++) {
       const child = sortedChildren[i];
-      if (child.active && typeof child.update === "function") {
+      if (child.active && typeof child.update === 'function') {
         child.update(dt);
       }
     }
@@ -176,220 +154,157 @@ export class Group extends Transformable {
   }
 
   /**
-   * Getter for children that uses the z-ordered collection
-   * @returns {Array} Children in the group
+   * Get group's children array
+   * @returns {Array} Children array
    */
   get children() {
-    return this._collection?.children;
+    // Check if the collection exists and if it doesn't, return an empty array
+    return this._collection?.children || [];
   }
 
-  _calculateChildrenBounds() {
-    // If no children, return default bounds
-    if (this.children.length === 0) {
+  /**
+   * Override width getter
+   * @returns {number} Width
+   */
+  get width() {
+    if (this.userDefinedDimensions) {
+      return this._width;
+    }
+    return this.getBounds().width;
+  }
+
+  /**
+   * Override width setter
+   * @param {number} v - New width
+   */
+  set width(v) {
+    const max = Math.max(0, v);
+    this._width = max;
+    this.userDefinedWidth = max;
+    this.userDefinedDimensions = (this.userDefinedWidth > 0 || this.userDefinedHeight > 0) && 
+                               this.userDefinedWidth !== undefined && this.userDefinedHeight !== undefined;
+    this.markBoundsDirty();
+  }
+
+  /**
+   * Override height getter
+   * @returns {number} Height
+   */
+  get height() {
+    if (this.userDefinedDimensions) {
+      return this._height;
+    }
+    return this.getBounds().height;
+  }
+
+  /**
+   * Override height setter
+   * @param {number} v - New height
+   */
+  set height(v) {
+    const max = Math.max(0, v);
+    this._height = max;
+    this.userDefinedHeight = max;
+    this.userDefinedDimensions = (this.userDefinedWidth > 0 || this.userDefinedHeight > 0) && 
+                               this.userDefinedWidth !== undefined && this.userDefinedHeight !== undefined;
+    this.markBoundsDirty();
+  }
+
+  /**
+   * Override calculateBounds to compute from children
+   * @returns {Object} Bounds object
+   */
+  calculateBounds() {
+    // If explicitly sized, use those dimensions
+    if (this.userDefinedDimensions) {
       return {
-        minX: 0,
-        minY: 0,
-        maxX: 0,
-        maxY: 0,
-        width: this._explicitWidth || 0,
-        height: this._explicitHeight || 0,
+        x: this.x,
+        y: this.y,
+        width: this._width,
+        height: this._height
       };
     }
-  
-    // Initialize extremes
+
+    // No children = empty bounds
+    if (!this.children?.length) {
+      return {
+        x: this.x,
+        y: this.y, 
+        width: 0,
+        height: 0
+      };
+    }
+
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
-  
-    // Track all corners of all child bounding boxes
-    for (let i = 0; i < this.children.length; i++) {
-      const child = this.children[i];
-  
-      // Calculate the absolute corner coordinates of the child
-      const childHalfWidth = child.width / 2;
-      const childHalfHeight = child.height / 2;
-  
-      // Calculate child corners in absolute coordinates
-      const corners = [
-        { x: child.x - childHalfWidth, y: child.y - childHalfHeight }, // Top-left
-        { x: child.x + childHalfWidth, y: child.y - childHalfHeight }, // Top-right
-        { x: child.x + childHalfWidth, y: child.y + childHalfHeight }, // Bottom-right
-        { x: child.x - childHalfWidth, y: child.y + childHalfHeight }, // Bottom-left
-      ];
-  
-      // Apply child rotation and scale if needed
-      if (child.rotation !== 0 || child.scaleX !== 1 || child.scaleY !== 1) {
-        const cos = Math.cos(child.rotation);
-        const sin = Math.sin(child.rotation);
-  
-        for (let j = 0; j < corners.length; j++) {
-          // Apply scale
-          const cornerX = (corners[j].x - child.x) * child.scaleX + child.x;
-          const cornerY = (corners[j].y - child.y) * child.scaleY + child.y;
-  
-          // Apply rotation around child center
-          const dx = cornerX - child.x;
-          const dy = cornerY - child.y;
-  
-          corners[j].x = child.x + dx * cos - dy * sin;
-          corners[j].y = child.y + dx * sin + dy * cos;
-        }
-      }
-  
-      // Find min/max for this child
-      for (const corner of corners) {
-        minX = Math.min(minX, corner.x);
-        minY = Math.min(minY, corner.y);
-        maxX = Math.max(maxX, corner.x);
-        maxY = Math.max(maxY, corner.y);
-      }
+    
+    // Calculate bounds from all children
+    for (const child of this.children) {
+      // Get the child's position and dimensions
+      const childX = child.x;
+      const childY = child.y;
+      const childWidth = child.width;
+      const childHeight = child.height;
+      
+      // Calculate the child's bounding box edges
+      const childLeft = childX - childWidth / 2;
+      const childRight = childX + childWidth / 2;
+      const childTop = childY - childHeight / 2;
+      const childBottom = childY + childHeight / 2;
+      
+      // Update min/max coordinates
+      minX = Math.min(minX, childLeft);
+      maxX = Math.max(maxX, childRight);
+      minY = Math.min(minY, childTop);
+      maxY = Math.max(maxY, childBottom);
     }
-  
-    // Calculate width and height
+
+    // Calculate dimensions
     const width = maxX - minX;
     const height = maxY - minY;
-  
-    return {
-      minX,
-      minY,
-      maxX,
-      maxY,
-      width,
-      height,
-    };
-  }
-  
-  calculateBounds() {
-    // If no children, return default bounds
-    if (this.children.length === 0) {
-      return {
-        x: this.x,
-        y: this.y,
-        width: 0,
-        height: 0,
-      };
-    }
-  
-    // Get children bounds
-    const childBounds = this._calculateChildrenBounds();
-  
-    // Use explicitly set dimensions if available, otherwise use calculated dimensions
-    const width = this._explicitWidth !== undefined 
-      ? this._explicitWidth 
-      : childBounds.width;
-    
-    const height = this._explicitHeight !== undefined 
-      ? this._explicitHeight 
-      : childBounds.height;
-  
-    return {
-      x: childBounds.minX + width / 2,
-      y: childBounds.minY + height / 2,
-      width,
-      height,
-    };
-  }
-  
-  getDebugBounds() {
-    // If no children, return default bounds
-    if (this.children.length === 0) {
-      return {
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-      };
-    }
-  
-    // Get children bounds
-    const childBounds = this._calculateChildrenBounds();
-  
-    return {
-      x: childBounds.minX,
-      y: childBounds.minY,
-      width: childBounds.width,
-      height: childBounds.height,
-    };
-  }
 
-  /**
-   * Override getBounds() to respect manually set dimensions while still considering children
-   * @override
-   * @returns {Object} Bounds with x, y, width, and height
-   */
-  getBounds() {
-    // Calculate bounds based on children
-    const childBounds = this.calculateBounds();
-
-    // Use explicitly set dimensions if available, otherwise use calculated dimensions
-    const bounds = {
+    // Return bounds centered on group position
+    return {
       x: this.x,
       y: this.y,
-      width:
-        this._explicitWidth !== undefined
-          ? this._explicitWidth
-          : childBounds.width,
-      height:
-        this._explicitHeight !== undefined
-          ? this._explicitHeight
-          : childBounds.height,
+      width: width,
+      height: height
     };
-
-    return bounds;
   }
 
-  /**
-   * Override width setter to store explicit width
-   * @type {number}
-   */
-  get width() {
-    // If we have an explicit width, return that
-    if (this._explicitWidth !== undefined) {
-      return this._explicitWidth;
+  getDebugBounds() {
+    const bounds = this.calculateBounds();
+    
+    // Calculate the actual left-top coordinates from the children
+    let minX = Infinity;
+    let minY = Infinity;
+    
+    for (const child of this.children) {
+      const childX = child.x;
+      const childY = child.y;
+      const childWidth = child.width;
+      const childHeight = child.height;
+      
+      const childLeft = childX - childWidth / 2;
+      const childTop = childY - childHeight / 2;
+      
+      minX = Math.min(minX, childLeft);
+      minY = Math.min(minY, childTop);
     }
-
-    // Otherwise, calculate from children
-    if (this.children && this.children.length > 0) {
-      const bounds = this.calculateBounds();
-      return bounds.width;
+    
+    // If no children, use the group's position
+    if (!this.children?.length) {
+      minX = this.x - bounds.width / 2;
+      minY = this.y - bounds.height / 2;
     }
-
-    // Default if no children and no explicit width
-    return this._width;
-  }
-
-  set width(v) {
-    this.validateProp(v, "width");
-    this._explicitWidth = Math.max(0, v);
-    this._width = this._explicitWidth; // Keep the base property in sync
-    this.markBoundsDirty();
-  }
-
-  /**
-   * Override height setter to store explicit height
-   * @type {number}
-   */
-  get height() {
-    // If we have an explicit height, return that
-    if (this._explicitHeight !== undefined) {
-      return this._explicitHeight;
-    }
-
-    // Otherwise, calculate from children
-    if (this.children && this.children.length > 0) {
-      const bounds = this.calculateBounds();
-      return bounds.height;
-    }
-
-    // Default if no children and no explicit height
-    return this._height;
-  }
-
-  set height(v) {
-    this.validateProp(v, "height");
-    this._explicitHeight = Math.max(0, v);
-    this._height = this._explicitHeight; // Keep the base property in sync
-    this.markBoundsDirty();
+    
+    return {
+      width: bounds.width,
+      height: bounds.height,
+      x: minX,
+      y: minY,
+    };
   }
 }

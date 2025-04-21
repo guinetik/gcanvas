@@ -136,8 +136,8 @@ export class Scene extends GameObject {
     return {
       width: this.width,
       height: this.height,
-      x: this.x,
-      y: this.y,
+      x: this.x - this.width / 2,
+      y: this.y - this.height / 2,
     };
   }
 

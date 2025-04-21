@@ -20,16 +20,16 @@ export class Rectangle extends Shape {
   }
 
   drawRect() {
-    const {x, y} = this.getLocalPosition();
+    // When in a group context, use relative coordinates
+    const x = -this.width / 2;
+    const y = -this.height / 2;
+    
     if (this.color) {
       Painter.shapes.rect(x, y, this.width, this.height, this.color);
     }
   
     if (this.stroke) {
-      Painter.shapes.outlineRect(
-        x, y, this.width, this.height, 
-        this.stroke, this.lineWidth
-      );
+      Painter.shapes.outlineRect(x, y, this.width, this.height, this.stroke, this.lineWidth);
     }
   }
 }

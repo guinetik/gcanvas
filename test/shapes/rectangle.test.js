@@ -32,7 +32,7 @@ describe("Rectangle", () => {
     });
     rectangle.drawRect();
     // painter should translate to the rectangle's center
-    expect(Painter.shapes.rect).toHaveBeenCalledWith(-40, -80, 100, 200, "red");
+    expect(Painter.shapes.rect).toHaveBeenCalledWith(-50, -100, 100, 200, "red");
   });
 
   it("should draw an outlined rectangle correctly using Painter.", () => {
@@ -52,13 +52,13 @@ describe("Rectangle", () => {
     rectangle.drawRect();
     // painter should translate to the rectangle's center
     expect(Painter.shapes.outlineRect).toHaveBeenCalledWith(
-      -40,
-      -80,
+      -50,
+      -100,
       100,
       200,
       "blue",
       2
     );
-    expect(Painter.shapes.rect).toHaveBeenCalledWith(-40, -80, 100, 200, "red");
+    expect(Painter.shapes.rect).toHaveBeenCalledWith(-50, -100, 100, 200, "red");
   });
 });

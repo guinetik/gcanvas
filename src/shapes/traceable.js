@@ -12,10 +12,8 @@ export class Traceable extends Geometry2d {
 
   async drawDebug() {
     if (!this._debug) return;
-
     // Get the debug bounds
     const debugBounds = this.getDebugBounds();
-
     this.logger.log(
       this.constructor.name,
       "drawDebug",
@@ -33,17 +31,14 @@ export class Traceable extends Geometry2d {
     // Draw the debug rectangle around the object's actual position and size
     // For Scenes, this should create a box that surrounds all their content
     Painter.shapes.outlineRect(
-      // Here's the key fix - respect the center-based coordinates
-      this.x - debugBounds.width / 2,
-      this.y - debugBounds.height / 2,
+      debugBounds.x,
+      debugBounds.y,
       debugBounds.width,
       debugBounds.height,
       this._debugColor,
       2
     );
-
     Painter.restore();
-    this.drawCoordinateMarker();
   }
 
   getDebugBounds() {
@@ -51,14 +46,9 @@ export class Traceable extends Geometry2d {
     return {
       width: this.width,
       height: this.height,
-      x: -this.width / 2,
-      y: -this.height / 2,
+      x: this.x - this.width / 2,
+      y: this.y - this.height / 2,
     };
-  }
-
-  drawCoordinateMarker() {
-    Painter.lines.line(this.x - 5, this.y, this.x + 5, this.y, "red", 1);
-    Painter.lines.line(this.x, this.y - 5, this.x, this.y + 5, "red", 1);
   }
 
   /**

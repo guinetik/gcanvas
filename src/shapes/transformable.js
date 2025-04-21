@@ -29,7 +29,7 @@ export class Transformable extends Renderable {
    */
   constructor(options = {}) {
     super(options);
-    this._rotation = options.rotation ?? 0;
+    this._rotation = options.rotation * Math.PI / 180 ?? 0;
     this._scaleX = options.scaleX ?? 1;
     this._scaleY = options.scaleY ?? 1;
     this.logger.log("Transformable", this.x, this.y, this.width, this.height);
@@ -61,7 +61,7 @@ export class Transformable extends Renderable {
   }
 
   set rotation(v) {
-    this._rotation = v;
+    this._rotation = v * Math.PI / 180;
     this.markBoundsDirty();
   }
 

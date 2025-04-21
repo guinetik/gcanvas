@@ -79,8 +79,8 @@ describe("Group", () => {
     const group = new Group();
     group.add(new Rectangle({ width: 400, height: 300, color: "#323232" }));
     group.add(new Rectangle({ width: 100, height: 100, color: "#0f0", x: -50 }));
-    group.add(new Rectangle({ width: 100, height: 100, color: "#0f0", x: 150 }));
-    expect(group.width).toBe(550);
+    group.add(new Rectangle({ width: 100, height: 100, color: "#0f0", x: 200 }));
+    expect(group.width).toBe(450);
     expect(group.height).toBe(300);
   });
 });

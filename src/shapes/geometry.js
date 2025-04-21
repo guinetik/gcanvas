@@ -165,15 +165,25 @@ export class Geometry2d extends Euclidian {
   }
 
   /**
-   * Returns the object's top-left corner.
+   * Returns the object's top-left corner, taking into account group containment.
    * Useful for layouting or aligning objects to pixel grids.
    *
    * @returns {{x: number, y: number}}
    */
   getLocalPosition() {
+    // Get the parent group's position if it exists
+    let parentX = 0;
+    let parentY = 0;
+    
+    // If this object is part of a group, adjust for the group's position
+    if (this.parent) {
+      parentX = this.parent.x;
+      parentY = this.parent.y;
+    }
+
     return {
-      x: this.x - this.width / 2,
-      y: this.y - this.height / 2,
+      x: (this.x - parentX) - this.width / 2,
+      y: (this.y - parentY) - this.height / 2,
     };
   }
 
