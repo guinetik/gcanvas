@@ -7,18 +7,21 @@
  ***************************************************************/
 
 import { Scene } from "./objects";
-import { Tweenetik } from "../motion"
+import { Tweenetik } from "../motion"; 
+import { Loggable } from "../logger/loggable";
+import { ZOrderedCollection } from "../util";
 /**
  * Pipeline - Maintains a list of GameObjects, updating and rendering them
  * each frame. It also centralizes and dispatches pointer events (inputdown,
  * inputup, inputmove) to interactive objects, including nested Scene children.
  */
-export class Pipeline {
+export class Pipeline extends Loggable {
   /**
    * Create a new Pipeline.
    * @param {Game} game - A reference to the main Game instance.
    */
   constructor(game) {
+    super();
     /**
      * Reference to the owning Game.
      * @type {Game}
@@ -28,10 +31,12 @@ export class Pipeline {
      * The master list of top-level GameObjects to update and render.
      * @type {GameObject[]}
      */
-    this.gameObjects = [];
+    // Create the z-ordered collection
+    this._collection = new ZOrderedCollection();
+    this._collection._owner = this; // Give collection a reference to its owner
 
     // Listen for pointer events from the Game's central event system.
-    const types = ["inputdown", "inputup", "inputmove"];
+    const types = ["inputdown", "inputup", "inputmove", "click"];
     types.forEach((type) => {
       this.game.events.on(type, (e) => {
         this.dispatchInputEvent(type, e);
@@ -47,6 +52,7 @@ export class Pipeline {
    * @private
    */
   _hoverObject(obj, e) {
+    //console.log("hoverObject", obj.constructor.name, obj.interactive, obj._hitTest != null);
     // Only applies to interactive objects with a shape and a _hitTest method.
     if (!obj.interactive || !obj._hitTest) return;
     const hit = obj._hitTest(e.x, e.y);
@@ -54,7 +60,7 @@ export class Pipeline {
       // Pointer entered this object
       obj._hovered = true;
       obj.events.emit("mouseover", e);
-      //console.log("Mouseover", obj, e.x, e.y);
+      //this.logger.log("Mouseover", obj, e.x, e.y);
     } else if (!hit && obj._hovered) {
       // Pointer left this object
       obj._hovered = false;
@@ -92,7 +98,7 @@ export class Pipeline {
     for (let i = this.gameObjects.length - 1; i >= 0; i--) {
       const obj = this.gameObjects[i];
       if (type === "inputdown") {
-        //console.log("inputdown", obj);
+        //this.logger.log("inputdown", obj);
       }
       if (obj instanceof Scene) {
         // If it's a Scene, see if any of its children were hit.
@@ -124,7 +130,7 @@ export class Pipeline {
     // Check from topmost to bottommost for hover changes.
     for (let i = this.gameObjects.length - 1; i >= 0; i--) {
       const obj = this.gameObjects[i];
-      //console.log("Hover test for", obj, e.x, e.y);
+      //this.logger.log("Hover test for", obj, e.x, e.y);
       if (obj instanceof Scene) {
         this._hoverScene(obj, e);
       } else {
@@ -142,19 +148,19 @@ export class Pipeline {
    * @private
    */
   _dispatchToScene(scene, type, e) {
-    //if(type === "inputdown") console.log("inputdown", scene);
+    //if(type === "inputdown") this.logger.log("inputdown", scene);
     for (let i = scene.children.length - 1; i >= 0; i--) {
       const child = scene.children[i];
       if (child instanceof Scene) {
         // Recurse deeper if child is also a Scene
         const hit = this._dispatchToScene(child, type, e);
         if (hit) {
-          //if(type === "inputdown") console.log("HIT", child, type);
+          //if(type === "inputdown") this.logger.log("HIT", child, type);
           return true;
         }
       } else if (child.interactive && child._hitTest?.(e.x, e.y)) {
         // Found a child that was hit
-        //if(type === "inputdown") console.log("Dispatching to child", child, type);
+        //if(type === "inputdown") this.logger.log("Dispatching to child", child, type);
         child.events.emit(type, e);
         return true;
       }
@@ -168,9 +174,13 @@ export class Pipeline {
    * @returns {GameObject} Returns the same object for convenience.
    */
   add(gameObject) {
-    gameObject.parent = this;
-    this.gameObjects = [...this.gameObjects, gameObject];
-    return gameObject;
+    gameObject.parent = this.game;
+    const go = this._collection.add(gameObject);
+    // call the init() method on the go if it exists
+    if (go.init) {
+      go.init();
+    }
+    return go;
   }
 
   /**
@@ -178,36 +188,56 @@ export class Pipeline {
    * @param {GameObject} gameObject - The object to remove.
    */
   remove(gameObject) {
-    this.gameObjects = this.gameObjects.filter((obj) => obj !== gameObject);
+    if(gameObject === undefined || gameObject === null) { 
+      this.logger.warn("Cannot remove undefined or null object", gameObject);
+      return;
+    }
+    this._collection.remove(gameObject);
   }
 
-  /**
-   * Update all active game objects. Called each frame by the Game.
-   * Only active objects are updated.
-   * @param {number} dt - Delta time in seconds since the last frame.
-   */
+  bringToFront(gameObject) {
+    return this._collection.bringToFront(gameObject);
+  }
+  
+  sendToBack(gameObject) {
+    return this._collection.sendToBack(gameObject);
+  }
+  
+  bringForward(gameObject) {
+    return this._collection.bringForward(gameObject);
+  }
+  
+  sendBackward(gameObject) {
+    return this._collection.sendBackward(gameObject);
+  }
+  
+  clear() {
+    return this._collection.clear();
+  }
+  
+  // Getter to access children
+  get gameObjects() {
+    return this._collection.children;
+  }
+  
   update(dt) {
-    this.gameObjects
+    this.logger.groupCollapsed("Pipeline.update");
+    this._collection.children
       .filter((obj) => obj.active)
       .forEach((obj) => obj.update(dt));
     Tweenetik.updateAll(dt);
+    this.logger.groupEnd();
   }
-
-  /**
-   * Render all active game objects. Called each frame by the Game.
-   * Only visible objects are rendered.
-   */
+  
   render() {
-    this.gameObjects
-      .filter((obj) => obj.visible)
-      .forEach((obj) => obj.render());
-  }
-
-  /**
-   * Clear all game objects from the pipeline.
-   * Typically used when restarting or resetting the game.
-   */
-  clear() {
-    this.gameObjects = [];
+    const renderObj = (obj) => obj.render();
+    const filterVisible = (obj) => obj.visible;
+    const filterActive = (obj) => obj.active;
+    this.logger.groupCollapsed("Pipeline.render");
+    this._collection.getSortedChildren()
+      .filter(filterVisible)
+      .filter(filterActive)
+      .forEach(renderObj);
+    this.logger.groupEnd();
   }
 }

@@ -5,9 +5,10 @@
  * pipeline management, and input initialization.
  * Intended to be subclassed for your specific game logic.
  ***************************************************************/
-
+import { Logger } from "../logger/logger.js";
+import { DebugTab } from "../logger/debugtab.js";
 import { Pipeline } from "./pipeline.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 import { EventEmitter } from "../io";
 import { Mouse } from "../io";
 import { Input } from "../io";
@@ -59,24 +60,48 @@ export class Game {
      */
     this.lastTime = 0;
     /**
+     * Tracks the delta time of the last update.
+     * @type {number}
+     * @private
+     */
+    this.dt = 0;
+    /**
      * Flag indicating if the game loop is currently running.
      * @type {boolean}
      */
     this.running = false;
     /**
+     * Keep track of current frame (how many times loop has been called)
+     * @type {number}
+     */
+    this._frame = 0;
+    /**
      * The pipeline is a collection of GameObjects that are updated and rendered each frame.
      * @type {Pipeline}
      */
     this.pipeline = new Pipeline(this);
-    //
     // Initialize Painter with this game's 2D context.
     Painter.init(this.ctx);
     //
-    // Initialize pointer & input subsystems with reference to this game.
-    this.initIO();
-    this.initMotion();
-    console.log("[Game] Constructor");
+    this.targetFPS = 60; // default target FPS
+    this._frameInterval = 1000 / this.targetFPS; // in milliseconds
+    this._accumulator = 0; // tracks time overflow
+    // Add visibility pause feature
+    this._pauseOnBlur = false;
+    this._isPaused = false;
+    //
+    this._init = false;
+    //
+    this.initLogging();
   }
+
+  setFPS(fps) {
+    this.targetFPS = fps;
+    this._frameInterval = 1000 / fps;
+  }
+
+  #prevWidth = 0;
+  #prevHeight = 0;
 
   /**
    * Hook to set up initial game state, add objects, etc.
@@ -84,7 +109,13 @@ export class Game {
    * Override in subclasses to initialize custom logic or objects.
    */
   init() {
-    console.log("[Game] Initialized");
+    //
+    // Initialize pointer & input subsystems with reference to this game.
+    this.initIO();
+    this.initMotion();
+    //this.setPauseOnBlur(true);
+    this._init = true;
+    this.logger.log("[Game] Initialized");
   }
 
   /**
@@ -138,11 +169,43 @@ export class Game {
   }
 
   initMotion() {
-    /**
-     * Holds all currently active Tweenetik instances.
-     * Always call Tweenetik.updateAll(dt) in your game loop to drive them.
-     */
     Tweenetik._active = [];
+  }
+
+  initLogging() {
+    this.logger = new Logger("Game");
+    //Logger.setOutput(DebugTab.getInstance());
+    Logger.setOutput(console);
+    // Disable all logs initially
+    Logger.disableAll();
+    Logger.disable();
+    // Enable logs for specific classes
+    //Logger.enableFor("Renderable");
+    //Logger.enableFor("GameObject");
+    // Set the global log level
+    Logger.setLevel(Logger.INFO);
+    this.logger.groupCollapsed("Initializing Game...");
+  }
+
+  enableLogging() {
+    Logger.enable();
+  }
+
+  disableLogging() {
+    Logger.disableAll();
+    Logger.disable();
+  }
+
+  markBoundsDirty() {
+    this._boundsDirty = true;
+  }
+
+  get boundsDirty() {
+    return this._boundsDirty;
+  }
+
+  set boundsDirty(dirty) {
+    this._boundsDirty = dirty;
   }
 
   /**
@@ -154,6 +217,15 @@ export class Game {
       const resizeCanvas = () => {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
+        if (
+          this.#prevWidth !== this.canvas.width ||
+          this.#prevHeight !== this.canvas.height
+        ) {
+          this.markBoundsDirty();
+          this.onResize?.();
+        }
+        this.#prevWidth = this.canvas.width;
+        this.#prevHeight = this.canvas.height;
       };
       resizeCanvas(); // set initial size
       window.addEventListener("resize", resizeCanvas);
@@ -197,10 +269,18 @@ export class Game {
    * The loop() method is bound so it can be used as a callback.
    */
   start() {
+    this.logger.groupCollapsed("[Game] Starting...");
+    this.init();
+    if (!this._init) {
+      throw new Error(
+        "Game not initialized. Did you call init()? Remember to call super.init() in your subclass."
+      );
+    }
     this.running = true;
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
-    console.log("[Game] Started");
+    this.logger.log("[Game] Started");
+    this.logger.groupEnd();
   }
 
   /**
@@ -208,7 +288,7 @@ export class Game {
    */
   stop() {
     this.running = false;
-    console.log("[Game] Stopped");
+    this.logger.log("[Game] Stopped");
   }
 
   /**
@@ -219,7 +299,7 @@ export class Game {
     this.pipeline.clear();
     this.init();
     this.start();
-    console.log("[Game] Restarted");
+    this.logger.log("[Game] Restarted");
   }
 
   /**
@@ -230,13 +310,32 @@ export class Game {
    */
   loop(timestamp) {
     if (!this.running) return;
-    // Compute delta time (dt) in seconds since last frame.
-    const dt = (timestamp - this.lastTime) / 1000;
+
+    const elapsed = timestamp - this.lastTime; // <--- Real elapsed time
     this.lastTime = timestamp;
-    // Update and render the game state.
-    this.update(dt);
-    this.render();
-    // Schedule the next frame.
+    this._accumulator += elapsed;
+
+    // 🧠 Real FPS from wall time
+    this.actualFps = 1000 / elapsed;
+
+    if (this._accumulator >= this._frameInterval) {
+      const dt = this._frameInterval / 1000; // fixed timestep in seconds
+      this.dt = dt;
+      this._frame++;
+      this.logger.groupCollapsed(`Frame #${this._frame}`);
+      this.logger.time("render time");
+
+      this.update(dt);
+      this.render();
+
+      this.logger.timeEnd("render time");
+      this.logger.groupEnd();
+
+      this._accumulator -= this._frameInterval;
+    }
+    if (this.boundsDirty) {
+      this.boundsDirty = false;
+    }
     requestAnimationFrame(this.loop);
   }
 
@@ -323,6 +422,44 @@ export class Game {
       this._cursor.destroy();
       this.pipeline.remove(this._cursor);
       this._cursor = null;
+    }
+  }
+
+  /**
+   * Enable/disable pausing the game when the tab loses focus
+   * @param {boolean} enabled - Whether to pause on blur
+   */
+  enablePauseOnBlur(enabled) {
+    this._pauseOnBlur = enabled;
+    if (enabled) {
+      window.addEventListener(
+        "visibilitychange",
+        this._handleVisibilityChange.bind(this),
+        false
+      );
+    } else {
+      window.removeEventListener(
+        "visibilitychange",
+        this._handleVisibilityChange.bind(this),
+        false
+      );
+    }
+  }
+
+  _handleVisibilityChange() {
+    this.logger.log("Visibility change detected");
+    if (document.hidden) {
+      if (this._pauseOnBlur && this.running) {
+        this._isPaused = true;
+        this.stop();
+        this.logger.log("Paused due to tab visibility change");
+      }
+    } else {
+      if (this._isPaused) {
+        this._isPaused = false;
+        this.start();
+        this.logger.log("Resumed after tab visibility change");
+      }
     }
   }
 }
