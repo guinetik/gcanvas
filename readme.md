@@ -120,8 +120,8 @@ At the foundation is `Painter` - a wrapper around the canvas context that centra
 Painter.init(ctx);
 
 // Now drawing operations use Painter's methods
-Painter.circle(100, 100, 50, { fillColor: "red" });
-Painter.rect(200, 200, 80, 40, { strokeColor: "blue" });
+Painter.shapes.circle(100, 100, 50, { fillColor: "red" });
+Painter.shapes.rect(200, 200, 80, 40, { strokeColor: "blue" });
 ```
 
 ### 🔄 Transformable Properties
@@ -137,14 +137,31 @@ Every visual element in the engine inherits from Transformable.
 
 ### 💎 Shape Layer
 
-`Shape` extends `Transformable` and adds drawing capabilities. When you call `shape.draw()`, it applies all transforms then delegates to `Painter`.
+The Shape Layer is built on a hierarchy of classes that provide increasingly sophisticated rendering capabilities:
+
+1. **Euclidian** - The base class that defines spatial properties (x, y, width, height)
+2. **Geometry2d** - Adds bounding box calculations and constraints
+3. **Transformable** - Introduces rotation and scaling capabilities
+4. **Renderable** - Adds visual properties like opacity and visibility
+5. **Shape** - The final layer that adds styling (fill, stroke, line width)
+
+Each layer uses underscore-prefixed private fields (`_property`) for encapsulation, following a consistent pattern throughout the codebase:
 
 ```js
-const rect = new Rectangle(100, 100, 80, 50, { fillColor: "skyblue" });
-rect.draw(); // Uses Painter internally with transforms applied
+class Shape extends Transformable {
+  constructor(options = {}) {
+    super(options);
+    this._fillColor = options.fillColor ?? null;
+    this._strokeColor = options.strokeColor ?? null;
+    this._lineWidth = options.lineWidth ?? 1;
+  }
+
+  get fillColor() { return this._fillColor; }
+  set fillColor(v) { this._fillColor = v; }
+}
 ```
 
-The engine provides standard shapes like `Circle`, `Rectangle`, `Star`, etc.
+The engine provides standard shapes like `Circle`, `Rectangle`, `Star`, etc., all built on this foundation.
 
 ### 📦 Group
 
