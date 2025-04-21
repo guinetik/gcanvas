@@ -53,9 +53,8 @@ export class Tweenetik {
     this._finished = false;
     this._startProps = {};
 
-    // Capture the starting values right now:
     for (const prop in this.toProps) {
-      if (Object.prototype.hasOwnProperty.call(this.target, prop)) {
+      if (prop in this.target) {
         this._startProps[prop] = this.target[prop];
       }
     }
@@ -103,7 +102,7 @@ export class Tweenetik {
 
     // Calculate eased factor
     const eased = this.easingFn(t);
-
+    //console.log("Tweenetik.update", this._startProps);
     // Apply interpolations for each property
     for (const prop in this._startProps) {
       const startVal = this._startProps[prop];
