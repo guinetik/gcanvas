@@ -54,17 +54,17 @@
     window.addEventListener("load", () => {
       const canvas = document.getElementById("game");
       const game = new DemoGame(canvas);
-      game.setFPS(60);
+      game.setFPS(1);
       game.start();
-      //setTimeout(game.stop.bind(game), 1000);
+      setTimeout(game.stop.bind(game), 1000);
     });
 
     //
     class HelloWorldBox extends GameObject {
       constructor(game) {
         super(game);
-        this.outer = new Rectangle({ width: 100, height: 100, color: "yellow", x: 100, name: "outer green rect", debug: true, debugColor: "green" });
-        this.group = new Group({ debug: true });
+        this.outer = new Rectangle({ width: 100, height: 100, color: "darkcyan", rotation:3, y:150, x: 200, name: "outer green rect", debug: true, debugColor: "cyan" });
+        this.group = new Group({ debug: true, debugColor: "red"});
         this.group.add(new Rectangle({ width: 400, height: 300, color: "#323232", name: "grey rect" }));
         this.group.add(new Rectangle({ width: 100, height: 100, color: "#0f0", x: 0, name: "inner green rect" }));
         this.group.add(this.outer);
@@ -72,7 +72,7 @@
 
       update(dt) {
         super.update(dt);
-        //this.outer.rotation += dt;
+        console.log(this.group.x, this.group.y, this.group.width, this.group.height, this.group.getBounds());
       }
 
       draw() {

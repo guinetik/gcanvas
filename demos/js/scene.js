@@ -3,7 +3,6 @@ import {
   Scene,
   Button,
   FPSCounter,
-  GameObject,
   VerticalLayout,
   Rectangle,
   Group,
@@ -121,7 +120,7 @@ export class DemoGame extends Game {
   addLayer(random, i) {
     const layer = new LayerBox(this, this.scene, {}, random);
     this.scene.add(layer);
-    setTimeout(layer.randomize.bind(layer), 10 * i);
+    setTimeout(layer.randomize.bind(layer), 50 * i);
     return layer;
   }
 }
@@ -226,6 +225,9 @@ class LayerBox extends GameObjectShapeWrapper {
     //  console.log(x, y);
     this.x = x;
     this.y = y;
+    this.scaleX = this.scaleY = 0;
+    this.scaleTime = 0;
+    this.targetScale = 1;
   }
 
   update(dt) {

@@ -102,7 +102,7 @@ export class GroupDemo extends GameObject {
     super.update(dt);
     this.elapsed += dt;
     // 1) Rotate the entire group (one full revolution in ~6 seconds)
-    this.group.rotation = (this.elapsed / 6) * Math.PI * 2;
+    this.group.rotation = (this.elapsed * 24);
     // 2) Pulse the group scale from 0.8..1.2
     const pulse = 0.5 * Math.sin(this.elapsed * 2); // range -0.5..0.5
     this.group.scaleX = 1 + pulse;
