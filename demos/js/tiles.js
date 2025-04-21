@@ -9,6 +9,7 @@ import {
   FPSCounter,
   Painter,
   Tween,
+  Easing,
 } from "../../src/index";
 
 export class TileDemo extends Scene {
@@ -54,7 +55,7 @@ export class TileDemo extends Scene {
     bottomUI.width = 40 + 40 + 40 + 40 + 15;
     this.add(bottomUI);
 
-    // 3) “Add Tile” button
+    // 3) "Add Tile" button
     const addTileBtn = new Button(game, {
       text: "Add Tile",
       onClick: () => {
@@ -69,7 +70,7 @@ export class TileDemo extends Scene {
     });
     bottomUI.add(addTileBtn);
 
-    // 4) “Remove Tile” button
+    // 4) "Remove Tile" button
     const removeTileBtn = new Button(game, {
       text: "Remove Tile",
       onClick: () => {
@@ -82,7 +83,7 @@ export class TileDemo extends Scene {
     });
     bottomUI.add(removeTileBtn);
     //
-    // 5) “Add Column” button
+    // 5) "Add Column" button
     const addColumn = new Button(game, {
       text: "+ Column",
       width: 100,
@@ -92,7 +93,7 @@ export class TileDemo extends Scene {
       },
     });
     bottomUI.add(addColumn);
-    // 6) “Remove Column” button
+    // 6) "Remove Column" button
     const removeColumn = new Button(game, {
       text: "- Column",
       width: 100,
@@ -133,32 +134,78 @@ export class TileDemo extends Scene {
       // Start tweening on selected tiles
       for (const tile of selectedTiles) {
         tile.isTweening = true;
-        tile.startColor = tile.shape.color; // Store current color
-        tile.targetColor = Painter.colors.randomColorHSL();
-        tile.tweenProgress = 0;
-        tile.tweenSpeed = 0.5 + Math.random(); // Random speed
+        
+        // Store RGB values directly instead of CSS string to avoid parsing issues
+        const rgb = tile.shape.color ? 
+          Painter.colors.parseColorString(tile.shape.color) : 
+          [255, 255, 255]; // Default to white if color is undefined
+        
+        tile.startRGB = rgb;
+        
+        // Generate vibrant random color in RGB directly
+        const hue = Math.floor(Math.random() * 360);
+        const saturation = 80 + Math.floor(Math.random() * 20); // 80-100%
+        const lightness = 50 + Math.floor(Math.random() * 30); // 50-80%
+        const targetRGB = Painter.colors.hslToRgb(hue, saturation, lightness);
+        
+        tile.targetRGB = targetRGB;
+        tile.tweenElapsed = 0;
+        tile.tweenDuration = 0.5 + Math.random() * 0.5; // Random duration between 0.5-1.0 seconds
       }
     }
 
     // Update all tweening tiles
     for (const tile of this.grid.children) {
       if (tile.isTweening) {
-        const currentRGB = Painter.colors.parseColorString(tile.startColor);
-        const targetRGB = Painter.colors.parseColorString(tile.targetColor);
-
-        tile.tweenProgress += tile.tweenSpeed * dt;
-        const newRGB = Tween.tweenColor(
-          currentRGB,
-          targetRGB,
-          Math.min(tile.tweenProgress, 1)
-        );
-
-        tile.shape.color = Painter.colors.rgbArrayToCSS(newRGB);
-
-        // Check if tween is complete
-        if (tile.tweenProgress >= 1) {
+        try {
+          // Update elapsed time
+          tile.tweenElapsed += dt;
+          
+          // Calculate progress with proper easing
+          const progress = Math.min(tile.tweenElapsed / tile.tweenDuration, 1.0);
+          const easedProgress = Easing.easeInOutQuad(progress);
+          
+          // Use the stored RGB values directly
+          if (tile.startRGB && tile.targetRGB) {
+            const newRGB = Tween.tweenColor(
+              tile.startRGB,
+              tile.targetRGB,
+              easedProgress
+            );
+            
+            // Convert interpolated RGB values to CSS color string
+            tile.shape.color = Painter.colors.rgbArrayToCSS(newRGB);
+            
+            // Check if tween is complete
+            if (progress >= 1) {
+              tile.isTweening = false;
+              tile.shape.color = Painter.colors.rgbArrayToCSS(tile.targetRGB);
+            }
+          } else {
+            // Color missing, reset the tweening state
+            console.warn("Missing color values for tweening");
+            tile.isTweening = false;
+            
+            // Set a fallback color
+            const fallbackRGB = [
+              Math.floor(Math.random() * 255),
+              Math.floor(Math.random() * 255),
+              Math.floor(Math.random() * 255)
+            ];
+            tile.shape.color = Painter.colors.rgbArrayToCSS(fallbackRGB);
+          }
+        } catch (error) {
+          // Handle any errors in the color transition
+          console.warn("Error during color tweening:", error);
           tile.isTweening = false;
-          tile.startColor = tile.targetColor; // Update start color for next tween
+          
+          // Set a fallback color
+          const fallbackRGB = [
+            Math.floor(Math.random() * 255),
+            Math.floor(Math.random() * 255),
+            Math.floor(Math.random() * 255)
+          ];
+          tile.shape.color = Painter.colors.rgbArrayToCSS(fallbackRGB);
         }
       }
     }

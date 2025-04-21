@@ -46,11 +46,11 @@ export class PainterImages {
     const ctx = Painter.ctx;
     if (!ctx || !source) return;
 
-    const iw = width  ?? (crop ? crop.sw : source.width  ?? source.videoWidth);
+    const iw = width ?? (crop ? crop.sw : source.width ?? source.videoWidth);
     const ih = height ?? (crop ? crop.sh : source.height ?? source.videoHeight);
 
     const ax = { left: 0, center: 0.5, right: 1 }[anchor.split("-").pop()] ?? 0;
-    const ay = { top: 0, center: 0.5, bottom: 1 }[anchor.split("-")[0]]   ?? 0;
+    const ay = { top: 0, center: 0.5, bottom: 1 }[anchor.split("-")[0]] ?? 0;
     const ox = -iw * ax;
     const oy = -ih * ay;
 
@@ -86,10 +86,10 @@ export class PainterImages {
   /**
    * Fill a rectangle with a pattern in one line.
    */
-  static fillPattern(image, repetition, x, y, width, height) {
+  static fillPattern(image, x, y, width, height) {
     const ctx = Painter.ctx;
     ctx.save();
-    ctx.fillStyle = this.createPattern(image, repetition);
+    ctx.fillStyle = image;
     ctx.fillRect(x, y, width, height);
     ctx.restore();
   }
@@ -150,7 +150,10 @@ export class PainterImages {
   static setPixel(imageData, x, y, r, g, b, a = 255) {
     const i = (y * imageData.width + x) * 4;
     const d = imageData.data;
-    d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = a;
+    d[i] = r;
+    d[i + 1] = g;
+    d[i + 2] = b;
+    d[i + 3] = a;
   }
 
   /* ───────────────────────────── BITMAP HELPERS ───────────────────────── */
@@ -167,26 +170,60 @@ export class PainterImages {
     return createImageBitmap(image);
   }
 
-   /* ───────────── ImageData ← raw pixels convenience ───────────── */
+  /* ───────────── ImageData ← raw pixels convenience ───────────── */
 
   /**
-   * Build an `ImageData` from any typed‑array of RGBA bytes.
-   * @param {Uint8Array|Uint8ClampedArray} pixels – length must be w*h*4
+   * Converts a flat RGBA array into an ImageData object.
+   * @param {Uint8ClampedArray} rgbaArray
    * @param {number} width
    * @param {number} height
    * @returns {ImageData}
    */
-  static fromPixels(pixels, width, height) {
-    if (pixels.length !== width * height * 4) {
-      throw new Error("fromPixels(): byte length mismatch (need w*h*4)");
+  static toImageData(rgbaArray, width, height) {
+    if (rgbaArray.length !== width * height * 4) {
+      throw new Error("Invalid RGBA array size for given dimensions");
     }
-    const clamped = pixels instanceof Uint8ClampedArray
-      ? pixels
-      : new Uint8ClampedArray(pixels.buffer.slice(
-          pixels.byteOffset,
-          pixels.byteOffset + pixels.byteLength
-        ));
+    return new ImageData(rgbaArray, width, height);
+  }
 
-    return new ImageData(clamped, width, height);
+  /**
+   * Asynchronously creates an ImageBitmap from raw RGBA data.
+   * Can be used directly with createPattern or drawImage.
+   * @param {Uint8ClampedArray} rgbaArray
+   * @param {number} width
+   * @param {number} height
+   * @returns {Promise<ImageBitmap>}
+   */
+  static async createImageBitmapFromPixels(rgbaArray, width, height) {
+    const imgData = this.toImageData(rgbaArray, width, height);
+    return await createImageBitmap(imgData);
+  }
+
+  /**
+   * Creates a pattern from ImageData via a temporary canvas.
+   * @param {ImageData} imageData
+   * @param {"repeat"|"repeat-x"|"repeat-y"|"no-repeat"} repeat
+   * @returns {CanvasPattern}
+   */
+  static createPatternFromImageData(imageData, repeat = "repeat") {
+    const canvas = document.createElement("canvas");
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    const ctx = canvas.getContext("2d");
+    ctx.putImageData(imageData, 0, 0);
+    return ctx.createPattern(canvas, repeat);
+  }
+
+  /**
+   * Shortcut to go directly from pixel array to CanvasPattern
+   * @param {Uint8ClampedArray} rgbaArray
+   * @param {number} width
+   * @param {number} height
+   * @param {string} repeat
+   * @returns {CanvasPattern}
+   */
+  static createPatternFromPixels(rgbaArray, width, height, repeat = "repeat") {
+    const imgData = this.toImageData(rgbaArray, width, height);
+    return this.createPatternFromImageData(imgData, repeat);
   }
 }

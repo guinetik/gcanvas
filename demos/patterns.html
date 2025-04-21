@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Patterns</title>
+  <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+  <div id="info">
+    <strong>Image Patterns</strong> - This demo shows how to use the image patterns.
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module">
+    import { MyGame } from './js/patterns.js';
+
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new MyGame(canvas);
+      game.start();
+    });
+  </script>
+</body>
+
+</html>

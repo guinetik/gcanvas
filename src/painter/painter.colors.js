@@ -85,8 +85,21 @@ export class PainterColors {
     return Painter.colors.hslToRgb(hue, saturation, lightness);
   }
 
+  static randomColorRGBA(alpha = 255) {
+    const [r, g, b] = this.randomColorRGB();
+    return [r, g, b, alpha];
+  }
+
   static randomColorHSL() {
     return `hsl(${Math.random() * 360}, 100%, 50%)`;
+  }
+
+  static randomColorHSL_RGBA(alpha = 255) {
+    const h = Math.random() * 360;
+    const s = 60 + Math.random() * 40; // 60–100%
+    const l = 40 + Math.random() * 40; // 40–80%
+    const [r, g, b] = Painter.colors.hslToRgb(h, s, l);
+    return [r, g, b, alpha];
   }
 
   static randomColorHEX() {
@@ -142,20 +155,13 @@ export class PainterColors {
    * Formulas from standard color conversion references.
    */
   static hslToRgb(h, s, l) {
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const hPrime = h / 60;
-    const x = c * (1 - Math.abs((hPrime % 2) - 1));
-    let [r, g, b] = [0, 0, 0];
-
-    if (hPrime >= 0 && hPrime < 1) [r, g, b] = [c, x, 0];
-    else if (hPrime >= 1 && hPrime < 2) [r, g, b] = [x, c, 0];
-    else if (hPrime >= 2 && hPrime < 3) [r, g, b] = [0, c, x];
-    else if (hPrime >= 3 && hPrime < 4) [r, g, b] = [0, x, c];
-    else if (hPrime >= 4 && hPrime < 5) [r, g, b] = [x, 0, c];
-    else if (hPrime >= 5 && hPrime < 6) [r, g, b] = [c, 0, x];
-
-    const m = l - c / 2;
-    return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+    s /= 100;
+    l /= 100;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n =>
+      l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
   }
 
   static rgbToHsl(r, g, b) {

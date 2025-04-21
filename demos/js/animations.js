@@ -72,7 +72,7 @@ class ShapeBox extends GameObject {
     const result = Motion.swing(
       0,
       0, // Center (just semantic here)
-      Math.PI / 2, // Max swing angle (30 degrees)
+      90, // Max swing angle (30 degrees)
       box.animTime, // Elapsed time
       3.0, // 6 seconds for full cycle
       true, // Loop
@@ -94,8 +94,8 @@ class ShapeBox extends GameObject {
     if (!box.pendulumState) box.pendulumState = null;
 
     const result = Motion.pendulum(
-      Math.PI / 3, // origin angle (radians)
-      Math.PI / 3, // max amplitude (45 degrees)
+      60, // origin angle (radians)
+      120, // max amplitude (45 degrees)
       box.animTime, // elapsed time
       3.0, // 3 seconds per cycle
       true, // loop
@@ -440,10 +440,10 @@ class ShapeBox extends GameObject {
     // Animate the inner shape’s x position using oscillation.
     // The shape will move between -20 and 20 along the x axis with a 2-second period.
     box.innerShape.rotation = Motion.oscillate(
-      Math.PI * 1.5 * -1,
-      Math.PI * 1.5,
+      -270,
+      270,
       box.animTime,
-      5,
+      3,
       true
     ).value;
   }
