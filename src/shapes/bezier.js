@@ -1,29 +1,32 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 /**
- * BezierShape - A shape that renders any custom path using Painter.path().
+ * BezierShape - A shape that renders any custom path using Painter.lines.path().
  * Great for clouds, blobs, tails, ears, capes, bananas.
  */
 export class BezierShape extends Shape {
   /**
-   * 
+   *
    * @param {number} x - Center X
    * @param {number} y - Center Y
    * @param {Array} path - An array of path commands [['M', x, y], ['C', ...], ['Z']]
-   * @param {object} options - fillColor, strokeColor, etc
+   * @param {object} options - color, stroke, etc
    */
-  constructor(x, y, path = [], options = {}) {
-    console.log("new Bezier", options);
-    super(x, y, options);
+  constructor(path = [], options = {}) {
+    //this.logger.log("new Bezier", options);
+    super(options);
     this.path = path;
   }
 
   draw() {
     super.draw();
-    this.renderWithTransform(() => {
-      Painter.path(this.path, this.fillColor, this.strokeColor, this.lineWidth);
-    });
+    Painter.lines.path(
+      this.path,
+      this.color,
+      this.stroke,
+      this.lineWidth
+    );
   }
 
   getBounds() {
@@ -33,7 +36,7 @@ export class BezierShape extends Shape {
       x: this.x,
       y: this.y,
       width: s * 2,
-      height: s * 2
+      height: s * 2,
     };
   }
 }

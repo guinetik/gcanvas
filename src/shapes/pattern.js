@@ -1,5 +1,5 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 /**
  * PatternRectangle - A drawable centered rectangle filled with a pattern.
@@ -38,7 +38,7 @@ export class PatternRectangle extends Shape {
    * @private
    */
   createPattern() {
-    this.pattern = Painter.ctx.createPattern(this.image, this.repetition);
+    this.pattern = Painter.img.createPattern(this.image, this.repetition);
   }
 
   /**
@@ -52,32 +52,30 @@ export class PatternRectangle extends Shape {
       this.createPattern();
     }
 
-    this.renderWithTransform(() => {
-      const x = -this.width / 2;
-      const y = -this.height / 2;
+    const x = -this.width / 2;
+    const y = -this.height / 2;
 
-      if (this.pattern) {
-        // Use fillPattern if pattern is available
-        Painter.fillPattern(
-          this.image,
-          this.repetition,
-          x,
-          y,
-          this.width,
-          this.height
-        );
-      } else if (this.strokeColor) {
-        // Fallback to just the outline if pattern isn't ready
-        Painter.strokeRect(
-          x,
-          y,
-          this.width,
-          this.height,
-          this.strokeColor,
-          this.lineWidth
-        );
-      }
-    });
+    if (this.pattern) {
+      // Use fillPattern if pattern is available
+      Painter.fillPattern(
+        this.image,
+        this.repetition,
+        x,
+        y,
+        this.width,
+        this.height
+      );
+    } else if (this.strokeColor) {
+      // Fallback to just the outline if pattern isn't ready
+      Painter.shapes.outlineRect(
+        x,
+        y,
+        this.width,
+        this.height,
+        this.strokeColor,
+        this.lineWidth
+      );
+    }
   }
 
   /**

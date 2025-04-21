@@ -1,59 +1,35 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 /**
  * Rectangle - A drawable centered rectangle using the canvas.
- * 
+ *
  * Draws a rectangle from its center (not top-left) using Painter.
  */
 export class Rectangle extends Shape {
-  /**
-   * @param {number} x - Center X
-   * @param {number} y - Center Y
-   * @param {number} width - Rectangle width
-   * @param {number} height - Rectangle height
-   * @param {Object} [options] - Shape rendering options
-   */
-  constructor(x, y, width, height, options = {}) {
-    super(x, y, options);
-    this.width = width;
-    this.height = height;
+  constructor(options = {}) {
+    super(options);
   }
 
   /**
    * Renders the rectangle using Painter.
    */
   draw() {
-    super.draw();
-    this.renderWithTransform(() => {
-      const x = -this.width / 2;
-      const y = -this.height / 2;
-
-      if (this.fillColor) {
-        Painter.fillRect(x, y, this.width, this.height, this.fillColor);
-      }
-
-      if (this.strokeColor) {
-        Painter.strokeRect(
-          x,
-          y,
-          this.width,
-          this.height,
-          this.strokeColor,
-          this.lineWidth
-        );
-      }
-    });
+    super.draw(); // Apply constraints from Shape
+    this.drawRect();
   }
 
-  getBounds() {
-    //console.log("getBounds", this.x, this.y, this.width, this.height);
-    return {
-      x: this.x,
-      y: this.y,
-      width: this.width,
-      height: this.height
-    };
-  }
+  drawRect() {
+    const {x, y} = this.getLocalPosition();
+    if (this.color) {
+      Painter.shapes.rect(x, y, this.width, this.height, this.color);
+    }
   
+    if (this.stroke) {
+      Painter.shapes.outlineRect(
+        x, y, this.width, this.height, 
+        this.stroke, this.lineWidth
+      );
+    }
+  }
 }

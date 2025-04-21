@@ -1,31 +1,26 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 export class Ring extends Shape {
-  constructor(x, y, outerRadius, innerRadius, options = {}) {
-    super(x, y, options);
+  constructor(outerRadius, innerRadius, options = {}) {
+    super(options);
     this.outerRadius = outerRadius;
     this.innerRadius = innerRadius;
   }
 
   draw() {
     super.draw();
-    this.renderWithTransform(() => {
-      Painter.ctx.beginPath();
-      Painter.ctx.arc(0, 0, this.outerRadius, 0, Math.PI * 2);
-      Painter.ctx.arc(0, 0, this.innerRadius, 0, Math.PI * 2, true);
-      Painter.ctx.closePath();
+    Painter.lines.beginPath();
+    Painter.shapes.arc(0, 0, this.outerRadius, 0, Math.PI * 2);
+    Painter.shapes.arc(0, 0, this.innerRadius, 0, Math.PI * 2, true);
+    Painter.lines.closePath();
 
-      if (this.fillColor) {
-        Painter.ctx.fillStyle = this.fillColor;
-        Painter.ctx.fill();
-      }
+    if (this.color) {
+      Painter.colors.fill(this.color);
+    }
 
-      if (this.strokeColor) {
-        Painter.ctx.strokeStyle = this.strokeColor;
-        Painter.ctx.lineWidth = this.lineWidth;
-        Painter.ctx.stroke();
-      }
-    });
+    if (this.stroke) {
+      Painter.colors.stroke(this.stroke, this.lineWidth);
+    }
   }
 }

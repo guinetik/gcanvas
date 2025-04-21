@@ -1,10 +1,10 @@
-import { Painter } from "../painter";
+import { Painter } from "../painter/painter";
 import { Shape } from "./shape";
 
 /**
- * SVGPath - A specialized Shape class that can render SVG path data
+ * SVGShape - A specialized Shape class that can render SVG path data
  */
-export class SVGPath extends Shape {
+export class SVGShape extends Shape {
   /**
    * @param {number} x - Center X position
    * @param {number} y - Center Y position
@@ -14,9 +14,9 @@ export class SVGPath extends Shape {
    * @param {boolean} [options.centerPath=true] - Automatically center the path
    * @param {number} [options.animationProgress=1] - Animation progress (0-1)
    */
-  constructor(x, y, svgPathData, options = {}) {
-    super(x, y, options);
-
+  constructor(svgPathData, options = {}) {
+    console.log("SVGShape", options.x)
+    super(options);
     // SVG specific options
     this.scale = options.scale || 1;
     this.centerPath =
@@ -278,19 +278,19 @@ export class SVGPath extends Shape {
     let totalSegments = this.pathCommands.length;
     let segmentIndex = Math.floor(this.animationProgress * totalSegments);
     let segmentProgress = (this.animationProgress * totalSegments) % 1;
-    
+
     // Initialize with a null previous point to indicate no previous point exists
     let hasPrevPoint = false;
     this.prevX = 0;
     this.prevY = 0;
-    
+
     // Add all completed segments
     for (let i = 0; i < segmentIndex; i++) {
       const cmd = this.pathCommands[i];
-      
+
       // Add to result
       result.push([...cmd]);
-      
+
       // Track points for bezier calculations
       if (cmd[0] === "M") {
         // For Move commands, just update position
@@ -304,11 +304,11 @@ export class SVGPath extends Shape {
         hasPrevPoint = true;
       }
     }
-    
+
     // Add the current segment with partial progress
     if (segmentIndex < totalSegments) {
       const currentSegment = this.pathCommands[segmentIndex];
-      
+
       if (currentSegment[0] === "M") {
         // For Move commands, add the full move
         result.push([...currentSegment]);
@@ -328,17 +328,17 @@ export class SVGPath extends Shape {
               break;
             }
           }
-          
+
           // If still no previous point, use (0,0)
           if (!hasPrevPoint) {
             this.prevX = 0;
             this.prevY = 0;
           }
         }
-        
+
         // Calculate the partial curve point
         const point = this.getBezierPoint(currentSegment, segmentProgress);
-        
+
         // Add partial curve to result
         result.push([
           "C",
@@ -347,13 +347,13 @@ export class SVGPath extends Shape {
           currentSegment[3],
           currentSegment[4],
           point.x,
-          point.y
+          point.y,
         ]);
-        
+
         this.currentPoint = point;
       }
     }
-    
+
     return result;
   }
 
@@ -362,19 +362,16 @@ export class SVGPath extends Shape {
    */
   draw() {
     super.draw();
-
-    this.renderWithTransform(() => {
-      // Get the path to draw based on animation progress
-      const pathToDraw = this.getPartialPath();
-
-      // Use Painter to render the path
-      Painter.path(
-        pathToDraw,
-        this.fillColor,
-        this.strokeColor,
-        this.lineWidth
-      );
-    });
+    // Get the path to draw based on animation progress
+    const pathToDraw = this.getPartialPath();
+    //console.log(pathToDraw);
+    // Use Painter to render the path
+    Painter.lines.path(
+      pathToDraw,
+      this.color,
+      this.stroke,
+      this.lineWidth
+    );
   }
 
   /**
@@ -383,8 +380,8 @@ export class SVGPath extends Shape {
    */
   getCurrentPoint() {
     return {
-      x: this.x + this.currentPoint.x,
-      y: this.y + this.currentPoint.y,
+      x: this.currentPoint.x,
+      y: this.currentPoint.y,
     };
   }
 
@@ -400,7 +397,7 @@ export class SVGPath extends Shape {
    * Get bounds of the shape for hit detection and layout
    * @returns {Object} Bounds {x, y, width, height}
    */
-  getBounds() {
+  calculateBounds() {
     return {
       x: this.x,
       y: this.y,

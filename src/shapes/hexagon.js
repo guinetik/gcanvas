@@ -1,8 +1,8 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 export class Hexagon extends Shape {
-  constructor(x, y, radius, options = {}) {
-    super(x, y, options);
+  constructor(radius, options = {}) {
+    super(options);
     this.radius = radius;
   }
 
@@ -16,8 +16,11 @@ export class Hexagon extends Shape {
       };
     });
 
-    this.renderWithTransform(() => {
-      Painter.polygon(points, this.fillColor, this.strokeColor, this.lineWidth);
-    });
+    Painter.shapes.polygon(
+      points,
+      this.color,
+      this.stroke,
+      this.lineWidth
+    );
   }
 }

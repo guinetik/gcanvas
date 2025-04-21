@@ -1,5 +1,5 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 /**
  * Cone - A 3D-looking isometric cone with rotation support.
@@ -16,8 +16,6 @@ import { Painter } from "../painter.js";
 export class Cone extends Shape {
   /**
    * Create a cone
-   * @param {number} x - X position (center of the cone)
-   * @param {number} y - Y position (center of the cone)
    * @param {number} radius - Radius of the cone base
    * @param {number} height - Height of the cone
    * @param {object} options - Customization options
@@ -25,16 +23,16 @@ export class Cone extends Shape {
    * @param {string} [options.sideColor] - Color of the side face(s)
    * @param {number} [options.segments] - Number of segments to approximate the curved surface
    * @param {Array<string>} [options.visibleFaces] - Array of face keys to render
-   * @param {string} [options.strokeColor] - Optional stroke around each face
+   * @param {string} [options.stroke] - Optional stroke around each face
    * @param {number} [options.lineWidth] - Stroke width
    * @param {number} [options.rotationX] - Rotation around X axis in radians
    * @param {number} [options.rotationY] - Rotation around Y axis in radians
    * @param {number} [options.rotationZ] - Rotation around Z axis in radians
    */
-  constructor(x, y, radius = 50, height = 100, options = {}) {
-    super(x, y, options);
+  constructor(radius = 50, height = 100, options = {}) {
+    super(options);
     this.radius = radius;
-    this.height = height;
+    this.height = height || options.height || 100;
 
     // Number of segments used to approximate the circle
     this.segments = options.segments || 24;
@@ -43,7 +41,7 @@ export class Cone extends Shape {
     this.bottomColor = options.bottomColor || "#eee";
     this.sideColor = options.sideColor || "#aaa";
 
-    this.strokeColor = options.strokeColor || null;
+    this.stroke = options.stroke || null;
     this.lineWidth = options.lineWidth || 1;
 
     // Rotation angles (in radians)
@@ -195,13 +193,10 @@ export class Cone extends Shape {
     facesWithDepth.sort((a, b) => b.z - a.z);
 
     // Draw faces in depth order
-    this.renderWithTransform(() => {
-      for (const face of facesWithDepth) {
-        const color =
-          face.type === "bottom" ? this.bottomColor : this.sideColor;
-        Painter.polygon(face.points, color, this.strokeColor, this.lineWidth);
-      }
-    });
+    for (const face of facesWithDepth) {
+      const color = face.type === "bottom" ? this.bottomColor : this.sideColor;
+      Painter.shapes.polygon(face.points, color, this.stroke, this.lineWidth);
+    }
   }
 
   /**
