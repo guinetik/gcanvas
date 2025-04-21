@@ -37,9 +37,7 @@ export class PainterLines {
     Painter.ctx.beginPath();
     Painter.ctx.moveTo(x1, y1);
     Painter.ctx.lineTo(x2, y2);
-    if (color) Painter.ctx.strokeStyle = color;
-    if (lineWidth !== undefined) Painter.ctx.lineWidth = lineWidth;
-    Painter.colors.stroke();
+    Painter.colors.stroke(color, lineWidth);
   }
 
   /**

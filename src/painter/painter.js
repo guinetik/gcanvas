@@ -84,6 +84,9 @@ export class Painter {
     this._ctx = ctx;
   }
 
+  /**
+   * @type {CanvasRenderingContext2D}
+   */
   static get ctx() {
     if (!this._ctx) {
       throw new Error("Cannot access Painter.ctx before initialization!");
