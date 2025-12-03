@@ -10,6 +10,8 @@ import {
   Painter,
   PatternRectangle,
   Patterns,
+  Group,
+  TextShape,
 } from "../../src/index";
 
 export class PatternDemo extends Scene {
@@ -34,7 +36,38 @@ export class PatternDemo extends Scene {
     // Define pattern types
     const patternSources = [
       {
-        label: "solidGrid",
+        name: "dots",
+        size: size * 2,
+        raw: Patterns.dotPattern(size * 2, size * 2, {
+          dotSize: 1,
+          spacing: size,
+          dotColor: Painter.colors.randomColorRGBA(),
+          background: [0, 0, 0, 0]
+        }),
+      },
+      {
+        name: "cross",
+        size: size * 6,
+        raw: Patterns.cross(size * 6, size * 6, {
+          size: 10,
+          thickness: 1,
+          spacing: 20,
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA()
+        }),
+      },
+      {
+        name: "stripes",
+        size: size * 4,
+        raw: Patterns.stripes(size * 4, size * 4, {
+          spacing: 10,
+          thickness: 4,
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA(),
+        }),
+      },
+      {
+        name: "grid",
         size,
         raw: Patterns.solidGrid(size, size, {
           spacing: 9,
@@ -43,19 +76,27 @@ export class PatternDemo extends Scene {
         }),
       },
       {
-        label: "noiseDisplacement",
-        size: size * 4,
-        raw: Patterns.noiseDisplacement(size * 4, size * 4, {
-          gridSpacing: 8,
-          gridColor: Painter.colors.randomColorRGBA(),
+        name: "mesh",
+        size: size * 2,
+        raw: Patterns.mesh(size * 2, size * 2, {
+          spacing: size*2,         // Keep the same spacing (20)
+          lineWidth: 1,
           background: [0, 0, 0, 0],
-          displacementScale: 4,
-          noiseScale: 0.05,
-          seed: 54321
+          foreground: Painter.colors.randomColorRGBA()
         }),
       },
       {
-        label: "checkerboard",
+        name: "isometric",
+        size: size * 4,
+        raw: Patterns.isometric(size * 4, size * 4, {
+          cellSize: size*4,
+          lineWidth: 2,
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA()
+        }),
+      },
+      {
+        name: "checkerboard",
         size: size * 2,
         raw: Patterns.checkerboard(size * 2, size * 2, {
           cellSize: 9,
@@ -64,41 +105,96 @@ export class PatternDemo extends Scene {
         }),
       },
       {
-        label: "diagonalStripes",
-        size: size * 4,
-        raw: Patterns.diagonalStripes(size * 4, size * 4, {
-          spacing: 10,
-          thickness: 4,
+        name: "harlequin",
+        size: size * 2,
+        raw: Patterns.harlequin(size * 2, size * 2, {
+          size: size,
+          lineWidth: size/2,
           background: [0, 0, 0, 0],
-          foreground: Painter.colors.randomColorRGBA(),
-        }),
-      },
-      
-      {
-        label: "dotPattern",
-        size: size * 4,
-        raw: Patterns.dotPattern(size * 4, size * 4, {
-          dotSize: 2,
-          spacing: 8,
-          dotColor: Painter.colors.randomColorRGBA(),
-          background: [0, 0, 0, 0]
+          foreground: Painter.colors.randomColorRGBA()
         }),
       },
       {
-        label: "dotPattern-Noise",
-        size: size * 4,
-        raw: Patterns.dotPattern(size * 4, size * 4, {
-          dotSize: 1,
-          dotColor: Painter.colors.randomColorRGBA(),
+        name: "diamonds",
+        size: size * 3,
+        raw: Patterns.diamonds(size * 3, size * 3, {
+          size: size*3,
+          spacing: 3,
           background: [0, 0, 0, 0],
-          useNoise: true,
-          noiseScale: 0.1,
-          noiseDensity: 0.6,
-          seed: 98765
+          foreground: Painter.colors.randomColorRGBA()
         }),
       },
       {
-        label: "voronoi",
+        name: "cubes",
+        size: size * 2,
+        raw: Patterns.cubes(size *2, size * 2, {
+          size: size,
+          spacing: 1,
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA()
+        }),
+      },
+      {
+        name: "penrose",
+        size: size * 4,
+        raw: Patterns.penrose(size * 4, size * 4, {
+          divisions: 3,
+          color1: Painter.colors.randomColorRGBA(),
+          color2: Painter.colors.randomColorRGBA(),
+          color3: Painter.colors.randomColorRGBA(),
+          lineWidth: 1,
+        }),
+      },
+      {
+        name: "TBA",
+        size: size * 2,
+        raw: Patterns.void(size *2, size * 2, {
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA()
+        }),
+      },
+      {
+        name: "honeycomb",
+        size: size * 4,
+        raw: Patterns.honeycomb(size * 4, size * 4, {
+          radius: size*2,
+          lineWidth: 1,
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA()
+        }),
+      },
+      {
+        name: "honeycomb (fill)",
+        size: size * 4,
+        raw: Patterns.honeycomb(size * 4, size * 4, {
+          radius: size*2,
+          lineWidth: 5,
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA()
+        }),
+      },
+      {
+        name: "circles",
+        size: size*4,
+        raw: Patterns.circles(size * 4, size * 4, {
+          radius: size*2,
+          lineWidth: 1,
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA()
+        }),
+      },
+      {
+        name: "circles (fill)",
+        size: size*4,
+        raw: Patterns.circles(size * 4, size * 4, {
+          radius: size*2,
+          lineWidth: 7,
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA()
+        }),
+      },
+      {
+        name: "voronoi",
         size: size*10,
         raw: Patterns.voronoi(size*10, size*10, {
           cellCount: size,
@@ -109,7 +205,7 @@ export class PatternDemo extends Scene {
         }),
       },
       {
-        label: "voronoi-themed",
+        name: "voronoi-themed",
         size: size*10,
         raw: Patterns.voronoi(size*10, size*10, {
           cellCount: size,
@@ -122,7 +218,23 @@ export class PatternDemo extends Scene {
         }),
       },
       {
-        label: "circularGradient",
+        name: "TBA",
+        size: size * 2,
+        raw: Patterns.void(size *2, size * 2, {
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA()
+        }),
+      },
+      {
+        name: "TBA",
+        size: size * 2,
+        raw: Patterns.void(size *2, size * 2, {
+          background: [0, 0, 0, 0],
+          foreground: Painter.colors.randomColorRGBA()
+        }),
+      },
+      {
+        name: "gradient",
         size: size * 4,
         raw: Patterns.circularGradient(size * 4, size * 4, {
           innerColor: Painter.colors.randomColorRGBA(),
@@ -132,7 +244,7 @@ export class PatternDemo extends Scene {
       },
       
       {
-        label: "perlinNoise",
+        name: "perlin-noise",
         size: size * 2,
         raw: Patterns.perlinNoise(size * 2, size * 2, {
           background: [0, 0, 0, 0],
@@ -144,7 +256,7 @@ export class PatternDemo extends Scene {
         }),
       },
       {
-        label: "perlinNoise",
+        name: "perlin-noise-2",
         size: size * 2,
         raw: Patterns.perlinNoise(size * 2, size * 2, {
           background: [0, 0, 0, 0],
@@ -157,7 +269,7 @@ export class PatternDemo extends Scene {
         }),
       },
       {
-        label: "perlinNoise",
+        name: "perlin-noise-3",
         size: size * 2,
         raw: Patterns.perlinNoise(size * 2, size * 2, {
           background: [0, 0, 0, 0],   // Dark background instead of transparent
@@ -175,19 +287,28 @@ export class PatternDemo extends Scene {
     for (let i = 0; i < patternSources.length; i++) {
       const pattern = patternSources[i % patternSources.length];
 
+      const group = new Group({width:100, height:130});
       const rect = new PatternRectangle(null, "repeat", {
         width: 100,
         height: 100,
         color: Painter.colors.randomColorHSL(),
-        strokeColor: "white",
         debug: true,
+        debugColor: "gray"
       });
+      const label = new TextShape(pattern.name, {
+        font: "12px monospace",
+        color: "white",
+        y: 100
+      });
+      label.y = 60;
+      group.add(rect);
+      group.add(label);
 
       Painter.img
         .createImageBitmapFromPixels(pattern.raw, pattern.size, pattern.size)
         .then((bitmap) => rect.setImage(bitmap));
 
-      const go = ShapeGOFactory.create(game, rect);
+      const go = ShapeGOFactory.create(game, group);
       this.grid.add(go);
     }
 

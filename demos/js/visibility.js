@@ -18,8 +18,6 @@ export class VisibilityDemo extends Scene {
     this.squaresLayout = new HorizontalLayout(game, {
       spacing: 1,
       padding: 4,
-      debug: true,
-      debugColor: "magenta",
     });
     this.add(this.squaresLayout);
     // Create a few colored squares and add them to the layout
@@ -30,18 +28,14 @@ export class VisibilityDemo extends Scene {
       });
       const squareGO = ShapeGOFactory.create(game, rect);
       this.squaresLayout.add(squareGO);
-      //console.log("SquareGO", squareGO.width, squareGO.height);
     }
-    //this.scaleX = this.scaleY = 4;
     // 2) A UI scene that holds the buttons
-    this.uiScene = new Scene(game, {      
+    this.uiScene = new Scene(game, {
       name: "UI Scene",
       width: 120,
       height: 40,
-      debug: true,
       anchor: Position.BOTTOM_CENTER,
       anchorMargin: 20,
-      //relative: this,
     });
     this.uiScene.width = 150;
     this.uiScene.height = 50;
@@ -80,8 +74,6 @@ export class VisibilityDemo extends Scene {
     // Center the scene in the game
     this.x = this.game.width / 2;
     this.y = this.game.height / 2;
-    //this.uiScene.x = 0;
-    //this.uiScene.y = this.y - this.uiScene.height - this.MARGIN;
     super.update(dt);
   }
 }
@@ -97,15 +89,13 @@ export class MyGame extends Game {
   init() {
     super.init();
     this.scene = new VisibilityDemo(this, {
-      debug: true,
-      debugColor: "red",
       width: this.width,
       height: this.height,
     });
     this.pipeline.add(this.scene);
     this.pipeline.add(
       new FPSCounter(this, {
-        anchor: Position.BOTTOM_RIGHT ,
+        anchor: Position.BOTTOM_RIGHT,
       })
     );
   }

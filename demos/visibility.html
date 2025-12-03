@@ -9,9 +9,12 @@
 
 <body>
   <div id="info">
-    <strong>Visibility Toggle Demo</strong> - Shows how game objects can be dynamically shown or hidden. Each subclass
-    of <code>Transformable</code> contains the visible property. Whenever an object is part of a pipeline, it is only
-    rendered on the screen if visibility is true.
+    <strong>Visibility Toggle Demo</strong> - Shows how game objects can be dynamically shown or hidden.
+    <span style="color:#CCC">
+      <li><code>Transformable</code> — The base class providing the <code>visible</code> property.</li>
+      <li><code>Pipeline Integration</code> — The pipeline skips invisible objects during rendering.</li>
+      <li><code>Dynamic Toggling</code> — Click the button to toggle visibility of a random square.</li>
+    </span>
   </div>
   <canvas id="game"></canvas>
   <script type="module">

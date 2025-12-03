@@ -96,10 +96,7 @@ export class FractalDemo extends Game {
         // Resize fractal renderer with a small delay to prevent multiple resizes
         if (!this.resizeTimeout) {
           this.resizeTimeout = setTimeout(() => {
-            this.fractal.resize(
-              this.mainScene.width - 60,
-              this.mainScene.height - 150
-            );
+            this.fractal.resize(800, 600);
             this.resizeTimeout = null;
           }, 100);
         }

@@ -45,10 +45,8 @@ export class TextShape extends Shape {
   _calculateAlignmentOffsets() {
     // Save current canvas context
     if (!Painter.text) return;
-
     // Measure text dimensions
     const metrics = Painter.text.measureTextDimensions(this.text, this.font);
-
     // Calculate horizontal center point offset
     switch (this._align) {
       case "left":
@@ -61,7 +59,6 @@ export class TextShape extends Shape {
         this._centerOffsetX = -metrics.width / 2 - 5;
         break;
     }
-
     // Calculate vertical center point offset
     switch (this._baseline) {
       case "top":
@@ -74,7 +71,6 @@ export class TextShape extends Shape {
         this._centerOffsetY = -metrics.height;
         break;
     }
-
     //console.log("calculateAlignmentOffsets", this._centerOffsetY, this._centerOffsetX);
   }
 
@@ -91,7 +87,6 @@ export class TextShape extends Shape {
         height: metrics.height + padding * 2,
       };
     }
-
     // Fallback
     return {
       x: this._centerOffsetX,
