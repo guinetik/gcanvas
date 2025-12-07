@@ -39,7 +39,7 @@ You can use GCanvas purely for visuals, or build full simulations, games, or cre
 
 ## 📊 Demo
 
-Open [`https://guinetik.github.io/gcanvas`](https://guinetik.github.io/gcanvas) or run:
+Open [`https://gcanvas.guinetik.com`](https://gcanvas.guinetik.com) or run:
 
 ```bash
 npm run dev
