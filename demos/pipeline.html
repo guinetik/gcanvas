@@ -6,8 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GCanvas Rendering Pipeline Documentation</title>
   <!-- Prism.js for syntax highlighting -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.css">
   <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      overflow-x: hidden;
+    }
+
     body {
       font-family: 'Courier New', 'Consolas', monospace;
       line-height: 1.6;
@@ -69,6 +77,7 @@
       overflow-x: auto;
       margin: 15px 0;
       font-family: 'Courier New', monospace;
+      max-width: 100%;
     }
 
     code {
@@ -176,6 +185,11 @@
       background-color: #181818;
       border-top: 1px solid #ddd;
       position: relative;
+    }
+
+    .canvas-demo canvas {
+      max-width: 100%;
+      height: auto;
     }
 
     .canvas-label {
