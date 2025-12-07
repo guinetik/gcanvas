@@ -8,11 +8,13 @@ import {
   HorizontalLayout,
   Motion,
   Painter,
+  Position,
   Rectangle,
   Scene,
   ShapeGOFactory,
   Tween,
-} from "/gcanvas/gcanvas.es.min.js";
+  VerticalLayout,
+} from "/gcanvas.es.min.js";
 
 /**
  * BezierBlob Game - A playful blob that follows the mouse with Tween animations
@@ -22,12 +24,17 @@ class BezierBlobGame extends Game {
     super(canvas);
     this.enableFluidSize();
     this.backgroundColor = "#111122";
+    this.debug = true;
+    this.hovering = false;
   }
 
   init() {
+    super.init();
     this.blobScene = new BlobScene(this);
-    this.uiScene = new BlobUIScene(this, this.blobScene);
-
+    this.uiScene = new BlobUIScene(this, this.blobScene, {
+      debug: true,
+      debugColor: "pink"
+    });
     this.pipeline.add(this.blobScene);
     this.pipeline.add(this.uiScene);
   }
@@ -43,19 +50,21 @@ class BlobScene extends Scene {
     // Create a background that will receive mouse events
     this.bg = ShapeGOFactory.create(
       game,
-      new Rectangle(0, 0, game.width, game.height, {
-        fillColor: "rgba(0, 0, 0, 0)",
+      new Rectangle({
+        width: game.width,
+        height: game.height,
+        debug: this.debug,
+        color: "rgba(0, 0, 0, 0)",
       })
     );
     this.add(this.bg);
-    this.bg.enableInteractivity(this.bg.shape);
 
     // Mouse position tracking
     this.mouseX = game.width / 2;
     this.mouseY = game.height / 2;
-
+    this.interactive = true;
     // Forward mouse events
-    this.bg.on("inputmove", (e) => {
+    this.game.events.on("inputmove", (e) => {
       this.mouseX = e.x;
       this.mouseY = e.y;
     });
@@ -149,7 +158,7 @@ class BlobScene extends Scene {
       scared: false,
       happy: false,
     };
-
+    this.bg.interactive = true;
     // Add click handler to toggle excitement
     this.bg.on("inputdown", () => {
       //console.log("Clicked!");
@@ -181,9 +190,13 @@ class BlobScene extends Scene {
     ];
 
     // Create BezierShape for the blob
-    const blobShape = new BezierShape(0, 0, path, {
-      fillColor: "rgba(80, 200, 255, 0.8)",
-      strokeColor: "rgba(255, 255, 255, 0.8)",
+    const blobShape = new BezierShape(path, {
+      color: "rgba(80, 200, 255, 0.8)",
+      stroke: "rgba(255, 255, 255, 0.8)",
+      debug: this.debug,
+      width: 100,
+      height: 100,
+      debugColor: "rgba(255, 0, 0, 0.8)",
       lineWidth: 2,
     });
 
@@ -196,53 +209,82 @@ class BlobScene extends Scene {
     // Create eyes for the blob
     const leftEye = ShapeGOFactory.create(
       this.game,
-      new Circle(-20, -15, 10, {
-        fillColor: "white",
-        strokeColor: "rgba(0, 0, 0, 0.5)",
+      new Circle(10, {
+        x: -20,
+        y: -15,
+        color: "white",
+        stroke: "rgba(0, 0, 0, 0.5)",
         lineWidth: 1,
-      })
+      }),
+      {
+        debug: this.debug,
+        debugColor: "white",
+      }
     );
 
     const rightEye = ShapeGOFactory.create(
       this.game,
-      new Circle(20, -15, 10, {
-        fillColor: "white",
-        strokeColor: "rgba(0, 0, 0, 0.5)",
+      new Circle(10, {
+        x: 20,
+        y: -15,
+        color: "white",
+        stroke: "rgba(0, 0, 0, 0.5)",
         lineWidth: 1,
-      })
+      }),
+      {
+        debug: this.debug,
+        debugColor: "white",
+      }
     );
 
     // Create pupils
     const leftPupil = ShapeGOFactory.create(
       this.game,
-      new Circle(-20, -15, 4, {
-        fillColor: "black",
-      })
+      new Circle(4, {
+        x: -20,
+        y: -15,
+        color: "black",
+      }),
+      {
+        debug: this.debug,
+        debugColor: "blue",
+      }
     );
 
     const rightPupil = ShapeGOFactory.create(
       this.game,
-      new Circle(20, -15, 4, {
-        fillColor: "black",
-      })
+      new Circle(4, {
+        x: 20,
+        y: -15,
+        color: "black",
+      }),
+      {
+        debug: this.debug,
+        debugColor: "blue",
+      }
     );
 
     // Create mouth (initially a small line)
     const mouthShape = new BezierShape(
-      0,
-      10,
       [
         ["M", -15, 0],
         ["Q", 0, 5, 15, 0],
       ],
       {
-        strokeColor: "rgba(0, 0, 0, 0.7)",
+        x: 0,
+        y: 10,
+        width: 30,
+        height: 10,
+        stroke: "rgba(0, 0, 0, 0.7)",
         lineWidth: 3,
-        fillColor: null,
+        color: null,
       }
     );
 
-    const mouth = ShapeGOFactory.create(this.game, mouthShape);
+    const mouth = ShapeGOFactory.create(this.game, mouthShape, {
+      debug: this.debug,
+      debugColor: "red",
+    });
 
     // Add facial features to the scene
     this.add(leftEye);
@@ -331,8 +373,15 @@ class BlobScene extends Scene {
     physics.vx *= physics.drag;
     physics.vy *= physics.drag;
     // Update position
-    physics.currentX += physics.vx;
-    physics.currentY += physics.vy;
+    if(!this.hovering) {
+      physics.currentX += physics.vx;
+      physics.currentY += physics.vy;
+    } else {
+      this.mouseX = this.game.width / 2;
+      this.mouseY = this.game.height / 2;
+      physics.currentX = this.game.width / 2;
+      physics.currentY = this.game.height / 2;
+    }
     // Calculate speed for excitement level
     const speed = Math.sqrt(physics.vx * physics.vx + physics.vy * physics.vy);
     const direction = Math.atan2(physics.vy, physics.vx);
@@ -383,10 +432,16 @@ class BlobScene extends Scene {
 
   triggerBlobGradientShift() {
     const current = this.blobPhysics.baseColor;
-    const next = Painter.colors.parseColorString(Painter.colors.randomColorHSL());
+    const next = Painter.colors.parseColorString(
+      Painter.colors.randomColorHSL()
+    );
 
-    this.animations.gradientShift.startColor = Painter.colors.rgbToHsl(...current);
-    this.animations.gradientShift.targetColor = Painter.colors.rgbToHsl(...next);
+    this.animations.gradientShift.startColor = Painter.colors.rgbToHsl(
+      ...current
+    );
+    this.animations.gradientShift.targetColor = Painter.colors.rgbToHsl(
+      ...next
+    );
     this.animations.gradientShift.startTime = this.time; // Set the start time
     this.animations.colorAnimation.active = false;
     this.animations.gradientShift.active = true;
@@ -608,7 +663,7 @@ class BlobScene extends Scene {
 
     const [r, g, b] = base;
     // Fix string template syntax
-    this.blob.shape.fillColor = `rgba(${r}, ${g}, ${b}, 0.8)`;
+    this.blob.shape.color = `rgba(${r}, ${g}, ${b}, 0.8)`;
 
     // Also update currentColor for particles
     this.blobPhysics.currentColor = base;
@@ -763,24 +818,36 @@ class BlobUIScene extends Scene {
     super(game);
     this.blobScene = blobScene;
     // Create UI layout
-    this.layout = new HorizontalLayout(game, {
-      x: 10,
-      y: 10,
+    this.layout = new VerticalLayout(game, {
       spacing: 8,
       padding: 0,
+      debug:true,
+      debugColor: "purple",
+      width: 300,
+      height: 50,
+      anchor: Position.CENTER_LEFT,
+      anchorOffsetX: 0,
+      anchorOffsetY: 0,
     });
+    const onHover = () => {
+      console.log("hovering");
+      this.resetBlob();
+      this.blobScene.hovering = true;
+    };
+    const onRelease = () => {
+      this.resetBlob();
+      this.blobScene.hovering = false;
+    };
     // Add buttons
     this.layout.add(
       new Button(game, {
         text: "Reset",
         width: 100,
         height: 32,
+        onHover: onHover,
+        onRelease: onRelease,
         onClick: () => {
-          this.blobScene.blobPhysics.baseRadius = 80;
-          this.blobScene.blobPhysics.currentRadius = 80;
-          this.blobScene.blobVisualBaseColor = null;
-          this.blobScene.blob.x = this.blobScene.mouseX = this.game.width / 2;
-          this.blobScene.blob.y = this.blobScene.mouseY = this.game.height / 2;
+          this.resetBlob();
         },
       })
     );
@@ -790,6 +857,8 @@ class BlobUIScene extends Scene {
         text: "🎨 Color",
         width: 100,
         height: 32,
+        onHover: onHover,
+        onRelease: onRelease,
         onClick: () => {
           this.blobScene.triggerAnimation("gradientShift");
         },
@@ -801,6 +870,8 @@ class BlobUIScene extends Scene {
         text: "⬆️ Bounce",
         width: 100,
         height: 32,
+        onHover: onHover,
+        onRelease: onRelease,
         onClick: () => {
           //console.log(" Bounce clicked");
           this.blobScene.triggerAnimation("bounce");
@@ -811,10 +882,16 @@ class BlobUIScene extends Scene {
     this.add(this.layout);
   }
 
+  resetBlob() {
+    console.log("resetting blob", this.blobScene);
+    this.blobScene.blobPhysics.baseRadius = 80;
+    this.blobScene.blobPhysics.currentRadius = 80;
+    this.blobScene.blobVisualBaseColor = null;
+    this.blobScene.blob.x = this.blobScene.mouseX = this.game.width / 2;
+    this.blobScene.blob.y = this.blobScene.mouseY = this.game.height / 2;
+  }
+
   update(dt) {
-    // Position the UI at the bottom of the screen
-    this.layout.x = 10;
-    this.layout.y = this.game.canvas.height - this.layout.height - 10;
     super.update(dt);
   }
 }

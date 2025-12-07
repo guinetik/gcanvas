@@ -9,10 +9,12 @@
 
 <body>
   <div id="info">
-    <strong>Scene Opacity Demo</strong> —
-    A <code>Scene</code> has an <code>opacity</code> property that multiplies each child's alpha.
-    Setting <code>scene.opacity = 0.5</code> fades the entire scene, layering any child-specific opacity for combined
-    fade effects.
+    <strong>Scene Opacity Demo</strong> — Animating opacity on a container affects all children.
+    <span style="color:#CCC">
+      <li><code>Scene Opacity</code> — Setting <code>scene.opacity</code> multiplies the alpha of all children.</li>
+      <li><code>Motion.pulse</code> — Uses the Motion system to animate the scene's fade effect.</li>
+      <li><code>GameObject</code> — Custom <code>BouncingSquare</code> entities with their own individual opacity.</li>
+    </span>
   </div>
   <canvas id="game"></canvas>
   <script type="module">
@@ -21,9 +23,10 @@
     window.addEventListener("load", () => {
       const canvas = document.getElementById("game");
       const game = new MyGame(canvas);
-      game.init();
+      //game.enableLogging();
+      //game.setFPS(60);
       game.start();
-      //setTimeout(()=>game.stop(), 1000);
+      //setTimeout(()=>game.stop(), 3000);
     });
   </script>
 </body>

@@ -10,7 +10,8 @@
 <body>
     <div id="info">
         <strong>EventEmitter Demo</strong> — Shows how <code>Game.events</code> handles unified input events. <br>
-        Events from <strong>mouse</strong>, <strong>touch</strong>, <strong>keyboard</strong> and <strong>input</strong> are emitted using a
+        Events from <strong>mouse</strong>, <strong>touch</strong>, <strong>keyboard</strong> and <strong>input</strong>
+        are emitted using a
         single system. <br>
         This demo logs the last event that happened inside a box on screen. Try clicking, moving, or touching!
     </div>
@@ -18,29 +19,37 @@
     <canvas id="game"></canvas>
 
     <script type="module">
-        import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group, Keys } from "/gcanvas/gcanvas.es.min.js";
+        import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group, Keys } from "/gcanvas.es.min.js";
 
         class EventLogger extends GameObject {
-            constructor(game) {
-                super(game);
-
-                this.label = new TextShape(0, 0, "Waiting for event...", {
+            constructor(game, options = {}) {
+                super(game, options);
+                this.interactive = true;
+                console.groupCollapsed("EventLoggerText");
+                this.label = new TextShape("Waiting for event...", {
                     font: "16px monospace",
                     color: "#0f0",
                     align: "center",
                     baseline: "middle",
+                    debug: false,
+                    name: "EventLoggerText"
                 });
+                console.groupEnd();
+                console.groupCollapsed("EventLoggerBox");
 
-                this.box = new Rectangle(0, 0, 280, 80, {
-                    fillColor: "#111",
-                    strokeColor: "#0f0",
-                    lineWidth: 2,
+                this.box = new Rectangle({
+                    width: 280,
+                    height: 80,
+                    color: "#111",
+                    debug: true
                 });
+                console.groupEnd();
+                console.groupCollapsed("EventLoggerGroup");
 
-                this.group = new Group(game.width / 2, game.height / 2);
+                this.group = new Group({ width: 280, height: 80 });
                 this.group.add(this.box);
                 this.group.add(this.label);
-
+                console.groupEnd();
                 const events = ["wheel", "inputdown", "inputup", "inputmove", "click"];
 
                 const groupEvents = [
@@ -50,8 +59,6 @@
 
                 let lock = false;
                 var inside = false;
-
-                this.enableInteractivity(this.group);
 
                 events.forEach(type => {
                     this.game.events.on(type, (e) => {
@@ -125,8 +132,9 @@
                     });
                 });
             }
-
-            render() {
+            draw() {
+                super.draw();
+                this.logger.log("draw", this.x, this.y, this.width, this.height);
                 this.group.render();
             }
         }
@@ -139,13 +147,27 @@
             }
 
             init() {
-                this.scene = new Scene(this);
+                super.init();
+                console.groupCollapsed("init");
+                this.scene = new Scene(this, { name: "EventDemoScene", width: 280, height: 80 });
                 this.ui = new Scene(this);
                 this.pipeline.add(this.scene);
                 this.pipeline.add(this.ui);
-
-                this.scene.add(new EventLogger(this));
+                console.groupEnd();
+                console.groupCollapsed("add EventLogger");
+                this.scene.add(new EventLogger(this, { width: 280, height: 80 }));
+                console.groupEnd();
+                console.groupCollapsed("add FPSCounter");
                 this.ui.add(new FPSCounter(this, { anchor: "bottom-right" }));
+                console.groupEnd();
+            }
+
+            update(dt) {
+                this.scene.x = this.width / 2;
+                this.scene.y = this.height / 2;
+                this.ui.width = this.width;
+                this.ui.height = this.height;
+                super.update(dt);
             }
 
             clear() {
@@ -157,8 +179,13 @@
         window.addEventListener("load", () => {
             const canvas = document.getElementById("game");
             const game = new EventDemoGame(canvas);
-            game.init();
+            //            game.enableLogging();
+
+            game.setFPS(60);
             game.start();
+            /* setTimeout(() => {
+                game.stop();
+            }, 10000); */
         });
     </script>
 </body>

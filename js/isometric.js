@@ -3,7 +3,7 @@ import {
     Game,
     GameObject,
     Painter
-} from "/gcanvas/gcanvas.es.min.js";
+} from "/gcanvas.es.min.js";
 class IsometricGrid extends GameObject {
   constructor(game) {
     super(game);

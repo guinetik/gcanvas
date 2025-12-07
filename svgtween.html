@@ -9,8 +9,8 @@
 
 <body>
   <div id="info">
-    <strong>Bezier Motion</strong> —
-    A <code>BezierShape</code>
+    <strong>SVG Motion</strong> — Interactive path drawing with animation.<br/>
+    This demo uses <code>SVGShape</code> and <code>GameObject</code> to animate SVG vector paths with easing, motion effects, and a glowing trail.
   </div>
   <canvas id="game"></canvas>
   <script type="module">
@@ -19,7 +19,6 @@
     window.addEventListener("load", () => {
       const canvas = document.getElementById("game");
       const game = new MyGame(canvas);
-      game.init();
       game.start();
     });
   </script>

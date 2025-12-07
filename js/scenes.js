@@ -9,7 +9,7 @@ import {
   Scene,
   Motion,
   Easing,
-} from "/gcanvas/gcanvas.es.min.js";
+} from "/gcanvas.es.min.js";
 /**
  * SceneLayoutDemo
  *

@@ -8,16 +8,17 @@ import {
   Painter,
   Scene,
   Easing,
-} from "/gcanvas/gcanvas.es.min.js";
-// Signature Animation Demo
+} from "/gcanvas.es.min.js";
+
 class MyGame extends Game {
   constructor(canvas) {
     super(canvas);
     this.enableFluidSize();
-    this.backgroundColor = "#222";
+    this.backgroundColor = "black";
   }
 
   init() {
+    super.init();
     // Set up scenes
     this.scene = new Scene(this);
     this.ui = new Scene(this);
@@ -25,7 +26,13 @@ class MyGame extends Game {
     this.pipeline.add(this.ui); // UI layer
 
     // Add signature animation
-    this.scene.add(new SignatureAnimation(this));
+    this.signature = new SignatureAnimation(this, {
+      debug: true,
+      anchor: "center",
+    });
+    this.signature.width = 400;
+    this.signature.height = 150;
+    this.scene.add(this.signature);
 
     // Add FPS counter in the UI scene
     this.ui.add(new FPSCounter(this, { anchor: "bottom-right" }));
@@ -34,8 +41,8 @@ class MyGame extends Game {
 
 // Signature Animation - A progressive bezier curve animation
 class SignatureAnimation extends GameObject {
-  constructor(game) {
-    super(game);
+  constructor(game, options = {}) {
+    super(game, options);
 
     // The signature path - represents a cursive signature
     this.signaturePath = [
@@ -56,24 +63,25 @@ class SignatureAnimation extends GameObject {
 
     // Initialize state
     this.progress = 0;
-    this.speed = 0.4; // Speed of animation
+    this.speed = 0.3; // Speed of animation
     this.complete = false;
 
     // Create visible bezier shape for the signature
     this.signature = new BezierShape(
-      game.width / 2,
-      game.height / 2,
       [], // Start with empty path
       {
-        strokeColor: "#fff",
+        stroke: "#fff",
         lineWidth: 3,
-        fillColor: null,
+        color: null,
+        debug: true,
       }
     );
 
     // Create a circle to represent the pen tip
-    this.penTip = new Circle(game.width / 2, game.height / 2, 8, {
-      fillColor: "#4f8",
+    this.penTip = new Circle(8, {
+      x: game.width / 2,
+      y: game.height / 2,
+      color: "#4f8",
       shadowColor: "rgba(64, 255, 128, 0.8)",
       shadowBlur: 15,
     });
@@ -191,13 +199,8 @@ class SignatureAnimation extends GameObject {
         this.progress = 1;
         this.complete = true;
       }
-
-      // Apply easing for more natural movement
-      const easedProgress = Easing.easeInOutQuad(this.progress);
-
       // Calculate partial path based on current progress
       this.currentPath = this.getPartialPath();
-
       // Update signature path
       this.signature.path = this.currentPath;
     }
@@ -205,35 +208,33 @@ class SignatureAnimation extends GameObject {
     // Add gentle bouncing motion when complete
     if (this.complete) {
       const time = performance.now() / 1000;
-      this.signature.y = this.game.height / 2 + Math.sin(time * 2) * 5;
+      this.signature.y = Math.sin(time * 2) * 5;
     }
 
     // Update pen tip position
     if (this.penTipPos) {
-      this.penTip.x = this.game.width / 2 + this.penTipPos.x;
-      this.penTip.y = this.game.height / 2 + this.penTipPos.y;
+      this.penTip.x = this.penTipPos.x;
+      this.penTip.y = this.penTipPos.y;
+    }
+    super.update(dt);
+  }
+
+  draw() {
+    super.draw();
+    // Draw signature
+    this.signature.render();
+    // Draw pen tip if animation is not complete
+    if (!this.complete) {
+      this.penTip.render();
     }
   }
 
   render() {
-    // Instructions text
+    super.render();
     Painter.text.setFont("18px monospace");
     Painter.text.setTextAlign("center");
     Painter.text.setTextBaseline("bottom");
-    Painter.text.fillText(
-      "Click anywhere to restart the signature animation",
-      this.game.width / 2,
-      this.game.height - 40,
-      "#4f8"
-    );
-
-    // Draw signature
-    this.signature.draw();
-
-    // Draw pen tip if animation is not complete
-    if (!this.complete) {
-      this.penTip.draw();
-    }
+    Painter.text.fillText("Click anywhere to restart the signature animation", this.game.width / 2, this.game.height - 40, "#4f8");
   }
 }
 

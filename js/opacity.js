@@ -8,130 +8,268 @@ import {
   Tween,
   Motion,
   Easing,
-} from "/gcanvas/gcanvas.es.min.js";
+  Square,
+} from "/gcanvas.es.min.js";
+
 /**
- * OpacityMotionDemo
+ * BouncingSquare - A GameObject that contains a square shape that bounces around within boundaries
  *
- * Spawns multiple squares with random:
- *  - color (HSL),
- *  - opacity,
- *  - initial position,
- *  - velocity.
- * They move around the canvas, bouncing off edges, overlapping each other
- * to demonstrate alpha blending in motion.
+ * @extends GameObject
  */
-export class OpacityDemo extends Scene {
+class BouncingSquare extends GameObject {
+  /**
+   * Create a new BouncingSquare
+   *
+   * @param {Game} game - Reference to the game instance
+   * @param {Object} options - Configuration options
+   */
   constructor(game, options = {}) {
     super(game, options);
-    this.squares = []; // Will hold references to each square’s GameObject
-    this.velocities = []; // Parallel array of {vx, vy} for each square
-    const count = 2; // number of squares
-    ///
-    for (let i = 0; i < count; i++) {
-      const { size, fillColor, x, y, vx, vy } = this.spawnBox(game);
-      const opacity = 0.3 + 0.7 * Math.random(); // range ~0.3..1
-      // Create a rectangle shape
-      const rectShape = new Rectangle(0, 0, size, size, {
-        fillColor,
-        debugColor: "#fff",
-        name: "rect_" + i
-      });
-      // Wrap it in a GameObject via the factory
-      const squareGO = ShapeGOFactory.create(game, rectShape);
-      squareGO.name = "rect_" + i;
-      squareGO.opacity = opacity;
-      // Position the shape's center
-      squareGO.x = x;
-      squareGO.y = y;
-      // Add it to the scene
-      this.add(squareGO);
-      // Store references
-      this.squares.push(squareGO);
-      this.velocities.push({ vx, vy });
-    }
-  }
 
-  spawnBox(game) {
-    const size = 50;
-    // Random initial position somewhere within canvas, minus margin to keep squares fully on screen
-    const x = Math.random() * (game.width - size) + size / 2;
-    const y = Math.random() * (game.height - size) + size / 2;
-    // Random velocity in range
-    const vx = Math.random() * 300 - 80;
-    const vy = Math.random() * 300 - 80;
-    // Random color and opacity
-    const hue = Math.floor(Math.random() * 360);
-    const fillColor = `hsl(${hue}, 80%, 50%)`;
-    return { size, fillColor, x, y, vx, vy };
+    // Square size (side length)
+    this.size = options.size || 50;
+
+    // Create the square shape
+    this.square = new Square(this.size, {
+      color: options.color || "#0f0",
+      debug: options.debug || false,
+      debugColor: options.debugColor || "#fff",
+    });
+
+    // Set initial position
+    this.x = options.x || 0;
+    this.y = options.y || 0;
+
+    // Set velocity
+    this.vx = options.vx !== undefined ? options.vx : Math.random() * 300 - 150;
+    this.vy = options.vy !== undefined ? options.vy : Math.random() * 300 - 150;
+
+    // Ensure velocity is never zero to prevent squares from stopping
+    if (Math.abs(this.vx) < 20) this.vx = this.vx < 0 ? -20 : 20;
+    if (Math.abs(this.vy) < 20) this.vy = this.vy < 0 ? -20 : 20;
+
+    // Set opacity if specified
+    if (options.opacity !== undefined) {
+      this.opacity = options.opacity;
+    }
+
+    // Store references to the scene for bounds checking
+    this.scene = options.scene;
   }
 
   /**
-   * update(dt) - Animate each square by moving it, bouncing off edges,
-   * and letting the Scene handle rendering them with partial opacity.
+   * Update the square's position and handle bouncing off boundaries
+   *
    * @param {number} dt - Delta time in seconds
    */
   update(dt) {
-    super.update(dt);
-    // Update each square’s position based on its velocity
-    for (let i = 0; i < this.squares.length; i++) {
-      const square = this.squares[i];
-      const vel = this.velocities[i];
-      // Move
-      square.x += vel.vx * dt;
-      square.y += vel.vy * dt;
-      // Check left/right boundaries
-      const halfW = square.width / 2;
-      if (square.x - halfW < 0) {
-        square.x = halfW;
-        vel.vx *= -1; // bounce horizontally
-      } else if (square.x + halfW > this.game.width) {
-        square.x = this.game.width - halfW;
-        vel.vx *= -1;
-      }
-      // Check top/bottom boundaries
-      const halfH = square.height / 2;
-      if (square.y - halfH < 0) {
-        square.y = halfH;
-        vel.vy *= -1;
-      } else if (square.y + halfH > this.game.height) {
-        square.y = this.game.height - halfH;
-        vel.vy *= -1;
-      }
+    // Move the square
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+
+    if (!this.scene) return super.update(dt);
+
+    // Get the scene boundaries
+    const halfSceneWidth = this.scene.width / 2;
+    const halfSceneHeight = this.scene.height / 2;
+
+    // Calculate half size for collision detection
+    const halfSize = this.size / 2;
+
+    // Check left/right boundaries
+    if (this.x - halfSize < -halfSceneWidth) {
+      this.x = -halfSceneWidth + halfSize;
+      this.vx = Math.abs(this.vx); // ensure positive velocity
+    } else if (this.x + halfSize > halfSceneWidth) {
+      this.x = halfSceneWidth - halfSize;
+      this.vx = -Math.abs(this.vx); // ensure negative velocity
     }
-    //
-    // The scene's opacity should be applied to all children.
-    // The Demo will pulse the opacity of the entire scene using Motion.
-    // Initialize scene timer
-    this.elapsed = (this.elapsed ?? 0) + dt;
-    // Use Motion.pulse to animate opacity between 0 and 1
-    const result = Motion.pulse(
-      0, // min
-      1, // max
-      this.elapsed, // elapsed time
-      10, // duration (2s up, 2s down for 0-1-0 over 4s)
-      true, // loop
-      true, // yoyo
-      Easing.easeInOutSine // optional
-    );
-    // Apply to scene
-    this.opacity = result.value;
+
+    // Check top/bottom boundaries
+    if (this.y - halfSize < -halfSceneHeight) {
+      this.y = -halfSceneHeight + halfSize;
+      this.vy = Math.abs(this.vy); // ensure positive velocity
+    } else if (this.y + halfSize > halfSceneHeight) {
+      this.y = halfSceneHeight - halfSize;
+      this.vy = -Math.abs(this.vy); // ensure negative velocity
+    }
+
+    // Ensure velocities never drop too low
+    if (Math.abs(this.vx) < 20) this.vx = this.vx < 0 ? -20 : 20;
+    if (Math.abs(this.vy) < 20) this.vy = this.vy < 0 ? -20 : 20;
+
+    // Call the parent update to handle standard GameObject behavior
+    super.update(dt);
+  }
+
+  /**
+   * Draw the square
+   */
+  draw() {
+    super.draw();
+    this.square.render();
   }
 }
-//
+
+/**
+ * OpacityDemo - Demo showcasing multiple squares with varying opacity levels
+ * bouncing around the screen with a fading effect applied to the entire scene.
+ */
+export class OpacityDemo extends Scene {
+  /**
+   * Create a new OpacityDemo
+   *
+   * @param {Game} game - Reference to the game instance
+   * @param {Object} options - Configuration options
+   */
+  constructor(game, options = {}) {
+    super(game, options);
+    // Define the margin to keep squares within
+    this.MARGIN = 50;
+    // Store all squares
+    this.squares = [];
+    // Initialize opacity animation timer
+    this.elapsed = 0;
+    // Create multiple squares
+    const count = options.count || 20; // Reasonable default
+
+    for (let i = 0; i < count; i++) {
+      // Create square with random properties
+      const square = this.createRandomSquare(game, i);
+      // Add it to the scene
+      this.add(square);
+      // Store a reference
+      this.squares.push(square);
+    }
+  }
+
+  /**
+   * Create a square with random properties
+   *
+   * @param {Game} game - Reference to the game instance
+   * @param {number} index - Index for naming
+   * @returns {BouncingSquare} The created square
+   */
+  createRandomSquare(game, index) {
+    // Random size between 30 and 70
+    const size = 30 + Math.random() * 40;
+
+    // Initialize scene dimensions for initial positioning
+    const sceneWidth = game.width - this.MARGIN * 2;
+    const sceneHeight = game.height - this.MARGIN * 2;
+
+    // Random position within scene bounds (80% of max to avoid edge cases)
+    const x = (Math.random() * sceneWidth - sceneWidth / 2) * 0.8;
+    const y = (Math.random() * sceneHeight - sceneHeight / 2) * 0.8;
+
+    // Random velocity (ensure it's not too slow)
+    const vx = (Math.random() < 0.5 ? -1 : 1) * (50 + Math.random() * 150);
+    const vy = (Math.random() < 0.5 ? -1 : 1) * (50 + Math.random() * 150);
+
+    // Random color
+    const hue = Math.floor(Math.random() * 360);
+    const color = `hsl(${hue}, 80%, 50%)`;
+
+    // Random opacity between 0.3 and 1
+    const opacity = 0.3 + Math.random() * 0.6;
+
+    // Create the square with these properties
+    return new BouncingSquare(game, {
+      size,
+      x,
+      y,
+      vx,
+      vy,
+      color,
+      opacity,
+      name: `square_${index}`,
+      debug: true,
+      debugColor: "white",
+      scene: this,
+    });
+  }
+
+  #prevWidth = 0;
+  #prevHeight = 0;
+
+  /**
+   * Update the scene and all squares
+   *
+   * @param {number} dt - Delta time in seconds
+   */
+  update(dt) {
+    // Update scene dimensions based on margin
+    if(this.width !== this.game.width - this.MARGIN * 2) {  
+      this.width = this.game.width - this.MARGIN * 2;
+      this.x = this.game.width / 2;
+    }
+    if(this.height !== this.game.height - this.MARGIN * 2) {
+      this.height = this.game.height - this.MARGIN * 2;
+      this.y = this.game.height / 2;
+    }
+
+    // Animate the scene's opacity
+    this.elapsed += dt;
+
+    // Use Motion.pulse to animate opacity between 0 and 1
+    const result = Motion.pulse(
+      0,
+      1, // max
+      this.elapsed, // elapsed time
+      10, // duration in seconds
+      true, // loop
+      true, // yoyo
+      Easing.easeInOutSine // easing function
+    );
+
+    // Apply the result to the scene's opacity
+    this.opacity = result.value;
+    //console.log(this.opacity);
+
+    // Call parent update which will update all children
+    super.update(dt);
+    if (this.#prevWidth !== this.width || this.#prevHeight !== this.height) {
+      this.markBoundsDirty();
+    }
+    this.#prevWidth = this.width;
+    this.#prevHeight = this.height;
+  }
+
+  render() {
+    this.logger.log("Scene opacity", this.opacity);
+    super.render();
+  }
+}
+
+/**
+ * MyGame - Main game class for the opacity demo
+ */
 export class MyGame extends Game {
+  /**
+   * Create a new game instance
+   *
+   * @param {HTMLCanvasElement} canvas - The canvas element to render to
+   */
   constructor(canvas) {
     super(canvas);
     this.backgroundColor = "black";
     this.enableFluidSize();
   }
 
+  /**
+   * Initialize the game
+   */
   init() {
     super.init();
-    this.pipeline.add(new OpacityDemo(this));
-    /* this.pipeline.add(
-      new FPSCounter(this, {
-        anchor: "bottom-right",
-      })
-    ); */
+
+    // Create the opacity demo with 20 squares
+    this.pipeline.add(new OpacityDemo(this, { count: 100, debug: true }));
+    this.fpsCounter = new FPSCounter(this, {
+      color: "#00FF00",
+      //debug: true,
+      anchor: "bottom-right",
+    });
+    // Add FPS counter
+    this.pipeline.add(this.fpsCounter);
   }
 }

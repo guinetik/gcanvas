@@ -4,7 +4,6 @@ import {
   FPSCounter,
   Text,
   Tween,
-  Shapes,
   Painter,
   Scene,
   ShapeGOFactory,
@@ -12,205 +11,77 @@ import {
   Motion,
   Tweenetik,
   Easing,
-} from "/gcanvas/gcanvas.es.min.js";
+  Line,
+  Rectangle,
+  Square,
+  RoundedRectangle,
+  Diamond,
+  Triangle,
+  Hexagon,
+  Polygon,
+  Star,
+  PieSlice,
+  Circle,
+  Arc,
+  BezierShape,
+  Ring,
+  Cube,
+  Prism,
+  Cylinder,
+  Cone,
+  Sphere,
+  Arrow,
+  Pin,
+  Cross,
+  StickFigure,
+  Heart,
+  Group,
+  TextShape,
+} from "/gcanvas.es.min.js";
 
 class ShapeGalleryGame extends Game {
   constructor(canvas) {
     super(canvas);
     this.backgroundColor = "#fff";
     this.enableFluidSize();
+  }
+
+  init() {
+    super.init();
     this.shapeEntries = [
       {
-        name: "Line",
-        class: Shapes.Line,
-        args: [0, 0, 40],
-        options: { strokeColor: "black", lineWidth: 3, anchor: "center" },
-      },
-      {
-        name: "Rectangle",
-        class: Shapes.Rectangle,
-        args: [0, 0, 60, 40],
-        options: { fillColor: Painter.colors.randomColorHSL() },
-      },
-      {
-        name: "Square",
-        class: Shapes.Square,
-        args: [0, 0, 50],
-        options: { fillColor: Painter.colors.randomColorHSL() },
-      },
-      {
-        name: "Rounded Rect",
-        class: Shapes.RoundedRectangle,
-        args: [0, 0, 50, 50, 10],
-        options: { fillColor: Painter.colors.randomColorHSL() },
-      },
-      {
-        name: "Diamond",
-        class: Shapes.Diamond,
-        args: [0, 0, 60, 60],
-        options: { fillColor: Painter.colors.randomColorHSL() },
-      },
-      {
-        name: "Triangle",
-        class: Shapes.Triangle,
-        args: [0, 0, 50],
-        options: { fillColor: Painter.colors.randomColorHSL() },
-      },
-      {
-        name: "Hexagon",
-        class: Shapes.Hexagon,
-        args: [0, 0, 30],
-        options: { fillColor: Painter.colors.randomColorHSL() },
-      },
-      {
-        name: "Polygon",
-        class: Shapes.Polygon,
-        args: [0, 0, 9, 30],
-        options: { fillColor: Painter.colors.randomColorHSL() },
-      },
-      {
-        name: "Star",
-        class: Shapes.Star,
-        args: [0, 0, 30, 5, 0.5],
-        options: { fillColor: Painter.colors.randomColorHSL() },
-      },
-      {
-        name: "PieSlice",
-        class: Shapes.PieSlice,
-        args: [0, 0, 30, 0, Math.PI * 1.5],
-        options: { fillColor: Painter.colors.randomColorHSL() },
-      },
-      {
-        name: "Circle",
-        class: Shapes.Circle,
-        args: [0, 0, 25],
-        options: { fillColor: Painter.colors.randomColorHSL() },
-      },
-      {
-        name: "Arc",
-        class: Shapes.Arc,
-        args: [0, 0, 25, 0, Math.PI * 1.5],
-        options: {
-          strokeColor: Painter.colors.randomColorHSL(),
-          lineWidth: 5,
-        },
-      },
-      {
-        name: "Bezier",
-        class: Shapes.BezierShape,
-        args: [
-          0,
-          0,
-          [
-            ["M", -40, 0],
-            ["C", -30, -30, -10, -30, 0, 0],
-            ["C", 10, 30, 30, 30, 40, 0],
-          ],
-        ],
-        options: {
-          fillColor: null,
-          strokeColor: Painter.colors.randomColorHSL(),
-          lineWidth: 3,
-        },
-      },
-      {
-        name: "Bezier (Filled)",
-        class: Shapes.BezierShape,
-        args: [
-          0,
-          0,
-          [
-            ["M", 0, -40],
-            ["C", 30, -40, 40, -10, 0, 30],
-            ["C", -40, -10, -30, -40, 0, -40],
-            ["Z"],
-          ],
-        ],
-        options: {
-          scaleX: 0.75,
-          scaleY: 0.75,
-          fillColor: Painter.colors.randomColorHSL(),
-          strokeColor: "#000",
-          lineWidth: 2,
-        },
-      },
-      {
-        name: "Ring",
-        class: Shapes.Ring,
-        args: [0, 0, 30, 15],
-        options: { fillColor: "lightblue" },
-      },
-
-      {
         name: "Cube",
-        class: Shapes.Cube,
-        args: [0, -10, 40],
+        class: Cube,
+        args: [50],
         options: {
+          y: -10,
+          opacity: 0.8,
           scaleX: 0.7,
           scaleY: 0.7,
-          faceTopColor: "#f00",
-          faceLeftColor: "#0f0",
-          faceRightColor: "#00f",
-          faceFrontColor: "#ff0",
-          faceBackColor: "#0ff",
-          faceBottomColor: "#f0f",
+          faceTopColor: Painter.colors.randomColorHSL(),
+          faceLeftColor: Painter.colors.randomColorHSL(),
+          faceRightColor: Painter.colors.randomColorHSL(),
+          faceFrontColor: Painter.colors.randomColorHSL(),
+          faceBackColor: Painter.colors.randomColorHSL(),
+          faceBottomColor: Painter.colors.randomColorHSL(),
           strokeColor: "black",
           lineWidth: 1,
         },
       },
       {
-        name: "Prism",
-        class: Shapes.Prism,
-        args: [0, -10, 40, 40, 40],
-        options: {
-          scaleX: 0.7,
-          scaleY: 0.7,
-          faceFrontColor: "#6495ED",
-          faceBackColor: "#4169E1",
-          faceBottomColor: "#1E90FF",
-          faceLeftColor: "#00BFFF",
-          faceRightColor: "#87CEFA",
-          strokeColor: "#000",
-          lineWidth: 1,
-        },
-      },
-      {
-        name: "Cylinder",
-        class: Shapes.Cylinder,
-        args: [0, 0, 10, 50, 10],
-        options: {
-          topColor: "#FF00FF",
-          bottomColor: "#FF00FF",
-          sideColor: "#FFFF00",
-          segments: 36, // Higher number for smoother curve
-          strokeColor: "#333",
-          lineWidth: 1,
-        },
-      },
-      {
-        name: "Cone",
-        class: Shapes.Cone,
-        args: [-2, -5, 25, 40],
-        options: {
-          bottomColor: "#FF00FF",
-          sideColor: "#00FF00",
-          segments: 32, // Higher for smoother appearance
-          strokeColor: "#333",
-          lineWidth: 1,
-        },
-      },
-      {
         name: "Sphere",
-        class: Shapes.Sphere,
-        args: [0, -10, 25, 40],
+        class: Sphere,
+        args: [25],
         options: {
-          scaleX: 0.7,
-          scaleY: 0.7,
-          color: "#FF6347", // Tomato base color
+          y: -10,
+          width: 50,
+          height: 50,
+          color: Painter.colors.randomColorHSL(),
+          highlightColor: "white",
           hSegments: 16, // Fewer segments for wireframe
-          vSegments: 12,
+          vSegments: 16,
           wireframe: true, // Wireframe rendering
-          strokeColor: "#333333",
+          stroke: "#CCC",
           lineWidth: 1,
           rotationX: Math.PI / 8,
           rotationY: 0,
@@ -218,47 +89,308 @@ class ShapeGalleryGame extends Game {
         },
       },
       {
-        name: "Arrow",
-        class: Shapes.Arrow,
-        args: [-5, 0, 60, 15],
-        options: { fillColor: "brown" },
+        name: "Cone",
+        class: Cone,
+        args: [20, 40],
+        options: {
+          x: -2,
+          y: -10,
+          bottomColor: "#FF00FF",
+          sideColor: "#00FF00",
+          segments: 16, // Higher for smoother appearance
+          stroke: "#333",
+          lineWidth: 1,
+        },
+      },
+      {
+        name: "Cylinder",
+        class: Cylinder,
+        args: [10],
+        options: {
+          y: -10,
+          width: 40,
+          height: 60,
+          topColor: Painter.colors.randomColorHSL(),
+          bottomColor: Painter.colors.randomColorHSL(),
+          sideColor: Painter.colors.randomColorHSL(),
+          rotationX: -45,
+          segments: 16, // Higher number for smoother curve
+          stroke: "black",
+          lineWidth: 1,
+        },
+      },
+      {
+        name: "Prism",
+        class: Prism,
+        args: [50],
+        options: {
+          y: -20,
+          width: 50,
+          height: 50,
+          scaleX: 0.7,
+          scaleY: 0.7,
+          faceFrontColor: "#6495ED",
+          faceBackColor: "#4169E1",
+          faceBottomColor: "#1E90FF",
+          faceLeftColor: "#00BFFF",
+          faceRightColor: "#87CEFA",
+          stroke: "#000",
+          lineWidth: 1,
+        },
+      },
+      {
+        name: "Line",
+        class: Line,
+        args: [40],
+        options: { stroke: "black", lineWidth: 3},
+      },
+      {
+        name: "Bezier",
+        class: BezierShape,
+        args: [
+          [
+            ["M", -40, 0],
+            ["C", -30, -30, -10, -30, 0, 0],
+            ["C", 10, 30, 30, 30, 40, 0],
+          ],
+        ],
+        options: {
+          y: -10,
+          color: Painter.colors.randomColorHSL(),
+          stroke: Painter.colors.randomColorHSL(),
+          lineWidth: 3,
+        },
+      },
+      {
+        name: "Bezier (Filled)",
+        class: BezierShape,
+        args: [
+          [
+            ["M", -60, 0],
+            ["C", -60, -20, -20, -20, 0, 0],
+            ["C", 20, 20, 60, 20, 60, 0],
+            ["C", 60, -20, 20, -20, 0, 0],
+            ["C", -20, 20, -60, 20, -60, 0],
+            ["Z"],
+          ],
+        ],
+        options: {
+          scaleX: 0.7,
+          scaleY: 0.7,
+          y: -10,
+          color: Painter.colors.randomColorHSL(),
+          stroke: Painter.colors.randomColorHSL(),
+          lineWidth: 3,
+        },
       },
       {
         name: "Pin",
-        class: Shapes.Pin,
-        args: [0, -10, 10],
-        options: { fillColor: "crimson", strokeColor: "black" },
-      },
-      {
-        name: "Cross",
-        class: Shapes.Cross,
-        args: [0, 0, 50, 10],
-        options: { fillColor: "gray" },
-      },
-      {
-        name: "StickFigure",
-        class: Shapes.StickFigure,
-        args: [0, 0, 0.5],
+        class: Pin,
+        args: [16],
         options: {
-          strokeColor: "#111",
-          headColor: "#fc0",
-          jointColor: "#111",
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
           lineWidth: 2,
-          showJoints: true,
+          scaleX: 0.9,
+          scaleY: 0.9,
+          y: -20,
         },
       },
       {
         name: "Heart",
-        class: Shapes.Heart,
-        args: [0, -30, 50, 50],
-        options: { fillColor: "crimson" },
+        class: Heart,
+        args: [],
+        options: {
+          width: 50,
+          height: 50,
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+          y: -35,
+        },
+      },
+      {
+        name: "Rounded Rect",
+        class: RoundedRectangle,
+        args: [10],
+        options: {
+          width: 50,
+          height: 50,
+          y: -10,
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+          crisp: true,
+        },
+      },
+      {
+        name: "Rectangle",
+        class: Rectangle,
+        args: [],
+        options: {
+          width: 70,
+          height: 50,
+          y: -5,
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+          crisp: true,
+        },
+      },
+      {
+        name: "Square",
+        class: Square,
+        args: [50],
+        options: {
+          y: -5,
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+          crisp: true,
+        },
+      },
+      {
+        name: "Diamond",
+        class: Diamond,
+        args: [],
+        options: {
+          y: -10,
+          width: 60,
+          height: 60,
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+        },
+      },
+
+      {
+        name: "Triangle",
+        class: Triangle,
+        args: [50],
+        options: {
+          y: -10,
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+        },
+      },
+      {
+        name: "Hexagon",
+        class: Hexagon,
+        args: [30],
+        options: {
+          y: -10,
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+        },
+      },
+      {
+        name: "Polygon",
+        class: Polygon,
+        args: [9, 30],
+        options: {
+          y: -10,
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+        },
+      },
+      {
+        name: "Star",
+        class: Star,
+        args: [30, 5, 0.5],
+        options: {
+          y: -10,
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+        },
+      },
+      {
+        name: "Circle",
+        class: Circle,
+        args: [30],
+        options: {
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+          y: -10,
+        },
+      },
+      {
+        name: "PieSlice",
+        class: PieSlice,
+        args: [30, 0, Math.PI * 1.5],
+        options: {
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+          y: -10,
+        },
+      },
+      {
+        name: "Arc",
+        class: Arc,
+        args: [28, 0, Math.PI * 1.5],
+        options: {
+          y: -10,
+          stroke: Painter.colors.randomColorHSL(),
+          lineWidth: 10,
+        },
+      },
+      {
+        name: "Ring",
+        class: Ring,
+        args: [30, 20],
+        options: {
+          color: Painter.colors.randomColorHSL(),
+          y: -10,
+        },
+      },
+      {
+        name: "Arrow",
+        class: Arrow,
+        args: [60],
+        options: {
+          width: 20,
+          height: 25,
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+          x: -5,
+          y: -10,
+        },
+      },
+      {
+        name: "Cross",
+        class: Cross,
+        args: [50, 10],
+        options: {
+          color: Painter.colors.randomColorHSL(),
+          stroke: "black",
+          lineWidth: 2,
+          y: -10,
+        },
+      },
+      {
+        name: "StickFigure",
+        class: StickFigure,
+        args: [0.5],
+        options: {
+          y: -10,
+          strokeColor: "#111",
+          headColor: Painter.colors.randomColorHSL(),
+          jointColor: "#111",
+          lineWidth: 2,
+          showJoints: false,
+        },
       },
     ];
-  }
-
-  init() {
-    super.init();
-    this.pipeline.add(new FPSCounter(this, { color: "black" }));
+    // FPS Counter
+    this.pipeline.add(
+      new FPSCounter(this, { color: "black", anchor: "bottom-right" })
+    );
     // Title
     this.pipeline.add(
       new Text(this, "GCanvas Shape Gallery", {
@@ -270,7 +402,6 @@ class ShapeGalleryGame extends Game {
         baseline: "top",
       })
     );
-
     // Subtitle
     this.pipeline.add(
       new Text(this, "Mouse over any shape to rotate or animate it", {
@@ -282,27 +413,56 @@ class ShapeGalleryGame extends Game {
         baseline: "top",
       })
     );
-
+    this.events.on("click", (e) => {
+      this.gallery.children.forEach((go) => {
+        go.entry.shape.color = Painter.colors.randomColorHSL();
+        if (
+          go.entry.class.name === "BezierShape" ||
+          go.entry.class.name == "Arc" ||
+          go.entry.class.name == "StickFigure"
+        ) {
+          go.entry.shape.headColor = Painter.colors.randomColorHSL();
+          go.entry.shape.stroke = Painter.colors.randomColorHSL();
+        }
+        if (
+          go.entry.name === "Sphere" ||
+          go.entry.name == "Cube" ||
+          go.entry.name === "Prism" ||
+          go.entry.name === "Cylinder" ||
+          go.entry.name === "Cone"
+        ) {
+          go.entry.shape.faceTopColor = Painter.colors.randomColorHSL();
+          go.entry.shape.faceBottomColor = Painter.colors.randomColorHSL();
+          go.entry.shape.faceLeftColor = Painter.colors.randomColorHSL();
+          go.entry.shape.faceRightColor = Painter.colors.randomColorHSL();
+          go.entry.shape.faceFrontColor = Painter.colors.randomColorHSL();
+          go.entry.shape.faceBackColor = Painter.colors.randomColorHSL();
+          go.entry.shape.topColor = Painter.colors.randomColorHSL();
+          go.entry.shape.bottomColor = Painter.colors.randomColorHSL();
+          go.entry.shape.sideColor = Painter.colors.randomColorHSL();
+        }
+      });
+    });
     this.createGallery();
+    this.onResize();
+  }
+  
+  onResize() {
+    if(this.gallery) {
+      this.gallery.x = Math.round((this.canvas.width ) / 2);
+      this.gallery.y = Math.round((this.canvas.height) / 2);
+    }
   }
 
   createGallery() {
     const cellSize = 120;
-    // Migrating to TileLayout those variables become irrelevant, but its good to have for a quick tile setup on another thing
-    //const padding = 20;
-    //const spacing = 16; // space between grid items
-    //const cols = Math.ceil(Math.sqrt(this.shapeEntries.length));
-    //const rows = Math.ceil(this.shapeEntries.length / cols);
-    //const gridWidth = cols * cellSize + (cols - 1) * spacing;
-    //const gridHeight = rows * cellSize + (rows - 1) * spacing;
-    //const originX = 0;
-    //const originY = 0;
-
     const gallery = new TileLayout(this, {
       debug: true,
-      anchor: "center",
+      debugColor: "grey",
       columns: 5,
-      debug: false,
+      debug: true,
+      width: cellSize * 5,
+      height: cellSize * 5,
     });
 
     this.shapeEntries.forEach((entry, index) => {
@@ -311,45 +471,50 @@ class ShapeGalleryGame extends Game {
       //const x = originX + col * (cellSize + spacing) + cellSize / 2;
       //const y = originY + row * (cellSize + spacing) + cellSize / 2;
       //
-      const group = new Shapes.Group(0, 0);
+      const group = new Group();
       group.width = group.height = cellSize;
-      const bg = new Shapes.Rectangle(0, 0, cellSize - 10, cellSize - 10, {
-        strokeColor: "rgba(0,0,0,0.1)",
+      const bg = new Rectangle({
+        width: cellSize - 10,
+        height: cellSize - 10,
+        stroke: "rgba(0,0,0,0.1)",
         lineWidth: 1,
       });
       const shape = new entry.class(...entry.args, entry.options);
       entry.shape = shape;
-      const label = new Shapes.TextShape(
-        0,
-        (cellSize - 10) / 2 - 12,
-        entry.name,
-        {
-          font: "12px monospace",
-          color: "#333",
-          align: "center",
-          baseline: "bottom",
-        }
-      );
+      const label = new TextShape(entry.name, {
+        x: 0,
+        y: (cellSize - 10) / 2 - 12,
+        font: "12px monospace",
+        color: "#333",
+        align: "center",
+        baseline: "bottom",
+      });
       group.add(bg);
       group.add(shape);
       group.add(label);
       //
       //
-      const go = ShapeGOFactory.create(this, group);
+      const go = ShapeGOFactory.create(this, group, {
+        interactive: true,
+        name: entry.name,
+        width: cellSize,
+        height: cellSize,
+        scaleX: 1,
+        scaleY: 1,
+      });
       go.entry = entry;
-      go.enableInteractivity(group);
-      go.hovered = false;
       go.rotation = 0;
       go.rotationVelocity = 0;
       go.startTime = 0;
       go.width = go.height = cellSize;
+      go.tweening = false;
       const game = this;
       go.on("mouseover", () => {
         go.scaleX = go.scaleY = 1;
         game.canvas.style.cursor = "pointer";
         Tweenetik.to(
-          go, // the shape to scale
-          { scaleX: 1.3, scaleY: 1.3 },
+          group,
+          { scaleX: 1.3, scaleY: 1.3},
           1, // duration
           Easing.easeOutElastic,
           { onComplete: () => (go.tweening = false) }
@@ -359,13 +524,16 @@ class ShapeGalleryGame extends Game {
       go.on("mouseout", () => {
         game.canvas.style.cursor = "default";
         Tweenetik.to(
-          go, // the shape to scale
-          { scaleX: 1, scaleY: 1 },
+          group, // the shape to scale
+          { scaleX: 1, scaleY: 1},
           1, // duration
           Easing.easeOutElastic
         );
       });
       function update(dt) {
+        if (go.entry.name === "Hexagon") {
+          //console.log(go.scaleX, go.scaleY);
+        }
         if (
           go.entry.name === "Sphere" ||
           go.entry.name == "Cube" ||
@@ -383,7 +551,8 @@ class ShapeGalleryGame extends Game {
             // Calculate rotation angles (convert to radians)
             const rotationSpeed = 0.001;
             const xRotation = (Math.sin(elapsed * 0.0005) * Math.PI) / 4;
-            const yRotation = (elapsed * rotationSpeed) % (Math.PI * 2);
+            const yRotation =
+              (elapsed * rotationSpeed * 0.0005) % (Math.PI * 2);
             const zRotation = (Math.cos(elapsed * 0.0003) * Math.PI) / 6;
 
             // Apply rotations
@@ -392,24 +561,20 @@ class ShapeGalleryGame extends Game {
           animate();
         }
       }
-      function render() {
-        group.render();
-      }
-      const originalUpdate = go.update;
-      go.update = (dt) => {
-        originalUpdate(dt);
-        update(dt);
-      };
-      go.render = render;
       gallery.add(go);
+      go.onUpdate = update;
     });
-    this.pipeline.add(gallery);
+    this.gallery = gallery;
+    this.pipeline.add(this.gallery);
   }
 }
 
 window.addEventListener("load", () => {
   const canvas = document.getElementById("game");
   const game = new ShapeGalleryGame(canvas);
-  game.init();
+  game.setFPS(60);
+  game.enablePauseOnBlur(true);
+  //game.enableLogging();
   game.start();
+  //setTimeout(game.stop.bind(game), 10000);
 });

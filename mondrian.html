@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Basic Game Template</title>
+  <link rel="stylesheet" href="demos.css" />
+</head>
+
+<body>
+  <div id="info">
+    <strong>Mondrian</strong> — Demonstrates how scenes can be layouted and animated. <br>
+  </div>
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { MondrianDemo } from "./js/mondrian.js";
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new MondrianDemo(canvas);
+      //game.enableLogging();
+      //game.enablePauseOnBlur(true);
+      //game.setFPS(1);
+      game.start();
+      //setTimeout(game.stop.bind(game), 4000);
+    });
+  </script>
+</body>
+
+</html>

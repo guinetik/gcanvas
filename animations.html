@@ -18,8 +18,10 @@
     window.addEventListener("load", () => {
       const canvas = document.getElementById("game");
       const game = new MyGame(canvas);
-      game.init();
+  //    game.setFPS(1);
+      //  game.enableLogging(true);
       game.start();
+//      setTimeout(game.stop.bind(game), 2000);
     });
   </script>
 </body>

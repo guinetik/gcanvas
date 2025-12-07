@@ -14,7 +14,7 @@
   <canvas id="game"></canvas>
 
   <script type="module">
-    import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group } from "/gcanvas/gcanvas.es.min.js";
+    import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group } from "/gcanvas.es.min.js";
     // Template for a Hello World game
     class DemoGame extends Game {
       constructor(canvas) {
@@ -23,48 +23,60 @@
         this.backgroundColor = "black";
       }
 
+      onResize() {
+        if (this.scene) {
+          // Because we're using anchor the positions are calculated automatically, but we need to refresh the scene size to be proportional to the canvas size.
+          this.scene.width = this.width - 20;
+          this.scene.height = this.height - 20;
+          this.ui.width = this.width - 10;
+          this.ui.height = this.height - 10;
+        }
+      }
+
       init() {
+        super.init();
         // Set up scenes
-        this.scene = new Scene(this);
-        //this.ui = new Scene(this);
-        this.pipeline.add(this.scene); // game layer
-        //this.pipeline.add(this.ui);    // UI layer
+        // The UI scene is slightly smaller than the game scene with an yellow debug box
+        this.ui = new Scene(this, { width: this.width - 10, height: this.height - 10, debug: true, debugColor: "yellow", anchor: "center" });
+        // The main scene is slightly smaller than the UI scene with a magenta debug box
+        this.scene = new Scene(this, { width: this.width - 20, height: this.height - 20, debug: true, debugColor: "magenta", anchor: "center" });
+        // Add the scenes to the pipeline.UI On top of the game scene. 
+        // When the game runs, we should see a magenta box inside a yellow box.
+        this.pipeline.add(this.scene);
+        this.pipeline.add(this.ui);
         // Hello World box in the game scene
         this.scene.add(new HelloWorldBox(this));
         // FPS counter in the UI scene
-       // this.ui.add(new FPSCounter(this, { anchor: "bottom-right" }));
+        this.ui.add(new FPSCounter(this, { anchor: "bottom-right" }));
       }
     }
 
     window.addEventListener("load", () => {
       const canvas = document.getElementById("game");
       const game = new DemoGame(canvas);
-      game.init();
+      game.setFPS(1);
       game.start();
+      setTimeout(game.stop.bind(game), 1000);
     });
 
     //
     class HelloWorldBox extends GameObject {
       constructor(game) {
         super(game);
-
-        const box = new Rectangle(0, 0, 200, 80, {
-          fillColor: "#323232"
-        });
-
-        const label = new TextShape(0, 0, "Hello World!", {
-          font: "18px monospace",
-          color: "#0f0",
-          align: "center",
-          baseline: "middle"
-        });
-
-        this.group = new Group(game.width / 2, game.height / 2);
-        this.group.add(box);
-        this.group.add(label);
+        this.outer = new Rectangle({ width: 100, height: 100, color: "darkcyan", rotation:3, y:150, x: 200, name: "outer green rect", debug: true, debugColor: "cyan" });
+        this.group = new Group({ debug: true, debugColor: "red"});
+        this.group.add(new Rectangle({ width: 400, height: 300, color: "#323232", name: "grey rect" }));
+        this.group.add(new Rectangle({ width: 100, height: 100, color: "#0f0", x: 0, name: "inner green rect" }));
+        this.group.add(this.outer);
       }
 
-      render() {
+      update(dt) {
+        super.update(dt);
+        console.log(this.group.x, this.group.y, this.group.width, this.group.height, this.group.getBounds());
+      }
+
+      draw() {
+        super.draw();
         this.group.render();
       }
     }

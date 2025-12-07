@@ -4,6 +4,7 @@ import {
   Easing,
   FPSCounter,
   Game,
+  GameObjectShapeWrapper,
   Group,
   Heart,
   Painter,
@@ -16,204 +17,50 @@ import {
   TextShape,
   TileLayout,
   Triangle,
+  Motion,
   Tween,
-} from "/gcanvas/gcanvas.es.min.js";
-import { Motion } from "/gcanvas/gcanvas.es.min.js";
-// Tile shapes
-const boxDefinitiosn = [
-  {
-    type: "hop",
-    innerShape: new Square(0, 0, 30, {
-      fillColor: "white",
-    }),
-  },
-  {
-    type: "spring",
-    innerShape: new Square(0, 0, 30, {
-      fillColor: "white",
-    }),
-  },
-  {
-    type: "bounce",
-    innerShape: new Square(0, 0, 30, {
-      fillColor: "white",
-    }),
-  },
-  {
-    type: "shake",
-    innerShape: new Star(0, 0, 30, 5, 0.5, {
-      fillColor: "white",
-    }),
-  },
-
-  {
-    type: "parabolic",
-    innerShape: new Circle(40, -40, 5, {
-      fillColor: "white",
-    }),
-  },
-  {
-    type: "spiral",
-    innerShape: new Circle(0, 0, 5, {
-      fillColor: "white",
-    }),
-  },
-  {
-    type: "orbit",
-    innerShape: new Circle(0, 0, 5, {
-      fillColor: "white",
-    }),
-  },
-  {
-    type: "float",
-    innerShape: new Circle(0, 0, 5, {
-      fillColor: "white",
-    }),
-  },
-  {
-    type: "bezier",
-    innerShape: new StickFigure(0, 0, 0.3, {
-      strokeColor: "white",
-    }),
-  },
-  {
-    type: "patrol",
-    innerShape: new StickFigure(0, 0, 0.3, {
-      strokeColor: "white",
-    }),
-  },
-  {
-    type: "follow",
-    innerShape: new StickFigure(0, 0, 0.3, {
-      strokeColor: "white",
-    }),
-  },
-  {
-    type: "waypoint",
-    innerShape: new StickFigure(0, 0, 0.3, {
-      strokeColor: "white",
-    }),
-  },
-  {
-    type: "pulse",
-    innerShape: new Heart(0, 0, 50, 50, {
-      fillColor: "white",
-      lineWidth: 3,
-    }),
-  },
-  {
-    type: "oscillate",
-    innerShape: new Arc(0, 0, 20, 0, Math.PI * 1.5, {
-      strokeColor: "white",
-      lineWidth: 10,
-    }),
-  },
-  {
-    type: "swing",
-    innerShape: new PieSlice(0, 0, 30, 0, Math.PI * 0.3, {
-      fillColor: "white",
-    }),
-  },
-  {
-    type: "pendulum",
-    innerShape: new PieSlice(0, 0, 30, 0, Math.PI * 0.3, {
-      fillColor: "white",
-    }),
-  },
-];
-
-// AnimationsDemo: A demo Scene that uses a TileLayout to arrange three ShapeBoxes
-// Each ShapeBox receives a different inner shape and its inner shape is animated separately.
-class AnimationsDemo extends Scene {
-  constructor(game, options = {}) {
-    super(game, options);
-    // Create a HorizontalLayout with some spacing and padding,
-    // and set its anchor property to "center" so it appears centered on the screen.
-    this.layout = new TileLayout(game, {
-      spacing: 30,
-      columns: 4,
-      padding: 30,
-      align: "center",
-      anchor: "center",
-      debug: true,
-    });
-    // Create three ShapeBoxes with different inner shapes and types.
-    this.boxes = boxDefinitiosn.map((boxDef) => {
-      const innerShape = boxDef.innerShape;
-      const type = boxDef.type;
-      const shapeBox = new ShapeBox(game, innerShape, type, {
-        width: 100,
-        height: 120,
-        x: 0,
-        y: 0,
-      });
-      shapeBox.animTime = 0; // Initialize the animation time for each box
-      // Add the ShapeBox to the layout.
-      this.layout.add(shapeBox);
-      return shapeBox;
-    });
-    // Finally, add the layout to the scene.
-    this.add(this.layout);
-  }
-
-  update(dt) {
-    //console.log(this.layout.x, this.layout.y, this.layout.width, this.layout.height);
-    // For each ShapeBox, update its internal animation (i.e. update the inner shape only)
-    this.boxes.forEach((box) => {
-      box.animTime += dt;
-      //console.log(box.type);
-      box[box.type](box, dt);
-    });
-    // Call the parent update (which also updates the layout positions).
-    super.update(dt);
-  }
-}
-
+  GameObject,
+} from "/gcanvas.es.min.js";
 // ShapeBox: A GameObject that wraps an inner shape within a background
-class ShapeBox extends Scene {
+class ShapeBox extends GameObject {
   constructor(game, innerShape, type, options = {}) {
-    options.width = options.width ?? 100;
-    options.height = options.height ?? 120;
     super(game, options);
-    this.type = type;
-    // Create a group that will hold the background and the inner shape.
-    this.group = new Group(0, 0);
-    // Create a background rectangle of 100x100 centered at (0,0).
-    const bg = new Rectangle(0, 0, 100, 100, {
-      fillColor: Painter.colors.randomColorHSL(),
-      strokeColor: "white",
+    const whites = ["bezier", "patrol", "follow", "waypoint"];
+    const group = new Group();
+    group.width = options.width;
+    group.height = options.height;
+    const bg = new Rectangle({
+      width: 100,
+      height: 100,
+      //color: Painter.colors.randomColorHSL(),
+      //color: "#FF0000",
+      color: whites.includes(type) ? "white" : "transparent",
+      stroke: "white",
       lineWidth: 2,
     });
-    // Add the background and the provided inner shape to the group.
-    this.group.add(bg);
-    this.group.add(innerShape);
+    group.add(bg);
+    /* group.add(new Rectangle({
+      width: 100 - 10,
+      height: 100 -10
+    })) */
+    group.add(innerShape);
+    this.type = type;
+    this.group = group;
     this.group.add(
-      new TextShape(0, 55, this.type, {
+      new TextShape(this.type, {
+        x: 0,
+        y: 40,
         font: "16px monospace",
-        color: "white",
+        color: whites.includes(type) ? "black" : "white",
       })
     );
     // Store a reference to the inner shape so you can update its animation separately.
     this.innerShape = innerShape;
   }
 
-  update(dt) {
-    this.group.x = this.x;
-    this.group.y = this.y;
-    super.update(dt);
-  }
-
-  render() {
+  draw() {
+    super.draw();
     this.group.render();
-    super.render();
-  }
-
-  width() {
-    return 100;
-  }
-
-  height() {
-    return 100;
   }
 
   swing(box, dt) {
@@ -225,7 +72,7 @@ class ShapeBox extends Scene {
     const result = Motion.swing(
       0,
       0, // Center (just semantic here)
-      Math.PI / 2, // Max swing angle (30 degrees)
+      90, // Max swing angle (30 degrees)
       box.animTime, // Elapsed time
       3.0, // 6 seconds for full cycle
       true, // Loop
@@ -247,8 +94,8 @@ class ShapeBox extends Scene {
     if (!box.pendulumState) box.pendulumState = null;
 
     const result = Motion.pendulum(
-      Math.PI / 3, // origin angle (radians)
-      Math.PI / 3, // max amplitude (45 degrees)
+      60, // origin angle (radians)
+      120, // max amplitude (45 degrees)
       box.animTime, // elapsed time
       3.0, // 3 seconds per cycle
       true, // loop
@@ -269,8 +116,8 @@ class ShapeBox extends Scene {
     if (!box.hopState) box.hopState = null;
 
     const result = Motion.hop(
-      35, // baseY (ground)
-      30, // hop height
+      -20, // baseY (ground)
+      -40, // hop height
       box.animTime,
       1.2, // duration
       true, // loop
@@ -379,7 +226,7 @@ class ShapeBox extends Scene {
     box.animTime += dt;
     // Get the patrol position and state
     const result = Motion.float(
-      box, // Target object with x,y properties
+      {x:0,y:0}, // Target object with x,y properties
       box.animTime, // Elapsed time
       10, // 10-second patrol cycle
       0.8, // Medium speed
@@ -481,8 +328,8 @@ class ShapeBox extends Scene {
     box.animTime += dt;
     // Run spring with your parameters
     const result = Motion.spring(
-      30, // Initial position
-      -30, // Target position
+      -15, // Initial position
+      18, // Target position
       box.animTime,
       3, // Duration
       true, // Loop
@@ -497,8 +344,8 @@ class ShapeBox extends Scene {
   }
 
   bounce(box) {
-    const maxHeight = -35; // Top position (negative y value)
-    const groundY = 35; // Bottom position (ground)
+    const maxHeight = -20; // Top position (negative y value)
+    const groundY = 25; // Bottom position (ground)
     const bounceCount = 3; // Number of bounces
     const cycleDuration = 3; // 3 seconds per cycle
     const frame = Motion.bounce(
@@ -584,6 +431,7 @@ class ShapeBox extends Scene {
     // Apply to the shape
     box.innerShape.x = pos.x;
     box.innerShape.y = pos.y;
+    box.innerShape.color = "white";
   }
 
   oscillate(box, dt) {
@@ -592,10 +440,10 @@ class ShapeBox extends Scene {
     // Animate the inner shape’s x position using oscillation.
     // The shape will move between -20 and 20 along the x axis with a 2-second period.
     box.innerShape.rotation = Motion.oscillate(
-      Math.PI * 1.5 * -1,
-      Math.PI * 1.5,
+      -270,
+      270,
       box.animTime,
-      5,
+      3,
       true
     ).value;
   }
@@ -642,6 +490,152 @@ class ShapeBox extends Scene {
   }
 }
 
+// AnimationsDemo: A demo Scene that uses a TileLayout to arrange three ShapeBoxes
+// Each ShapeBox receives a different inner shape and its inner shape is animated separately.
+class AnimationsDemo extends TileLayout {
+  constructor(game, options = {}) {
+    super(game, options);
+    this.boxDefinitions = [
+      {
+        type: "hop",
+        innerShape: new Square(30, {
+          color: "white",
+        }),
+      },
+      {
+        type: "spring",
+        innerShape: new Square(30, {
+          color: "white",
+        }),
+      },
+      {
+        type: "bounce",
+        innerShape: new Square(30, {
+          color: "white",
+        })
+      },
+      {
+        type: "shake",
+        innerShape: new Square(30, {
+          color: "white",
+        })
+      },
+      {
+        type: "parabolic",
+        innerShape: new Circle(5, {
+          x: -40,
+          y: -40,
+          color: "white",
+        }),
+      },
+      {
+        type: "spiral",
+        innerShape: new Circle(5, {
+          color: "white",
+        }),
+      },
+      {
+        type: "orbit",
+        innerShape: new Circle(5, {
+          color: "white",
+        }),
+      },
+      {
+        type: "float",
+        innerShape: new Circle(5, {
+          color: "white",
+        }),
+      },
+      {
+        type: "bezier",
+        innerShape: new StickFigure(0.3, {
+          stroke: "black",
+        }),
+      },
+      {
+        type: "patrol",
+        innerShape: new StickFigure(0.3, {
+          stroke: "black",
+        }),
+      },
+      {
+        type: "follow",
+        innerShape: new StickFigure(0.3, {
+          stroke: "black",
+        }),
+      },
+      {
+        type: "waypoint",
+        innerShape: new StickFigure(0.3, {
+          stroke: "black",
+        }),
+      },
+      {
+        type: "pulse",
+        innerShape: new Heart({
+          width: 50,
+          height: 50,
+          color: "white",
+          lineWidth: 3,
+        }),
+      },
+      {
+        type: "oscillate",
+        innerShape: new Arc(20, 0, Math.PI * 1.5, {
+          stroke: "white",
+          lineWidth: 10,
+        }),
+      },
+      {
+        type: "swing",
+        innerShape: new PieSlice(30, 0, Math.PI * 0.3, {
+          color: "white",
+        }),
+      },
+      {
+        type: "pendulum",
+        innerShape: new PieSlice(30, 0, Math.PI * 0.3, {
+          color: "white",
+        }),
+      },
+    ];
+  }
+
+  init() {
+    // Create three ShapeBoxes with different inner shapes and types.
+    this.boxes = this.boxDefinitions.map((boxDef) => {
+      const innerShape = boxDef.innerShape;
+      const type = boxDef.type;
+      const shapeBox = new ShapeBox(game, innerShape, type, {
+        width: 100,
+        height: 100,
+        x: 0,
+        y: 0,
+      });
+      shapeBox.width = 100;
+      shapeBox.height = 100;
+      shapeBox.animTime = 0; // Initialize the animation time for each box
+      // Add the ShapeBox to the layout.
+      this.add(shapeBox);
+      return shapeBox;
+    });
+  }
+
+  update(dt) {
+    //console.log(this.layout.x, this.layout.y, this.layout.width, this.layout.height);
+    // For each ShapeBox, update its internal animation (i.e. update the inner shape only)
+    if (this.boxes && this.boxes.length > 0) {
+      this.boxes.forEach((box) => {
+        box.animTime += dt;
+        //console.log(box.type);
+        box[box.type](box, dt);
+      });
+    }
+    // Call the parent update (which also updates the layout positions).
+    super.update(dt);
+  }
+}
+
 // Boilerplate game to run our scene
 export class MyGame extends Game {
   constructor(canvas) {
@@ -650,9 +644,23 @@ export class MyGame extends Game {
     this.enableFluidSize();
   }
 
+  /**Override clear function to give pseudo trailling effect */
+  clear() {
+    this.ctx.fillStyle = "rgba(0, 0, 0, 0.21)";
+    this.ctx.fillRect(0, 0, this.width, this.height);
+  }
+
   init() {
     super.init();
-    this.pipeline.add(new AnimationsDemo(this));
+    this.animationsDemo = new AnimationsDemo(this, {
+      debug: true,
+      anchor: "center",
+      spacing: 30,
+      columns: 4,
+      padding: 30,
+      align: "center",
+    });
+    this.pipeline.add(this.animationsDemo);
     this.pipeline.add(
       new FPSCounter(this, {
         anchor: "bottom-right",
