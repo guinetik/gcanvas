@@ -152,7 +152,7 @@ class BlobScene extends Scene {
 
     // Add click handler to toggle excitement
     this.bg.on("inputdown", () => {
-      console.log("Clicked!");
+      //console.log("Clicked!");
       this.blobPhysics.radiusScale += 0.1;
       this.triggerAnimation("pulse");
     });
@@ -383,10 +383,10 @@ class BlobScene extends Scene {
 
   triggerBlobGradientShift() {
     const current = this.blobPhysics.baseColor;
-    const next = Painter.parseColorString(Painter.randomColorHSL());
+    const next = Painter.colors.parseColorString(Painter.colors.randomColorHSL());
 
-    this.animations.gradientShift.startColor = Painter.rgbToHsl(...current);
-    this.animations.gradientShift.targetColor = Painter.rgbToHsl(...next);
+    this.animations.gradientShift.startColor = Painter.colors.rgbToHsl(...current);
+    this.animations.gradientShift.targetColor = Painter.colors.rgbToHsl(...next);
     this.animations.gradientShift.startTime = this.time; // Set the start time
     this.animations.colorAnimation.active = false;
     this.animations.gradientShift.active = true;
@@ -637,7 +637,7 @@ class BlobScene extends Scene {
     const hsl = Tween.tweenGradient(anim.startColor, anim.targetColor, easedT);
 
     // Store temporary base color override
-    this.blobVisualBaseColor = Painter.hslToRgb(...hsl);
+    this.blobVisualBaseColor = Painter.colors.hslToRgb(...hsl);
 
     if (t >= 1) {
       anim.active = false;
@@ -681,7 +681,7 @@ class BlobScene extends Scene {
       const { currentColor } = this.blobPhysics;
       const alpha = 0.4 + Math.random() * 0.6;
       // Draw the particle
-      Painter.fillCircle(
+      Painter.shapes.fillCircle(
         x,
         y,
         size,
@@ -802,7 +802,7 @@ class BlobUIScene extends Scene {
         width: 100,
         height: 32,
         onClick: () => {
-          console.log(" Bounce clicked");
+          //console.log(" Bounce clicked");
           this.blobScene.triggerAnimation("bounce");
         },
       })

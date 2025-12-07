@@ -30,68 +30,68 @@ class ShapeGalleryGame extends Game {
         name: "Rectangle",
         class: Shapes.Rectangle,
         args: [0, 0, 60, 40],
-        options: { fillColor: Painter.randomColorHSL() },
+        options: { fillColor: Painter.colors.randomColorHSL() },
       },
       {
         name: "Square",
         class: Shapes.Square,
         args: [0, 0, 50],
-        options: { fillColor: Painter.randomColorHSL() },
+        options: { fillColor: Painter.colors.randomColorHSL() },
       },
       {
         name: "Rounded Rect",
         class: Shapes.RoundedRectangle,
         args: [0, 0, 50, 50, 10],
-        options: { fillColor: Painter.randomColorHSL() },
+        options: { fillColor: Painter.colors.randomColorHSL() },
       },
       {
         name: "Diamond",
         class: Shapes.Diamond,
         args: [0, 0, 60, 60],
-        options: { fillColor: Painter.randomColorHSL() },
+        options: { fillColor: Painter.colors.randomColorHSL() },
       },
       {
         name: "Triangle",
         class: Shapes.Triangle,
         args: [0, 0, 50],
-        options: { fillColor: Painter.randomColorHSL() },
+        options: { fillColor: Painter.colors.randomColorHSL() },
       },
       {
         name: "Hexagon",
         class: Shapes.Hexagon,
         args: [0, 0, 30],
-        options: { fillColor: Painter.randomColorHSL() },
+        options: { fillColor: Painter.colors.randomColorHSL() },
       },
       {
         name: "Polygon",
         class: Shapes.Polygon,
         args: [0, 0, 9, 30],
-        options: { fillColor: Painter.randomColorHSL() },
+        options: { fillColor: Painter.colors.randomColorHSL() },
       },
       {
         name: "Star",
         class: Shapes.Star,
         args: [0, 0, 30, 5, 0.5],
-        options: { fillColor: Painter.randomColorHSL() },
+        options: { fillColor: Painter.colors.randomColorHSL() },
       },
       {
         name: "PieSlice",
         class: Shapes.PieSlice,
         args: [0, 0, 30, 0, Math.PI * 1.5],
-        options: { fillColor: Painter.randomColorHSL() },
+        options: { fillColor: Painter.colors.randomColorHSL() },
       },
       {
         name: "Circle",
         class: Shapes.Circle,
         args: [0, 0, 25],
-        options: { fillColor: Painter.randomColorHSL() },
+        options: { fillColor: Painter.colors.randomColorHSL() },
       },
       {
         name: "Arc",
         class: Shapes.Arc,
         args: [0, 0, 25, 0, Math.PI * 1.5],
         options: {
-          strokeColor: Painter.randomColorHSL(),
+          strokeColor: Painter.colors.randomColorHSL(),
           lineWidth: 5,
         },
       },
@@ -109,7 +109,7 @@ class ShapeGalleryGame extends Game {
         ],
         options: {
           fillColor: null,
-          strokeColor: Painter.randomColorHSL(),
+          strokeColor: Painter.colors.randomColorHSL(),
           lineWidth: 3,
         },
       },
@@ -129,7 +129,7 @@ class ShapeGalleryGame extends Game {
         options: {
           scaleX: 0.75,
           scaleY: 0.75,
-          fillColor: Painter.randomColorHSL(),
+          fillColor: Painter.colors.randomColorHSL(),
           strokeColor: "#000",
           lineWidth: 2,
         },
@@ -393,7 +393,7 @@ class ShapeGalleryGame extends Game {
         }
       }
       function render() {
-        group.draw();
+        group.render();
       }
       const originalUpdate = go.update;
       go.update = (dt) => {

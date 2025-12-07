@@ -104,12 +104,14 @@ export class GroupDemo extends GameObject {
       // one circle is invisible; all others remain visible
       circle.visible = i !== flashIndex;
     });
+    this.group.update(dt);
   }
 
   /**
    * render() - Draw the group each frame.
    */
   render() {
-    this.group.draw();
+    this.logger.log("GroupDemo: render");
+    this.group.render();
   }
 }

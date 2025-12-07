@@ -180,7 +180,7 @@ class ShapeBox extends Scene {
     this.group = new Group(0, 0);
     // Create a background rectangle of 100x100 centered at (0,0).
     const bg = new Rectangle(0, 0, 100, 100, {
-      fillColor: Painter.randomColorHSL(),
+      fillColor: Painter.colors.randomColorHSL(),
       strokeColor: "white",
       lineWidth: 2,
     });
@@ -204,7 +204,7 @@ class ShapeBox extends Scene {
   }
 
   render() {
-    this.group.draw();
+    this.group.render();
     super.render();
   }
 

@@ -313,18 +313,18 @@ class BezierScene extends Scene {
     if (this.points.length >= 2) {
       Painter.save();
       // Draw dashed lines connecting control points
-      Painter.setStrokeColor("rgba(0, 255, 0, 0.8)");
-      Painter.setLineWidth(1);
+      Painter.colors.setStrokeColor("rgba(0, 255, 0, 0.8)");
+      Painter.lines.setLineWidth(1);
       // Set up a dashed line style
       Painter.ctx.setLineDash([5, 5]);
-      Painter.beginPath();
-      Painter.moveTo(this.points[0].x, this.points[0].y);
+      Painter.lines.beginPath();
+      Painter.lines.moveTo(this.points[0].x, this.points[0].y);
 
       for (let i = 1; i < this.points.length; i++) {
-        Painter.lineTo(this.points[i].x, this.points[i].y);
+        Painter.lines.lineTo(this.points[i].x, this.points[i].y);
       }
 
-      Painter.stroke();
+      Painter.colors.Painter.colors.stroke();
       Painter.ctx.setLineDash([]); // Reset dash
       Painter.restore();
     }

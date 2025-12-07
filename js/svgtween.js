@@ -48,10 +48,10 @@ class MyGame extends Game {
   render() {
     super.render();
     // Instructions text
-    Painter.setFont("18px monospace");
-    Painter.setTextAlign("center");
-    Painter.setTextBaseline("bottom");
-    Painter.fillText(
+    Painter.text.setFont"18px monospace");
+    Painter.text.setTextAlign"center");
+    Painter.text.setTextBaseline"bottom");
+    Painter.text.fillText
       "Click anywhere to restart the SVG path animation",
       this.width / 2,
       this.height - 100,

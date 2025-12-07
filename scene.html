@@ -74,7 +74,7 @@
                 const size = 100;
                 const x = Math.random() * (game.width - size);
                 const y = Math.random() * (game.height - size);
-                const color = Painter.randomColorHSL();
+                const color = Painter.colors.randomColorHSL();
                 // Create a rectangle and group
                 this.rect = new Rectangle(0, 0, size, size, {
                     fillColor: color,

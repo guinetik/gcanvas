@@ -15,24 +15,24 @@ class IsometricGrid extends GameObject {
 
   render() {
     // Draw the grid lines and origin dot using the Painter API
-    Painter.setStrokeColor("#ccc");
-    Painter.setLineWidth(1);
+    Painter.colors.setStrokeColor("#ccc");
+    Painter.lines.setLineWidth(1);
 
     for (let x = -this.game.gridSize; x <= this.game.gridSize; x++) {
       const start = this.game.toIsometric(x, -this.game.gridSize);
       const end = this.game.toIsometric(x, this.game.gridSize);
-      Painter.line(start.x, start.y, end.x, end.y);
+      Painter.lines.line(start.x, start.y, end.x, end.y);
     }
 
     for (let y = -this.game.gridSize; y <= this.game.gridSize; y++) {
       const start = this.game.toIsometric(-this.game.gridSize, y);
       const end = this.game.toIsometric(this.game.gridSize, y);
-      Painter.line(start.x, start.y, end.x, end.y);
+      Painter.lines.line(start.x, start.y, end.x, end.y);
     }
 
     // Draw the origin in red for reference
     const origin = this.game.toIsometric(0, 0);
-    Painter.fillCircle(origin.x, origin.y, 5, "#FF0000");
+    Painter.shapes.fillCircle(origin.x, origin.y, 5, "#FF0000");
   }
 }
 
@@ -163,7 +163,7 @@ class Ball extends GameObject {
     const shadowAlpha = Math.max(0.1, 0.3 - Math.abs(this.z) / 300);
 
     // Draw the shadow
-    Painter.fillEllipse(
+    Painter.shapes.fillEllipse(
       isoPos.x,
       isoPos.y + perspectiveRadius / 2,
       perspectiveRadius * shadowScale,
@@ -173,7 +173,7 @@ class Ball extends GameObject {
     );
 
     // Draw the ball
-    Painter.fillCircle(
+    Painter.shapes.fillCircle(
       isoPos.x,
       isoPos.y - elevation,
       perspectiveRadius,
@@ -181,7 +181,7 @@ class Ball extends GameObject {
     );
 
     // Outline to add depth
-    Painter.strokeCircle(
+    Painter.shapes.strokeCircle(
       isoPos.x,
       isoPos.y - elevation,
       perspectiveRadius,

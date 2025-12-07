@@ -25,44 +25,44 @@ export class OpacityDemo extends Scene {
     super(game, options);
     this.squares = []; // Will hold references to each square’s GameObject
     this.velocities = []; // Parallel array of {vx, vy} for each square
-    const count = 100; // number of squares
+    const count = 2; // number of squares
     ///
     for (let i = 0; i < count; i++) {
-      const size = 50;
-      // Random initial position somewhere within canvas, minus margin to keep squares fully on screen
-      const x = Math.random() * (game.width - size) + size / 2;
-      const y = Math.random() * (game.height - size) + size / 2;
-
-      // Random velocity in range
-      const vx = Math.random() * 300 - 80;
-      const vy = Math.random() * 300 - 80;
-
-      // Random color and opacity
-      const hue = Math.floor(Math.random() * 360);
-      const fillColor = `hsl(${hue}, 80%, 50%)`;
+      const { size, fillColor, x, y, vx, vy } = this.spawnBox(game);
       const opacity = 0.3 + 0.7 * Math.random(); // range ~0.3..1
-
       // Create a rectangle shape
       const rectShape = new Rectangle(0, 0, size, size, {
         fillColor,
-        strokeColor: "#fff",
-        lineWidth: 1,
-        opacity: 1,
+        debugColor: "#fff",
+        name: "rect_" + i
       });
-
       // Wrap it in a GameObject via the factory
       const squareGO = ShapeGOFactory.create(game, rectShape);
+      squareGO.name = "rect_" + i;
+      squareGO.opacity = opacity;
       // Position the shape's center
       squareGO.x = x;
       squareGO.y = y;
-
       // Add it to the scene
       this.add(squareGO);
-
       // Store references
       this.squares.push(squareGO);
       this.velocities.push({ vx, vy });
     }
+  }
+
+  spawnBox(game) {
+    const size = 50;
+    // Random initial position somewhere within canvas, minus margin to keep squares fully on screen
+    const x = Math.random() * (game.width - size) + size / 2;
+    const y = Math.random() * (game.height - size) + size / 2;
+    // Random velocity in range
+    const vx = Math.random() * 300 - 80;
+    const vy = Math.random() * 300 - 80;
+    // Random color and opacity
+    const hue = Math.floor(Math.random() * 360);
+    const fillColor = `hsl(${hue}, 80%, 50%)`;
+    return { size, fillColor, x, y, vx, vy };
   }
 
   /**
@@ -71,6 +71,7 @@ export class OpacityDemo extends Scene {
    * @param {number} dt - Delta time in seconds
    */
   update(dt) {
+    super.update(dt);
     // Update each square’s position based on its velocity
     for (let i = 0; i < this.squares.length; i++) {
       const square = this.squares[i];
@@ -99,7 +100,7 @@ export class OpacityDemo extends Scene {
     }
     //
     // The scene's opacity should be applied to all children.
-    // The Demo will pulse the opacity of the entire scene using Tween.
+    // The Demo will pulse the opacity of the entire scene using Motion.
     // Initialize scene timer
     this.elapsed = (this.elapsed ?? 0) + dt;
     // Use Motion.pulse to animate opacity between 0 and 1
@@ -114,7 +115,6 @@ export class OpacityDemo extends Scene {
     );
     // Apply to scene
     this.opacity = result.value;
-    super.update(dt);
   }
 }
 //
@@ -128,10 +128,10 @@ export class MyGame extends Game {
   init() {
     super.init();
     this.pipeline.add(new OpacityDemo(this));
-    this.pipeline.add(
+    /* this.pipeline.add(
       new FPSCounter(this, {
         anchor: "bottom-right",
       })
-    );
+    ); */
   }
 }

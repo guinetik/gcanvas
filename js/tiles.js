@@ -27,7 +27,7 @@ export class TileDemo extends Scene {
     // Add 50 squares, each 50x50
     for (let i = 0; i < 50; i++) {
       const rect = new Rectangle(0, 0, 50, 50, {
-        fillColor: Painter.randomColorHSL(),
+        fillColor: Painter.colors.randomColorHSL(),
         strokeColor: "white",
       });
       const go = ShapeGOFactory.create(game, rect);
@@ -50,7 +50,7 @@ export class TileDemo extends Scene {
       text: "Add Tile",
       onClick: () => {
         const rect = new Rectangle(0, 0, 50, 50, {
-          fillColor: Painter.randomColorHSL(),
+          fillColor: Painter.colors.randomColorHSL(),
         });
         const tileGO = ShapeGOFactory.create(game, rect);
         this.grid.add(tileGO);
@@ -121,7 +121,7 @@ export class TileDemo extends Scene {
       for (const tile of selectedTiles) {
         tile.isTweening = true;
         tile.startColor = tile.shape.fillColor; // Store current color
-        tile.targetColor = Painter.randomColorHSL();
+        tile.targetColor = Painter.colors.randomColorHSL();
         tile.tweenProgress = 0;
         tile.tweenSpeed = 0.5 + Math.random(); // Random speed
       }
@@ -130,8 +130,8 @@ export class TileDemo extends Scene {
     // Update all tweening tiles
     for (const tile of this.grid.children) {
       if (tile.isTweening) {
-        const currentRGB = Painter.parseColorString(tile.startColor);
-        const targetRGB = Painter.parseColorString(tile.targetColor);
+        const currentRGB = Painter.colors.parseColorString(tile.startColor);
+        const targetRGB = Painter.colors.parseColorString(tile.targetColor);
 
         tile.tweenProgress += tile.tweenSpeed * dt;
         const newRGB = Tween.tweenColor(
@@ -140,7 +140,7 @@ export class TileDemo extends Scene {
           Math.min(tile.tweenProgress, 1)
         );
 
-        tile.shape.fillColor = Painter.rgbArrayToCSS(newRGB);
+        tile.shape.fillColor = Painter.colors.rgbArrayToCSS(newRGB);
 
         // Check if tween is complete
         if (tile.tweenProgress >= 1) {
