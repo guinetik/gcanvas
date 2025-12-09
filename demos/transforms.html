@@ -130,7 +130,9 @@
           height: 60,
           color: "#e94560",
           stroke: "#fff",
-          lineWidth: 2
+          lineWidth: 2,
+          debug: true,
+          debugColor: "#00ff00"
         });
 
         // Use fluent API to set initial position
@@ -241,7 +243,9 @@
         this.star = new Star(30, 5, 0.5, {
           color: "#ffc107",
           stroke: "#fff",
-          lineWidth: 2
+          lineWidth: 2,
+          debug: true,
+          debugColor: "#ff00ff"
         });
 
         // Use batch set for initial state
@@ -307,9 +311,9 @@
         ];
 
         const types = [
-          { name: "translateBy", shape: new Rectangle({ width: 50, height: 50, color: "#00d9ff", stroke: "#fff", lineWidth: 2 }) },
-          { name: "rotateBy", shape: new Triangle(40, { color: "#ff6b6b", stroke: "#fff", lineWidth: 2 }) },
-          { name: "scaleBy", shape: new Circle(25, { color: "#7bed9f", stroke: "#fff", lineWidth: 2 }) }
+          { name: "translateBy", shape: new Rectangle({ width: 50, height: 50, color: "#00d9ff", stroke: "#fff", lineWidth: 2, debug: true, debugColor: "#00ffff" }) },
+          { name: "rotateBy", shape: new Triangle(40, { color: "#ff6b6b", stroke: "#fff", lineWidth: 2, debug: true, debugColor: "#ffff00" }) },
+          { name: "scaleBy", shape: new Circle(25, { color: "#7bed9f", stroke: "#fff", lineWidth: 2, debug: true, debugColor: "#ff8800" }) }
         ];
 
         types.forEach((type, i) => {

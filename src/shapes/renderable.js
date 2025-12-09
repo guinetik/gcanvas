@@ -55,17 +55,12 @@ export class Renderable extends Traceable {
     this.logger.log("Renderable", this.x, this.y, this.width, this.height);
   }
 
-  // Modify this in Renderable class
+  /**
+   * Main render method.
+   * Handles visibility, translation, and calls draw() in the transformed context.
+   */
   render() {
     if (!this._visible || this._opacity <= 0) return;
-
-    // Handle debug drawing specially for anchored Scenes
-    const isAnchoredScene = this._anchor?.position != null;
-
-    // Draw debug for non-anchored objects before translation
-    if (this._debug && !isAnchoredScene) {
-      this.drawDebug();
-    }
 
     Painter.save();
     Painter.effects.setBlendMode(this._blendMode);
@@ -79,18 +74,13 @@ export class Renderable extends Traceable {
 
     this.applyShadow(Painter.ctx);
 
-    // Draw the object
+    // Draw the object (subclasses apply transforms and draw debug in their draw() methods)
     if (this.constructor.name !== "Renderable") {
       this.draw();
     }
 
     Painter.opacity.popOpacity();
     Painter.restore();
-
-    // Draw debug for anchored Scenes after everything else
-    if (this._debug && isAnchoredScene) {
-      this.drawDebug();
-    }
   }
 
   draw() {

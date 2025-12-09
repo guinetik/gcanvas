@@ -65,10 +65,12 @@ export class Transformable extends Renderable {
 
   /**
    * The main rendering method.
-   * Applies transforms before calling `draw()`.
+   * Applies transforms and draws debug bounding box.
+   * Subclasses should call super.draw() before their drawing logic.
    */
   draw() {
     this.applyTransforms();
+    this.drawDebug();
   }
 
   /**
