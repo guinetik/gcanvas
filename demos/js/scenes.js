@@ -15,6 +15,29 @@ import {
 } from "../../src/index";
 
 /**
+ * Helper class to wrap a Shape in a GameObject for use in Scenes.
+ * Scenes expect GameObjects, not raw Shapes.
+ */
+class ShapeWrapper extends GameObject {
+  constructor(game, shape) {
+    super(game);
+    this.shape = shape;
+  }
+
+  draw() {
+    super.draw();
+    this.shape.render();
+  }
+}
+
+/**
+ * Utility function to wrap a shape in a GameObject
+ */
+function wrapShape(game, shape) {
+  return new ShapeWrapper(game, shape);
+}
+
+/**
  * SceneDemo Game
  * Demonstrates Scene capabilities: nesting, transforms, and z-ordering
  */
@@ -100,9 +123,9 @@ class TransformingSceneDemo extends GameObject {
     star.transform.position(25, -25);
 
     // Add shapes via wrapper
-    this.scene.add(this.wrapShape(rect));
-    this.scene.add(this.wrapShape(circle));
-    this.scene.add(this.wrapShape(star));
+    this.scene.add(wrapShape(game, rect));
+    this.scene.add(wrapShape(game, circle));
+    this.scene.add(wrapShape(game, star));
 
     // Label
     this.label = new TextShape("Scene Transforms", {
@@ -114,16 +137,6 @@ class TransformingSceneDemo extends GameObject {
     });
 
     this.elapsed = 0;
-  }
-
-  wrapShape(shape) {
-    const go = new GameObject(this.game);
-    go.shape = shape;
-    go.draw = function() {
-      super.draw();
-      this.shape.render();
-    };
-    return go;
   }
 
   update(dt) {
@@ -176,7 +189,7 @@ class NestedSceneDemo extends GameObject {
       stroke: "#fff",
       lineWidth: 2
     });
-    this.innerScene.add(this.wrapShape(innerRect));
+    this.innerScene.add(wrapShape(game, innerRect));
 
     // Add inner scene to outer
     this.outerScene.add(this.innerScene);
@@ -195,7 +208,7 @@ class NestedSceneDemo extends GameObject {
         lineWidth: 1
       });
       marker.transform.position(pos.x, pos.y);
-      this.outerScene.add(this.wrapShape(marker));
+      this.outerScene.add(wrapShape(game, marker));
     });
 
     // Label
@@ -208,16 +221,6 @@ class NestedSceneDemo extends GameObject {
     });
 
     this.elapsed = 0;
-  }
-
-  wrapShape(shape) {
-    const go = new GameObject(this.game);
-    go.shape = shape;
-    go.draw = function() {
-      super.draw();
-      this.shape.render();
-    };
-    return go;
   }
 
   update(dt) {
@@ -275,7 +278,7 @@ class ZOrderDemo extends GameObject {
         lineWidth: 2
       });
       rect.transform.position(positions[i].x, positions[i].y);
-      const wrapped = this.wrapShape(rect);
+      const wrapped = wrapShape(game, rect);
       this.shapes.push(wrapped);
       this.scene.add(wrapped);
     });
@@ -292,16 +295,6 @@ class ZOrderDemo extends GameObject {
     this.elapsed = 0;
     this.lastSwap = 0;
     this.swapInterval = 1.5; // seconds between z-order changes
-  }
-
-  wrapShape(shape) {
-    const go = new GameObject(this.game);
-    go.shape = shape;
-    go.draw = function() {
-      super.draw();
-      this.shape.render();
-    };
-    return go;
   }
 
   update(dt) {
