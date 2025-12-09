@@ -7,3 +7,4 @@ export * from "./io";
 export * from "./game";
 export * from "./motion";
 export * from "./mixins";
+export * from "./sound";
