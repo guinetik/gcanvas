@@ -21,28 +21,31 @@ import {
   Tween,
   GameObject,
 } from "../../src/index";
-// ShapeBox: A GameObject that wraps an inner shape within a background
+
+/**
+ * ShapeBox: A GameObject that wraps an inner shape within a background
+ *
+ * Demonstrates the Transform API for animations:
+ * - Uses transform.position() for x/y updates
+ * - Uses transform.rotation() for rotation updates
+ * - Uses transform.scale() for scale updates
+ */
 class ShapeBox extends GameObject {
   constructor(game, innerShape, type, options = {}) {
     super(game, options);
     const whites = ["bezier", "patrol", "follow", "waypoint"];
     const group = new Group();
-    group.width = options.width;
-    group.height = options.height;
+    // Use Transform API to set group dimensions
+    group.transform.size(options.width, options.height);
+
     const bg = new Rectangle({
       width: 100,
       height: 100,
-      //color: Painter.colors.randomColorHSL(),
-      //color: "#FF0000",
       color: whites.includes(type) ? "white" : "transparent",
       stroke: "white",
       lineWidth: 2,
     });
     group.add(bg);
-    /* group.add(new Rectangle({
-      width: 100 - 10,
-      height: 100 -10
-    })) */
     group.add(innerShape);
     this.type = type;
     this.group = group;
@@ -64,545 +67,291 @@ class ShapeBox extends GameObject {
   }
 
   swing(box, dt) {
-    // Setup animation time
     if (box.animTime === undefined) box.animTime = 0;
     box.animTime += dt;
-    // Setup state
     if (!box.swingState) box.swingState = null;
     const result = Motion.swing(
-      0,
-      0, // Center (just semantic here)
-      90, // Max swing angle (30 degrees)
-      box.animTime, // Elapsed time
-      3.0, // 6 seconds for full cycle
-      true, // Loop
-      true, // Yoyo
-      null, // Easing (skipped easing here to highlight the difference between pendulum and swing interpolating the same angules on the same time)
-      {}, // Callbacks (optional)
-      box.swingState // State tracking
+      0, 0,
+      90,
+      box.animTime,
+      3.0,
+      true, true, null, {},
+      box.swingState
     );
     box.swingState = result.state;
-    box.innerShape.rotation = 45 + result.angle;
+    // Use Transform API for rotation
+    box.innerShape.transform.rotation(45 + result.angle);
   }
 
   pendulum(box, dt) {
-    // Track animation time
     if (box.animTime === undefined) box.animTime = 0;
     box.animTime += dt;
-
-    // Keep state
     if (!box.pendulumState) box.pendulumState = null;
 
     const result = Motion.pendulum(
-      60, // origin angle (radians)
-      120, // max amplitude (45 degrees)
-      box.animTime, // elapsed time
-      3.0, // 3 seconds per cycle
-      true, // loop
-      true, // damped
-      null, // easing: these radian animations do support them but the default motion is already very pendulum-like
-      {}, // callbacks
-      box.pendulumState // state
+      60, 120,
+      box.animTime,
+      3.0,
+      true, true, null, {},
+      box.pendulumState
     );
 
     box.pendulumState = result.state;
-    box.innerShape.rotation = result.angle;
+    // Use Transform API for rotation
+    box.innerShape.transform.rotation(result.angle);
   }
 
   hop(box, dt) {
     if (box.animTime === undefined) box.animTime = 0;
     box.animTime += dt;
-
     if (!box.hopState) box.hopState = null;
 
     const result = Motion.hop(
-      -20, // baseY (ground)
-      -40, // hop height
+      -20, -40,
       box.animTime,
-      1.2, // duration
-      true, // loop
-      true, //yoyo
+      1.2,
+      true, true,
       Easing.easeInOutQuart,
-      {
-        onLoop: () => {
-          //console.log("hop loop")
-        },
-      },
+      { onLoop: () => {} },
       box.hopState
     );
 
     box.hopState = result.state;
-    box.innerShape.y = result.y;
+    // Use Transform API for y position
+    box.innerShape.transform.y(result.y);
   }
 
   parabolic(box) {
     const startPos = { x: -45, y: 30 };
     const endPos = { x: 30, y: -40 };
-    const cycleDuration = 2; // Duration in seconds
-    // Calculate normalized time (0-1) within cycle
+    const cycleDuration = 2;
+
     const frameX = Motion.parabolic(
-      startPos.x,
-      -50,
-      endPos.x,
-      box.animTime,
-      cycleDuration,
-      true,
-      true,
+      startPos.x, -50, endPos.x,
+      box.animTime, cycleDuration,
+      true, true,
       Easing.easeInOutBack
     );
     const frameY = Motion.parabolic(
-      startPos.y,
-      -50,
-      endPos.y,
-      box.animTime,
-      cycleDuration,
-      true,
-      true,
+      startPos.y, -50, endPos.y,
+      box.animTime, cycleDuration,
+      true, true,
       Easing.easeInOutBack
     );
-    // Apply parabolic interpolation to both x and y coordinates
-    box.innerShape.x = frameX.value;
-    box.innerShape.y = frameY.value;
+    // Use Transform API for position
+    box.innerShape.transform.position(frameX.value, frameY.value);
   }
 
   spiral(box) {
     if (!box.easingFun) box.easingFun = Easing.easeInOutSine;
-    const centerX = 0;
-    const centerY = 0;
-    const startRadius = 0; // Start from center
-    const endRadius = 40; // Maximum radius
-    const startAngle = 0;
-    const revolutions = 2; // Two full revolutions
-    const duration = 3; // 3 seconds per cycle
-
-    // Pass the accumulated time to the function directly
     const result = Motion.spiral(
-      centerX,
-      centerY,
-      startRadius,
-      endRadius, // Use the max radius as the end radius
-      startAngle,
-      revolutions,
-      box.animTime, // Pass accumulated time directly
-      duration,
-      true, // Loop = true
-      true, // yo-yo
+      0, 0,     // center
+      0, 40,    // start/end radius
+      0, 2,     // start angle, revolutions
+      box.animTime, 3,
+      true, true,
       box.easingFun
     );
-    // Use the x and y properties from the result
-    box.innerShape.x = result.x;
-    box.innerShape.y = result.y;
+    // Use Transform API for position
+    box.innerShape.transform.position(result.x, result.y);
   }
 
   orbit(box) {
-    const radiusX = -40;
-    const radiusY = 30;
-    const startAngle = Math.PI / 2; // Start from top (to begin at origin)
-    const cycleDuration = 3;
-    // Calculate center offset to make the orbit pass through origin
-    const centerX = 0;
-    const centerY = 0;
     const result = Motion.orbit(
-      centerX,
-      centerY,
-      radiusX,
-      radiusY,
-      startAngle,
-      box.animTime,
-      cycleDuration,
-      true,
-      true,
+      0, 0,           // center
+      -40, 30,        // radius X/Y
+      Math.PI / 2,    // start angle
+      box.animTime, 3,
+      true, true,
       Easing.easeInOutSine
     );
-    // Calculate position on elliptical path
-    box.innerShape.x = result.x;
-    box.innerShape.y = result.y;
+    // Use Transform API for position
+    box.innerShape.transform.position(result.x, result.y);
   }
 
   float(box, dt) {
-    // Initialize animTime if needed
     if (box.animTime === undefined) box.animTime = 0;
-    // Add delta time
     box.animTime += dt;
-    // Get the patrol position and state
+
     const result = Motion.float(
-      {x:0,y:0}, // Target object with x,y properties
-      box.animTime, // Elapsed time
-      10, // 10-second patrol cycle
-      0.8, // Medium speed
-      0.7, // Medium randomness
-      30, // 60px radius patrol area
-      true // Loop
+      { x: 0, y: 0 },
+      box.animTime,
+      10, 0.8, 0.7, 30, true
     );
-    // Apply the new position
-    box.innerShape.x = result.x;
-    box.innerShape.y = result.y;
-    // Change animation based on movement state
-    if (result.moving) {
-      //box.playAnimation('walk');
-      // Set facing direction based on movement
-      if (result.offsetX > 0) {
-        //box.faceRight();
-      } else {
-        //box.faceLeft();
-      }
-    } else {
-      //box.playAnimation('idle');
-    }
+    // Use Transform API for position
+    box.innerShape.transform.position(result.x, result.y);
   }
 
   waypoint(guard, dt) {
-    // Initialize animTime if needed
     if (guard.animTime === undefined) guard.animTime = 0;
-    // Add delta time
     guard.animTime += dt;
-    // Define waypoints for patrol route
+
     const waypoints = [
-      [0, 0], // Start position
-      [40, 0], // Move right
-      [40, -30], // Move down
-      [-40, -30], // Move left
-      [-40, 30], // Move right
-      [40, 30], // Return to start
+      [0, 0], [40, 0], [40, -30],
+      [-40, -30], [-40, 30], [40, 30],
     ];
-    // Get patrol position and state
+
     const result = Motion.waypoint(
-      guard, // Target object (not used for position)
-      guard.animTime, // Elapsed time
-      waypoints, // Patrol waypoints
-      50, // Speed (50 units per second)
-      1.5, // Wait time (1.5 seconds at each point)
-      true, // Loop
-      {
-        // Optional callbacks
-        onWaypointReached: (index) => {
-          //console.log(`Reached waypoint ${index}`);
-        },
-      }
+      guard, guard.animTime, waypoints,
+      50, 1.5, true,
+      { onWaypointReached: (index) => {} }
     );
-    // Apply position
-    guard.innerShape.x = result.x;
-    guard.innerShape.y = result.y;
-    // Update animation based on movement state and direction
-    if (result.moving) {
-      // Play walking animation in the correct direction
-      //guard.playAnimation(`walk_${result.direction}`);
-    } else {
-      // Play idle animation at waypoints
-      //guard.playAnimation("idle");
-    }
+    // Use Transform API for position
+    guard.innerShape.transform.position(result.x, result.y);
   }
 
   patrol(guard, dt) {
-    // Initialize animTime if needed
     if (guard.animTime === undefined) guard.animTime = 0;
     guard.animTime += dt;
-    // Initialize or reuse patrol state
     if (!guard.patrolState) guard.patrolState = null;
-    // Get patrol position
+
     const result = Motion.patrol(
-      0,
-      0, // Initial center of patrol area
-      guard.animTime, // Elapsed time
-      1.5, // Move time
-      2.0, // Wait time
-      40, // Radius
-      true, // Loop
-      guard.patrolState // Persistent state
+      0, 0,
+      guard.animTime,
+      1.5, 2.0, 40, true,
+      guard.patrolState
     );
-    guard.patrolState = result.state; // <-- persist updated state
-    guard.innerShape.x = result.x;
-    guard.innerShape.y = result.y;
-    //console.log(result);
-    if (result.moving) {
-      // guard.playAnimation("walk_" + result.direction);
-    } else {
-      // guard.playAnimation("idle");
-    }
+    guard.patrolState = result.state;
+    // Use Transform API for position
+    guard.innerShape.transform.position(result.x, result.y);
   }
 
   spring(box, dt) {
-    // Make sure animTime is initialized
     if (box.animTime === undefined) box.animTime = 0;
-    // Add delta time
     box.animTime += dt;
-    // Run spring with your parameters
+
     const result = Motion.spring(
-      -15, // Initial position
-      18, // Target position
-      box.animTime,
-      3, // Duration
-      true, // Loop
-      true,
-      {
-        stiffness: 0.7,
-        damping: 0.5,
-      }
+      -15, 18,
+      box.animTime, 3,
+      true, true,
+      { stiffness: 0.7, damping: 0.5 }
     );
-    // Apply result
-    box.innerShape.y = result.value;
+    // Use Transform API for y position
+    box.innerShape.transform.y(result.value);
   }
 
   bounce(box) {
-    const maxHeight = -20; // Top position (negative y value)
-    const groundY = 25; // Bottom position (ground)
-    const bounceCount = 3; // Number of bounces
-    const cycleDuration = 3; // 3 seconds per cycle
     const frame = Motion.bounce(
-      maxHeight,
-      groundY,
-      bounceCount,
-      box.animTime,
-      cycleDuration,
-      true
+      -20, 25, 3,
+      box.animTime, 3, true
     );
-    // Update positions
-    box.innerShape.x = 0;
-    box.innerShape.y = frame.y;
+    // Use Transform API for position
+    box.innerShape.transform.position(0, frame.y);
   }
 
   bezier(box, dt) {
-    // Make sure animTime is initialized
     if (box.animTime === undefined) box.animTime = 0;
-    // Add delta time
     box.animTime += dt;
-    // For a loop that returns to origin, make p0 and p3 the same point
-    const p0 = [-30, 30]; // Start at origin
-    const p1 = [-75, 10]; // Control point 1
-    const p2 = [100, 40]; // Control point 2
-    const p3 = [-40, -40]; // End at origin for perfect loop
-    const cycleDuration = 10;
-    // Get bezier curve coordinates using the Tween.bezier function
+
+    const p0 = [-30, 30];
+    const p1 = [-75, 10];
+    const p2 = [100, 40];
+    const p3 = [-40, -40];
+
     const pos = Motion.bezier(
-      p0,
-      p1,
-      p2,
-      p3,
-      box.animTime,
-      cycleDuration,
-      true,
-      true,
+      p0, p1, p2, p3,
+      box.animTime, 10,
+      true, true,
       Easing.easeInOutExpo
     );
-    // Apply to the shape
-    box.innerShape.x = pos.x;
-    box.innerShape.y = pos.y;
+    // Use Transform API for position
+    box.innerShape.transform.position(pos.x, pos.y);
   }
 
   pulse(box, dt) {
-    // Initialize animTime if it doesn't exist
     if (box.animTime === undefined) box.animTime = 0;
     box.animTime += dt;
-    // Get the pulse value
+
     const result = Motion.pulse(0.5, 1.5, box.animTime, 2, true);
-    // Apply the scale
-    box.innerShape.scaleX = box.innerShape.scaleY = result.value;
-    // Update position based on scale
-    box.innerShape.y = box.innerShape.scaleX * -25;
-    // Debug output to console for tests
-    //console.log(`Time: ${box.animTime.toFixed(2)}, Scale: ${result.value.toFixed(2)}`);
+    // Use Transform API for scale and position
+    box.innerShape.transform
+      .scale(result.value)
+      .y(result.value * -25);
   }
 
   shake(box, dt) {
     if (box.animTime === undefined) box.animTime = 0;
     box.animTime += dt;
-    //
-    const centerX = 0;
-    const centerY = 0;
-    const maxOffsetX = 20; // Maximum X shake amount
-    const maxOffsetY = 15; // Maximum Y shake amount
-    const frequency = 5; // Speed of shakes
-    const decay = 1; // How quickly shake reduces (higher = faster decay)
-    const cycleDuration = 5; // 3 seconds per cycle
-    // Get shake coordinates
+
     const pos = Motion.shake(
-      centerX,
-      centerY,
-      maxOffsetX,
-      maxOffsetY,
-      frequency,
-      decay,
-      box.animTime,
-      cycleDuration,
+      0, 0,       // center
+      20, 15,     // max offset X/Y
+      5, 1,       // frequency, decay
+      box.animTime, 5,
       true,
       Easing.easeInOutQuad
     );
-
-    // Apply to the shape
-    box.innerShape.x = pos.x;
-    box.innerShape.y = pos.y;
+    // Use Transform API for position
+    box.innerShape.transform.position(pos.x, pos.y);
     box.innerShape.color = "white";
   }
 
   oscillate(box, dt) {
     if (box.animTime === undefined) box.animTime = 0;
     box.animTime += dt;
-    // Animate the inner shape’s x position using oscillation.
-    // The shape will move between -20 and 20 along the x axis with a 2-second period.
-    box.innerShape.rotation = Motion.oscillate(
-      -270,
-      270,
-      box.animTime,
-      3,
-      true
-    ).value;
+
+    const result = Motion.oscillate(-270, 270, box.animTime, 3, true);
+    // Use Transform API for rotation
+    box.innerShape.transform.rotation(result.value);
   }
 
   follow(box, dt) {
-    // Initialize time and state on first call
     if (box.animTime === undefined) box.animTime = 0;
     if (!box.followState) box.followState = null;
-    // Update time
     box.animTime += dt;
-    // Define the path (can be any number of points)
+
     const pathPoints = [
-      [-30, 30],
-      [30, 30],
-      [30, -30],
-      [-30, -30],
+      [-30, 30], [30, 30], [30, -30], [-30, -30],
     ];
 
-    // Call the followPath animation
     const result = Motion.follow(
       pathPoints,
-      true, // closed path (returns to start)
-      box.animTime, // elapsed time
-      6, // duration to complete full loop
-      true, // loop
-      Easing.easeInOutSine, // easing function
-      {}, // no callbacks
-      box.followState // persistent state
+      true, box.animTime, 6, true,
+      Easing.easeInOutSine,
+      {},
+      box.followState
     );
-    // Save the new state
     box.followState = result.state;
-    // Apply new position
-    box.innerShape.x = result.x;
-    box.innerShape.y = result.y;
-    // Optional: Rotate box to face direction of motion
-    //box.innerShape.rotation = result.angle;
-    box.innerShape.rotation = Tween.lerpAngle(
-      box.innerShape.rotation,
-      result.angle,
-      dt * 10
-    );
-    // Log debug info
-    // console.log(result);
+
+    // Use Transform API for position and rotation
+    box.innerShape.transform.position(result.x, result.y);
+
+    // Lerp the rotation for smooth turning
+    const currentRotation = box.innerShape.rotation * 180 / Math.PI; // Convert from radians to degrees
+    const targetRotation = result.angle;
+    const newRotation = Tween.lerpAngle(currentRotation, targetRotation, dt * 10);
+    box.innerShape.transform.rotation(newRotation);
   }
 }
 
-// AnimationsDemo: A demo Scene that uses a TileLayout to arrange three ShapeBoxes
-// Each ShapeBox receives a different inner shape and its inner shape is animated separately.
+/**
+ * AnimationsDemo: A demo Scene that uses a TileLayout to arrange ShapeBoxes
+ * Each ShapeBox receives a different inner shape and animates using Transform API
+ */
 class AnimationsDemo extends TileLayout {
   constructor(game, options = {}) {
     super(game, options);
     this.boxDefinitions = [
-      {
-        type: "hop",
-        innerShape: new Square(30, {
-          color: "white",
-        }),
-      },
-      {
-        type: "spring",
-        innerShape: new Square(30, {
-          color: "white",
-        }),
-      },
-      {
-        type: "bounce",
-        innerShape: new Square(30, {
-          color: "white",
-        })
-      },
-      {
-        type: "shake",
-        innerShape: new Square(30, {
-          color: "white",
-        })
-      },
-      {
-        type: "parabolic",
-        innerShape: new Circle(5, {
-          x: -40,
-          y: -40,
-          color: "white",
-        }),
-      },
-      {
-        type: "spiral",
-        innerShape: new Circle(5, {
-          color: "white",
-        }),
-      },
-      {
-        type: "orbit",
-        innerShape: new Circle(5, {
-          color: "white",
-        }),
-      },
-      {
-        type: "float",
-        innerShape: new Circle(5, {
-          color: "white",
-        }),
-      },
-      {
-        type: "bezier",
-        innerShape: new StickFigure(0.3, {
-          stroke: "black",
-        }),
-      },
-      {
-        type: "patrol",
-        innerShape: new StickFigure(0.3, {
-          stroke: "black",
-        }),
-      },
-      {
-        type: "follow",
-        innerShape: new StickFigure(0.3, {
-          stroke: "black",
-        }),
-      },
-      {
-        type: "waypoint",
-        innerShape: new StickFigure(0.3, {
-          stroke: "black",
-        }),
-      },
-      {
-        type: "pulse",
-        innerShape: new Heart({
-          width: 50,
-          height: 50,
-          color: "white",
-          lineWidth: 3,
-        }),
-      },
-      {
-        type: "oscillate",
-        innerShape: new Arc(20, 0, Math.PI * 1.5, {
-          stroke: "white",
-          lineWidth: 10,
-        }),
-      },
-      {
-        type: "swing",
-        innerShape: new PieSlice(30, 0, Math.PI * 0.3, {
-          color: "white",
-        }),
-      },
-      {
-        type: "pendulum",
-        innerShape: new PieSlice(30, 0, Math.PI * 0.3, {
-          color: "white",
-        }),
-      },
+      { type: "hop", innerShape: new Square(30, { color: "white" }) },
+      { type: "spring", innerShape: new Square(30, { color: "white" }) },
+      { type: "bounce", innerShape: new Square(30, { color: "white" }) },
+      { type: "shake", innerShape: new Square(30, { color: "white" }) },
+      { type: "parabolic", innerShape: new Circle(5, { x: -40, y: -40, color: "white" }) },
+      { type: "spiral", innerShape: new Circle(5, { color: "white" }) },
+      { type: "orbit", innerShape: new Circle(5, { color: "white" }) },
+      { type: "float", innerShape: new Circle(5, { color: "white" }) },
+      { type: "bezier", innerShape: new StickFigure(0.3, { stroke: "black" }) },
+      { type: "patrol", innerShape: new StickFigure(0.3, { stroke: "black" }) },
+      { type: "follow", innerShape: new StickFigure(0.3, { stroke: "black" }) },
+      { type: "waypoint", innerShape: new StickFigure(0.3, { stroke: "black" }) },
+      { type: "pulse", innerShape: new Heart({ width: 50, height: 50, color: "white", lineWidth: 3 }) },
+      { type: "oscillate", innerShape: new Arc(20, 0, Math.PI * 1.5, { stroke: "white", lineWidth: 10 }) },
+      { type: "swing", innerShape: new PieSlice(30, 0, Math.PI * 0.3, { color: "white" }) },
+      { type: "pendulum", innerShape: new PieSlice(30, 0, Math.PI * 0.3, { color: "white" }) },
     ];
   }
 
   init() {
-    // Create three ShapeBoxes with different inner shapes and types.
     this.boxes = this.boxDefinitions.map((boxDef) => {
       const innerShape = boxDef.innerShape;
       const type = boxDef.type;
@@ -612,26 +361,21 @@ class AnimationsDemo extends TileLayout {
         x: 0,
         y: 0,
       });
-      shapeBox.width = 100;
-      shapeBox.height = 100;
-      shapeBox.animTime = 0; // Initialize the animation time for each box
-      // Add the ShapeBox to the layout.
+      // Use Transform API to set dimensions
+      shapeBox.transform.size(100, 100);
+      shapeBox.animTime = 0;
       this.add(shapeBox);
       return shapeBox;
     });
   }
 
   update(dt) {
-    //console.log(this.layout.x, this.layout.y, this.layout.width, this.layout.height);
-    // For each ShapeBox, update its internal animation (i.e. update the inner shape only)
     if (this.boxes && this.boxes.length > 0) {
       this.boxes.forEach((box) => {
         box.animTime += dt;
-        //console.log(box.type);
         box[box.type](box, dt);
       });
     }
-    // Call the parent update (which also updates the layout positions).
     super.update(dt);
   }
 }
@@ -644,7 +388,7 @@ export class MyGame extends Game {
     this.enableFluidSize();
   }
 
-  /**Override clear function to give pseudo trailling effect */
+  /** Override clear function to give pseudo trailing effect */
   clear() {
     this.ctx.fillStyle = "rgba(0, 0, 0, 0.21)";
     this.ctx.fillRect(0, 0, this.width, this.height);

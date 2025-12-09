@@ -449,8 +449,11 @@ class ShapeGalleryGame extends Game {
   
   onResize() {
     if(this.gallery) {
-      this.gallery.x = Math.round((this.canvas.width ) / 2);
-      this.gallery.y = Math.round((this.canvas.height) / 2);
+      // Use Transform API for positioning
+      this.gallery.transform.position(
+        Math.round(this.canvas.width / 2),
+        Math.round(this.canvas.height / 2)
+      );
     }
   }
 
@@ -472,7 +475,8 @@ class ShapeGalleryGame extends Game {
       //const y = originY + row * (cellSize + spacing) + cellSize / 2;
       //
       const group = new Group();
-      group.width = group.height = cellSize;
+      // Use Transform API to set group dimensions
+      group.transform.size(cellSize, cellSize);
       const bg = new Rectangle({
         width: cellSize - 10,
         height: cellSize - 10,
@@ -503,14 +507,17 @@ class ShapeGalleryGame extends Game {
         scaleY: 1,
       });
       go.entry = entry;
-      go.rotation = 0;
+      // Use Transform API for initial state
+      go.transform
+        .rotation(0)
+        .size(cellSize, cellSize);
       go.rotationVelocity = 0;
       go.startTime = 0;
-      go.width = go.height = cellSize;
       go.tweening = false;
       const game = this;
       go.on("mouseover", () => {
-        go.scaleX = go.scaleY = 1;
+        // Use Transform API to reset scale
+        go.transform.scale(1);
         game.canvas.style.cursor = "pointer";
         Tweenetik.to(
           group,
