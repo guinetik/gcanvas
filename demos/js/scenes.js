@@ -1,145 +1,327 @@
 import {
   Game,
   GameObject,
-  ShapeGOFactory,
-  Rectangle,
-  HorizontalLayout,
-  Circle,
-  TextShape,
   Scene,
+  Rectangle,
+  Circle,
+  Star,
+  Triangle,
+  TextShape,
+  Group,
+  FPSCounter,
   Motion,
   Easing,
+  Painter,
 } from "../../src/index";
+
 /**
- * SceneLayoutDemo
- *
- * This creates a HorizontalLayout (which is a subclass of Scene),
- * then populates it with "shape-based game objects," using
- * ShapeGOFactory to wrap each Shape. All children are laid out side-by-side.
- * Finally, we animate the entire layout's rotation and scale so you can see
- * everything move as a single unit.
+ * SceneDemo Game
+ * Demonstrates Scene capabilities: nesting, transforms, and z-ordering
  */
-export class SceneLayoutDemo extends Scene {
-  constructor(game, options = {}) {
-    super(game, options);
-    // Add a few shapes as “children” of the layout, using ShapeGOFactory
-    // so that each shape is wrapped into a minimal GameObject.
-    const shapes = [];
-
-    // A small rectangle
-    const rect = ShapeGOFactory.create(
-      game,
-      new Rectangle(0, 0, 60, 60, {
-        fillColor: "#f00",
-        strokeColor: "#000",
-        lineWidth: 2
-      })
-    );
-    rect.width = 60;
-    rect.height = 60;
-    shapes.push(rect);
-    // A circle
-    const circle = ShapeGOFactory.create(
-      game,
-      new Circle(0, 0, 30, {
-        fillColor: "#3f3",
-        strokeColor: "#000",
-        lineWidth: 2
-      }),
-      
-    );
-    circle.width = 60;
-    circle.height = 60;
-    shapes.push(circle);
-    ///
-    /**
-     * A simple scene to add the shapes to
-     * {debugColor:"#FF00FF"}
-     */
-    this.simpleScene = new Scene(this.game, {debugColor:"#FF00FF"});
-    this.simpleScene.animTime = 0;
-    shapes.forEach((shapeGO, i) => {
-      this.simpleScene.add(shapeGO);
-      shapeGO.x = i * 80;
-    });
-    this.add(this.simpleScene);
-    /**
-     * A HorizontalLayout is essentially a Scene that positions its children
-     * in a row. It inherits from Scene -> GameObject -> Transformable,
-     * so it has x, y, rotation, scaleX, scaleY, etc.
-     
-    this.layout = new HorizontalLayout(game, {
-      x: 0,
-      y: 0,
-      spacing: 20, // Extra spacing between items
-      padding: 20, // Extra space inside the layout container
-      align: "center", // Center them vertically within the row
-      autoSize: true,
-      debug: true,
-      anchor: "center", // middle of the screeeen
-    });
-
-    
-
-    // Add them to the layout (which is effectively a Scene)
-    shapes.forEach((shapeGO) => {
-      this.layout.add(shapeGO);
-    });
-
-    // The HorizontalLayout’s “x,y,rotation,scaleX,scaleY” can be manipulated:
-    this.layout.rotation = 0;
-    this.layout.scaleX = 1;
-    this.layout.scaleY = 1;
-    this.elapsed = 0;
-    //this.add(this.layout);
-    */
-  }
-
-  /**
-   * In update(dt), we:
-   * - Let the layout handle the children’s positioning
-   * - Animate the entire layout with rotation and scale
-   */
-  update(dt) {
-    this.x = this.game.width/2;
-    this.y = this.game.height/2;
-    super.update(dt);
-    this.simpleScene.animTime += dt;
-    // Use Motion.oscillate for rotation (oscillates between min and max values)
-    const rotationResult = Motion.oscillate(
-      0,
-      -90,
-      this.simpleScene.animTime,
-      60,
-      true
-    );
-    this.simpleScene.rotation = rotationResult.value;
-    //console.log("rotation", rotationResult);
-    // Use Motion.pulse for scaling (pulses between min and max)
-    const scaleResult = Motion.pulse(
-      0.8, // Min scale
-      1.2, // Max scale
-      this.simpleScene.animTime, // Current time
-      Math.PI / 2, // Duration of one pulse cycle
-      true, // Loop animation
-      false, // No yoyo
-      Easing.easeInOutQuad // Smoother easing
-    );
-    this.simpleScene.scaleX = scaleResult.value;
-    this.simpleScene.scaleY = scaleResult.value;
-    //
-    //console.log(this.simpleScene.width, this.simpleScene.height);
-  }
-}
-//
 export class MyGame extends Game {
   constructor(canvas) {
     super(canvas);
     this.enableFluidSize();
+    this.backgroundColor = "black";
   }
 
   init() {
     super.init();
-    this.pipeline.add(new SceneLayoutDemo(this));
+
+    // Main container scene (centered)
+    this.mainScene = new Scene(this, {
+      width: 600,
+      height: 400,
+      debug: false,
+      debugColor: "#ff00ff",
+      anchor: "center"
+    });
+    this.pipeline.add(this.mainScene);
+
+    // Add demo scenes
+    this.mainScene.add(new TransformingSceneDemo(this));
+    this.mainScene.add(new NestedSceneDemo(this));
+    this.mainScene.add(new ZOrderDemo(this));
+
+    // FPS counter
+    this.pipeline.add(new FPSCounter(this, { anchor: "bottom-right" }));
+  }
+
+  onResize() {
+    if (this.mainScene) {
+      // Adjust main scene to fit screen
+      this.mainScene.width = Math.min(this.width - 40, 800);
+      this.mainScene.height = Math.min(this.height - 80, 500);
+    }
+  }
+}
+
+/**
+ * Demo 1: Scene with animated transforms
+ * Shows rotation and scaling applied to a scene with children
+ */
+class TransformingSceneDemo extends GameObject {
+  constructor(game) {
+    super(game);
+
+    // Create a scene that will be transformed
+    this.scene = new Scene(game, {
+      width: 120,
+      height: 120,
+      debug: false,
+      debugColor: "#ff00ff"
+    });
+
+    // Position using transform API
+    this.scene.transform.position(-200, -80);
+
+    // Add shapes to the scene
+    const rect = new Rectangle({
+      width: 40,
+      height: 40,
+      color: "#e94560",
+      stroke: "#fff",
+      lineWidth: 2
+    });
+    rect.transform.position(-25, -25);
+
+    const circle = new Circle(15, {
+      color: "#00d9ff",
+      stroke: "#fff",
+      lineWidth: 2
+    });
+    circle.transform.position(25, 25);
+
+    const star = new Star(12, 5, 0.5, {
+      color: "#ffc107",
+      stroke: "#fff",
+      lineWidth: 1
+    });
+    star.transform.position(25, -25);
+
+    // Add shapes via wrapper
+    this.scene.add(this.wrapShape(rect));
+    this.scene.add(this.wrapShape(circle));
+    this.scene.add(this.wrapShape(star));
+
+    // Label
+    this.label = new TextShape("Scene Transforms", {
+      x: -200,
+      y: -150,
+      font: "bold 12px monospace",
+      color: "#fff",
+      align: "center"
+    });
+
+    this.elapsed = 0;
+  }
+
+  wrapShape(shape) {
+    const go = new GameObject(this.game);
+    go.shape = shape;
+    go.draw = function() {
+      super.draw();
+      this.shape.render();
+    };
+    return go;
+  }
+
+  update(dt) {
+    super.update(dt);
+    this.elapsed += dt;
+
+    // Animate the scene's transforms
+    this.scene.transform
+      .rotation(this.elapsed * 30)
+      .scale(0.8 + Math.sin(this.elapsed * 2) * 0.2);
+  }
+
+  draw() {
+    super.draw();
+    this.scene.render();
+    this.label.render();
+  }
+}
+
+/**
+ * Demo 2: Nested Scenes
+ * Shows scenes containing other scenes
+ */
+class NestedSceneDemo extends GameObject {
+  constructor(game) {
+    super(game);
+
+    // Outer scene
+    this.outerScene = new Scene(game, {
+      width: 150,
+      height: 150,
+      debug: false,
+      debugColor: "#ff00ff"
+    });
+    this.outerScene.transform.position(0, -80);
+
+    // Inner scene (nested inside outer)
+    this.innerScene = new Scene(game, {
+      width: 80,
+      height: 80,
+      debug: false,
+      debugColor: "#00ffff"
+    });
+
+    // Add shapes to inner scene
+    const innerRect = new Rectangle({
+      width: 30,
+      height: 30,
+      color: "#7bed9f",
+      stroke: "#fff",
+      lineWidth: 2
+    });
+    this.innerScene.add(this.wrapShape(innerRect));
+
+    // Add inner scene to outer
+    this.outerScene.add(this.innerScene);
+
+    // Add corner markers to outer scene
+    const corners = [
+      { x: -50, y: -50 },
+      { x: 50, y: -50 },
+      { x: 50, y: 50 },
+      { x: -50, y: 50 }
+    ];
+    corners.forEach((pos, i) => {
+      const marker = new Circle(8, {
+        color: ["#ff6b6b", "#ffc107", "#00d9ff", "#7bed9f"][i],
+        stroke: "#fff",
+        lineWidth: 1
+      });
+      marker.transform.position(pos.x, pos.y);
+      this.outerScene.add(this.wrapShape(marker));
+    });
+
+    // Label
+    this.label = new TextShape("Nested Scenes", {
+      x: 0,
+      y: -150,
+      font: "bold 12px monospace",
+      color: "#fff",
+      align: "center"
+    });
+
+    this.elapsed = 0;
+  }
+
+  wrapShape(shape) {
+    const go = new GameObject(this.game);
+    go.shape = shape;
+    go.draw = function() {
+      super.draw();
+      this.shape.render();
+    };
+    return go;
+  }
+
+  update(dt) {
+    super.update(dt);
+    this.elapsed += dt;
+
+    // Outer scene rotates slowly
+    this.outerScene.transform.rotation(this.elapsed * 20);
+
+    // Inner scene counter-rotates and pulses
+    this.innerScene.transform
+      .rotation(-this.elapsed * 60)
+      .scale(0.9 + Math.sin(this.elapsed * 3) * 0.2);
+  }
+
+  draw() {
+    super.draw();
+    this.outerScene.render();
+    this.label.render();
+  }
+}
+
+/**
+ * Demo 3: Z-Ordering in Scenes
+ * Shows bring to front / send to back functionality
+ */
+class ZOrderDemo extends GameObject {
+  constructor(game) {
+    super(game);
+
+    this.scene = new Scene(game, {
+      width: 140,
+      height: 140,
+      debug: false,
+      debugColor: "#ff00ff"
+    });
+    this.scene.transform.position(200, -80);
+
+    // Create overlapping shapes
+    this.shapes = [];
+    const colors = ["#e94560", "#ffc107", "#00d9ff", "#7bed9f"];
+    const positions = [
+      { x: -20, y: -20 },
+      { x: 0, y: -10 },
+      { x: 20, y: 0 },
+      { x: 0, y: 10 }
+    ];
+
+    colors.forEach((color, i) => {
+      const rect = new Rectangle({
+        width: 50,
+        height: 50,
+        color: color,
+        stroke: "#fff",
+        lineWidth: 2
+      });
+      rect.transform.position(positions[i].x, positions[i].y);
+      const wrapped = this.wrapShape(rect);
+      this.shapes.push(wrapped);
+      this.scene.add(wrapped);
+    });
+
+    // Label
+    this.label = new TextShape("Z-Ordering", {
+      x: 200,
+      y: -150,
+      font: "bold 12px monospace",
+      color: "#fff",
+      align: "center"
+    });
+
+    this.elapsed = 0;
+    this.lastSwap = 0;
+    this.swapInterval = 1.5; // seconds between z-order changes
+  }
+
+  wrapShape(shape) {
+    const go = new GameObject(this.game);
+    go.shape = shape;
+    go.draw = function() {
+      super.draw();
+      this.shape.render();
+    };
+    return go;
+  }
+
+  update(dt) {
+    super.update(dt);
+    this.elapsed += dt;
+
+    // Periodically bring a different shape to front
+    if (this.elapsed - this.lastSwap > this.swapInterval) {
+      this.lastSwap = this.elapsed;
+      const index = Math.floor(this.elapsed / this.swapInterval) % this.shapes.length;
+      this.scene.bringToFront(this.shapes[index]);
+    }
+
+    // Subtle pulse on the scene
+    this.scene.transform.scale(0.95 + Math.sin(this.elapsed * 2) * 0.05);
+  }
+
+  draw() {
+    super.draw();
+    this.scene.render();
+    this.label.render();
   }
 }
