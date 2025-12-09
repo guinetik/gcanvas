@@ -276,35 +276,105 @@ export class Group extends Transformable {
 
   getDebugBounds() {
     const bounds = this.calculateBounds();
-    
+
     // Calculate the actual left-top coordinates from the children
     let minX = Infinity;
     let minY = Infinity;
-    
+
     for (const child of this.children) {
       const childX = child.x;
       const childY = child.y;
       const childWidth = child.width;
       const childHeight = child.height;
-      
+
       const childLeft = childX - childWidth / 2;
       const childTop = childY - childHeight / 2;
-      
+
       minX = Math.min(minX, childLeft);
       minY = Math.min(minY, childTop);
     }
-    
+
     // If no children, use the group's position
     if (!this.children?.length) {
       minX = this.x - bounds.width / 2;
       minY = this.y - bounds.height / 2;
     }
-    
+
     return {
       width: bounds.width,
       height: bounds.height,
       x: minX,
       y: minY,
     };
+  }
+
+  // ============================================================
+  // Group-wide Transform Operations
+  // ============================================================
+
+  /**
+   * Applies a transform callback to each child in the group.
+   * Useful for batch operations on all children.
+   *
+   * @param {function(import('./transform.js').Transform, import('./transformable.js').Transformable, number): void} callback
+   *   Callback receiving (transform, child, index)
+   * @returns {Group} this for chaining
+   *
+   * @example
+   * // Scale all children by 0.5
+   * group.forEachTransform((t) => t.scale(0.5));
+   *
+   * // Rotate each child differently
+   * group.forEachTransform((t, child, i) => t.rotation(i * 15));
+   */
+  forEachTransform(callback) {
+    this.children.forEach((child, index) => {
+      if (child.transform) {
+        callback(child.transform, child, index);
+      }
+    });
+    return this;
+  }
+
+  /**
+   * Translates all children by the given offset.
+   * This moves children relative to their current positions,
+   * not the group itself.
+   *
+   * @param {number} dx - Delta X
+   * @param {number} dy - Delta Y
+   * @returns {Group} this for chaining
+   */
+  translateChildren(dx, dy) {
+    return this.forEachTransform((t) => t.translateBy(dx, dy));
+  }
+
+  /**
+   * Scales all children by the given factor.
+   *
+   * @param {number} factor - Scale factor (1 = no change)
+   * @returns {Group} this for chaining
+   */
+  scaleChildren(factor) {
+    return this.forEachTransform((t) => t.scaleBy(factor));
+  }
+
+  /**
+   * Rotates all children by the given amount.
+   *
+   * @param {number} degrees - Rotation amount in degrees
+   * @returns {Group} this for chaining
+   */
+  rotateChildren(degrees) {
+    return this.forEachTransform((t) => t.rotateBy(degrees));
+  }
+
+  /**
+   * Resets transforms on all children to default values.
+   *
+   * @returns {Group} this for chaining
+   */
+  resetChildTransforms() {
+    return this.forEachTransform((t) => t.reset());
   }
 }

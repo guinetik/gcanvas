@@ -76,6 +76,7 @@ export { Geometry2d } from "./geometry.js";
 export { Traceable } from "./traceable.js";
 export { Renderable } from "./renderable.js";
 export { Transformable } from "./transformable.js";
+export { Transform } from "./transform.js";
 export { Shape } from "./shape.js";
 export { Group } from "./group.js";
 // Shape Primitives

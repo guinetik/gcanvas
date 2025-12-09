@@ -3,83 +3,384 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Basic Game Template</title>
+  <title>Transform API Demo</title>
   <link rel="stylesheet" href="demos.css" />
+  <style>
+    #info {
+      max-width: 800px;
+    }
+    code {
+      background: rgba(0, 0, 0, 0.1);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    .code-example {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 12px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 13px;
+      overflow-x: auto;
+    }
+    .code-example .comment { color: #6a9955; }
+    .code-example .keyword { color: #569cd6; }
+    .code-example .method { color: #dcdcaa; }
+    .code-example .number { color: #b5cea8; }
+  </style>
 </head>
 
 <body>
   <div id="info">
-    <strong>Shape Transforms</strong> — Demonstrates Renderable and Transforms. <br>
+    <strong>Transform API Demo</strong> — Demonstrates the new fluent Transform API for shapes.<br><br>
+
+    <b>The Transform API</b> provides a consistent, chainable interface for modifying shape properties:
+
+    <div class="code-example">
+      <span class="comment">// Fluent chaining</span><br>
+      shape.<span class="method">transform</span><br>
+      &nbsp;&nbsp;.<span class="method">x</span>(<span class="number">100</span>).<span class="method">y</span>(<span class="number">200</span>)<br>
+      &nbsp;&nbsp;.<span class="method">width</span>(<span class="number">50</span>).<span class="method">height</span>(<span class="number">50</span>)<br>
+      &nbsp;&nbsp;.<span class="method">rotation</span>(<span class="number">45</span>)<br>
+      &nbsp;&nbsp;.<span class="method">scale</span>(<span class="number">0.8</span>);<br><br>
+
+      <span class="comment">// Batch updates</span><br>
+      shape.<span class="method">transform</span>.<span class="method">set</span>({ x: <span class="number">100</span>, rotation: <span class="number">45</span> });<br><br>
+
+      <span class="comment">// Relative transforms</span><br>
+      shape.<span class="method">transform</span>.<span class="method">translateBy</span>(<span class="number">10</span>, <span class="number">20</span>);<br>
+      shape.<span class="method">transform</span>.<span class="method">rotateBy</span>(<span class="number">15</span>);<br>
+    </div>
+
+    <b>Controls:</b> Click to randomize colors. Watch the shapes animate using the Transform API.
   </div>
   <canvas id="game"></canvas>
 
   <script type="module">
-    import { Game, Scene, GameObject, FPSCounter, Rectangle, TextShape, Group } from "../src/index";
-    // Template for a Hello World game
-    class DemoGame extends Game {
+    import {
+      Game,
+      Scene,
+      GameObject,
+      FPSCounter,
+      Rectangle,
+      Circle,
+      Star,
+      Triangle,
+      TextShape,
+      Group,
+      Transform,
+      Painter,
+      Easing
+    } from "../src/index";
+
+    /**
+     * TransformDemo Game
+     * Showcases the new Transform API with animated shapes
+     */
+    class TransformDemoGame extends Game {
       constructor(canvas) {
         super(canvas);
         this.enableFluidSize();
-        this.backgroundColor = "black";
+        this.backgroundColor = "#1a1a2e";
       }
 
       onResize() {
         if (this.scene) {
-          // Because we're using anchor the positions are calculated automatically, but we need to refresh the scene size to be proportional to the canvas size.
           this.scene.width = this.width - 20;
           this.scene.height = this.height - 20;
-          this.ui.width = this.width - 10;
-          this.ui.height = this.height - 10;
         }
       }
 
       init() {
         super.init();
-        // Set up scenes
-        // The UI scene is slightly smaller than the game scene with an yellow debug box
-        this.ui = new Scene(this, { width: this.width - 10, height: this.height - 10, debug: true, debugColor: "yellow", anchor: "center" });
-        // The main scene is slightly smaller than the UI scene with a magenta debug box
-        this.scene = new Scene(this, { width: this.width - 20, height: this.height - 20, debug: true, debugColor: "magenta", anchor: "center" });
-        // Add the scenes to the pipeline.UI On top of the game scene. 
-        // When the game runs, we should see a magenta box inside a yellow box.
+        // Main scene
+        this.scene = new Scene(this, {
+          width: this.width - 20,
+          height: this.height - 20,
+          debug: false,
+          anchor: "center"
+        });
+
         this.pipeline.add(this.scene);
-        this.pipeline.add(this.ui);
-        // Hello World box in the game scene
-        this.scene.add(new HelloWorldBox(this));
-        // FPS counter in the UI scene
-        this.ui.add(new FPSCounter(this, { anchor: "bottom-right" }));
+
+        // Add demos
+        this.scene.add(new FluentAPIDemo(this));
+        this.scene.add(new GroupTransformDemo(this));
+        this.scene.add(new BatchUpdateDemo(this));
+        this.scene.add(new RelativeTransformDemo(this));
+
+        // FPS counter
+        this.pipeline.add(new FPSCounter(this, { anchor: "bottom-right" }));
       }
     }
 
-    window.addEventListener("load", () => {
-      const canvas = document.getElementById("game");
-      const game = new DemoGame(canvas);
-      game.setFPS(1);
-      game.start();
-      setTimeout(game.stop.bind(game), 1000);
-    });
-
-    //
-    class HelloWorldBox extends GameObject {
+    /**
+     * Demo 1: Fluent API Chaining
+     * Shows basic chained transform calls
+     */
+    class FluentAPIDemo extends GameObject {
       constructor(game) {
         super(game);
-        this.outer = new Rectangle({ width: 100, height: 100, color: "darkcyan", rotation:3, y:150, x: 200, name: "outer green rect", debug: true, debugColor: "cyan" });
-        this.group = new Group({ debug: true, debugColor: "red"});
-        this.group.add(new Rectangle({ width: 400, height: 300, color: "#323232", name: "grey rect" }));
-        this.group.add(new Rectangle({ width: 100, height: 100, color: "#0f0", x: 0, name: "inner green rect" }));
-        this.group.add(this.outer);
+
+        // Create a rectangle using the new Transform API
+        this.rect = new Rectangle({
+          width: 80,
+          height: 60,
+          color: "#e94560",
+          stroke: "#fff",
+          lineWidth: 2
+        });
+
+        // Use fluent API to set initial position
+        this.rect.transform
+          .x(-200)
+          .y(-120);
+
+        // Label
+        this.label = new TextShape("Fluent API", {
+          x: -200,
+          y: -170,
+          font: "bold 14px monospace",
+          color: "#fff",
+          align: "center"
+        });
+
+        this.elapsed = 0;
       }
 
       update(dt) {
         super.update(dt);
-        console.log(this.group.x, this.group.y, this.group.width, this.group.height, this.group.getBounds());
+        this.elapsed += dt;
+
+        // Animate using the transform API
+        this.rect.transform
+          .rotation(this.elapsed * 45)
+          .scaleX(0.8 + Math.sin(this.elapsed * 2) * 0.3)
+          .scaleY(0.8 + Math.cos(this.elapsed * 2) * 0.3);
+      }
+
+      draw() {
+        super.draw();
+        this.rect.render();
+        this.label.render();
+      }
+    }
+
+    /**
+     * Demo 2: Group Transform Operations
+     * Shows group-wide transform operations
+     */
+    class GroupTransformDemo extends GameObject {
+      constructor(game) {
+        super(game);
+
+        // Create a group with multiple shapes
+        this.group = new Group({ debug: true, debugColor: "#4a4a6a" });
+
+        // Add shapes to group using transform API
+        const colors = ["#0f3460", "#16213e", "#1a1a2e"];
+        for (let i = 0; i < 3; i++) {
+          const circle = new Circle(15 + i * 5, {
+            color: Painter.colors.randomColorHSL(),
+            stroke: "#fff",
+            lineWidth: 1
+          });
+          // Position using transform
+          circle.transform.position(i * 40 - 40, 0);
+          this.group.add(circle);
+        }
+
+        // Position the group
+        this.group.transform.position(0, -120);
+
+        // Label
+        this.label = new TextShape("Group Transforms", {
+          x: 0,
+          y: -170,
+          font: "bold 14px monospace",
+          color: "#fff",
+          align: "center"
+        });
+
+        this.elapsed = 0;
+      }
+
+      update(dt) {
+        super.update(dt);
+        this.elapsed += dt;
+
+        // Animate group transform
+        this.group.transform
+          .rotation(this.elapsed * 30)
+          .scale(0.9 + Math.sin(this.elapsed * 1.5) * 0.2);
+
+        // Animate individual children using forEachTransform
+        this.group.forEachTransform((t, child, i) => {
+          // Each child rotates at different speed
+          t.rotation(-this.elapsed * (60 + i * 30));
+        });
       }
 
       draw() {
         super.draw();
         this.group.render();
+        this.label.render();
       }
     }
+
+    /**
+     * Demo 3: Batch Updates
+     * Shows using set() for multiple properties at once
+     */
+    class BatchUpdateDemo extends GameObject {
+      constructor(game) {
+        super(game);
+
+        this.star = new Star(30, 5, 0.5, {
+          color: "#ffc107",
+          stroke: "#fff",
+          lineWidth: 2
+        });
+
+        // Use batch set for initial state
+        this.star.transform.set({
+          x: 200,
+          y: -120,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1
+        });
+
+        // Label
+        this.label = new TextShape("Batch set()", {
+          x: 200,
+          y: -170,
+          font: "bold 14px monospace",
+          color: "#fff",
+          align: "center"
+        });
+
+        this.elapsed = 0;
+      }
+
+      update(dt) {
+        super.update(dt);
+        this.elapsed += dt;
+
+        // Use batch update for animation
+        const pulse = Math.sin(this.elapsed * 3);
+        const wobble = Math.sin(this.elapsed * 5) * 5;
+
+        this.star.transform.set({
+          rotation: this.elapsed * 60,
+          scaleX: 1 + pulse * 0.3,
+          scaleY: 1 - pulse * 0.3
+        });
+
+        // Also translate using relative method
+        this.star.transform.x(200 + wobble);
+      }
+
+      draw() {
+        super.draw();
+        this.star.render();
+        this.label.render();
+      }
+    }
+
+    /**
+     * Demo 4: Relative Transforms
+     * Shows translateBy, rotateBy, scaleBy
+     */
+    class RelativeTransformDemo extends GameObject {
+      constructor(game) {
+        super(game);
+
+        // Create shapes for demonstrating relative transforms
+        this.shapes = [];
+        const positions = [
+          { x: -200, y: 80 },
+          { x: 0, y: 80 },
+          { x: 200, y: 80 }
+        ];
+
+        const types = [
+          { name: "translateBy", shape: new Rectangle({ width: 50, height: 50, color: "#00d9ff", stroke: "#fff", lineWidth: 2 }) },
+          { name: "rotateBy", shape: new Triangle(40, { color: "#ff6b6b", stroke: "#fff", lineWidth: 2 }) },
+          { name: "scaleBy", shape: new Circle(25, { color: "#7bed9f", stroke: "#fff", lineWidth: 2 }) }
+        ];
+
+        types.forEach((type, i) => {
+          type.shape.transform.position(positions[i].x, positions[i].y);
+          type.label = new TextShape(type.name + "()", {
+            x: positions[i].x,
+            y: 30,
+            font: "bold 14px monospace",
+            color: "#fff",
+            align: "center"
+          });
+          type.baseX = positions[i].x;
+          type.baseY = positions[i].y;
+          this.shapes.push(type);
+        });
+
+        this.elapsed = 0;
+        this.lastUpdate = 0;
+      }
+
+      update(dt) {
+        super.update(dt);
+        this.elapsed += dt;
+
+        // translateBy demo - oscillate position
+        const tx = Math.sin(this.elapsed * 2) * 30;
+        const ty = Math.cos(this.elapsed * 3) * 15;
+        this.shapes[0].shape.transform.position(this.shapes[0].baseX + tx, this.shapes[0].baseY + ty);
+
+        // rotateBy demo - continuous rotation using relative
+        // We reset and apply fresh rotation to avoid accumulation issues in demo
+        this.shapes[1].shape.transform.rotation(this.elapsed * 90);
+
+        // scaleBy demo - pulsing scale
+        const scale = 0.7 + Math.abs(Math.sin(this.elapsed * 2)) * 0.6;
+        this.shapes[2].shape.transform.scale(scale);
+      }
+
+      draw() {
+        super.draw();
+        this.shapes.forEach(s => {
+          s.shape.render();
+          s.label.render();
+        });
+      }
+    }
+
+    // Start the game
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new TransformDemoGame(canvas);
+      game.start();
+
+      // Randomize colors on click
+      canvas.addEventListener("click", () => {
+        game.scene.children.forEach(child => {
+          if (child.rect) child.rect.color = Painter.colors.randomColorHSL();
+          if (child.star) child.star.color = Painter.colors.randomColorHSL();
+          if (child.group) {
+            child.group.children.forEach(c => {
+              c.color = Painter.colors.randomColorHSL();
+            });
+          }
+          if (child.shapes) {
+            child.shapes.forEach(s => {
+              s.shape.color = Painter.colors.randomColorHSL();
+            });
+          }
+        });
+      });
+    });
   </script>
 </body>
 
