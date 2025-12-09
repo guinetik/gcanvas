@@ -3,6 +3,7 @@
   "version": "0.0.3-alpha",
   "description": "Canvas Utilities and 2d Primitives",
   "main": "index.js",
+  "types": "gcanvas.d.ts",
   "type": "module",
   "scripts": {
     "dev": "vite",
