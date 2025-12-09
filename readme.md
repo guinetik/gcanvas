@@ -47,10 +47,13 @@ npm run dev
 
 ## 🔢 API Docs
 
-Each shape and utility is JSDoc-annotated. 
+Each shape and utility is JSDoc-annotated.
 I'm organizing a docs folder on Github Pages.
 For now, you can do `npm run docs` to generate the docs site.
-TODO: We'll be publishing `.d.ts` typings soon for full TypeScript support.
+
+### TypeScript Support
+
+GCanvas includes TypeScript definitions (`gcanvas.d.ts`) for full IDE intellisense and type checking. The types are automatically included when you install the package.
 
 ## 🧑‍💻 Installation
 
