@@ -101,9 +101,9 @@ class Player extends GameObject {
 
   draw() {
     super.draw();
-    // Position the ship shape at player's location
-    this.ship.x = this.x;
-    this.ship.y = this.y;
+    // Render ship at origin - parent transform already positions us correctly
+    this.ship.x = 0;
+    this.ship.y = 0;
     this.ship.render();
   }
 }
@@ -143,8 +143,9 @@ class Bullet extends GameObject {
 
   draw() {
     super.draw();
-    this.shape.x = this.x;
-    this.shape.y = this.y;
+    // Render at origin - parent transform already positions us correctly
+    this.shape.x = 0;
+    this.shape.y = 0;
     this.shape.render();
   }
 
@@ -263,11 +264,12 @@ class Alien extends GameObject {
     if (!this.visible) return;
     super.draw();
 
-    // Add subtle animation
+    // Add subtle animation - render at origin with wobble offset
+    // Parent transform already positions us correctly
     const wobble = Math.sin(this.animTime * 5) * 2;
 
-    this.shape.x = this.x;
-    this.shape.y = this.y + wobble;
+    this.shape.x = 0;
+    this.shape.y = wobble;
     this.shape.render();
   }
 
@@ -340,9 +342,10 @@ class Explosion extends GameObject {
     if (!this.visible) return;
     super.draw();
 
+    // Render particles relative to origin - parent transform positions us correctly
     for (const p of this.particles) {
-      p.shape.x = this.x + p.x;
-      p.shape.y = this.y + p.y;
+      p.shape.x = p.x;
+      p.shape.y = p.y;
       p.shape.render();
     }
   }
