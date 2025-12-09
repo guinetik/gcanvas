@@ -1,5 +1,5 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 /**
  * Arc - A circular arc (partial circle outline) without connecting to center.
@@ -14,8 +14,8 @@ export class Arc extends Shape {
    * @param {number} endAngle - In radians
    * @param {object} options - Style options
    */
-  constructor(x, y, radius, startAngle, endAngle, options = {}) {
-    super(x, y, options);
+  constructor(radius, startAngle, endAngle, options = {}) {
+    super(options);
     this.radius = radius;
     this.startAngle = startAngle;
     this.endAngle = endAngle;
@@ -23,17 +23,12 @@ export class Arc extends Shape {
 
   draw() {
     super.draw();
-    this.renderWithTransform(() => {
-      const ctx = Painter.ctx;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius, this.startAngle, this.endAngle, false);
+    Painter.lines.beginPath();
+    Painter.shapes.arc(0, 0, this.radius, this.startAngle, this.endAngle, false);
 
-      if (this.strokeColor) {
-        ctx.strokeStyle = this.strokeColor;
-        ctx.lineWidth = this.lineWidth;
-        ctx.stroke();
-      }
-    });
+    if (this.stroke) {
+      Painter.colors.stroke(this.stroke, this.lineWidth);
+    }
   }
 
   getBounds() {

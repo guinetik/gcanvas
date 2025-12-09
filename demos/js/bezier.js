@@ -25,18 +25,35 @@ class BezierDemoGame extends Game {
   }
 
   init() {
+    super.init();
     // Create the scenes
-    this.bezierScene = new BezierScene(this);
-    this.uiScene = new BezierUIScene(this, this.bezierScene);
+    this.bezierScene = new BezierScene(this, {
+      debug: true,
+      debugColor: "yellow",
+    });
+    this.uiScene = new BezierUIScene(this, this.bezierScene, {
+      debug: true,
+      debugColor: "magenta",
+      widht: 450,
+      height: 50,
+      padding: 45,
+      anchor: "bottom-left",
+      anchorRelative: this.bezierScene,
+    });
+    this.uiScene.width = 525;
+    this.uiScene.height = 50;
     // Add them to the pipeline
     this.pipeline.add(this.bezierScene);
     this.pipeline.add(this.uiScene);
+    this.uiScene.init();
+    // Show FPS counter
+    this.pipeline.add(new FPSCounter(this, { anchor: "bottom-right" }));
     // Setup custom cursor
-    this.addCursor = new TextShape(0, 0, "➕", {
+    this.addCursor = new TextShape("➕", {
       font: "24px monospace",
       color: "white",
     });
-    this.editCursor = new TextShape(0, 0, "✋", {
+    this.editCursor = new TextShape("✋", {
       font: "24px monospace",
       color: "white",
     });
@@ -54,8 +71,10 @@ class BezierDemoGame extends Game {
  * - Provides UI to finish/clear the curve
  */
 class BezierScene extends Scene {
-  constructor(game) {
-    super(game);
+  constructor(game, options = {}) {
+    super(game, options);
+    this.MARGIN = 50;
+    this.interactive = true;
     // Control points the user has placed
     this.points = [];
     // Current bezier path that will be visualized
@@ -68,25 +87,25 @@ class BezierScene extends Scene {
     this.controlPointShapes = [];
     // User interface state
     this.mode = "add"; // "add" or "edit"
-    // Create a background for the scene
-    this.bg = ShapeGOFactory.create(
-      this.game,
-      new Rectangle(0, 0, 1000, 1000, { fillColor: "rgba(255, 1, 1, 0.0)" })
-    );
-    this.add(this.bg);
-    this.bg.enableInteractivity(this.bg.shape);
     // Forward input events to the bezier scene
-    this.bg.on("inputdown", (e) => {
-      this.pointerDown(e.x, e.y);
+    this.game.events.on("inputdown", (e) => {
+      //console.log("inputdown", e);
+      const x = e.x - this.width / 2;
+      const y = e.y - this.height / 2;
+      this.pointerDown(x, y);
     });
     // Forward input move event to the bezier scene
-    this.bg.on("inputmove", (e) => {
-      this.pointerMove(e.x, e.y);
+    this.game.events.on("inputmove", (e) => {
+      const x = e.x - this.width / 2;
+      const y = e.y - this.height / 2;
+      this.pointerMove(x, y);
     });
     // Forward input up event to the bezier scene
-    this.bg.on("inputup", (e) => {
+    this.game.events.on("inputup", (e) => {
       this.pointerUp();
     });
+    //
+    this.userBeziers = [];
   }
 
   /**
@@ -112,14 +131,16 @@ class BezierScene extends Scene {
    * Add a control point at the specified position
    */
   addPoint(x, y) {
+    x = x - 50;
+    y = y - 50;
     this.points.push({ x, y });
     // Create a visual representation of the control point
-    const pointShape = new Circle(x, y, 6, {
-      fillColor: "#00FF00",
-      strokeColor: "#e2FFe2",
+    const pointShape = new Circle(6, {
+      color: "#00FF00",
+      stroke: "#e2FFe2",
       lineWidth: 2,
     });
-    const go = ShapeGOFactory.create(this.game, pointShape);
+    const go = ShapeGOFactory.create(this.game, pointShape, { x: x, y: y });
     this.controlPointShapes.push(go);
     this.add(go);
     // Update the bezier path
@@ -199,14 +220,17 @@ class BezierScene extends Scene {
       const centerX = 0;
       const centerY = 0;
       // Create the bezier shape
-      const bezierShapeObj = new BezierShape(centerX, centerY, path, {
-        fillColor: "rgba(0, 255, 0, 0.2)",
-        strokeColor: "rgba(255, 255, 255, 0.8)",
+      const bezierShapeObj = new BezierShape(path, {
+        color: Painter.colors.randomColorHSL(),
+        stroke: "rgba(255, 255, 255, 0.8)",
         lineWidth: 3,
       });
 
       // Create a GameObject using the factory
-      this.bezierShape = ShapeGOFactory.create(this.game, bezierShapeObj);
+      this.bezierShape = ShapeGOFactory.create(this.game, bezierShapeObj, {
+        x: centerX,
+        y: centerY,
+      });
 
       // Add the GameObject to the scene
       this.add(this.bezierShape);
@@ -214,23 +238,74 @@ class BezierScene extends Scene {
   }
 
   /**
+   * Cut the current bezier shape and store it with jitter animation
+   */
+  cutShape() {
+    // Only proceed if we have a valid bezier curve
+    if (this.points.length >= 2 && this.bezierShape) {
+      // Create a deep copy of the current bezier data
+      const cutBezier = {
+        points: [...this.points.map((p) => ({ ...p }))],
+        path: [...this.bezierPath.map((cmd) => [...cmd])],
+        shape: this.bezierShape,
+        originalPath: [...this.bezierPath.map((cmd) => [...cmd])], // Store original path for animation
+        jitterAmount: 5, // Base jitter amount
+        jitterSpeed: 1.5 + Math.random() * 0.5, // Random speed variation
+        jitterPhase: Math.random() * Math.PI * 2, // Random starting phase
+      };
+
+      cutBezier.jitterAmount = 5 * cutBezier.points.length;
+
+      // Add to our collection of user beziers
+      this.userBeziers.push(cutBezier);
+
+      // Remove the current bezier shape from control but keep it in the scene
+      this.bezierShape = null;
+
+      // Clear current editing points but keep the shape visible
+      this.points = [];
+      this.bezierPath = [];
+
+      // Remove visual control points
+      for (const pointShape of this.controlPointShapes) {
+        this.remove(pointShape);
+      }
+      this.controlPointShapes = [];
+      this.draggedPointIndex = -1;
+
+      //console.log(`Cut bezier shape - ${this.userBeziers.length} total shapes`);
+    } else {
+      //console.log("Need at least 2 points to cut a shape");
+    }
+  }
+
+  /**
    * Clear all points and reset the demo
+   * Updated to also clear all cut bezier shapes
    */
   clear() {
     // Remove visual elements
     for (const shape of this.controlPointShapes) {
       this.remove(shape);
     }
+
+    // Remove the current bezier shape if exists
     if (this.bezierShape) {
       this.remove(this.bezierShape);
       this.bezierShape = null;
     }
 
-    // Reset data
+    // Additionally remove all cut bezier shapes
+    for (const bezier of this.userBeziers) {
+      this.remove(bezier.shape);
+    }
+
+    // Reset all data
     this.points = [];
     this.bezierPath = [];
     this.controlPointShapes = [];
     this.draggedPointIndex = -1;
+    this.userBeziers = [];
   }
 
   /**
@@ -263,12 +338,15 @@ class BezierScene extends Scene {
    * Pointer down handler
    */
   pointerDown(x, y) {
+    if (this.game.canvas.style.cursor === "pointer") {
+      return;
+    }
     if (this.mode === "add") {
       // In add mode, place a new control point
       this.addPoint(x, y);
     } else {
       // In edit mode, check if we're clicking on an existing point
-      const pointIndex = this.findNearbyPoint(x, y);
+      const pointIndex = this.findNearbyPoint(x - 50, y - 50);
       if (pointIndex >= 0) {
         this.draggedPointIndex = pointIndex;
       }
@@ -281,13 +359,13 @@ class BezierScene extends Scene {
   pointerMove(x, y) {
     if (this.draggedPointIndex >= 0) {
       // Update the dragged point position
-      this.points[this.draggedPointIndex].x = x;
-      this.points[this.draggedPointIndex].y = y;
+      this.points[this.draggedPointIndex].x = x - 50;
+      this.points[this.draggedPointIndex].y = y - 50;
 
       // Update the visual control point
       const pointShape = this.controlPointShapes[this.draggedPointIndex];
-      pointShape.x = x;
-      pointShape.y = y;
+      pointShape.x = x - 50;
+      pointShape.y = y - 50;
 
       // Update the Bezier curve
       this.updateBezierPath();
@@ -304,38 +382,103 @@ class BezierScene extends Scene {
   /**
    * Render additional visual helpers
    */
-  render() {
-    // First render all the normal scene elements
-    super.render();
-    // Draw the background
-    this.bg.render();
+  draw() {
+    super.draw();
     // If we have at least 2 points, draw guide lines between control points
     if (this.points.length >= 2) {
       Painter.save();
       // Draw dashed lines connecting control points
-      Painter.setStrokeColor("rgba(0, 255, 0, 0.8)");
-      Painter.setLineWidth(1);
+      Painter.colors.setStrokeColor("rgba(0, 255, 0, 0.8)");
+      Painter.lines.setLineWidth(1);
       // Set up a dashed line style
       Painter.ctx.setLineDash([5, 5]);
-      Painter.beginPath();
-      Painter.moveTo(this.points[0].x, this.points[0].y);
+      Painter.lines.beginPath();
+      Painter.lines.moveTo(this.points[0].x, this.points[0].y);
 
       for (let i = 1; i < this.points.length; i++) {
-        Painter.lineTo(this.points[i].x, this.points[i].y);
+        Painter.lines.lineTo(this.points[i].x, this.points[i].y);
       }
 
-      Painter.stroke();
+      Painter.colors.stroke();
       Painter.ctx.setLineDash([]); // Reset dash
       Painter.restore();
     }
   }
 
+  static gco = [
+    "source-over",
+    "multiply",
+    "screen",
+    "overlay",
+    "darken",
+    "lighten",
+    "color-dodge",
+    "color-burn",
+    "hard-light",
+    "soft-light",
+    "difference",
+    "exclusion",
+    "hue",
+    "saturation",
+    "color",
+    "luminosity",
+  ];
+
+  #prevWidth = 0;
+  #prevHeight = 0;
+
+  /**
+   * Update method that adds the jitter animation to cut bezier shapes
+   */
   update(dt) {
-    this.bg.x = this.game.width / 2;
-    this.bg.y = this.game.height / 2;
-    this.bg.width = this.game.width;
-    this.bg.height = this.game.height;
+    // Update scene dimensions based on margin
+    this.width = this.game.width - this.MARGIN * 2;
+    this.height = this.game.height - this.MARGIN * 2;
+
+    // Center the scene in the game
+    this.x = this.game.width / 2;
+    this.y = this.game.height / 2;
+    const filter = Painter.ctx.globalCompositeOperation;
+    Painter.ctx.globalCompositeOperation = "screen";
+    // Update jitter animation for all cut beziers
+    for (const bezier of this.userBeziers) {
+      // Update the jitter phase
+      bezier.jitterPhase += dt * bezier.jitterSpeed * 5;
+
+      // Create a new jittered path based on the original
+      const jitteredPath = [];
+      for (
+        let cmdIndex = 0;
+        cmdIndex < bezier.originalPath.length;
+        cmdIndex++
+      ) {
+        const originalCmd = bezier.originalPath[cmdIndex];
+        const newCmd = [...originalCmd]; // Make a copy
+
+        // Only modify coordinate values (not the command type at index 0)
+        for (let i = 1; i < newCmd.length; i++) {
+          if (typeof newCmd[i] === "number") {
+            // Apply a sine wave jitter with unique offset for each point
+            const offset =
+              Math.sin(bezier.jitterPhase + i * 0.3 + cmdIndex * 0.7) *
+              bezier.jitterAmount;
+            newCmd[i] = originalCmd[i] + offset;
+          }
+        }
+        jitteredPath.push(newCmd);
+      }
+
+      // Apply the jittered path to the shape
+      bezier.shape.shape.path = jitteredPath;
+    }
+    //Painter.effects.setBlendMode(filter);
     super.update(dt);
+
+    if (this.#prevWidth !== this.width || this.#prevHeight !== this.height) {
+      this.markBoundsDirty();
+    }
+    this.#prevWidth = this.width;
+    this.#prevHeight = this.height;
   }
 }
 
@@ -344,70 +487,92 @@ class BezierScene extends Scene {
  * clearing the canvas, and switching between modes.
  */
 class BezierUIScene extends Scene {
-  constructor(game, bezierScene) {
-    super(game);
+  constructor(game, bezierScene, options = {}) {
+    super(game, options);
     this.bezierScene = bezierScene;
-    this.layout = new HorizontalLayout(game, {
-      x: 10,
-      y: 10,
-      spacing: 8,
-      padding: 0,
-    });
+    this.onMenu = false;
+  }
+
+  init() {
     let currentMode = null;
+    this.layout = new HorizontalLayout(this.game, {
+      width: 350,
+      height: 50,
+    });
     this.addModeButton = this.layout.add(
-      new ToggleButton(game, {
+      new ToggleButton(this.game, {
         text: "➕Add Points",
         width: 125,
         height: 32,
+        colorHoverBg: "transparent",
+        colorDefaultBg: "transparent",
+        colorPressedBg: "transparent",
+        colorDefaultText: "white",
         startToggled: true,
         onToggle: (active) => {
           if (currentMode) {
             currentMode.toggle(false);
           }
           if (active) {
-            bezierScene.setMode("add");
+            this.bezierScene.setMode("add");
             currentMode = this.addModeButton;
           }
         },
       })
     );
     this.editModeButton = this.layout.add(
-      new ToggleButton(game, {
+      new ToggleButton(this.game, {
         text: "✋Edit Points",
         width: 125,
         height: 32,
+        colorHoverBg: "transparent",
+        colorDefaultBg: "transparent",
+        colorPressedBg: "transparent",
+        colorDefaultText: "white",
         onToggle: (active) => {
           if (currentMode) {
             currentMode.toggle(false);
           }
           if (active) {
-            bezierScene.setMode("edit");
+            this.bezierScene.setMode("edit");
             currentMode = this.editModeButton;
           }
         },
       })
     );
+    this.cutModeButton = this.layout.add(
+      new Button(this.game, {
+        text: "✂️Cut Shape",
+        width: 125,
+        height: 32,
+        colorHoverBg: "transparent",
+        colorDefaultBg: "transparent",
+        colorPressedBg: "transparent",
+        colorDefaultText: "white",
+        onClick: () => {
+          this.editModeButton.toggle(false);
+          this.addModeButton.toggle(false);
+          currentMode = null;
+          this.bezierScene.cutShape();
+        },
+      })
+    );
     this.layout.add(
-      new Button(game, {
+      new Button(this.game, {
         text: "🧼 Clear",
         width: 100,
         height: 32,
+        colorHoverBg: "transparent",
+        colorDefaultBg: "transparent",
+        colorPressedBg: "transparent",
+        colorDefaultText: "white",
         onClick: () => {
           this.bezierScene.clear();
         },
       })
     );
-    currentMode = this.addModeButton;
     this.add(this.layout);
-    // Show FPS counter
-    this.add(new FPSCounter(game, { anchor: "bottom-right" }));
-  }
-
-  update(dt) {
-    // Position the UI at the bottom of the screen
-    this.layout.x = 10;
-    this.layout.y = this.game.canvas.height - this.layout.height - 10;
-    super.update(dt);
+    currentMode = this.addModeButton;
   }
 }
 /// Main game class

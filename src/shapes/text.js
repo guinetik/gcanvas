@@ -1,54 +1,203 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
-
+import { Painter } from "../painter/painter.js";
 /**
  * TextShape - A drawable text shape that supports rotation, scaling, and grouping.
  * Intended for use inside a Group.
+ *
+ * @extends Shape
  */
 export class TextShape extends Shape {
   /**
-   * @param {number} x
-   * @param {number} y
-   * @param {string} text
-   * @param {object} options
-   * @param {string} [options.font="12px monospace"]
-   * @param {string} [options.color="#000"]
-   * @param {string} [options.align="center"]
-   * @param {string} [options.baseline="top"]
+   * Create a text shape
+   *
+   * @param {string} text - The text content
+   * @param {Object} [options={}] - Configuration options
+   * @param {string} [options.font="12px monospace"] - CSS font string
+   * @param {string} [options.color="#000"] - Text color
+   * @param {string} [options.align="center"] - Text alignment (left, center, right)
+   * @param {string} [options.baseline="middle"] - Text baseline (top, middle, bottom)
    */
-  constructor(x, y, text, options = {}) {
-    super(x, y, options);
-    this.text = text;
-    this.font = options.font || "12px monospace";
-    this.color = options.color || "#000";
-    this.align = options.align || "center";
-    this.baseline = options.baseline || "top";
+  constructor(text, options = {}) {
+    super(options);
+    this._text = text;
+    this._font = options.font || "12px monospace";
+    this._color = options.color || "yellow";
+    this._align = options.align || "center";
+    this._baseline = options.baseline || "middle";
+
+    // Calculate initial bounds
+    this._calculateBounds();
+    this._calculateAlignmentOffsets();
   }
 
+  /**
+   * Draw the text using Painter
+   */
   draw() {
     super.draw();
-    this.renderWithTransform(() => {
-      Painter.setFont(this.font);
-      Painter.setTextAlign(this.align);
-      Painter.setTextBaseline(this.baseline);
-      Painter.fillText(this.text, 0, 0, this.color);
-    });
+    this.logger.log("draw", this.font, this.color, this.opacity);
+    Painter.text.setFont(this.font);
+    Painter.text.setTextAlign(this.align);
+    Painter.text.setTextBaseline(this.baseline);
+    Painter.text.fillText(this.text, 0, 0, this.color);
   }
 
-  getBounds() {
-    this.width = Painter.measureText(this.text);
+  _calculateAlignmentOffsets() {
+    // Save current canvas context
+    if (!Painter.text) return;
+    // Measure text dimensions
+    const metrics = Painter.text.measureTextDimensions(this.text, this.font);
+    // Calculate horizontal center point offset
+    switch (this._align) {
+      case "left":
+        this._centerOffsetX = metrics.width / 2;
+        break;
+      case "center":
+        this._centerOffsetX = 0;
+        break;
+      case "right":
+        this._centerOffsetX = -metrics.width / 2 - 5;
+        break;
+    }
+    // Calculate vertical center point offset
+    switch (this._baseline) {
+      case "top":
+        this._centerOffsetY = metrics.height/4;
+        break;
+      case "middle":
+        this._centerOffsetY = -2;
+        break;
+      case "bottom":
+        this._centerOffsetY = -metrics.height;
+        break;
+    }
+    //console.log("calculateAlignmentOffsets", this._centerOffsetY, this._centerOffsetX);
+  }
+
+  getTextBounds() {
+    if (Painter.text) {
+      // Measure the text dimensions
+      const metrics = Painter.text.measureTextDimensions(this.text, this.font);
+      // Add padding
+      const padding = 2;
+      return {
+        x: this._centerOffsetX - metrics.width / 2,
+        y: this._centerOffsetY - metrics.height / 2,
+        width: metrics.width + padding * 2,
+        height: metrics.height + padding * 2,
+      };
+    }
+    // Fallback
     return {
-      x: this.x,
-      y: this.y,
-      width: this.width,
-      height: parseInt(this.font), // rough height guess from font size
+      x: this._centerOffsetX,
+      y: this._centerOffsetY,
+      width: this._width,
+      height: this._height,
     };
+  }
+
+  /**
+   * Overridden _calculateBounds to include alignment offsets
+   * @private
+   */
+  _calculateBounds() {
+    if (Painter.text) {
+      // Measure the text dimensions
+      const metrics = Painter.text.measureTextDimensions(this.text, this.font);
+
+      // Set dimensions based on measurements
+      this._width = metrics.width;
+      this._height = metrics.height;
+
+      // Calculate alignment offsets
+      this._calculateAlignmentOffsets();
+    } else {
+      // Fallback if Painter not available
+      this._width = this.text ? this.text.length * 8 : 0;
+      this._height = 16;
+    }
+    this.trace(
+      "TextShape.calculateBounds: " + this._width + "x" + this._height
+    );
+  }
+
+  /**
+   * Debug bounds should match text bounds
+   * @returns {Object} Debug bounds with width and height
+   */
+  getDebugBounds() {
+    const textBounds = this.getTextBounds();
+    return {
+      x: textBounds.x,
+      y: textBounds.y,
+      width: textBounds.width,
+      height: textBounds.height,
+    };
+  }
+
+  /**
+   * Check if a property has changed and update bounds if needed
+   * @param {*} value - New value
+   * @param {*} oldValue - Previous value
+   * @private
+   */
+  checkDirty(value, oldValue) {
+    if (value !== oldValue) {
+      this._boundsDirty = true;
+      this._calculateBounds();
+    }
+  }
+
+  // Getters and setters
+
+  get text() {
+    return this._text;
+  }
+
+  set text(value) {
+    this.checkDirty(value, this._text);
+    this._text = value;
+  }
+
+  get font() {
+    return this._font;
+  }
+
+  set font(value) {
+    this.checkDirty(value, this._font);
+    this._font = value;
+  }
+
+  get color() {
+    return this._color;
+  }
+
+  set color(value) {
+    this._color = value;
+  }
+
+  get align() {
+    return this._align;
+  }
+
+  set align(value) {
+    this.checkDirty(value, this._align);
+    this._align = value;
+  }
+
+  get baseline() {
+    return this._baseline;
+  }
+
+  set baseline(value) {
+    this.checkDirty(value, this._baseline);
+    this._baseline = value;
   }
 }
 
 /**
  * OutlinedText - A text shape with a stroke outline.
- * 
+ *
  * Draws text with both fill and stroke for an outlined effect.
  */
 export class OutlinedText extends Shape {
@@ -58,8 +207,8 @@ export class OutlinedText extends Shape {
    * @param {string} text - Text content
    * @param {Object} [options] - Shape rendering options
    * @param {boolean} [options.centered=false] - Whether the text is positioned from its center
-   * @param {string} [options.fillColor='#000000'] - Text fill color
-   * @param {string} [options.strokeColor='#FFFFFF'] - Text stroke color
+   * @param {string} [options.color='#000000'] - Text fill color
+   * @param {string} [options.stroke='#FFFFFF'] - Text stroke color
    * @param {number} [options.lineWidth=1] - Width of the text outline
    * @param {string} [options.font] - Font specification
    * @param {string} [options.align='left'] - Text alignment ('left', 'center', 'right')
@@ -67,18 +216,15 @@ export class OutlinedText extends Shape {
    */
   constructor(x, y, text, options = {}) {
     super(x, y, options);
-    
     this.text = text;
-    
     // Text-specific options
     this.centered = options.centered || false;
-    this.fillColor = options.fillColor || '#000000';
-    this.strokeColor = options.strokeColor || '#FFFFFF';
+    this.color = options.color || "#000000";
+    this.stroke = options.stroke || "#FFFFFF";
     this.lineWidth = options.lineWidth || 1;
     this.font = options.font || null;
-    this.align = options.align || 'left';
-    this.baseline = options.baseline || 'alphabetic';
-    
+    this.align = options.align || "left";
+    this.baseline = options.baseline || "alphabetic";
     // Calculate text dimensions
     this.calculateDimensions();
   }
@@ -89,39 +235,43 @@ export class OutlinedText extends Shape {
    */
   calculateDimensions() {
     if (!Painter.ctx) {
-      console.warn('Painter context not initialized. Cannot calculate text dimensions.');
+      console.warn(
+        "Painter context not initialized. Cannot calculate text dimensions."
+      );
       this.width = 0;
       this.height = 0;
       return;
     }
-    
+
     // Save current context settings
-    const currentFont = Painter.ctx.font;
-    
+    const currentFont = Painter.text.font();
+
     // Apply font if provided
-    if (this.font) Painter.ctx.font = this.font;
-    
+    if (this.font) Painter.text.setFont(this.font);
+
     // Measure the text
-    const metrics = Painter.ctx.measureText(this.text);
-    
+    const metrics = Painter.text.measureText(this.text);
+
     // Set dimensions
     this.width = metrics.width;
-    
+
     // Approximate height from font size if available
     if (this.font) {
       const fontSize = parseInt(this.font);
       this.height = isNaN(fontSize) ? 20 : fontSize; // Default to 20 if parsing fails
     } else {
       // Try to get height from metrics (newer browsers) or estimate
-      this.height = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent || 20;
+      this.height =
+        metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent ||
+        20;
     }
-    
+
     // Add a bit of padding for the stroke
     this.width += this.lineWidth * 2;
     this.height += this.lineWidth * 2;
-    
+
     // Restore font
-    Painter.ctx.font = currentFont;
+    Painter.text.setFont(currentFont);
   }
 
   /**
@@ -138,83 +288,80 @@ export class OutlinedText extends Shape {
    */
   draw() {
     super.draw();
-    
+
     // Handle case where Painter context isn't initialized yet
     if (!Painter.ctx) {
-      console.warn('Painter context not initialized. Cannot draw text.');
+      console.warn("Painter context not initialized. Cannot draw text.");
       return;
     }
-    
-    this.renderWithTransform(() => {
-      // Calculate the starting position
-      let xPos = 0;
-      let yPos = 0;
-      
-      // Apply text settings
-      if (this.font) Painter.ctx.font = this.font;
-      Painter.ctx.textAlign = this.align;
-      Painter.ctx.textBaseline = this.baseline;
-      
-      // Adjust for centered positioning
-      if (this.centered) {
-        // No adjustment needed as textAlign will handle this
-        if (this.baseline === 'middle' || this.baseline === 'alphabetic') {
-          yPos = 0;
-        } else if (this.baseline === 'top') {
-          yPos = this.height / 2;
-        } else if (this.baseline === 'bottom') {
-          yPos = -this.height / 2;
-        }
-      }
-      
-      // Draw the outlined text using Painter's outlinedText method
-      Painter.outlinedText(
-        this.text,
-        xPos,
-        yPos,
-        this.fillColor,
-        this.strokeColor,
-        this.lineWidth,
-        this.font
-      );
-    });
-  }
 
-  /**
-   * Returns the bounding box
-   * @returns {{x: number, y: number, width: number, height: number}}
-   */
-  getBounds() {
-    let x = this.x;
-    let y = this.y;
-    
-    // Adjust for non-centered positioning
-    if (!this.centered) {
-      if (this.align === 'left') {
-        x += this.width / 2;
-      } else if (this.align === 'right') {
-        x -= this.width / 2;
-      }
-      
-      if (this.baseline === 'top') {
-        y += this.height / 2;
-      } else if (this.baseline === 'bottom') {
-        y -= this.height / 2;
+    // Calculate the starting position
+    let xPos = 0;
+    let yPos = 0;
+
+    // Apply text settings
+    if (this.font) Painter.text.setFont(this.font);
+    Painter.text.setTextAlign(this.align);
+    Painter.text.setTextBaseline(this.baseline);
+
+    // Adjust for centered positioning
+    if (this.centered) {
+      // No adjustment needed as textAlign will handle this
+      if (this.baseline === "middle" || this.baseline === "alphabetic") {
+        yPos = 0;
+      } else if (this.baseline === "top") {
+        yPos = this.height / 2;
+      } else if (this.baseline === "bottom") {
+        yPos = -this.height / 2;
       }
     }
-    
+
+    // Draw the outlined text using Painter's outlinedText method
+    Painter.outlinedText(
+      this.text,
+      xPos,
+      yPos,
+      this.color,
+      this.stroke,
+      this.lineWidth,
+      this.font
+    );
+  }
+
+  getBounds() {
+    // Use the canvas context directly for precision
+    if (!Painter.ctx) {
+      return super.getBounds(); // fallback
+    }
+
+    // Save current font and apply the text style
+    const prevFont = Painter.text.font();
+    Painter.text.setFont(this.font);
+
+    const metrics = Painter.text.measureText(this.text);
+    const width = metrics.width;
+    const height =
+      metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent ||
+      parseInt(this.font) ||
+      20;
+
+    Painter.text.setFont(prevFont);
+
+    this.width = width;
+    this.height = height;
+
     return {
-      x: x,
-      y: y,
-      width: this.width,
-      height: this.height
+      x: this.x,
+      y: this.y,
+      width,
+      height,
     };
   }
 }
 
 /**
  * WrappedText - A text shape that automatically wraps to fit within a specified width.
- * 
+ *
  * Draws text that wraps to new lines when it exceeds a maximum width.
  */
 export class WrappedText extends Shape {
@@ -226,29 +373,29 @@ export class WrappedText extends Shape {
    * @param {number} [lineHeight=20] - Line height for wrapped text
    * @param {Object} [options] - Shape rendering options
    * @param {boolean} [options.centered=false] - Whether the text is positioned from its center
-   * @param {string} [options.fillColor='#000000'] - Text fill color 
+   * @param {string} [options.color='#000000'] - Text fill color
    * @param {string} [options.font] - Font specification
    * @param {string} [options.align='left'] - Text alignment ('left', 'center', 'right')
    * @param {string} [options.baseline='top'] - Text baseline
    */
   constructor(x, y, text, maxWidth, lineHeight = 20, options = {}) {
     super(x, y, options);
-    
+
     this.text = text;
     this.maxWidth = maxWidth;
     this.lineHeight = lineHeight;
-    
+
     // Text-specific options
     this.centered = options.centered || false;
-    this.fillColor = options.fillColor || '#000000';
+    this.color = options.color || "#000000";
     this.font = options.font || null;
-    this.align = options.align || 'left';
-    this.baseline = options.baseline || 'top';
-    
+    this.align = options.align || "left";
+    this.baseline = options.baseline || "top";
+
     // For outlined text
     this.outlineColor = options.outlineColor || null;
     this.outlineWidth = options.outlineWidth || 1;
-    
+
     // Calculate wrapped text dimensions
     this.calculateDimensions();
   }
@@ -259,53 +406,55 @@ export class WrappedText extends Shape {
    */
   calculateDimensions() {
     if (!Painter.ctx) {
-      console.warn('Painter context not initialized. Cannot calculate text dimensions.');
+      console.warn(
+        "Painter context not initialized. Cannot calculate text dimensions."
+      );
       this.width = this.maxWidth;
       this.height = this.lineHeight;
       this.lines = [this.text];
       return;
     }
-    
+
     // Save current context settings
-    const currentFont = Painter.ctx.font;
-    const currentAlign = Painter.ctx.textAlign;
-    const currentBaseline = Painter.ctx.textBaseline;
-    
+    const currentFont = Painter.text.font();
+    const currentAlign = Painter.text.textAlign();
+    const currentBaseline = Painter.text.textBaseline();
+
     // Apply text settings
-    if (this.font) Painter.ctx.font = this.font;
-    Painter.ctx.textAlign = 'left'; // Always left-align for measurement
-    Painter.ctx.textBaseline = 'top';
-    
+    if (this.font) Painter.text.setFont(this.font);
+    Painter.text.setTextAlign("left"); // Always left-align for measurement
+    Painter.text.setTextBaseline("top");
+
     // Calculate wrapped lines and dimensions
-    const words = this.text.split(' ');
-    let line = '';
-    let testLine = '';
+    const words = this.text.split(" ");
+    let line = "";
+    let testLine = "";
     this.lines = [];
     this.width = 0;
-    
+
     for (let i = 0; i < words.length; i++) {
-      testLine = line + words[i] + ' ';
-      const metrics = Painter.ctx.measureText(testLine);
+      testLine = line + words[i] + " ";
+      const metrics = Painter.text.measureText(testLine);
       const testWidth = metrics.width;
-      
+
       if (testWidth > this.maxWidth && i > 0) {
         this.lines.push(line);
-        this.width = Math.max(this.width, Painter.ctx.measureText(line).width);
-        line = words[i] + ' ';
+        this.width = Math.max(this.width, Painter.text.measureText(line).width);
+        line = words[i] + " ";
       } else {
         line = testLine;
       }
     }
-    
+
     // Add the last line
     this.lines.push(line);
-    this.width = Math.max(this.width, Painter.ctx.measureText(line).width);
+    this.width = Math.max(this.width, Painter.text.measureText(line).width);
     this.height = this.lines.length * this.lineHeight;
-    
+
     // Restore context settings
-    Painter.ctx.font = currentFont;
-    Painter.ctx.textAlign = currentAlign;
-    Painter.ctx.textBaseline = currentBaseline;
+    Painter.text.setFont(currentFont);
+    Painter.text.setTextAlign(currentAlign);
+    Painter.text.setTextBaseline(currentBaseline);
   }
 
   /**
@@ -322,64 +471,62 @@ export class WrappedText extends Shape {
    */
   draw() {
     super.draw();
-    
+
     // Handle case where Painter context isn't initialized yet
     if (!Painter.ctx) {
-      console.warn('Painter context not initialized. Cannot draw text.');
+      console.warn("Painter context not initialized. Cannot draw text.");
       return;
     }
-    
-    this.renderWithTransform(() => {
-      // Calculate the starting position
-      let xPos = 0;
-      let yPos = 0;
-      
-      // Adjust for centered positioning
-      if (this.centered) {
-        xPos = -this.width / 2;
-        yPos = -this.height / 2;
+
+    // Calculate the starting position
+    let xPos = 0;
+    let yPos = 0;
+
+    // Adjust for centered positioning
+    if (this.centered) {
+      xPos = -this.width / 2;
+      yPos = -this.height / 2;
+    }
+
+    // Apply text settings
+    if (this.font) Painter.text.setFont(this.font);
+    Painter.text.setTextAlign(this.align);
+    Painter.text.setTextBaseline(this.baseline);
+
+    // Adjust x based on alignment
+    let alignmentX = xPos;
+    if (this.align === "center") {
+      alignmentX = 0;
+    } else if (this.align === "right") {
+      alignmentX = xPos + this.width;
+    }
+
+    // Draw each line
+    for (let i = 0; i < this.lines.length; i++) {
+      const lineY = yPos + i * this.lineHeight;
+
+      if (this.outlineColor) {
+        // Draw outlined text
+        Painter.outlinedText(
+          this.lines[i],
+          alignmentX,
+          lineY,
+          this.color,
+          this.outlineColor,
+          this.outlineWidth,
+          this.font
+        );
+      } else {
+        // Draw regular text
+        Painter.text.fillText(
+          this.lines[i],
+          alignmentX,
+          lineY,
+          this.color,
+          this.font
+        );
       }
-      
-      // Apply text settings
-      if (this.font) Painter.ctx.font = this.font;
-      Painter.ctx.textAlign = this.align;
-      Painter.ctx.textBaseline = this.baseline;
-      
-      // Adjust x based on alignment
-      let alignmentX = xPos;
-      if (this.align === 'center') {
-        alignmentX = 0;
-      } else if (this.align === 'right') {
-        alignmentX = xPos + this.width;
-      }
-      
-      // Draw each line
-      for (let i = 0; i < this.lines.length; i++) {
-        const lineY = yPos + (i * this.lineHeight);
-        
-        if (this.outlineColor) {
-          // Draw outlined text
-          Painter.outlinedText(
-            this.lines[i],
-            alignmentX,
-            lineY,
-            this.fillColor,
-            this.outlineColor,
-            this.outlineWidth,
-            this.font
-          );
-        } else {
-          // Draw regular text
-          Painter.fillText(
-            this.lines[i],
-            alignmentX,
-            lineY,
-            this.fillColor,
-            this.font
-          );
-        }
-      }
-    });
+    }
   }
 
   /**
@@ -392,14 +539,14 @@ export class WrappedText extends Shape {
         x: this.x,
         y: this.y,
         width: this.width,
-        height: this.height
+        height: this.height,
       };
     } else {
       return {
-        x: this.x + (this.width / 2),
-        y: this.y + (this.height / 2),
+        x: this.x + this.width / 2,
+        y: this.y + this.height / 2,
         width: this.width,
-        height: this.height
+        height: this.height,
       };
     }
   }

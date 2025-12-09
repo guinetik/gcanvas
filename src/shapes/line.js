@@ -1,5 +1,5 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 export class Line extends Shape {
   /**
@@ -9,16 +9,21 @@ export class Line extends Shape {
    * @param {number} length - Length of the line
    * @param {Object} options - Style options
    */
-  constructor(x, y, length = 40, options = {}) {
-    super(x, y, options);
+  constructor(length = 40, options = {}) {
+    super(options);
     this.length = length;
   }
 
   draw() {
     super.draw();
     const half = this.length / 2;
-    this.renderWithTransform(() => {
-      Painter.line(-half, -half, half, half, this.strokeColor, this.lineWidth);
-    });
+    Painter.lines.line(
+      -half,
+      -half,
+      half,
+      half,
+      this.stroke,
+      this.lineWidth
+    );
   }
 }

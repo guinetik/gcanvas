@@ -16,7 +16,7 @@
  * 
  * // Animate an object's properties
  * Tweenetik.to(player, { x: 100, y: 200 }, 1.5, Easing.easeOutBounce, {
- *   onComplete: () => console.log('Animation complete!')
+ *   onComplete: () => this.logger.log('Animation complete!')
  * });
  * 
  * @example
@@ -53,6 +53,23 @@ export { Tween } from "./tween";
  * @see {@link Easing} For timing functions that control animation progression
  */
 export { Easing } from "./easing";
+
+export { bezierV1 } from "./bezier.js";
+export { bounceV1 } from "./bounce.js";
+export { floatV1 } from "./float.js";
+export { followPath } from "./follow.js";
+export { orbitV1 } from "./orbit.js";
+export { oscillateV1 } from "./oscillate.js";
+export { parabolicV1 } from "./parabolic.js";
+export { patrolV1 } from "./patrol.js";
+export { pendulumV1 } from "./pendulum.js";
+export { pulseV1 } from "./pulse.js";
+export { hopV1 } from "./hop.js";
+export { shakeV1 } from "./shake.js";
+export { spiralV1 } from "./spiral.js";
+export { springV1 } from "./spring.js";
+export { swingV1 } from "./swing.js";
+export { waypointV1 } from "./waypoint.js";
 
 /**
  * @see {@link class:Motion} For stateless animation patterns like springs, bezier paths, and physics-based movements

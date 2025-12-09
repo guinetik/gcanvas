@@ -8,7 +8,7 @@
 </head>
 
 <body>
-  <div id="info">
+  <div id="info" class="light">
     <strong>Group Demo</strong> —
     A <code>Group</code> is a specialized shape that can contain other shapes. It
     inherits from <code>Shape</code>, which in turn extends our <code>Transformable</code> base. 
@@ -26,7 +26,6 @@
     window.addEventListener("load", () => {
         const canvas = document.getElementById("game");
         const game = new MyGame(canvas);
-        game.init();
         game.start();
     });
 </script>

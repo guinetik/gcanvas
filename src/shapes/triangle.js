@@ -1,9 +1,9 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 export class Triangle extends Shape {
-  constructor(x, y, size = 50, options = {}) {
-    super(x, y, options);
+  constructor(size = 50, options = {}) {
+    super(options);
     this.size = size;
   }
 
@@ -13,11 +13,14 @@ export class Triangle extends Shape {
     const points = [
       { x: 0, y: -half },
       { x: half, y: half },
-      { x: -half, y: half }
+      { x: -half, y: half },
     ];
 
-    this.renderWithTransform(() => {
-      Painter.polygon(points, this.fillColor, this.strokeColor, this.lineWidth);
-    });
+    Painter.shapes.polygon(
+      points,
+      this.color,
+      this.stroke,
+      this.lineWidth
+    );
   }
 }

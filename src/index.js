@@ -1,7 +1,9 @@
-export { Painter } from "./painter";
-export * from "./game";
-export * from "./io";
-export * from "./motion";
+export * from "./util";
+export * from "./math";
+export * from "./logger";
+export * from "./painter";
 export * from "./shapes";
+export * from "./io";
+export * from "./game";
+export * from "./motion";
 export * from "./mixins";
-export * as Shapes from "./shapes";

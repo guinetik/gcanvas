@@ -1,138 +1,169 @@
-/*************************************************************
- * Scene.js
- *
- * A container-like GameObject that manages a list of child
- * GameObjects. It acts as a local coordinate system, allowing
- * children to inherit the Scene's position for rendering and
- * update. Useful for grouping related objects (e.g., a level).
- *************************************************************/
-import { GameObject } from "../go.js";
+import { Painter } from "../../painter/painter.js";
+import { ZOrderedCollection } from "../../util/zindex.js";
+import { GameObject } from "./go.js";
 
 /**
- * Scene - A specialized GameObject that can contain child GameObjects,
- * updating and rendering them as a group. The Scene’s own position
- * (x, y) is temporarily added to each child for the duration of
- * update calls, effectively shifting children by the Scene’s offset.
+ * Scene - A Hierarchical Container for Game Objects
+ *
+ * ### Conceptual Overview
+ *
+ * The Scene class represents a complex spatial management system that goes beyond
+ * simple object containment. It serves as a specialized GameObject that:
+ *
+ * - Creates a local coordinate system
+ * - Manages spatial relationships between game objects
+ * - Provides dynamic bounds calculation
+ * - Handles rendering and updating of child objects
+ *
+ * ### Rendering Pipeline Integration
+ *
+ * The Scene operates as a crucial middleware in the rendering pipeline:
+ * 1. Inherits transformation capabilities from GameObject
+ * 2. Applies collective transformations to child objects
+ * 3. Calculates composite bounds dynamically
+ *
+ * @extends GameObject
  */
 export class Scene extends GameObject {
-  /**
-   * @param {Game} game - The main game instance.
-   * @param {object} [options] - Optional parameters for position, etc.
-   * @param {number} [options.x=0] - The Scene’s x-position.
-   * @param {number} [options.y=0] - The Scene’s y-position.
-   */
   constructor(game, options = {}) {
     super(game, options);
-
-    /**
-     * A list of child GameObjects that this Scene manages.
-     * @type {Array<GameObject>}
-     */
-    this.children = [];
-
-    // Re-assign explicitly in case user omitted them in the parent constructor call.
-    this.x = options.x ?? 0;
-    this.y = options.y ?? 0;
+    // Create the z-ordered collection
+    this._collection = new ZOrderedCollection({
+      sortByZIndex: options.sortByZIndex || true,
+    });
+    this._collection._owner = this;
+    // Initialize dimensions and override properties
+    this._width = options.width ?? 0;
+    this._height = options.height ?? 0;
+    this.forceWidth = null; // CRITICAL: Initialize with null
+    this.forceHeight = null; // CRITICAL: Initialize with null
+    // Cache for natural dimensions
+    this._naturalWidth = null;
+    this._naturalHeight = null;
+    this.userDefinedDimensions = false;
+    if (options.width != undefined && options.height != undefined) {
+      this.userDefinedWidth = options.width;
+      this.userDefinedHeight = options.height;
+      this.userDefinedDimensions = true;
+    }
   }
 
-  /**
-   * Add a GameObject to this Scene, allowing it to be updated and rendered.
-   * @param {GameObject} go - The child GameObject to add.
-   * @returns {GameObject} The same GameObject, for chaining or reference.
-   */
+  // Update method - update children and recalculate natural dimensions
+  update(dt) {
+    this.logger.groupCollapsed(
+      "Scene.update: " +
+        (this.name == undefined ? this.constructor.name : this.name)
+    );
+    // Update all active children
+    for (let i = 0; i < this.children.length; i++) {
+      const child = this.children[i];
+      if (child.active && child.update) {
+        child.update(dt);
+      }
+    }
+    super.update(dt);
+    this.logger.groupEnd();
+  }
+
+  // Add a GameObject to the scene and invalidate dimensions
   add(go) {
-    go.parent = this; // Set the parent to this Scene
-    this.children.push(go);
+    if (go == null || go == undefined) {
+      throw new Error("GameObject is null or undefined");
+    }
+    if (go.parent != null) {
+      console.warn(
+        "This GameObject already has a parent. Consider removing it first."
+      );
+    }
+    go.parent = this;
+    this._collection.add(go);
+    this.markBoundsDirty();
+    // if the game object has an init method, call it
+    if (go.init) {
+      go.init();
+    }
     return go;
   }
 
+  markBoundsDirty() {
+    super.markBoundsDirty();
+    // Dirty the children's bounds
+    this.children.forEach((child) => {
+      child.markBoundsDirty();
+    });
+  }
+
   /**
-   * Remove a GameObject from the Scene.
-   * @param {GameObject} go - The child GameObject to remove.
+   * Removes a GameObject from the Scene
+   *
+   * ### Removal Strategy
+   *
+   * #### Why Use Filter?
+   * - Creates a new array (immutable approach)
+   * - Ensures no direct mutation of the children array
+   *
+   * #### Parent Reference Clearing
+   * - Breaks the parent-child relationship
+   * - Allows the object to be re-parented elsewhere
+   *
+   * @param {GameObject} go - Game object to remove
    */
   remove(go) {
-    this.children = this.children.filter((child) => child !== go);
-    go.parent = null; // Clear the parent reference
+    const result = this._collection.remove(go);
+    if (result) {
+      go.parent = null;
+      this.markBoundsDirty();
+    }
+    return result;
   }
 
-  /**
-   * Remove all child GameObjects.
-   */
-  clear() {
-    this.children = [];
+  draw() {
+    super.draw();
+    this.logger.log("Scene.draw chilren:");
+    this._collection
+      .getSortedChildren()
+      .filter((obj) => obj.visible)
+      .map(function (obj) {
+        Painter.save();
+        obj.render();
+        Painter.restore();
+        return obj;
+      });
   }
 
-  /**
-   * Bring a specific child GameObject to the front (end of the list),
-   * ensuring it’s rendered after others (on top).
-   * @param {GameObject} go - The child to bring forward.
-   */
+  getDebugBounds() {
+    // For Scenes, always return the full size centered around x,y
+    return {
+      width: this.width,
+      height: this.height,
+      x: this.x - this.width / 2,
+      y: this.y - this.height / 2,
+    };
+  }
+
   bringToFront(go) {
-    this.remove(go);
-    this.children.push(go);
+    return this._collection.bringToFront(go);
   }
 
-  /**
-   * Send a specific child GameObject to the back (start of the list),
-   * ensuring it’s rendered before others (behind them).
-   * @param {GameObject} go - The child to push behind.
-   */
   sendToBack(go) {
-    this.remove(go);
-    this.children.unshift(go);
+    return this._collection.sendToBack(go);
   }
 
-  /**
-   * Called each frame to update this Scene and its children.
-   * Temporarily offsets each child by the Scene’s own (x, y) before
-   * updating, then reverts the child’s coordinates afterward.
-   * @param {number} dt - Delta time in seconds since the last frame.
-   */
-  update(dt) {
-    for (let child of this.children) {
-      // Shift the child's coordinates by the Scene's position
-      if (typeof child.x === "number") child.x += this.x;
-      if (typeof child.y === "number") child.y += this.y;
-      const opacity = child.opacity ?? 1;
-      child.opacity = this.opacity * opacity;
-      ///
-      // TODO NOT WORKING
-      // Set child's scale to the Scene's scale
-      const scaleX = child.scaleX ?? 1;
-      const scaleY = child.scaleY ?? 1;
-      child.scaleX *= this.scaleX;
-      child.scaleY *= this.scaleY;
-      // Set the child's rotation to the Scene's rotation
-      const rotation = child.rotation ?? 0;
-      child.rotation += this.rotation;
-      // Delegate the update to the child
-      if (child.update) {
-        child.update(dt);
-      }
-      // Restore the child's opacity
-      child.opacity = opacity;
-      child.rotation = rotation;
-      // Restore the child's scale
-      child.scaleX = scaleX;
-      child.scaleY = scaleY;
-      // Revert the child's position
-      if (typeof child.x === "number") child.x -= this.x;
-      if (typeof child.y === "number") child.y -= this.y;
-    }
+  bringForward(go) {
+    return this._collection.bringForward(go);
   }
 
-  /**
-   * Called each frame to render the Scene’s children in order.
-   * Children are drawn at their normal coordinates but conceptually
-   * offset by (x, y) if the user checks them inside child.render().
-   */
-  render() {
-    // If Scene is invisible or fully transparent, bail out
-    if (!this.visible || this.opacity <= 0) return;
-    for (let child of this.children) {
-      if (child.render) {
-        child.render();
-      }
-    }
+  sendBackward(go) {
+    return this._collection.sendBackward(go);
+  }
+
+  clear() {
+    this._collection.children.forEach((go) => this.remove(go));
+    return this._collection.clear();
+  }
+
+  // Getter to access children
+  get children() {
+    return this._collection.children;
   }
 }

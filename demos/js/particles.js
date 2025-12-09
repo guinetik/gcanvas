@@ -6,7 +6,11 @@ import {
   Scene,
   Text,
   Painter,
-  Shapes
+  Circle,
+  Square,
+  Triangle,
+  Star,
+  VerticalLayout,
 } from "../../src/index";
 
 class ParticlesGame extends Game {
@@ -14,31 +18,38 @@ class ParticlesGame extends Game {
     super(canvas);
     this.backgroundColor = "black";
     this.enableFluidSize();
-    this.NUM_PARTICLES = 500;
+    this.NUM_PARTICLES = 200;
+    this.MARGIN = 50;
   }
 
   init() {
     super.init();
     this.mouse = { x: this.width / 2, y: this.height / 2 };
     // Create particle scene (below UI)
-    this.particleScene = new Scene(this);
+    this.particleScene = new Scene(this, {
+      width: this.width - this.MARGIN * 2,
+      height: this.height - this.MARGIN * 2,
+      debug: true,
+      debugColor: "#0f0",
+    });
     this.pipeline.add(this.particleScene);
     // Create UI scene (above particles)
-    this.uiScene = new Scene(this);
+    this.uiScene = new VerticalLayout(this, {
+      debug: true,
+      debugColor: "#0f0",
+    });
     this.pipeline.add(this.uiScene);
     // Add buttons
     this.uiScene.add(
       new Button(this, {
-        x: 70,
-        y: 80,
+        y: 0,
         text: "Clear",
         onClick: this.clearParticles.bind(this),
       })
     );
     this.uiScene.add(
       new Button(this, {
-        x: 70,
-        y: 130,
+        y: 50,
         text: "Reset",
         onClick: () => {
           Painter.clear();
@@ -49,34 +60,67 @@ class ParticlesGame extends Game {
     );
     this.particlesCounter = this.uiScene.add(
       new Text(this, "Particles", {
-        x: 10,
-        y: 160,
+        x: 0,
+        y: 100,
+        color: "white",
+        debug: true,
+        align: "center",
+        baseline: "middle",
       })
     );
     // Input logic...
+    this.freeToCreate = true;
     this.events.on("mousemove", (e) => {
-      this.mouse.x = e.x;
-      this.mouse.y = e.y;
-      if (this.isDown) {
-        const p = new Particle(this, this.mouse.x, this.mouse.y);
-        this.particleScene.add(p);
-        this.particles.push(p);
-      }
+      this.mouse.x = e.x - this.particleScene.x;
+      this.mouse.y = e.y - this.particleScene.y;
+      this.createParticle();
     });
-    this.events.on("inputdown", () => (this.isDown = true));
+    this.events.on("inputdown", () => (this.isDown = this.createParticle()));
     this.events.on("inputup", () => (this.isDown = false));
     // Add particles
     this.spawnParticles();
     // Add FPS
-    this.uiScene.add(
+    this.pipeline.add(
       new FPSCounter(this, { color: "white", anchor: "bottom-right" })
     );
   }
 
+  createParticle() {
+    if (this.isDown && this.freeToCreate) {
+      this.freeToCreate = false;
+      const p = new Particle(this, this.mouse.x, this.mouse.y);
+      p._particleId = this.particles.length;
+      this.particleScene.add(p);
+      p.vx = 10;
+      p.vy = 10;
+      p.reset(this.mouse.x, this.mouse.y);
+      this.particles.push(p);
+      setTimeout(() => {
+        this.freeToCreate = true;
+        p.x = this.mouse.x;
+        p.y = this.mouse.y;
+      }, 1);
+      //console.log(x, y)
+    }
+    return true;
+  }
+
+  #prevWidth = 0;
+  #prevHeight = 0;
   update(dt) {
-    super.update(dt);
+    // Update scene dimensions based on margin
+    this.particleScene.width = this.width - this.MARGIN * 2;
+    this.particleScene.height = this.height - this.MARGIN * 2;
+    // Center the scene in the game
+    this.particleScene.x = this.width / 2;
+    this.particleScene.y = this.height / 2;
+    this.uiScene.width = 200;
+    this.uiScene.height = 200;
+    //
+    this.uiScene.x = this.particleScene.x - this.particleScene.width/2 + this.uiScene.width/2;
+    this.uiScene.y = this.particleScene.y - this.particleScene.height/2 + this.uiScene.height/2;
     this.particlesCounter.text = `Particles: ${this.particles.length}`;
-    this.particleScene.update(dt);
+    super.update(dt);
   }
 
   /**
@@ -96,103 +140,139 @@ class ParticlesGame extends Game {
     this.particles = [];
     for (let i = 0; i < this.NUM_PARTICLES; i++) {
       const particle = new Particle(this);
+      particle._particleId = i;
       this.particleScene.add(particle);
       this.particles.push(particle);
+      particle.reset();
     }
   }
 
   /**Override clear function to give pseudo trailling effect */
   clear() {
-    this.ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    this.ctx.fillStyle = "rgba(0, 0, 0, 0.21)";
     this.ctx.fillRect(0, 0, this.width, this.height);
   }
 }
 
 class Particle extends GameObject {
   constructor(game, _x, _y) {
-    super(game);
+    super(game, { crisp: false });
     this.size = Math.random() * 5 + 5;
     this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
-    this.reset();
-    this.x = _x || Math.random() * game.width;
-    this.y = _y || Math.random() * game.height;
-    this.shape = this.createRandomShape(this.x, this.y, this.size, this.color);
+    this.x = _x == undefined ? 0 : _x;
+    this.y = _y == undefined ? 0 : _y;
+    this.shape = this.createRandomShape();
     this.spin = (Math.random() - 0.5) * 0.2;
+    this._influenceRadius = 100;
+    this.resetVelocity();
   }
 
-  createRandomShape(x, y, size, color) {
+  createRandomShape() {
     const r = Math.random();
     if (r < 0.5) {
-      return new Shapes.Circle(x, y, size, {
-        fillColor: color,
-      });
+      return new Circle(this.size, { color: this.color });
     } else if (r < 0.66) {
-      return new Shapes.Square(x, y, size, {
-        fillColor: color,
-      });
+      return new Square(this.size, { color: this.color });
     } else if (r < 0.83) {
-      return new Shapes.Triangle(x, y, size * 2, {
-        fillColor: color,
-      });
+      return new Triangle(this.size * 2, { color: this.color });
     } else {
-      return new Shapes.Star(x, y, size, 5, 0.5, {
-        fillColor: color,
-      });
+      return new Star(this.size, 5, 0.5, { color: this.color });
     }
   }
 
-  reset() {
-    this.x = Math.random() * this.game.width;
-    this.y = Math.random() * this.game.height;
-    this.vx = Math.random() * 2 - 1;
-    this.vy = Math.random() * 2 - 1;
+  draw() {
+    super.draw();
+    this.shape.render();
+  }
+
+  resetVelocity() {
+    this.vx = Math.random() * 2 + 1 ;
+    this.vy = Math.random() * 2 + 1;
+  }
+
+  reset(x, y) {
+    const { width, height } = this.parent;
+    this.x = (Math.random() - 0.5) * width;
+    this.y = (Math.random() - 0.5) * height;
+    this.resetVelocity();
   }
 
   update(dt) {
-    const mouseX = this.game.mouse.x;
-    const mouseY = this.game.mouse.y;
+    const { mouse } = this.game;
+    const { width, height } = this.parent;
+    const halfWidth = width * 0.5 - this.size;
+    const halfHeight = height * 0.5 - this.size;
+    const timeScale = dt * 60;
 
-    const dx = mouseX - this.x;
-    const dy = mouseY - this.y;
-    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    // ---- Mouse repulsion (optimized) ----
+    const dx = this.x - mouse.x;
+    const dy = this.y - mouse.y;
+    const distSq = dx * dx + dy * dy;
+    const maxDistSq = 10000; // 100^2
 
-    //console.log("dx", dx, "dy", dy, "dist", dist);
+    if (distSq < maxDistSq && distSq > 0) {
+      const invDist = 1 / Math.sqrt(distSq);
+      const force = (100 - distSq * invDist) * 0.006; // 0.6/100
 
-    const force = Math.max((100 - dist) / 100, 0);
-    const fx = dx / dist;
-    const fy = dy / dist;
+      this.vx += dx * invDist * force;
+      this.vy += dy * invDist * force;
 
-    this.vx += fx * force * 0.6 + (Math.random() - 0.5) * 0.5;
-    this.vy += fy * force * 0.6 + (Math.random() - 0.5) * 0.5;
+      // Add some randomness but less frequently for performance
+      if (Math.random() < 0.1) {
+        this.vx += (Math.random() - 0.5) * 0.5;
+        this.vy += (Math.random() - 0.5) * 0.5;
+      }
+    }
 
-    this.vx *= 0.95;
-    this.vy *= 0.95;
+    // ---- Movement physics ----
+    this.vx *= 0.98;
+    this.vy *= 0.98;
 
+    // Store previous position for rotation calculation
+    const prevX = this.x;
+    const prevY = this.y;
+
+    // Update position with slight acceleration
     this.x += this.vx;
     this.y += this.vy;
+    this.vx *= 1.019;
+    this.vy *= 1.019;
 
-    const w = this.game.width;
-    const h = this.game.height;
+    // ---- Boundary handling (optimized) ----
+    const bounce = 0.8;
+    const randomPush = 0.5;
 
-    if (this.x < 0 || this.x > w) this.vx *= -1;
-    if (this.y < 0 || this.y > h) this.vy *= -1;
+    if (this.x < -halfWidth) {
+      this.x = -halfWidth;
+      this.vx = Math.abs(this.vx) * bounce;
+      this.vy += (Math.random() - 0.5) * randomPush;
+    } else if (this.x > halfWidth) {
+      this.x = halfWidth;
+      this.vx = -Math.abs(this.vx) * bounce;
+      this.vy += (Math.random() - 0.5) * randomPush;
+    }
 
-    this.x = Math.max(0, Math.min(w, this.x));
-    this.y = Math.max(0, Math.min(h, this.y));
+    if (this.y < -halfHeight) {
+      this.y = -halfHeight;
+      this.vy = Math.abs(this.vy) * bounce;
+      this.vx += (Math.random() - 0.5) * randomPush;
+    } else if (this.y > halfHeight) {
+      this.y = halfHeight;
+      this.vy = -Math.abs(this.vy) * bounce;
+      this.vx += (Math.random() - 0.5) * randomPush;
+    }
+    const moveX = this.x - prevX;
+    const moveY = this.y - prevY;
+    
+    this.rotation += this.spin * timeScale;
 
-    this.shape.x = this.x;
-    this.shape.y = this.y;
-    this.shape.rotation += this.spin + (this.vx + this.vy) * 0.05;
-  }
 
-  render() {
-    this.shape.draw();
+    super.update(dt);
   }
 }
 
 window.addEventListener("load", () => {
   const canvas = document.getElementById("game");
   const game = new ParticlesGame(canvas);
-  game.init();
   game.start();
 });

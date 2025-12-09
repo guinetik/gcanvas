@@ -1,5 +1,5 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 /**
  * Cylinder - A 3D-looking isometric cylinder with rotation support.
@@ -16,8 +16,6 @@ import { Painter } from "../painter.js";
 export class Cylinder extends Shape {
   /**
    * Create a cylinder
-   * @param {number} x - X position (center of the cylinder)
-   * @param {number} y - Y position (center of the cylinder)
    * @param {number} radius - Radius of the cylinder
    * @param {number} height - Height of the cylinder
    * @param {object} options - Customization options
@@ -26,16 +24,16 @@ export class Cylinder extends Shape {
    * @param {string} [options.sideColor] - Color of the side face
    * @param {number} [options.segments] - Number of segments to approximate the curved surface
    * @param {Array<string>} [options.visibleFaces] - Array of face keys to render
-   * @param {string} [options.strokeColor] - Optional stroke around each face
+   * @param {string} [options.stroke] - Optional stroke around each face
    * @param {number} [options.lineWidth] - Stroke width
    * @param {number} [options.rotationX] - Rotation around X axis in radians
    * @param {number} [options.rotationY] - Rotation around Y axis in radians
    * @param {number} [options.rotationZ] - Rotation around Z axis in radians
    */
-  constructor(x, y, radius = 40, height = 80, options = {}) {
-    super(x, y, options);
+  constructor(radius = 40, options = {}) {
+    super(options);
     this.radius = radius;
-    this.height = height;
+    this.height = options.height || 80;
 
     // Number of segments used to approximate the circle
     this.segments = options.segments || 24;
@@ -45,7 +43,7 @@ export class Cylinder extends Shape {
     this.bottomColor = options.bottomColor || "#FF0FFF";
     this.sideColor = options.sideColor || "#00FF00";
 
-    this.strokeColor = options.strokeColor || "#000000";
+    this.stroke = options.stroke || "#000000";
     this.lineWidth = options.lineWidth || 1;
 
     // Rotation angles (in radians)
@@ -212,25 +210,28 @@ export class Cylinder extends Shape {
     facesWithDepth.sort((a, b) => b.z - a.z);
 
     // Draw faces in depth order
-    this.renderWithTransform(() => {
-      for (const face of facesWithDepth) {
-        let color;
+    for (const face of facesWithDepth) {
+      let color;
 
-        switch (face.type) {
-          case "top":
-            color = this.topColor;
-            break;
-          case "bottom":
-            color = this.bottomColor;
-            break;
-          case "side":
-            color = this.sideColor;
-            break;
-        }
-
-        Painter.polygon(face.points, color, this.strokeColor, this.lineWidth);
+      switch (face.type) {
+        case "top":
+          color = this.topColor;
+          break;
+        case "bottom":
+          color = this.bottomColor;
+          break;
+        case "side":
+          color = this.sideColor;
+          break;
       }
-    });
+
+      Painter.shapes.polygon(
+        face.points,
+        color,
+        this.stroke,
+        this.lineWidth
+      );
+    }
   }
 
   /**

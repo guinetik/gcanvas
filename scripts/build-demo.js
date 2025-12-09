@@ -27,19 +27,19 @@ function copyRecursive(src, dest) {
   }
 }
 
-function rewriteImportsInPublic(dir) {
+function rewriteImports(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name);
 
     if (entry.isDirectory()) {
-      rewriteImportsInPublic(fullPath);
+      rewriteImports(fullPath);
     } else if (entry.isFile() && /\.(js|html)$/.test(entry.name)) {
       let content = fs.readFileSync(fullPath, "utf-8");
 
       // Replace all imports pointing to any form of src/
       content = content.replace(
         /from\s+["'](\.{1,2}\/)+src\/[^"']+["']/g,
-        `from "/gcanvas/gcanvas.es.min.js"`
+        `from "/gcanvas.es.min.js"`
       );
 
       fs.writeFileSync(fullPath, content);
@@ -47,7 +47,10 @@ function rewriteImportsInPublic(dir) {
   }
 }
 
-function buildAndCopy() {
+function run() {
+  console.log("🧹 Cleaning public/");
+  cleanPublic();
+
   console.log("📦 Running build");
   execSync("npm run build", { stdio: "inherit" });
 
@@ -58,15 +61,9 @@ function buildAndCopy() {
   fs.copyFileSync(ESM_FILE, path.join(PUBLIC, "gcanvas.es.min.js"));
 
   console.log("✍️ Rewriting imports in public/...");
-  rewriteImportsInPublic(PUBLIC);
+  rewriteImports(PUBLIC);
 
   console.log("✅ build:demo complete");
-}
-
-function run() {
-  console.log("🧹 Cleaning public/");
-  cleanPublic();
-  buildAndCopy();
 }
 
 run();

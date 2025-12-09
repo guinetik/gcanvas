@@ -1,5 +1,5 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 export class Cloud extends Shape {
   constructor(x, y, size = 40, options = {}) {
@@ -21,9 +21,7 @@ export class Cloud extends Shape {
       ["Z"],
     ];
 
-    this.renderWithTransform(() => {
-      Painter.path(path, this.fillColor, this.strokeColor, this.lineWidth);
-    });
+    Painter.lines.path(path, this.fillColor, this.strokeColor, this.lineWidth);
   }
 
   getBounds() {

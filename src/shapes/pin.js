@@ -1,9 +1,9 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 export class Pin extends Shape {
-  constructor(x, y, radius = 20, options = {}) {
-    super(x, y, options);
+  constructor(radius = 20, options = {}) {
+    super(options);
     this.radius = radius;
   }
 
@@ -13,29 +13,24 @@ export class Pin extends Shape {
     const h = r * 2.5;
     const baseY = 0;
 
-    this.renderWithTransform(() => {
-      Painter.ctx.beginPath();
+    Painter.lines.beginPath();
 
-      // Draw circle head
-      Painter.ctx.arc(0, baseY, r, Math.PI, 0);
+    // Draw circle head
+    Painter.shapes.arc(0, baseY, r, Math.PI, 0);
 
-      // Draw tail (triangle)
-      Painter.ctx.lineTo(r, baseY);
-      Painter.ctx.lineTo(0, h);
-      Painter.ctx.lineTo(-r, baseY);
-      Painter.ctx.closePath();
+    // Draw tail (triangle)
+    Painter.lines.lineTo(r, baseY);
+    Painter.lines.lineTo(0, h);
+    Painter.lines.lineTo(-r, baseY);
+    Painter.lines.closePath();
 
-      if (this.fillColor) {
-        Painter.ctx.fillStyle = this.fillColor;
-        Painter.ctx.fill();
-      }
+    if (this.color) {
+      Painter.colors.fill(this.color);
+    }
 
-      if (this.strokeColor) {
-        Painter.ctx.strokeStyle = this.strokeColor;
-        Painter.ctx.lineWidth = this.lineWidth;
-        Painter.ctx.stroke();
-      }
-    });
+    if (this.stroke) {
+      Painter.colors.stroke(this.stroke, this.lineWidth);
+    }
   }
 
   getBounds() {

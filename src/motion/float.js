@@ -40,8 +40,8 @@ export function floatV1(
   // Initialize state if not provided, capturing initial position
   if (!state) {
     state = {
-      initialX: 0,
-      initialY: 0,
+      initialX: target.x,
+      initialY: target.y,
       started: false,
       completed: false,
       loopCount: 0,
@@ -86,7 +86,7 @@ export function floatV1(
   // This properly centers the patrol area around the initial position
   const x = centerX + dx * radius;
   const y = centerY + dy * radius;
-  //console.log(x, y, centerX, centerY);
+  //this.logger.log(x, y, centerX, centerY);
   // Calculate if currently moving or paused
   // Object "pauses" when velocity is low (near turning points of sine waves)
   const dxdt =

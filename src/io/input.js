@@ -19,7 +19,7 @@ export class Input {
 
   static _onDown = (e) => {
     Input.down = true;
-    //console.log("mousedown", e.offsetX, e.offsetY);
+    //this.logger.log("mousedown", e.offsetX, e.offsetY);
     Input._setPosition(e.offsetX, e.offsetY);
     Input.game.events.emit("inputdown", e);
   };

@@ -1,5 +1,5 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 /**
  * StickFigure - A simple humanoid stick figure composed of circles and lines.
@@ -11,19 +11,19 @@ export class StickFigure extends Shape {
    * @param {number} y - Y position (center of figure)
    * @param {number} scale - Scale multiplier for size
    * @param {object} options - Style options
-   * @param {string} [options.strokeColor="#000"] - Line color
+   * @param {string} [options.stroke="#000"] - Line color
    * @param {string} [options.headColor] - Fill color of the head
    * @param {string} [options.jointColor] - Fill color of joint circles
    * @param {number} [options.lineWidth=2] - Line width
    * @param {boolean} [options.showJoints=true] - Whether to draw joints
    */
-  constructor(x, y, scale = 1, options = {}) {
-    super(x, y, options);
+  constructor(scale = 1, options = {}) {
+    super(options);
     this.scale = scale;
 
-    this.strokeColor = options.strokeColor || "#000";
-    this.headColor = options.headColor || this.strokeColor;
-    this.jointColor = options.jointColor || this.strokeColor;
+    this.stroke = options.stroke || "#000";
+    this.headColor = options.headColor || this.stroke;
+    this.jointColor = options.jointColor || this.stroke;
     this.lineWidth = options.lineWidth || 2;
     this.showJoints = options.showJoints !== false; // default to true
   }
@@ -42,66 +42,64 @@ export class StickFigure extends Shape {
     const hipX = 10 * s;
     const legY = torsoBottom + 40 * s;
     const jointR = 3 * s;
-    this.renderWithTransform(() => {
-      // Head
-      Painter.fillCircle(0, headCenterY, headR, this.headColor);
-      Painter.strokeCircle(
-        0,
-        headCenterY,
-        headR,
-        this.strokeColor,
-        this.lineWidth
+    // Head
+    Painter.shapes.fillCircle(0, headCenterY, headR, this.headColor);
+    Painter.shapes.strokeCircle(
+      0,
+      headCenterY,
+      headR,
+      this.stroke,
+      this.lineWidth
+    );
+    // Torso
+    Painter.lines.line(
+      0,
+      torsoTop,
+      0,
+      torsoBottom,
+      this.stroke,
+      this.lineWidth
+    );
+    // Arms
+    Painter.lines.line(
+      -shoulderX,
+      armY,
+      shoulderX,
+      armY,
+      this.stroke,
+      this.lineWidth
+    );
+    // Legs
+    Painter.lines.line(
+      0,
+      torsoBottom,
+      -hipX,
+      legY,
+      this.stroke,
+      this.lineWidth
+    );
+    Painter.lines.line(
+      0,
+      torsoBottom,
+      hipX,
+      legY,
+      this.stroke,
+      this.lineWidth
+    );
+    // Joints (optional)
+    if (this.showJoints) {
+      const joints = [
+        [0, torsoTop],
+        [-shoulderX, armY],
+        [shoulderX, armY],
+        [0, torsoBottom],
+        [-hipX, legY],
+        [hipX, legY],
+      ];
+      joints.forEach(([jx, jy]) =>
+        Painter.shapes.fillCircle(jx, jy, jointR, this.jointColor)
       );
-      // Torso
-      Painter.line(
-        0,
-        torsoTop,
-        0,
-        torsoBottom,
-        this.strokeColor,
-        this.lineWidth
-      );
-      // Arms
-      Painter.line(
-        -shoulderX,
-        armY,
-        shoulderX,
-        armY,
-        this.strokeColor,
-        this.lineWidth
-      );
-      // Legs
-      Painter.line(
-        0,
-        torsoBottom,
-        -hipX,
-        legY,
-        this.strokeColor,
-        this.lineWidth
-      );
-      Painter.line(
-        0,
-        torsoBottom,
-        hipX,
-        legY,
-        this.strokeColor,
-        this.lineWidth
-      );
-      // Joints (optional)
-      if (this.showJoints) {
-        const joints = [
-          [0, torsoTop],
-          [-shoulderX, armY],
-          [shoulderX, armY],
-          [0, torsoBottom],
-          [-hipX, legY],
-          [hipX, legY],
-        ];
-        joints.forEach(([jx, jy]) =>
-          Painter.fillCircle(jx, jy, jointR, this.jointColor)
-        );
-      }
-    });
+    }
   }
 
   getBounds() {

@@ -1,5 +1,5 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 /**
  * Sphere - A 3D-looking isometric sphere with rotation support.
@@ -24,14 +24,14 @@ export class Sphere extends Shape {
    * @param {number} [options.hSegments] - Number of horizontal segments
    * @param {number} [options.vSegments] - Number of vertical segments
    * @param {boolean} [options.wireframe] - Whether to render as wireframe
-   * @param {string} [options.strokeColor] - Color of wireframe or outline
+   * @param {string} [options.stroke] - Color of wireframe or outline
    * @param {number} [options.lineWidth] - Stroke width
    * @param {number} [options.rotationX] - Rotation around X axis in radians
    * @param {number} [options.rotationY] - Rotation around Y axis in radians
    * @param {number} [options.rotationZ] - Rotation around Z axis in radians
    */
-  constructor(x, y, radius = 50, options = {}) {
-    super(x, y, options);
+  constructor(radius = 50, options = {}) {
+    super(options);
     this.radius = radius;
 
     // Number of segments used to approximate the sphere
@@ -42,7 +42,7 @@ export class Sphere extends Shape {
     this.color = options.color || "#6495ED";
     this.highlightColor = options.highlightColor || "#FFFFFF"; // For gradient effect
     this.wireframe = options.wireframe || false;
-    this.strokeColor = options.strokeColor || "#333333";
+    this.stroke = options.stroke || "#333333";
     this.lineWidth = options.lineWidth || 1;
 
     // Rotation angles (in radians)
@@ -265,40 +265,34 @@ export class Sphere extends Shape {
         });
       }
     }
-
     // Sort faces by depth (back to front)
     faces.sort((a, b) => b.z - a.z);
-
     // Draw faces in depth order
-    this.renderWithTransform(() => {
-      if (this.wireframe) {
-        // Draw as wireframe
-        for (const face of faces) {
-          const pts = face.points;
-          for (let i = 0; i < pts.length; i++) {
-            const j = (i + 1) % pts.length;
-            Painter.line(
-              pts[i].x,
-              pts[i].y,
-              pts[j].x,
-              pts[j].y,
-              this.strokeColor,
-              this.lineWidth
-            );
-          }
-        }
-      } else {
-        // Draw as solid with lighting effect
-        for (const face of faces) {
-          Painter.polygon(
-            face.points,
-            face.color,
-            this.strokeColor,
+    if (this.wireframe) {
+      // Draw as wireframe
+      for (const face of faces) {
+        const pts = face.points;
+        for (let i = 0; i < pts.length; i++) {
+          const j = (i + 1) % pts.length;
+          Painter.lines.line(
+            pts[i].x,
+            pts[i].y,
+            pts[j].x,
+            pts[j].y,
+            this.stroke,
             this.lineWidth
           );
         }
       }
-    });
+    }
+    for (const face of faces) {
+      Painter.shapes.polygon(
+        face.points,
+        face.color,
+        this.stroke,
+        this.lineWidth
+      );
+    }
   }
 
   /**

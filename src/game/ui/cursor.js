@@ -1,4 +1,4 @@
-import { GameObject } from "../go.js";
+import { GameObject } from "../objects/go.js";
 
 /**
  * Cursor
@@ -58,6 +58,12 @@ export class Cursor extends GameObject {
     this.game.events.on("inputup", () => {
       this.isDown = false;
     });
+    this.game.events.on("mouseover", () => {
+      this.visible = false;
+    });
+    this.game.events.on("mouseout", () => {
+      this.visible = true;
+    });
   }
 
   activate() {
@@ -71,28 +77,17 @@ export class Cursor extends GameObject {
     // Show the native cursor
     this.game.canvas.style.cursor = "default";
   }
-
-  /**
-   * update UI
-   */
-  update(dt) {
-    super.update(dt);
-  }
-
   /**
    * Renders whichever shape is appropriate based on mouse pressed state.
    */
-  render() {
-    //console.log("render cursor", this.normalShape); 
+  draw() {
+    super.draw();
+    //this.logger.log("render cursor", this.normalShape); 
     if (!this.active) return;
     // Decide which shape to draw
     const shape = this.isDown && this.pressedShape ? this.pressedShape : this.normalShape;
     if (!shape) return;
-    // Move the shape to the cursor position
-    shape.x = this.x + this.offsetX;
-    shape.y = this.y + this.offsetY;
     // Draw it
-    shape.draw();
-    super.render();
+    shape.render();
   }
 }

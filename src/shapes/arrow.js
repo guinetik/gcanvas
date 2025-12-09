@@ -1,10 +1,9 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 export class Arrow extends Shape {
-  constructor(x, y, length, width, options = {}) {
-    super(x, y, options);
+  constructor(length, options = {}) {
+    super(options);
     this.length = length;
-    this.width = width;
   }
 
   draw() {
@@ -13,27 +12,22 @@ export class Arrow extends Shape {
     const headLength = this.length * 0.4;
     const shaftLength = this.length - headLength;
 
-    this.renderWithTransform(() => {
-      Painter.ctx.beginPath();
-      Painter.ctx.moveTo(-shaftLength / 2, -halfW);
-      Painter.ctx.lineTo(shaftLength / 2, -halfW);
-      Painter.ctx.lineTo(shaftLength / 2, -this.width);
-      Painter.ctx.lineTo(this.length / 2, 0);
-      Painter.ctx.lineTo(shaftLength / 2, this.width);
-      Painter.ctx.lineTo(shaftLength / 2, halfW);
-      Painter.ctx.lineTo(-shaftLength / 2, halfW);
-      Painter.ctx.closePath();
+    Painter.lines.beginPath();
+    Painter.lines.moveTo(-shaftLength / 2, -halfW);
+    Painter.lines.lineTo(shaftLength / 2, -halfW);
+    Painter.lines.lineTo(shaftLength / 2, -this.width);
+    Painter.lines.lineTo(this.length / 2, 0);
+    Painter.lines.lineTo(shaftLength / 2, this.width);
+    Painter.lines.lineTo(shaftLength / 2, halfW);
+    Painter.lines.lineTo(-shaftLength / 2, halfW);
+    Painter.lines.closePath();
 
-      if (this.fillColor) {
-        Painter.ctx.fillStyle = this.fillColor;
-        Painter.ctx.fill();
-      }
+    if (this.color) {
+      Painter.colors.fill(this.color);
+    }
 
-      if (this.strokeColor) {
-        Painter.ctx.strokeStyle = this.strokeColor;
-        Painter.ctx.lineWidth = this.lineWidth;
-        Painter.ctx.stroke();
-      }
-    });
+    if (this.stroke) {
+      Painter.colors.stroke(this.stroke, this.lineWidth);
+    }
   }
 }

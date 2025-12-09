@@ -1,106 +1,84 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 /**
  * PatternRectangle - A drawable centered rectangle filled with a pattern.
- *
- * Draws a rectangle from its center filled with an image pattern.
+ * Supports lazy image loading and CanvasImageSource types.
  */
 export class PatternRectangle extends Shape {
   /**
-   * @param {number} x - Center X
-   * @param {number} y - Center Y
-   * @param {number} width - Rectangle width
-   * @param {number} height - Rectangle height
-   * @param {HTMLImageElement|HTMLCanvasElement} image - Image to create pattern from
-   * @param {string} [repetition='repeat'] - 'repeat', 'repeat-x', 'repeat-y', or 'no-repeat'
+   * @param {CanvasImageSource|null} image - Optional pattern source
+   * @param {string} [repetition='repeat'] - Pattern repetition mode
    * @param {Object} [options] - Shape rendering options
    */
-  constructor(x, y, width, height, image, repetition = "repeat", options = {}) {
-    super(x, y, options);
-    this.width = width;
-    this.height = height;
+  constructor(image = null, repetition = "repeat", options = {}) {
+    super(options);
     this.image = image;
     this.repetition = repetition;
     this.pattern = null;
 
-    // Initialize pattern if image is already loaded
-    if (image.complete) {
-      this.createPattern();
-    } else {
-      // Set up image load event handler
-      image.addEventListener("load", () => this.createPattern());
-    }
+    if (image) this._tryCreatePattern(image);
   }
 
-  /**
-   * Creates the pattern from the image
-   * @private
-   */
-  createPattern() {
-    this.pattern = Painter.ctx.createPattern(this.image, this.repetition);
-  }
+  _tryCreatePattern(image) {
+    const isAsyncImage =
+      image instanceof HTMLImageElement ||
+      (typeof image.complete === "boolean");
 
-  /**
-   * Renders the pattern-filled rectangle
-   */
-  draw() {
-    super.draw();
-
-    // Skip drawing if pattern isn't ready
-    if (!this.pattern && this.image.complete) {
-      this.createPattern();
-    }
-
-    this.renderWithTransform(() => {
-      const x = -this.width / 2;
-      const y = -this.height / 2;
-
-      if (this.pattern) {
-        // Use fillPattern if pattern is available
-        Painter.fillPattern(
-          this.image,
-          this.repetition,
-          x,
-          y,
-          this.width,
-          this.height
-        );
-      } else if (this.strokeColor) {
-        // Fallback to just the outline if pattern isn't ready
-        Painter.strokeRect(
-          x,
-          y,
-          this.width,
-          this.height,
-          this.strokeColor,
-          this.lineWidth
-        );
+    if (isAsyncImage) {
+      if (image.complete) {
+        this._createPattern();
+      } else {
+        image.addEventListener("load", () => this._createPattern(), {
+          once: true,
+        });
       }
-    });
+    } else {
+      this._createPattern();
+    }
   }
 
-  /**
-   * Update the pattern image
-   * @param {HTMLImageElement|HTMLCanvasElement} image - New image for pattern
-   * @param {string} [repetition] - New repetition style (optional)
-   */
+  _createPattern() {
+    this.pattern = Painter.img.createPattern(this.image, this.repetition);
+  }
+
   setImage(image, repetition) {
     this.image = image;
     if (repetition) this.repetition = repetition;
-    this.pattern = null; // Reset pattern
+    this.pattern = null;
+    this._tryCreatePattern(image);
+  }
 
-    if (image.complete) {
-      this.createPattern();
-    } else {
-      image.addEventListener("load", () => this.createPattern());
+  draw() {
+    super.draw();
+
+    if (!this.pattern && this.image) {
+      this._tryCreatePattern(this.image);
+    }
+
+    const x = -this.width / 2;
+    const y = -this.height / 2;
+
+    if (this.pattern) {
+      Painter.img.fillPattern(
+        this.pattern,
+        x,
+        y,
+        this.width,
+        this.height
+      );
+    } else if (this.strokeColor) {
+      Painter.shapes.outlineRect(
+        x,
+        y,
+        this.width,
+        this.height,
+        this.strokeColor,
+        this.lineWidth
+      );
     }
   }
 
-  /**
-   * Returns the bounding box
-   * @returns {{x: number, y: number, width: number, height: number}}
-   */
   getBounds() {
     return {
       x: this.x,

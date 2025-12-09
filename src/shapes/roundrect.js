@@ -1,5 +1,5 @@
 import { Shape } from "./shape.js";
-import { Painter } from "../painter.js";
+import { Painter } from "../painter/painter.js";
 
 /**
  * RoundedRectangle - A drawable centered rectangle with rounded corners.
@@ -15,11 +15,8 @@ export class RoundedRectangle extends Shape {
    * @param {number|number[]} radii - Corner radius or array of radii for each corner
    * @param {Object} [options] - Shape rendering options
    */
-  constructor(x, y, width, height, radii = 0, options = {}) {
-    super(x, y, options);
-    this.width = width;
-    this.height = height;
-
+  constructor(radii = 0, options = {}) {
+    super(options);
     // Handle radius either as a single value or array of 4 values
     if (typeof radii === "number") {
       this.radii = [radii, radii, radii, radii]; // [topLeft, topRight, bottomRight, bottomLeft]
@@ -44,46 +41,43 @@ export class RoundedRectangle extends Shape {
    */
   draw() {
     super.draw();
-    this.renderWithTransform(() => {
-      const x = -this.width / 2;
-      const y = -this.height / 2;
-
-      // Use the Painter's roundRect utility methods
-      if (this.fillColor && this.strokeColor) {
-        // If both fill and stroke are needed
-        Painter.roundRect(
-          x,
-          y,
-          this.width,
-          this.height,
-          this.radii,
-          this.fillColor,
-          this.strokeColor,
-          this.lineWidth
-        );
-      } else if (this.fillColor) {
-        // If only fill is needed
-        Painter.fillRoundRect(
-          x,
-          y,
-          this.width,
-          this.height,
-          this.radii,
-          this.fillColor
-        );
-      } else if (this.strokeColor) {
-        // If only stroke is needed
-        Painter.strokeRoundRect(
-          x,
-          y,
-          this.width,
-          this.height,
-          this.radii,
-          this.strokeColor,
-          this.lineWidth
-        );
-      }
-    });
+    const x = -this.width / 2;
+    const y = -this.height / 2;
+    // Use the Painter's roundRect utility methods
+    if (this.color && this.stroke) {
+      // If both fill and stroke are needed
+      Painter.shapes.roundRect(
+        x,
+        y,
+        this.width,
+        this.height,
+        this.radii,
+        this.color,
+        this.stroke,
+        this.lineWidth
+      );
+    } else if (this.color) {
+      // If only fill is needed
+      Painter.shapes.fillRoundRect(
+        x,
+        y,
+        this.width,
+        this.height,
+        this.radii,
+        this.color
+      );
+    } else if (this.stroke) {
+      // If only stroke is needed
+      Painter.shapes.strokeRoundRect(
+        x,
+        y,
+        this.width,
+        this.height,
+        this.radii,
+        this.stroke,
+        this.lineWidth
+      );
+    }
   }
 
   /**
