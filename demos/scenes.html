@@ -3,25 +3,92 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Groups</title>
+  <title>Scenes Demo</title>
   <link rel="stylesheet" href="demos.css" />
+  <style>
+    #debug-toggle {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 100;
+      padding: 10px 20px;
+      font-family: monospace;
+      font-size: 14px;
+      background: #333;
+      color: #ff00ff;
+      border: 2px solid #ff00ff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    #debug-toggle:hover {
+      background: #ff00ff;
+      color: #000;
+    }
+    #debug-toggle.active {
+      background: #ff00ff;
+      color: #000;
+    }
+  </style>
 </head>
 
 <body>
-  <div id="info">
-    <strong>Scenes</strong> —
-    A <code>Scene</code>
-  </div>  
+  <div id="info" class="light">
+    <strong>Scenes Demo</strong> —
+    A <code>Scene</code> is a container for <code>GameObjects</code> that provides its own coordinate system and transforms.
+    Scenes can be nested inside other scenes, support z-ordering with <code>bringToFront()</code> and <code>sendToBack()</code>,
+    and inherit from <code>GameObject</code> so they have full transform support (position, rotation, scale).
+    Use scenes to organize game layers, UI panels, or any logical grouping of objects.
+  </div>
+  <button id="debug-toggle">Toggle Debug</button>
   <canvas id="game"></canvas>
   <script type="module">
     import { MyGame } from './js/scenes.js';
 
     window.addEventListener("load", () => {
-        const canvas = document.getElementById("game");
-        const game = new MyGame(canvas);
-        game.start();
+      const canvas = document.getElementById("game");
+      const game = new MyGame(canvas);
+      game.start();
+
+      // Debug toggle
+      let debugEnabled = false;
+      const debugBtn = document.getElementById("debug-toggle");
+
+      debugBtn.addEventListener("click", () => {
+        debugEnabled = !debugEnabled;
+        debugBtn.classList.toggle("active", debugEnabled);
+        debugBtn.textContent = debugEnabled ? "Debug: ON" : "Toggle Debug";
+
+        // Toggle debug on all scenes recursively
+        function toggleSceneDebug(scene) {
+          if (scene._debug !== undefined) {
+            scene._debug = debugEnabled;
+          }
+          if (scene.children) {
+            scene.children.forEach(child => {
+              if (child._debug !== undefined) {
+                child._debug = debugEnabled;
+              }
+              // Check for nested scenes
+              if (child.scene) toggleSceneDebug(child.scene);
+              if (child.outerScene) toggleSceneDebug(child.outerScene);
+              if (child.innerScene) toggleSceneDebug(child.innerScene);
+            });
+          }
+        }
+
+        // Toggle main scene and all nested scenes
+        if (game.mainScene) {
+          toggleSceneDebug(game.mainScene);
+          // Also toggle on demo objects that have scenes
+          game.mainScene.children.forEach(demo => {
+            if (demo.scene) toggleSceneDebug(demo.scene);
+            if (demo.outerScene) toggleSceneDebug(demo.outerScene);
+            if (demo.innerScene) toggleSceneDebug(demo.innerScene);
+          });
+        }
+      });
     });
-</script>
+  </script>
 </body>
 
 </html>
