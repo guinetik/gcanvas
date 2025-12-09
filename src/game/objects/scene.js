@@ -131,13 +131,19 @@ export class Scene extends GameObject {
       });
   }
 
+  /**
+   * Returns debug bounds in local space (centered at origin).
+   * Used for debug drawing after transforms have been applied.
+   * @returns {{x: number, y: number, width: number, height: number}}
+   */
   getDebugBounds() {
-    // For Scenes, always return the full size centered around x,y
+    // Return bounds centered at local origin (0, 0)
+    // This works because debug is drawn after translation to scene's position
     return {
       width: this.width,
       height: this.height,
-      x: this.x - this.width / 2,
-      y: this.y - this.height / 2,
+      x: -this.width / 2,
+      y: -this.height / 2,
     };
   }
 

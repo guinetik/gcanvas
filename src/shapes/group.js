@@ -274,37 +274,21 @@ export class Group extends Transformable {
     };
   }
 
+  /**
+   * Returns debug bounds in local space (centered at origin).
+   * Used for debug drawing after transforms have been applied.
+   * @returns {{x: number, y: number, width: number, height: number}}
+   */
   getDebugBounds() {
     const bounds = this.calculateBounds();
 
-    // Calculate the actual left-top coordinates from the children
-    let minX = Infinity;
-    let minY = Infinity;
-
-    for (const child of this.children) {
-      const childX = child.x;
-      const childY = child.y;
-      const childWidth = child.width;
-      const childHeight = child.height;
-
-      const childLeft = childX - childWidth / 2;
-      const childTop = childY - childHeight / 2;
-
-      minX = Math.min(minX, childLeft);
-      minY = Math.min(minY, childTop);
-    }
-
-    // If no children, use the group's position
-    if (!this.children?.length) {
-      minX = this.x - bounds.width / 2;
-      minY = this.y - bounds.height / 2;
-    }
-
+    // Return bounds centered at local origin (0, 0)
+    // This works because debug is drawn after translation to group's position
     return {
       width: bounds.width,
       height: bounds.height,
-      x: minX,
-      y: minY,
+      x: -bounds.width / 2,
+      y: -bounds.height / 2,
     };
   }
 

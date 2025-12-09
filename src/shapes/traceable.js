@@ -10,9 +10,14 @@ export class Traceable extends Geometry2d {
     this.logger.log("Traceable", this.x, this.y, this.width, this.height);
   }
 
-  async drawDebug() {
+  /**
+   * Draws debug bounding box in local space (after translation and transforms).
+   * Should be called from within the transformed context.
+   */
+  drawDebug() {
     if (!this._debug) return;
-    // Get the debug bounds
+
+    // Get the debug bounds in local space
     const debugBounds = this.getDebugBounds();
     this.logger.log(
       this.constructor.name,
@@ -23,13 +28,7 @@ export class Traceable extends Geometry2d {
       debugBounds.height
     );
 
-    Painter.save();
-    Painter.scale(this.scaleX, this.scaleY);
-    Painter.rotate(this.rotation);
-    // Important: We DO NOT translate here - we draw in world coordinates
-    // We're in pre-translation context from render()
-    // Draw the debug rectangle around the object's actual position and size
-    // For Scenes, this should create a box that surrounds all their content
+    // Draw debug rectangle in local space (already translated and transformed)
     Painter.shapes.outlineRect(
       debugBounds.x,
       debugBounds.y,
@@ -38,16 +37,20 @@ export class Traceable extends Geometry2d {
       this._debugColor,
       2
     );
-    Painter.restore();
   }
 
+  /**
+   * Returns debug bounds in local space (centered at origin).
+   * Override in subclasses for custom debug bounds.
+   * @returns {{x: number, y: number, width: number, height: number}}
+   */
   getDebugBounds() {
-    // Always return bounds centered around origin
+    // Return bounds centered at local origin (0, 0)
     return {
       width: this.width,
       height: this.height,
-      x: this.x - this.width / 2,
-      y: this.y - this.height / 2,
+      x: -this.width / 2,
+      y: -this.height / 2,
     };
   }
 
