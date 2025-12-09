@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Space Invaders - GCanvas Demo</title>
+  <link rel="stylesheet" href="demos.css" />
+  <style>
+    /* Game-specific layout */
+    body {
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      background: #000011;
+    }
+    #info {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+    }
+    canvas#game {
+      display: block;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Space Invaders</strong> — A classic arcade game clone built with GCanvas.<br>
+    <strong>Controls:</strong> Arrow keys or A/D to move, Space to shoot.<br>
+    <strong>Objective:</strong> Destroy all aliens before they reach the bottom!
+  </div>
+  <canvas id="game" width="800" height="600"></canvas>
+
+  <script type="module">
+    import { SpaceGame } from "./js/space.js";
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new SpaceGame(canvas);
+      game.enablePauseOnBlur(true);
+      game.setFPS(60);
+      game.start();
+    });
+  </script>
+</body>
+
+</html>
