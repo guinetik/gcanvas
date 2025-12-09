@@ -6,21 +6,32 @@
   <title>Space Invaders - GCanvas Demo</title>
   <link rel="stylesheet" href="demos.css" />
   <style>
-    /* Game-specific layout */
-    body {
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
+    /* Fullscreen game layout */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
       background: #000011;
     }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
     #info {
-      position: relative;
-      width: 100%;
-      max-width: 800px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      background: rgba(0, 0, 17, 0.85);
+      border-bottom: 1px solid #333;
     }
     canvas#game {
       display: block;
-      margin-top: 10px;
+      width: 100%;
+      height: 100%;
     }
   </style>
 </head>
@@ -31,17 +42,41 @@
     <strong>Controls:</strong> Arrow keys or A/D to move, Space to shoot.<br>
     <strong>Objective:</strong> Destroy all aliens before they reach the bottom!
   </div>
-  <canvas id="game" width="800" height="600"></canvas>
+  <canvas id="game"></canvas>
 
   <script type="module">
     import { SpaceGame } from "./js/space.js";
-    window.addEventListener("load", () => {
+
+    let game = null;
+
+    function startGame() {
+      // Clean up any existing game instance (fixes HMR duplication bug)
+      if (game) {
+        game.stop();
+        game = null;
+      }
+
       const canvas = document.getElementById("game");
-      const game = new SpaceGame(canvas);
+      game = new SpaceGame(canvas);
       game.enablePauseOnBlur(true);
       game.setFPS(60);
       game.start();
-    });
+
+      // Store reference for HMR cleanup
+      window.__spaceGame = game;
+    }
+
+    // Clean up on HMR
+    if (import.meta.hot) {
+      import.meta.hot.dispose(() => {
+        if (window.__spaceGame) {
+          window.__spaceGame.stop();
+          window.__spaceGame = null;
+        }
+      });
+    }
+
+    window.addEventListener("load", startGame);
   </script>
 </body>
 

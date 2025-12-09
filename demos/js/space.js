@@ -12,6 +12,8 @@ import {
   Easing,
   Motion,
   Tweenetik,
+  Star,
+  Button,
 } from "../../src/index";
 
 // ==========================================================================
@@ -39,6 +41,13 @@ const ALIEN_MOVE_SPEED = 30;
 const ALIEN_DROP_DISTANCE = 20;
 const ALIEN_SHOOT_CHANCE = 0.002;
 const ALIEN_BULLET_SPEED = 200;
+
+// Power-up constants
+const POWERUP_SPAWN_CHANCE = 0.0003; // Per frame chance for 1-Up (rare)
+const STARPOWER_SPAWN_CHANCE = 0.001; // Star power (more common for fun)
+const POWERUP_FALL_SPEED = 80;
+const POWERUP_SIZE = 24;
+const STARPOWER_DURATION = 8; // Seconds of invincibility
 
 // ==========================================================================
 // Player Ship
@@ -148,25 +157,56 @@ class Player extends GameObject {
     this.engineRight = engineRight;
     this.engineTimer = 0;
 
+    // Banking/tilt when moving
+    this.targetTilt = 0;
+    this.currentTilt = 0;
+    this.maxTilt = 15; // Max degrees of rotation
+    this.tiltSpeed = 8; // How fast to reach target tilt
+
     this.canShoot = true;
     this.shootCooldown = 0.25; // seconds
     this.shootTimer = 0;
+
+    // Star power state
+    this.starPower = false;
+    this.starPowerTimer = 0;
+    this.starPowerFlash = 0;
+
+    // Store hull ref for star power glow
+    this.hull = hull;
+    this.originalHullColor = "#00ff00";
   }
 
   update(dt) {
     super.update(dt);
 
-    // Handle movement
-    if (Keys.isDown(Keys.LEFT) || Keys.isDown("a")) {
+    // Only allow movement during active gameplay
+    const canMove = this.game.gameState === "playing";
+
+    // Handle movement (arrow keys and WASD)
+    const movingLeft = canMove && (Keys.isDown(Keys.LEFT) || Keys.isDown("a") || Keys.isDown("A"));
+    const movingRight = canMove && (Keys.isDown(Keys.RIGHT) || Keys.isDown("d") || Keys.isDown("D"));
+
+    if (movingLeft) {
       this.x -= PLAYER_SPEED * dt;
+      this.targetTilt = -this.maxTilt;
     }
-    if (Keys.isDown(Keys.RIGHT) || Keys.isDown("d")) {
+    if (movingRight) {
       this.x += PLAYER_SPEED * dt;
+      this.targetTilt = this.maxTilt;
+    }
+    if (!movingLeft && !movingRight) {
+      this.targetTilt = 0;
     }
 
-    // Clamp to screen bounds
-    const halfWidth = PLAYER_WIDTH / 2;
-    this.x = Math.max(halfWidth, Math.min(this.game.width - halfWidth, this.x));
+    // Smoothly interpolate current tilt toward target
+    this.currentTilt += (this.targetTilt - this.currentTilt) * this.tiltSpeed * dt;
+
+    // Clamp to screen bounds (only during gameplay)
+    if (canMove) {
+      const halfWidth = PLAYER_WIDTH / 2;
+      this.x = Math.max(halfWidth, Math.min(this.game.width - halfWidth, this.x));
+    }
 
     // Animate engine flicker
     this.engineTimer += dt * 20;
@@ -174,19 +214,45 @@ class Player extends GameObject {
     this.engineLeft.color = flicker ? "#ffaa00" : "#ff6600";
     this.engineRight.color = flicker ? "#ff6600" : "#ffaa00";
 
-    // Shooting cooldown
+    // Star power timer and effects
+    if (this.starPower) {
+      this.starPowerTimer -= dt;
+      this.starPowerFlash += dt * 15;
+
+      // Rainbow/golden glow effect
+      const hue = (Math.sin(this.starPowerFlash) + 1) / 2;
+      const colors = ["#ffff00", "#ff8800", "#ffff00", "#ffffff"];
+      const colorIndex = Math.floor(this.starPowerFlash * 2) % colors.length;
+      this.hull.color = colors[colorIndex];
+
+      // End star power
+      if (this.starPowerTimer <= 0) {
+        this.starPower = false;
+        this.hull.color = this.originalHullColor;
+        this.shootCooldown = 0.25; // Reset to normal
+      }
+    }
+
+    // Shooting cooldown (faster during star power)
+    const currentCooldown = this.starPower ? 0.08 : this.shootCooldown;
     if (!this.canShoot) {
       this.shootTimer += dt;
-      if (this.shootTimer >= this.shootCooldown) {
+      if (this.shootTimer >= currentCooldown) {
         this.canShoot = true;
         this.shootTimer = 0;
       }
     }
 
-    // Handle shooting
-    if (Keys.isDown(Keys.SPACE) && this.canShoot) {
+    // Handle shooting (only during active gameplay)
+    if (Keys.isDown(Keys.SPACE) && this.canShoot && this.game.gameState === "playing") {
       this.shoot();
     }
+  }
+
+  activateStarPower() {
+    this.starPower = true;
+    this.starPowerTimer = STARPOWER_DURATION;
+    this.starPowerFlash = 0;
   }
 
   shoot() {
@@ -200,6 +266,7 @@ class Player extends GameObject {
     // Render ship at origin - parent transform already positions us correctly
     this.ship.x = 0;
     this.ship.y = 0;
+    this.ship.rotation = this.currentTilt; // Apply banking tilt
     this.ship.render();
   }
 }
@@ -481,21 +548,21 @@ class Explosion extends GameObject {
     super(game, options);
 
     this.particles = [];
-    this.lifetime = 0.6;
+    this.lifetime = 0.4; // Shorter lifetime for better performance
     this.age = 0;
     this.baseColor = options.color || "#ffff00";
 
     // Color palette for explosion - varies based on base color
     const colors = this.baseColor === "#ffff00"
-      ? ["#ffffff", "#ffff00", "#ffaa00", "#ff6600", "#ff3300"] // Yellow explosion
-      : ["#ffffff", "#ff8888", "#ff4444", "#ff0000", "#aa0000"]; // Red explosion
+      ? ["#ffffff", "#ffff00", "#ffaa00", "#ff6600"] // Yellow explosion
+      : ["#ffffff", "#ff8888", "#ff4444", "#ff0000"]; // Red explosion
 
-    // Create more particles for a spectacular effect
-    const particleCount = 16;
+    // Optimized particle count (8 circles + 3 squares = 11 total)
+    const particleCount = 8;
     for (let i = 0; i < particleCount; i++) {
       const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.5;
-      const speed = 80 + Math.random() * 120;
-      const size = 2 + Math.random() * 5;
+      const speed = 80 + Math.random() * 100;
+      const size = 2 + Math.random() * 4;
       const color = colors[Math.floor(Math.random() * colors.length)];
 
       this.particles.push({
@@ -510,9 +577,9 @@ class Explosion extends GameObject {
     }
 
     // Add some square debris
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 3; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 40 + Math.random() * 80;
+      const speed = 40 + Math.random() * 60;
       const size = 2 + Math.random() * 3;
       const color = colors[Math.floor(Math.random() * colors.length)];
 
@@ -574,6 +641,266 @@ class Explosion extends GameObject {
 }
 
 // ==========================================================================
+// Absorb Effect (particles fly toward player)
+// ==========================================================================
+
+class AbsorbEffect extends GameObject {
+  constructor(game, options = {}) {
+    super(game, options);
+
+    this.particles = [];
+    this.lifetime = 0.4; // Shorter lifetime for better performance
+    this.age = 0;
+    this.targetX = options.targetX || this.x;
+    this.targetY = options.targetY || this.y;
+    this.color = options.color || "#98fb98";
+
+    // Create particles that will fly toward target (optimized count)
+    const particleCount = 8;
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (i / particleCount) * Math.PI * 2;
+      const distance = 25 + Math.random() * 15;
+      const size = 3 + Math.random() * 3;
+
+      this.particles.push({
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        size: size,
+        shape: new Circle(size, {
+          color: this.color,
+        }),
+      });
+    }
+  }
+
+  update(dt) {
+    super.update(dt);
+    this.age += dt;
+
+    if (this.age >= this.lifetime) {
+      this.active = false;
+      this.visible = false;
+      return;
+    }
+
+    // Update target to follow player
+    if (this.game.player) {
+      this.targetX = this.game.player.x;
+      this.targetY = this.game.player.y;
+    }
+
+    // Move particles toward target (relative to effect origin)
+    const progress = this.age / this.lifetime;
+    const targetRelX = this.targetX - this.x;
+    const targetRelY = this.targetY - this.y;
+
+    for (const p of this.particles) {
+      // Lerp toward target
+      p.x += (targetRelX - p.x) * dt * 5;
+      p.y += (targetRelY - p.y) * dt * 5;
+
+      // Shrink and fade
+      p.shape.opacity = 1 - progress;
+    }
+  }
+
+  draw() {
+    if (!this.visible) return;
+    super.draw();
+
+    for (const p of this.particles) {
+      p.shape.x = p.x;
+      p.shape.y = p.y;
+      p.shape.render();
+    }
+  }
+}
+
+// ==========================================================================
+// Power-Up (1-Up)
+// ==========================================================================
+
+class PowerUp extends GameObject {
+  constructor(game, options = {}) {
+    super(game, {
+      width: POWERUP_SIZE,
+      height: POWERUP_SIZE,
+      ...options,
+    });
+
+    this.speed = POWERUP_FALL_SPEED;
+    this.bobTime = Math.random() * Math.PI * 2;
+
+    // Create 1-Up visual - pastel green life icon
+    this.shape = new Group({});
+
+    // Glowing background
+    const glow = new Circle(POWERUP_SIZE / 2 + 4, {
+      color: "rgba(144, 238, 144, 0.4)",
+    });
+
+    // Main body - pastel green
+    const body = new Circle(POWERUP_SIZE / 2, {
+      color: "#98fb98", // Pale green
+    });
+
+    // "1UP" text
+    this.label = new TextShape("1UP", {
+      font: "bold 10px monospace",
+      color: "#ffffff",
+      align: "center",
+      baseline: "middle",
+    });
+
+    this.shape.add(glow);
+    this.shape.add(body);
+
+    // Store glow for animation
+    this.glow = glow;
+  }
+
+  update(dt) {
+    super.update(dt);
+
+    // Fall down
+    this.y += this.speed * dt;
+
+    // Bob side to side
+    this.bobTime += dt * 3;
+    this.x += Math.sin(this.bobTime) * 30 * dt;
+
+    // Pulse glow - pastel green
+    const pulse = 0.4 + Math.sin(this.bobTime * 2) * 0.2;
+    this.glow.color = `rgba(144, 238, 144, ${pulse})`;
+
+    // Remove if off screen
+    if (this.y > this.game.height + POWERUP_SIZE) {
+      this.destroy();
+    }
+  }
+
+  draw() {
+    if (!this.visible) return;
+    super.draw();
+
+    this.shape.x = 0;
+    this.shape.y = 0;
+    this.shape.render();
+
+    // Draw label on top
+    this.label.x = 0;
+    this.label.y = 0;
+    this.label.render();
+  }
+
+  destroy() {
+    this.active = false;
+    this.visible = false;
+  }
+
+  getBounds() {
+    return {
+      x: this.x - POWERUP_SIZE / 2,
+      y: this.y - POWERUP_SIZE / 2,
+      width: POWERUP_SIZE,
+      height: POWERUP_SIZE,
+    };
+  }
+}
+
+// ==========================================================================
+// Star Power-Up (Invincibility)
+// ==========================================================================
+
+class StarPowerUp extends GameObject {
+  constructor(game, options = {}) {
+    super(game, {
+      width: POWERUP_SIZE,
+      height: POWERUP_SIZE,
+      ...options,
+    });
+
+    this.speed = POWERUP_FALL_SPEED * 0.8; // Slightly slower
+    this.bobTime = Math.random() * Math.PI * 2;
+    this.spinAngle = 0;
+
+    // Create star visual using the Star shape
+    this.shape = new Group({});
+
+    // Glowing background
+    const glow = new Circle(POWERUP_SIZE / 2 + 6, {
+      color: "rgba(255, 215, 0, 0.4)",
+    });
+
+    // Main star - golden
+    this.star = new Star(POWERUP_SIZE / 2, 5, 0.5, {
+      color: "#ffd700", // Gold
+    });
+
+    // Inner highlight
+    const innerStar = new Star(POWERUP_SIZE / 4, 5, 0.5, {
+      color: "#ffec8b", // Light gold
+    });
+
+    this.shape.add(glow);
+    this.shape.add(this.star);
+    this.shape.add(innerStar);
+
+    // Store refs for animation
+    this.glow = glow;
+    this.innerStar = innerStar;
+  }
+
+  update(dt) {
+    super.update(dt);
+
+    // Fall down
+    this.y += this.speed * dt;
+
+    // Bob side to side
+    this.bobTime += dt * 3;
+    this.x += Math.sin(this.bobTime) * 40 * dt;
+
+    // Spin the star
+    this.spinAngle += dt * 180; // Degrees per second
+    this.star.rotation = this.spinAngle;
+    this.innerStar.rotation = -this.spinAngle * 0.5;
+
+    // Pulse glow
+    const pulse = 0.4 + Math.sin(this.bobTime * 2) * 0.2;
+    this.glow.color = `rgba(255, 215, 0, ${pulse})`;
+
+    // Remove if off screen
+    if (this.y > this.game.height + POWERUP_SIZE) {
+      this.destroy();
+    }
+  }
+
+  draw() {
+    if (!this.visible) return;
+    super.draw();
+
+    this.shape.x = 0;
+    this.shape.y = 0;
+    this.shape.render();
+  }
+
+  destroy() {
+    this.active = false;
+    this.visible = false;
+  }
+
+  getBounds() {
+    return {
+      x: this.x - POWERUP_SIZE / 2,
+      y: this.y - POWERUP_SIZE / 2,
+      width: POWERUP_SIZE,
+      height: POWERUP_SIZE,
+    };
+  }
+}
+
+// ==========================================================================
 // HUD (Heads Up Display)
 // ==========================================================================
 
@@ -581,6 +908,15 @@ class HUD extends GameObject {
   constructor(game, options = {}) {
     super(game, options);
 
+    // Title - centered, below info bar
+    this.titleText = new TextShape("SPACE INVADERS", {
+      font: "bold 32px monospace",
+      color: "#ffff00",
+      align: "center",
+      baseline: "top",
+    });
+
+    // Score - top left
     this.scoreText = new TextShape("SCORE: 0", {
       font: "20px monospace",
       color: "#ffffff",
@@ -588,20 +924,23 @@ class HUD extends GameObject {
       baseline: "top",
     });
 
+    // Level - top right
     this.levelText = new TextShape("LEVEL: 1", {
       font: "20px monospace",
-      color: "#ffff00",
-      align: "center",
-      baseline: "top",
-    });
-
-    this.livesText = new TextShape("LIVES: 3", {
-      font: "20px monospace",
-      color: "#00ff00",
+      color: "#00ffff",
       align: "right",
       baseline: "top",
     });
 
+    // Lives - bottom left (above FPS)
+    this.livesText = new TextShape("LIVES: 3", {
+      font: "18px monospace",
+      color: "#00ff00",
+      align: "left",
+      baseline: "bottom",
+    });
+
+    // Center message
     this.messageText = new TextShape("", {
       font: "28px monospace",
       color: "#ffff00",
@@ -620,19 +959,24 @@ class HUD extends GameObject {
   draw() {
     super.draw();
 
-    // Score (top left)
+    // Title (centered, 100px from top to account for info bar)
+    this.titleText.x = this.game.width / 2;
+    this.titleText.y = 100;
+    this.titleText.render();
+
+    // Score (top left, below title area)
     this.scoreText.x = 20;
-    this.scoreText.y = 20;
+    this.scoreText.y = 140;
     this.scoreText.render();
 
-    // Level (top center)
-    this.levelText.x = this.game.width / 2;
-    this.levelText.y = 20;
+    // Level (top right, below title area)
+    this.levelText.x = this.game.width - 20;
+    this.levelText.y = 140;
     this.levelText.render();
 
-    // Lives (top right)
-    this.livesText.x = this.game.width - 20;
-    this.livesText.y = 20;
+    // Lives (bottom left, above FPS counter)
+    this.livesText.x = 20;
+    this.livesText.y = this.game.height - 40;
     this.livesText.render();
 
     // Center message
@@ -660,17 +1004,26 @@ class Starfield extends GameObject {
   constructor(game, options = {}) {
     super(game, options);
     this.stars = [];
+    this.initialized = false;
+  }
 
-    // Initialize stars immediately (use constants for reliable positioning)
-    const starCount = 100;
+  initStars() {
+    if (this.initialized || this.game.width === 0) return;
+    this.initialized = true;
+
+    // Optimized star count - cap at 100 stars max
+    const area = this.game.width * this.game.height;
+    const starCount = Math.min(100, Math.floor(area / 15000)); // ~1 star per 15000 pixels, max 100
+
     for (let i = 0; i < starCount; i++) {
+      const size = 1 + Math.random() * 1.5;
       this.stars.push({
-        x: Math.random() * CANVAS_WIDTH,
-        y: Math.random() * CANVAS_HEIGHT,
-        size: 1 + Math.random() * 2,
-        speed: 20 + Math.random() * 40,
-        shape: new Circle(1 + Math.random() * 2, {
-          color: `rgba(255,255,255,${0.3 + Math.random() * 0.7})`,
+        x: Math.random() * this.game.width,
+        y: Math.random() * this.game.height,
+        size: size,
+        speed: 15 + Math.random() * 30,
+        shape: new Circle(size, {
+          color: `rgba(255,255,255,${0.4 + Math.random() * 0.5})`,
         }),
       });
     }
@@ -679,11 +1032,16 @@ class Starfield extends GameObject {
   update(dt) {
     super.update(dt);
 
+    // Initialize stars on first update when dimensions are known
+    if (!this.initialized) {
+      this.initStars();
+    }
+
     for (const star of this.stars) {
       star.y += star.speed * dt;
-      if (star.y > CANVAS_HEIGHT) {
+      if (star.y > this.game.height) {
         star.y = 0;
-        star.x = Math.random() * CANVAS_WIDTH;
+        star.x = Math.random() * this.game.width;
       }
     }
   }
@@ -706,12 +1064,18 @@ class Starfield extends GameObject {
 export class SpaceGame extends Game {
   constructor(canvas) {
     super(canvas);
-    // Use fixed dimensions for predictable gameplay
-    // The canvas element's width/height attributes define the drawing buffer
+    // Enable fluid sizing for fullscreen display
+    this.enableFluidSize();
     this.backgroundColor = "#000011";
   }
 
   init() {
+    // Prevent re-initialization on resume from alt-tab
+    if (this._spaceGameInitialized) {
+      return;
+    }
+    this._spaceGameInitialized = true;
+
     super.init();
     this.initKeyboard();
 
@@ -719,27 +1083,30 @@ export class SpaceGame extends Game {
     this.score = 0;
     this.lives = 3;
     this.level = 1;
-    this.gameState = "playing"; // playing, gameover, win, levelcomplete
+    this.gameState = "ready"; // ready, playing, gameover, win, levelcomplete, flyoff, flyin
     this.alienDirection = 1; // 1 = right, -1 = left
     this.alienMoveTimer = 0;
     this.baseMoveInterval = 1; // Base seconds between moves (decreases with level)
     this.alienMoveInterval = this.baseMoveInterval;
-    this.levelStartY = 80;
+    this.levelStartY = 170; // Below title and score display
     this.levelTransitionTimer = 0;
+    this.shipAnimationTimer = 0;
+    this.shipStartY = 0; // For fly-in animation
 
     // Collections
     this.bullets = [];
     this.aliens = [];
     this.explosions = [];
+    this.powerups = [];
 
     // Create starfield background
     this.starfield = new Starfield(this);
     this.pipeline.add(this.starfield);
 
-    // Create player at bottom center (use constants for reliable positioning)
+    // Create player at bottom center (use actual canvas dimensions)
     this.player = new Player(this, {
-      x: CANVAS_WIDTH / 2,
-      y: CANVAS_HEIGHT - 50,
+      x: this.width / 2,
+      y: this.height - 90,
     });
     this.pipeline.add(this.player);
 
@@ -749,6 +1116,27 @@ export class SpaceGame extends Game {
     // Create HUD
     this.hud = new HUD(this);
     this.pipeline.add(this.hud);
+
+    // Create play button for start screen
+    this.playButton = new Button(this, {
+      x: this.width / 2,
+      y: this.height / 2,
+      width: 200,
+      height: 60,
+      text: "PLAY",
+      font: "bold 24px monospace",
+      colorDefaultBg: "#003300",
+      colorDefaultStroke: "#00ff00",
+      colorDefaultText: "#00ff00",
+      colorHoverBg: "#004400",
+      colorHoverStroke: "#44ff44",
+      colorHoverText: "#44ff44",
+      colorPressedBg: "#002200",
+      colorPressedStroke: "#00aa00",
+      colorPressedText: "#00aa00",
+      onClick: () => this.startPlaying(),
+    });
+    this.pipeline.add(this.playButton);
 
     // FPS counter
     this.fpsCounter = new FPSCounter(this, {
@@ -768,9 +1156,9 @@ export class SpaceGame extends Game {
     // Calculate rows based on level (starts at 4, increases every 2 levels, max 8)
     const alienRows = Math.min(MAX_ALIEN_ROWS, ALIEN_BASE_ROWS + Math.floor((this.level - 1) / 2));
 
-    // Calculate starting position to center the alien grid (use constants)
+    // Calculate starting position to center the alien grid
     const gridWidth = ALIEN_COLS * ALIEN_SPACING_X;
-    const startX = (CANVAS_WIDTH - gridWidth) / 2 + ALIEN_SPACING_X / 2;
+    const startX = (this.width - gridWidth) / 2 + ALIEN_SPACING_X / 2;
 
     // Adjust starting Y based on level - aliens start lower on higher levels
     const levelStartOffset = Math.min(50, (this.level - 1) * 10);
@@ -841,23 +1229,107 @@ export class SpaceGame extends Game {
     this.pipeline.add(explosion);
   }
 
+  spawnPowerUp() {
+    // Spawn at random X position at top of screen
+    const powerup = new PowerUp(this, {
+      x: POWERUP_SIZE + Math.random() * (this.width - POWERUP_SIZE * 2),
+      y: -POWERUP_SIZE,
+    });
+    this.powerups.push(powerup);
+    this.pipeline.add(powerup);
+  }
+
+  spawnStarPower() {
+    // Spawn golden star power-up at random X position
+    const starpower = new StarPowerUp(this, {
+      x: POWERUP_SIZE + Math.random() * (this.width - POWERUP_SIZE * 2),
+      y: -POWERUP_SIZE,
+    });
+    this.powerups.push(starpower);
+    this.pipeline.add(starpower);
+  }
+
+  spawnAbsorbEffect(x, y, color) {
+    const effect = new AbsorbEffect(this, {
+      x: x,
+      y: y,
+      color: color,
+      targetX: this.player.x,
+      targetY: this.player.y,
+    });
+    this.explosions.push(effect); // Reuse explosions array for effects
+    this.pipeline.add(effect);
+  }
+
   update(dt) {
     super.update(dt);
 
-    // Handle level complete transition
+    // Handle ready state - waiting for player to click play button
+    if (this.gameState === "ready") {
+      // Button handles the click, just wait
+      return;
+    }
+
+    // Handle ship flying off screen after level complete
+    if (this.gameState === "flyoff") {
+      this.shipAnimationTimer += dt;
+      const flyOffDuration = 0.8; // 0.8 seconds to fly off
+      const progress = Math.min(1, this.shipAnimationTimer / flyOffDuration);
+
+      // Ease in cubic for acceleration
+      const eased = Math.pow(progress, 2);
+
+      // Move from current position to off-screen
+      const startY = this.height - 90;
+      const targetY = -80;
+      this.player.y = startY + (targetY - startY) * eased;
+
+      // When ship is off screen, start next level with fly-in
+      if (progress >= 1) {
+        this.prepareNextLevel();
+        this.gameState = "flyin";
+        this.shipAnimationTimer = 0;
+        this.player.y = this.height + 50; // Start below screen
+        this.shipStartY = this.height - 90; // Target position
+        this.hud.hideMessage();
+      }
+      return;
+    }
+
+    // Handle ship flying in from bottom
+    if (this.gameState === "flyin") {
+      this.shipAnimationTimer += dt;
+      const flyInDuration = 1.0; // 1 second to fly in
+      const progress = Math.min(1, this.shipAnimationTimer / flyInDuration);
+
+      // Ease out cubic for smooth deceleration
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      // Interpolate from bottom to target position
+      const startY = this.height + 50;
+      const targetY = this.shipStartY;
+      this.player.y = startY + (targetY - startY) * eased;
+
+      // When animation complete, start playing
+      if (progress >= 1) {
+        this.player.y = targetY;
+        this.gameState = "playing";
+      }
+      return;
+    }
+
+    // Handle level complete - show message then fly off
     if (this.gameState === "levelcomplete") {
       this.levelTransitionTimer += dt;
-      if (this.levelTransitionTimer >= 2) {
-        this.startNextLevel();
+      if (this.levelTransitionTimer >= 1.5) {
+        this.gameState = "flyoff";
+        this.shipAnimationTimer = 0;
       }
       return;
     }
 
     if (this.gameState !== "playing") {
-      // Check for restart
-      if (Keys.isDown(Keys.SPACE)) {
-        this.restart();
-      }
+      // Buttons handle gameover/win states
       return;
     }
 
@@ -867,8 +1339,22 @@ export class SpaceGame extends Game {
     // Alien shooting
     this.alienShooting();
 
+    // Random chance to spawn power-ups (max 1 of each type on screen)
+    const has1Up = this.powerups.some(p => p.active && p instanceof PowerUp);
+    const hasStarPower = this.powerups.some(p => p.active && p instanceof StarPowerUp);
+
+    if (!has1Up && Math.random() < POWERUP_SPAWN_CHANCE) {
+      this.spawnPowerUp();
+    }
+    if (!hasStarPower && Math.random() < STARPOWER_SPAWN_CHANCE) {
+      this.spawnStarPower();
+    }
+
     // Check collisions
     this.checkCollisions();
+
+    // Check power-up collection
+    this.checkPowerUpCollection();
 
     // Clean up dead objects
     this.cleanup();
@@ -999,7 +1485,45 @@ export class SpaceGame extends Game {
     );
   }
 
+  checkPowerUpCollection() {
+    const playerBounds = {
+      x: this.player.x - PLAYER_WIDTH / 2,
+      y: this.player.y - PLAYER_HEIGHT / 2,
+      width: PLAYER_WIDTH,
+      height: PLAYER_HEIGHT,
+    };
+
+    for (const powerup of this.powerups) {
+      if (!powerup.active) continue;
+
+      const powerupBounds = powerup.getBounds();
+      if (this.intersects(playerBounds, powerupBounds)) {
+        // Collected!
+        powerup.destroy();
+
+        if (powerup instanceof StarPowerUp) {
+          // Star power - invincibility and fast shooting
+          this.player.activateStarPower();
+          // Golden absorb effect
+          this.spawnAbsorbEffect(powerup.x, powerup.y, "#ffd700");
+        } else {
+          // 1-Up - extra life
+          this.lives++;
+          // Green absorb effect - particles fly toward player
+          this.spawnAbsorbEffect(powerup.x, powerup.y, "#98fb98");
+        }
+      }
+    }
+  }
+
   playerHit() {
+    // Invincible during star power!
+    if (this.player.starPower) {
+      // Still show a small effect to indicate hit was blocked
+      this.spawnExplosion(this.player.x, this.player.y, "#ffd700");
+      return;
+    }
+
     this.lives--;
     this.spawnExplosion(this.player.x, this.player.y, "#ff0000");
 
@@ -1028,20 +1552,71 @@ export class SpaceGame extends Game {
       return true;
     });
 
+    // Remove dead aliens (important for performance!)
+    this.aliens = this.aliens.filter((a) => {
+      if (!a.active) {
+        this.pipeline.remove(a);
+        return false;
+      }
+      return true;
+    });
+
     // Remove finished explosions
     this.explosions = this.explosions.filter((e) => {
       if (!e.active) {
         this.pipeline.remove(e);
+        // Clear particles to free memory
+        if (e.particles) e.particles = [];
+        return false;
+      }
+      return true;
+    });
+
+    // Remove collected/missed power-ups
+    this.powerups = this.powerups.filter((p) => {
+      if (!p.active) {
+        this.pipeline.remove(p);
         return false;
       }
       return true;
     });
   }
 
+  startPlaying() {
+    // Hide play button and start the game
+    if (this.playButton) {
+      this.pipeline.remove(this.playButton);
+      this.playButton = null;
+    }
+    this.gameState = "playing";
+    this.hud.hideMessage();
+  }
+
   gameOver() {
     this.gameState = "gameover";
-    this.hud.showMessage(`GAME OVER\n\nFinal Score: ${this.score}\nReached Level: ${this.level}\n\nPress SPACE to restart`);
+    this.hud.showMessage(`GAME OVER\n\nFinal Score: ${this.score}\nReached Level: ${this.level}`);
     this.player.visible = false;
+
+    // Show play again button
+    this.playButton = new Button(this, {
+      x: this.width / 2,
+      y: this.height / 2 + 100,
+      width: 200,
+      height: 60,
+      text: "PLAY AGAIN",
+      font: "bold 20px monospace",
+      colorDefaultBg: "#330000",
+      colorDefaultStroke: "#ff0000",
+      colorDefaultText: "#ff0000",
+      colorHoverBg: "#440000",
+      colorHoverStroke: "#ff4444",
+      colorHoverText: "#ff4444",
+      colorPressedBg: "#220000",
+      colorPressedStroke: "#aa0000",
+      colorPressedText: "#aa0000",
+      onClick: () => this.restart(),
+    });
+    this.pipeline.add(this.playButton);
   }
 
   levelComplete() {
@@ -1055,12 +1630,11 @@ export class SpaceGame extends Game {
     this.hud.showMessage(`LEVEL ${this.level} COMPLETE!\n\n+${levelBonus} BONUS\n\nGet Ready...`);
   }
 
-  startNextLevel() {
+  prepareNextLevel() {
+    // Called when ship flies off - set up the next level
     this.level++;
-    this.gameState = "playing";
     this.alienDirection = 1;
     this.alienMoveTimer = 0;
-    this.hud.hideMessage();
 
     // Clear any remaining bullets
     for (const bullet of this.bullets) {
@@ -1074,9 +1648,16 @@ export class SpaceGame extends Game {
     }
     this.explosions = [];
 
-    // Reset player position
-    this.player.x = CANVAS_WIDTH / 2;
+    // Clear power-ups
+    for (const powerup of this.powerups) {
+      this.pipeline.remove(powerup);
+    }
+    this.powerups = [];
+
+    // Reset player horizontal position (y is animated)
+    this.player.x = this.width / 2;
     this.player.canShoot = true;
+    // Keep star power through level transitions (reward!)
 
     // Spawn new wave of aliens
     this.spawnAliens();
@@ -1085,10 +1666,37 @@ export class SpaceGame extends Game {
   win() {
     // This is now only called if you somehow beat all possible levels
     this.gameState = "win";
-    this.hud.showMessage(`CONGRATULATIONS!\n\nYOU ARE A SPACE CHAMPION!\n\nFinal Score: ${this.score}\n\nPress SPACE to restart`);
+    this.hud.showMessage(`CONGRATULATIONS!\n\nYOU ARE A SPACE CHAMPION!\n\nFinal Score: ${this.score}`);
+
+    // Show play again button
+    this.playButton = new Button(this, {
+      x: this.width / 2,
+      y: this.height / 2 + 120,
+      width: 200,
+      height: 60,
+      text: "PLAY AGAIN",
+      font: "bold 20px monospace",
+      colorDefaultBg: "#333300",
+      colorDefaultStroke: "#ffff00",
+      colorDefaultText: "#ffff00",
+      colorHoverBg: "#444400",
+      colorHoverStroke: "#ffff44",
+      colorHoverText: "#ffff44",
+      colorPressedBg: "#222200",
+      colorPressedStroke: "#aaaa00",
+      colorPressedText: "#aaaa00",
+      onClick: () => this.restart(),
+    });
+    this.pipeline.add(this.playButton);
   }
 
   restart() {
+    // Remove play again button if present
+    if (this.playButton) {
+      this.pipeline.remove(this.playButton);
+      this.playButton = null;
+    }
+
     // Reset game state
     this.score = 0;
     this.lives = 3;
@@ -1111,12 +1719,22 @@ export class SpaceGame extends Game {
     }
     this.explosions = [];
 
-    // Reset player (use constants for reliable positioning)
-    this.player.x = CANVAS_WIDTH / 2;
-    this.player.y = CANVAS_HEIGHT - 50;
+    // Clear power-ups
+    for (const powerup of this.powerups) {
+      this.pipeline.remove(powerup);
+    }
+    this.powerups = [];
+
+    // Reset player position and state
+    this.player.x = this.width / 2;
+    this.player.y = this.height - 90;
     this.player.visible = true;
     this.player.opacity = 1;
     this.player.canShoot = true;
+    // Reset star power on full restart
+    this.player.starPower = false;
+    this.player.starPowerTimer = 0;
+    this.player.hull.color = this.player.originalHullColor;
 
     // Respawn aliens
     this.spawnAliens();
