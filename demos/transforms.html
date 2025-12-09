@@ -287,14 +287,14 @@
     }
 
     /**
-     * Demo 4: Relative Transforms
-     * Shows translateBy, rotateBy, scaleBy
+     * Demo 4: Animated Transforms
+     * Shows position, rotation, and scale animations
      */
     class RelativeTransformDemo extends GameObject {
       constructor(game) {
         super(game);
 
-        // Create shapes for demonstrating relative transforms
+        // Create shapes for demonstrating animated transforms
         this.shapes = [];
         const positions = [
           { x: -200, y: 80 },
@@ -303,9 +303,9 @@
         ];
 
         const types = [
-          { name: "translateBy", shape: new Rectangle({ width: 50, height: 50, color: "#00d9ff", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) },
-          { name: "rotateBy", shape: new Triangle(40, { color: "#ff6b6b", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) },
-          { name: "scaleBy", shape: new Circle(25, { color: "#7bed9f", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) }
+          { name: "position", shape: new Rectangle({ width: 50, height: 50, color: "#00d9ff", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) },
+          { name: "rotation", shape: new Triangle(40, { color: "#ff6b6b", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) },
+          { name: "scale", shape: new Circle(25, { color: "#7bed9f", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) }
         ];
 
         types.forEach((type, i) => {
@@ -331,16 +331,15 @@
         super.update(dt);
         this.elapsed += dt;
 
-        // translateBy demo - oscillate position
+        // position demo - oscillate position
         const tx = Math.sin(this.elapsed * 2) * 30;
         const ty = Math.cos(this.elapsed * 3) * 15;
         this.shapes[0].shape.transform.position(this.shapes[0].baseX + tx, this.shapes[0].baseY + ty);
 
-        // rotateBy demo - continuous rotation using relative
-        // We reset and apply fresh rotation to avoid accumulation issues in demo
+        // rotation demo - continuous rotation
         this.shapes[1].shape.transform.rotation(this.elapsed * 90);
 
-        // scaleBy demo - pulsing scale
+        // scale demo - pulsing scale
         const scale = 0.7 + Math.abs(Math.sin(this.elapsed * 2)) * 0.6;
         this.shapes[2].shape.transform.scale(scale);
       }
