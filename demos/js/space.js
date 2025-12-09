@@ -28,8 +28,9 @@ const PLAYER_HEIGHT = 20;
 const BULLET_SPEED = 400;
 const BULLET_WIDTH = 4;
 const BULLET_HEIGHT = 12;
-const ALIEN_ROWS = 5;
+const ALIEN_BASE_ROWS = 4;
 const ALIEN_COLS = 11;
+const MAX_ALIEN_ROWS = 8;
 const ALIEN_WIDTH = 30;
 const ALIEN_HEIGHT = 20;
 const ALIEN_SPACING_X = 40;
@@ -51,12 +52,101 @@ class Player extends GameObject {
       ...options,
     });
 
-    // Simple ship shape - a single rectangle for now (debug)
-    this.ship = new Rectangle({
-      width: PLAYER_WIDTH,
-      height: PLAYER_HEIGHT,
+    // Classic arcade-style spaceship using grouped shapes
+    this.ship = new Group({});
+
+    // Main hull (center body)
+    const hull = new Rectangle({
+      width: 16,
+      height: 12,
+      y: 2,
       color: "#00ff00",
     });
+
+    // Cannon (top center)
+    const cannon = new Rectangle({
+      width: 4,
+      height: 10,
+      y: -8,
+      color: "#00ff00",
+    });
+
+    // Cannon tip
+    const cannonTip = new Rectangle({
+      width: 2,
+      height: 4,
+      y: -14,
+      color: "#88ff88",
+    });
+
+    // Left wing
+    const leftWing = new Rectangle({
+      width: 10,
+      height: 6,
+      x: -13,
+      y: 5,
+      color: "#00dd00",
+    });
+
+    // Right wing
+    const rightWing = new Rectangle({
+      width: 10,
+      height: 6,
+      x: 13,
+      y: 5,
+      color: "#00dd00",
+    });
+
+    // Left wing detail
+    const leftWingTip = new Rectangle({
+      width: 4,
+      height: 4,
+      x: -19,
+      y: 6,
+      color: "#00aa00",
+    });
+
+    // Right wing detail
+    const rightWingTip = new Rectangle({
+      width: 4,
+      height: 4,
+      x: 19,
+      y: 6,
+      color: "#00aa00",
+    });
+
+    // Engine glow left
+    const engineLeft = new Rectangle({
+      width: 4,
+      height: 4,
+      x: -6,
+      y: 10,
+      color: "#ffaa00",
+    });
+
+    // Engine glow right
+    const engineRight = new Rectangle({
+      width: 4,
+      height: 4,
+      x: 6,
+      y: 10,
+      color: "#ffaa00",
+    });
+
+    this.ship.add(hull);
+    this.ship.add(cannon);
+    this.ship.add(cannonTip);
+    this.ship.add(leftWing);
+    this.ship.add(rightWing);
+    this.ship.add(leftWingTip);
+    this.ship.add(rightWingTip);
+    this.ship.add(engineLeft);
+    this.ship.add(engineRight);
+
+    // Store engine refs for animation
+    this.engineLeft = engineLeft;
+    this.engineRight = engineRight;
+    this.engineTimer = 0;
 
     this.canShoot = true;
     this.shootCooldown = 0.25; // seconds
@@ -78,6 +168,12 @@ class Player extends GameObject {
     const halfWidth = PLAYER_WIDTH / 2;
     this.x = Math.max(halfWidth, Math.min(this.game.width - halfWidth, this.x));
 
+    // Animate engine flicker
+    this.engineTimer += dt * 20;
+    const flicker = Math.sin(this.engineTimer) > 0;
+    this.engineLeft.color = flicker ? "#ffaa00" : "#ff6600";
+    this.engineRight.color = flicker ? "#ff6600" : "#ffaa00";
+
     // Shooting cooldown
     if (!this.canShoot) {
       this.shootTimer += dt;
@@ -96,7 +192,7 @@ class Player extends GameObject {
   shoot() {
     if (!this.canShoot) return;
     this.canShoot = false;
-    this.game.spawnPlayerBullet(this.x, this.y - PLAYER_HEIGHT / 2);
+    this.game.spawnPlayerBullet(this.x, this.y - PLAYER_HEIGHT);
   }
 
   draw() {
@@ -124,11 +220,50 @@ class Bullet extends GameObject {
     this.direction = options.direction || -1; // -1 = up, 1 = down
     this.isPlayerBullet = options.isPlayerBullet !== false;
 
-    this.shape = new Rectangle({
-      width: BULLET_WIDTH,
-      height: BULLET_HEIGHT,
-      color: this.isPlayerBullet ? "#ffff00" : "#ff4444",
-    });
+    // Create laser-style bullet with glow effect
+    this.shape = new Group({});
+
+    if (this.isPlayerBullet) {
+      // Player bullet - bright yellow/white laser
+      const glow = new Rectangle({
+        width: BULLET_WIDTH + 4,
+        height: BULLET_HEIGHT + 2,
+        color: "rgba(255, 255, 0, 0.3)",
+      });
+      const core = new Rectangle({
+        width: BULLET_WIDTH,
+        height: BULLET_HEIGHT,
+        color: "#ffff00",
+      });
+      const center = new Rectangle({
+        width: 2,
+        height: BULLET_HEIGHT - 2,
+        color: "#ffffff",
+      });
+      this.shape.add(glow);
+      this.shape.add(core);
+      this.shape.add(center);
+    } else {
+      // Enemy bullet - menacing red plasma
+      const glow = new Rectangle({
+        width: BULLET_WIDTH + 4,
+        height: BULLET_HEIGHT + 2,
+        color: "rgba(255, 0, 0, 0.3)",
+      });
+      const core = new Rectangle({
+        width: BULLET_WIDTH,
+        height: BULLET_HEIGHT,
+        color: "#ff3333",
+      });
+      const center = new Rectangle({
+        width: 2,
+        height: BULLET_HEIGHT - 2,
+        color: "#ff8888",
+      });
+      this.shape.add(glow);
+      this.shape.add(core);
+      this.shape.add(center);
+    }
   }
 
   update(dt) {
@@ -188,68 +323,117 @@ class Alien extends GameObject {
   createShape() {
     const group = new Group({});
 
-    // Different alien designs based on row
+    // Different alien designs based on row - classic Space Invaders style
     if (this.row === 0) {
-      // Top row - squid type (30 points)
+      // Top row - Squid/UFO type (30 points) - magenta/pink
       this.points = 30;
-      const body = new Circle(ALIEN_WIDTH / 3, {
-        color: "#ff0066",
-      });
-      const leftEye = new Circle(3, { x: -5, y: -2, color: "#ffffff" });
-      const rightEye = new Circle(3, { x: 5, y: -2, color: "#ffffff" });
+
+      // Dome head
+      const head = new Circle(8, { y: -2, color: "#ff0088" });
+
+      // Body
+      const body = new Rectangle({ width: 20, height: 8, y: 4, color: "#ff0088" });
+
+      // Eyes
+      const leftEye = new Circle(2, { x: -4, y: -3, color: "#ffffff" });
+      const rightEye = new Circle(2, { x: 4, y: -3, color: "#ffffff" });
+      const leftPupil = new Circle(1, { x: -4, y: -3, color: "#000000" });
+      const rightPupil = new Circle(1, { x: 4, y: -3, color: "#000000" });
+
+      // Tentacles
+      const tent1 = new Rectangle({ width: 3, height: 6, x: -8, y: 10, color: "#cc0066" });
+      const tent2 = new Rectangle({ width: 3, height: 8, x: -3, y: 11, color: "#cc0066" });
+      const tent3 = new Rectangle({ width: 3, height: 8, x: 3, y: 11, color: "#cc0066" });
+      const tent4 = new Rectangle({ width: 3, height: 6, x: 8, y: 10, color: "#cc0066" });
+
+      group.add(head);
       group.add(body);
       group.add(leftEye);
       group.add(rightEye);
+      group.add(leftPupil);
+      group.add(rightPupil);
+      group.add(tent1);
+      group.add(tent2);
+      group.add(tent3);
+      group.add(tent4);
+
     } else if (this.row <= 2) {
-      // Middle rows - crab type (20 points)
+      // Middle rows - Crab type (20 points) - cyan
       this.points = 20;
-      const body = new Rectangle({
-        width: ALIEN_WIDTH - 4,
-        height: ALIEN_HEIGHT - 6,
-        color: "#00ffff",
-      });
-      const leftClaw = new Rectangle({
-        x: -ALIEN_WIDTH / 2 + 2,
-        y: 5,
-        width: 6,
-        height: 8,
-        color: "#00cccc",
-      });
-      const rightClaw = new Rectangle({
-        x: ALIEN_WIDTH / 2 - 2,
-        y: 5,
-        width: 6,
-        height: 8,
-        color: "#00cccc",
-      });
+
+      // Main body
+      const body = new Rectangle({ width: 22, height: 10, color: "#00ffff" });
+
+      // Head bump
+      const headBump = new Rectangle({ width: 10, height: 6, y: -6, color: "#00ffff" });
+
+      // Eyes
+      const leftEye = new Rectangle({ width: 4, height: 4, x: -6, y: -2, color: "#000033" });
+      const rightEye = new Rectangle({ width: 4, height: 4, x: 6, y: -2, color: "#000033" });
+
+      // Claws - left
+      const leftArm = new Rectangle({ width: 4, height: 6, x: -14, y: -2, color: "#00cccc" });
+      const leftClaw = new Rectangle({ width: 6, height: 4, x: -16, y: -6, color: "#00cccc" });
+
+      // Claws - right
+      const rightArm = new Rectangle({ width: 4, height: 6, x: 14, y: -2, color: "#00cccc" });
+      const rightClaw = new Rectangle({ width: 6, height: 4, x: 16, y: -6, color: "#00cccc" });
+
+      // Legs
+      const leg1 = new Rectangle({ width: 3, height: 5, x: -8, y: 8, color: "#00aaaa" });
+      const leg2 = new Rectangle({ width: 3, height: 5, x: 0, y: 8, color: "#00aaaa" });
+      const leg3 = new Rectangle({ width: 3, height: 5, x: 8, y: 8, color: "#00aaaa" });
+
       group.add(body);
+      group.add(headBump);
+      group.add(leftEye);
+      group.add(rightEye);
+      group.add(leftArm);
       group.add(leftClaw);
+      group.add(rightArm);
       group.add(rightClaw);
+      group.add(leg1);
+      group.add(leg2);
+      group.add(leg3);
+
     } else {
-      // Bottom rows - octopus type (10 points)
+      // Bottom rows - Octopus/Basic type (10 points) - green
       this.points = 10;
-      const body = new Rectangle({
-        width: ALIEN_WIDTH - 8,
-        height: ALIEN_HEIGHT - 4,
-        color: "#66ff66",
-      });
-      const antenna1 = new Rectangle({
-        x: -6,
-        y: -ALIEN_HEIGHT / 2 + 2,
-        width: 3,
-        height: 6,
-        color: "#44cc44",
-      });
-      const antenna2 = new Rectangle({
-        x: 6,
-        y: -ALIEN_HEIGHT / 2 + 2,
-        width: 3,
-        height: 6,
-        color: "#44cc44",
-      });
+
+      // Round head
+      const head = new Circle(10, { y: -2, color: "#44ff44" });
+
+      // Body extension
+      const body = new Rectangle({ width: 16, height: 8, y: 6, color: "#44ff44" });
+
+      // Eyes
+      const leftEye = new Rectangle({ width: 4, height: 5, x: -4, y: -4, color: "#003300" });
+      const rightEye = new Rectangle({ width: 4, height: 5, x: 4, y: -4, color: "#003300" });
+
+      // Antennae
+      const leftAntenna = new Rectangle({ width: 2, height: 6, x: -6, y: -12, color: "#22cc22" });
+      const rightAntenna = new Rectangle({ width: 2, height: 6, x: 6, y: -12, color: "#22cc22" });
+      const leftTip = new Circle(2, { x: -6, y: -16, color: "#88ff88" });
+      const rightTip = new Circle(2, { x: 6, y: -16, color: "#88ff88" });
+
+      // Tentacle legs
+      const leg1 = new Rectangle({ width: 3, height: 6, x: -10, y: 12, color: "#22aa22" });
+      const leg2 = new Rectangle({ width: 3, height: 8, x: -4, y: 13, color: "#22aa22" });
+      const leg3 = new Rectangle({ width: 3, height: 8, x: 4, y: 13, color: "#22aa22" });
+      const leg4 = new Rectangle({ width: 3, height: 6, x: 10, y: 12, color: "#22aa22" });
+
+      group.add(head);
       group.add(body);
-      group.add(antenna1);
-      group.add(antenna2);
+      group.add(leftEye);
+      group.add(rightEye);
+      group.add(leftAntenna);
+      group.add(rightAntenna);
+      group.add(leftTip);
+      group.add(rightTip);
+      group.add(leg1);
+      group.add(leg2);
+      group.add(leg3);
+      group.add(leg4);
     }
 
     return group;
@@ -297,24 +481,50 @@ class Explosion extends GameObject {
     super(game, options);
 
     this.particles = [];
-    this.lifetime = 0.5;
+    this.lifetime = 0.6;
     this.age = 0;
-    this.color = options.color || "#ffff00";
+    this.baseColor = options.color || "#ffff00";
 
-    // Create particles
-    const particleCount = 8;
+    // Color palette for explosion - varies based on base color
+    const colors = this.baseColor === "#ffff00"
+      ? ["#ffffff", "#ffff00", "#ffaa00", "#ff6600", "#ff3300"] // Yellow explosion
+      : ["#ffffff", "#ff8888", "#ff4444", "#ff0000", "#aa0000"]; // Red explosion
+
+    // Create more particles for a spectacular effect
+    const particleCount = 16;
     for (let i = 0; i < particleCount; i++) {
-      const angle = (i / particleCount) * Math.PI * 2;
-      const speed = 50 + Math.random() * 100;
+      const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.5;
+      const speed = 80 + Math.random() * 120;
+      const size = 2 + Math.random() * 5;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+
       this.particles.push({
         x: 0,
         y: 0,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: 3 + Math.random() * 4,
-        shape: new Circle(3 + Math.random() * 4, {
-          color: this.color,
-        }),
+        size: size,
+        shape: new Circle(size, { color: color }),
+        rotSpeed: (Math.random() - 0.5) * 10,
+      });
+    }
+
+    // Add some square debris
+    for (let i = 0; i < 6; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 40 + Math.random() * 80;
+      const size = 2 + Math.random() * 3;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+
+      this.particles.push({
+        x: 0,
+        y: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: size,
+        shape: new Rectangle({ width: size, height: size, color: color }),
+        rotSpeed: (Math.random() - 0.5) * 15,
+        rotation: 0,
       });
     }
   }
@@ -329,12 +539,21 @@ class Explosion extends GameObject {
       return;
     }
 
-    // Update particles
+    // Update particles with gravity and fade
     const progress = this.age / this.lifetime;
     for (const p of this.particles) {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.shape.opacity = 1 - progress;
+      p.vy += 100 * dt; // Gravity
+      p.vx *= 0.99; // Air resistance
+
+      // Fade and shrink
+      p.shape.opacity = 1 - progress * progress;
+
+      // Rotate debris
+      if (p.rotation !== undefined) {
+        p.rotation += p.rotSpeed * dt;
+      }
     }
   }
 
@@ -346,6 +565,9 @@ class Explosion extends GameObject {
     for (const p of this.particles) {
       p.shape.x = p.x;
       p.shape.y = p.y;
+      if (p.rotation !== undefined) {
+        p.shape.rotation = p.rotation * (180 / Math.PI); // Convert to degrees
+      }
       p.shape.render();
     }
   }
@@ -366,6 +588,13 @@ class HUD extends GameObject {
       baseline: "top",
     });
 
+    this.levelText = new TextShape("LEVEL: 1", {
+      font: "20px monospace",
+      color: "#ffff00",
+      align: "center",
+      baseline: "top",
+    });
+
     this.livesText = new TextShape("LIVES: 3", {
       font: "20px monospace",
       color: "#00ff00",
@@ -374,7 +603,7 @@ class HUD extends GameObject {
     });
 
     this.messageText = new TextShape("", {
-      font: "32px monospace",
+      font: "28px monospace",
       color: "#ffff00",
       align: "center",
       baseline: "middle",
@@ -384,6 +613,7 @@ class HUD extends GameObject {
   update(dt) {
     super.update(dt);
     this.scoreText.text = `SCORE: ${this.game.score}`;
+    this.levelText.text = `LEVEL: ${this.game.level}`;
     this.livesText.text = `LIVES: ${this.game.lives}`;
   }
 
@@ -394,6 +624,11 @@ class HUD extends GameObject {
     this.scoreText.x = 20;
     this.scoreText.y = 20;
     this.scoreText.render();
+
+    // Level (top center)
+    this.levelText.x = this.game.width / 2;
+    this.levelText.y = 20;
+    this.levelText.render();
 
     // Lives (top right)
     this.livesText.x = this.game.width - 20;
@@ -483,11 +718,14 @@ export class SpaceGame extends Game {
     // Game state
     this.score = 0;
     this.lives = 3;
-    this.gameState = "playing"; // playing, gameover, win
+    this.level = 1;
+    this.gameState = "playing"; // playing, gameover, win, levelcomplete
     this.alienDirection = 1; // 1 = right, -1 = left
     this.alienMoveTimer = 0;
-    this.alienMoveInterval = 1; // seconds between moves
+    this.baseMoveInterval = 1; // Base seconds between moves (decreases with level)
+    this.alienMoveInterval = this.baseMoveInterval;
     this.levelStartY = 80;
+    this.levelTransitionTimer = 0;
 
     // Collections
     this.bullets = [];
@@ -527,22 +765,46 @@ export class SpaceGame extends Game {
     }
     this.aliens = [];
 
+    // Calculate rows based on level (starts at 4, increases every 2 levels, max 8)
+    const alienRows = Math.min(MAX_ALIEN_ROWS, ALIEN_BASE_ROWS + Math.floor((this.level - 1) / 2));
+
     // Calculate starting position to center the alien grid (use constants)
     const gridWidth = ALIEN_COLS * ALIEN_SPACING_X;
     const startX = (CANVAS_WIDTH - gridWidth) / 2 + ALIEN_SPACING_X / 2;
 
-    for (let row = 0; row < ALIEN_ROWS; row++) {
+    // Adjust starting Y based on level - aliens start lower on higher levels
+    const levelStartOffset = Math.min(50, (this.level - 1) * 10);
+    const startY = this.levelStartY + levelStartOffset;
+
+    for (let row = 0; row < alienRows; row++) {
       for (let col = 0; col < ALIEN_COLS; col++) {
+        // Assign row type based on position ratio (for varied alien types)
+        const rowRatio = row / alienRows;
+        let rowType;
+        if (rowRatio < 0.2) {
+          rowType = 0; // Top ~20% are squid (30 pts)
+        } else if (rowRatio < 0.5) {
+          rowType = 1; // Next ~30% are crab (20 pts)
+        } else {
+          rowType = 3; // Bottom ~50% are octopus (10 pts)
+        }
+
         const alien = new Alien(this, {
           x: startX + col * ALIEN_SPACING_X,
-          y: this.levelStartY + row * ALIEN_SPACING_Y,
-          row: row,
+          y: startY + row * ALIEN_SPACING_Y,
+          row: rowType,
           col: col,
         });
         this.aliens.push(alien);
         this.pipeline.add(alien);
       }
     }
+
+    // Calculate level-based speed multiplier
+    // Each level is 15% faster, compounding
+    const levelSpeedMultiplier = Math.pow(1.15, this.level - 1);
+    this.baseMoveInterval = Math.max(0.3, 1 / levelSpeedMultiplier);
+    this.alienMoveInterval = this.baseMoveInterval;
   }
 
   spawnPlayerBullet(x, y) {
@@ -582,6 +844,15 @@ export class SpaceGame extends Game {
   update(dt) {
     super.update(dt);
 
+    // Handle level complete transition
+    if (this.gameState === "levelcomplete") {
+      this.levelTransitionTimer += dt;
+      if (this.levelTransitionTimer >= 2) {
+        this.startNextLevel();
+      }
+      return;
+    }
+
     if (this.gameState !== "playing") {
       // Check for restart
       if (Keys.isDown(Keys.SPACE)) {
@@ -602,9 +873,9 @@ export class SpaceGame extends Game {
     // Clean up dead objects
     this.cleanup();
 
-    // Check win condition
+    // Check win condition - advance to next level
     if (this.getAliveAliens().length === 0) {
-      this.win();
+      this.levelComplete();
     }
   }
 
@@ -649,9 +920,11 @@ export class SpaceGame extends Game {
         }
       }
 
-      // Speed up as fewer aliens remain
-      const speedMultiplier = 1 + (ALIEN_ROWS * ALIEN_COLS - aliveAliens.length) * 0.02;
-      this.alienMoveInterval = Math.max(0.1, 1 / speedMultiplier);
+      // Speed up as fewer aliens remain (relative to level's base speed)
+      const totalAliens = this.aliens.length;
+      const destroyedCount = totalAliens - aliveAliens.length;
+      const killSpeedBonus = 1 + destroyedCount * 0.02;
+      this.alienMoveInterval = Math.max(0.1, this.baseMoveInterval / killSpeedBonus);
     }
   }
 
@@ -668,9 +941,12 @@ export class SpaceGame extends Game {
       }
     }
 
+    // Shooting chance increases with level (base + 50% per level, capped)
+    const shootChance = Math.min(0.015, ALIEN_SHOOT_CHANCE * (1 + (this.level - 1) * 0.5));
+
     // Random chance to shoot from bottom aliens
     for (const alien of bottomAliens.values()) {
-      if (Math.random() < ALIEN_SHOOT_CHANCE) {
+      if (Math.random() < shootChance) {
         this.spawnAlienBullet(alien.x, alien.y + ALIEN_HEIGHT / 2);
       }
     }
@@ -764,23 +1040,64 @@ export class SpaceGame extends Game {
 
   gameOver() {
     this.gameState = "gameover";
-    this.hud.showMessage("GAME OVER\nPress SPACE to restart");
+    this.hud.showMessage(`GAME OVER\n\nFinal Score: ${this.score}\nReached Level: ${this.level}\n\nPress SPACE to restart`);
     this.player.visible = false;
   }
 
+  levelComplete() {
+    this.gameState = "levelcomplete";
+    this.levelTransitionTimer = 0;
+
+    // Bonus points for completing level
+    const levelBonus = this.level * 100;
+    this.score += levelBonus;
+
+    this.hud.showMessage(`LEVEL ${this.level} COMPLETE!\n\n+${levelBonus} BONUS\n\nGet Ready...`);
+  }
+
+  startNextLevel() {
+    this.level++;
+    this.gameState = "playing";
+    this.alienDirection = 1;
+    this.alienMoveTimer = 0;
+    this.hud.hideMessage();
+
+    // Clear any remaining bullets
+    for (const bullet of this.bullets) {
+      this.pipeline.remove(bullet);
+    }
+    this.bullets = [];
+
+    // Clear explosions
+    for (const explosion of this.explosions) {
+      this.pipeline.remove(explosion);
+    }
+    this.explosions = [];
+
+    // Reset player position
+    this.player.x = CANVAS_WIDTH / 2;
+    this.player.canShoot = true;
+
+    // Spawn new wave of aliens
+    this.spawnAliens();
+  }
+
   win() {
+    // This is now only called if you somehow beat all possible levels
     this.gameState = "win";
-    this.hud.showMessage("YOU WIN!\nScore: " + this.score + "\nPress SPACE to restart");
+    this.hud.showMessage(`CONGRATULATIONS!\n\nYOU ARE A SPACE CHAMPION!\n\nFinal Score: ${this.score}\n\nPress SPACE to restart`);
   }
 
   restart() {
     // Reset game state
     this.score = 0;
     this.lives = 3;
+    this.level = 1;
     this.gameState = "playing";
     this.alienDirection = 1;
     this.alienMoveTimer = 0;
-    this.alienMoveInterval = 1;
+    this.baseMoveInterval = 1;
+    this.alienMoveInterval = this.baseMoveInterval;
     this.hud.hideMessage();
 
     // Clear bullets and explosions
