@@ -12,6 +12,8 @@ import {
   Easing,
   Motion,
   Tweenetik,
+  Synth,
+  Sound,
 } from "../../src/index";
 
 // ==========================================================================
@@ -479,6 +481,7 @@ export class SpaceGame extends Game {
   init() {
     super.init();
     this.initKeyboard();
+    this.initAudio();
 
     // Game state
     this.score = 0;
@@ -488,6 +491,7 @@ export class SpaceGame extends Game {
     this.alienMoveTimer = 0;
     this.alienMoveInterval = 1; // seconds between moves
     this.levelStartY = 80;
+    this.audioResumed = false;
 
     // Collections
     this.bullets = [];
@@ -518,6 +522,20 @@ export class SpaceGame extends Game {
       anchor: "bottom-left",
     });
     this.pipeline.add(this.fpsCounter);
+  }
+
+  initAudio() {
+    // Initialize the Synth audio system
+    Synth.init({ masterVolume: 0.4 });
+    this.logger.log("[SpaceGame] Audio system initialized");
+  }
+
+  async resumeAudio() {
+    if (!this.audioResumed) {
+      await Synth.resume();
+      this.audioResumed = true;
+      this.logger.log("[SpaceGame] Audio context resumed");
+    }
   }
 
   spawnAliens() {
@@ -555,6 +573,10 @@ export class SpaceGame extends Game {
     });
     this.bullets.push(bullet);
     this.pipeline.add(bullet);
+
+    // Play laser sound
+    this.resumeAudio();
+    Sound.laser({ startFreq: 1500, endFreq: 300, duration: 0.1, volume: 0.2 });
   }
 
   spawnAlienBullet(x, y) {
@@ -567,9 +589,12 @@ export class SpaceGame extends Game {
     });
     this.bullets.push(bullet);
     this.pipeline.add(bullet);
+
+    // Play alien laser sound (lower, more menacing)
+    Sound.laser({ startFreq: 600, endFreq: 200, duration: 0.12, volume: 0.15, type: "square" });
   }
 
-  spawnExplosion(x, y, color) {
+  spawnExplosion(x, y, color, isPlayer = false) {
     const explosion = new Explosion(this, {
       x: x,
       y: y,
@@ -577,14 +602,29 @@ export class SpaceGame extends Game {
     });
     this.explosions.push(explosion);
     this.pipeline.add(explosion);
+
+    // Play explosion sound - different for player vs alien
+    if (isPlayer) {
+      Sound.explosion(0.8);
+    } else {
+      // Alien explosion - higher pitched, shorter
+      Sound.impact(0.6);
+      Sound.beep(200 + Math.random() * 100, 0.08, { volume: 0.15, type: "square" });
+    }
   }
 
   update(dt) {
     super.update(dt);
 
+    // Resume audio on any key press (browser autoplay policy)
+    if (!this.audioResumed && (Keys.isDown(Keys.SPACE) || Keys.isDown(Keys.LEFT) || Keys.isDown(Keys.RIGHT))) {
+      this.resumeAudio();
+    }
+
     if (this.gameState !== "playing") {
       // Check for restart
       if (Keys.isDown(Keys.SPACE)) {
+        this.resumeAudio();
         this.restart();
       }
       return;
@@ -616,6 +656,11 @@ export class SpaceGame extends Game {
 
       const aliveAliens = this.getAliveAliens();
       if (aliveAliens.length === 0) return;
+
+      // Play alien march sound (alternating tones like classic Space Invaders)
+      this.alienMoveNote = (this.alienMoveNote || 0) + 1;
+      const freq = this.alienMoveNote % 2 === 0 ? 100 : 80;
+      Sound.beep(freq, 0.05, { volume: 0.15, type: "square" });
 
       // Check if we need to change direction
       let shouldDrop = false;
@@ -725,7 +770,10 @@ export class SpaceGame extends Game {
 
   playerHit() {
     this.lives--;
-    this.spawnExplosion(this.player.x, this.player.y, "#ff0000");
+    this.spawnExplosion(this.player.x, this.player.y, "#ff0000", true);
+
+    // Play hurt sound
+    Sound.hurt(0.8);
 
     if (this.lives <= 0) {
       this.gameOver();
@@ -766,11 +814,17 @@ export class SpaceGame extends Game {
     this.gameState = "gameover";
     this.hud.showMessage("GAME OVER\nPress SPACE to restart");
     this.player.visible = false;
+
+    // Play game over sound
+    Sound.lose();
   }
 
   win() {
     this.gameState = "win";
     this.hud.showMessage("YOU WIN!\nScore: " + this.score + "\nPress SPACE to restart");
+
+    // Play victory fanfare
+    Sound.win();
   }
 
   restart() {
@@ -781,7 +835,11 @@ export class SpaceGame extends Game {
     this.alienDirection = 1;
     this.alienMoveTimer = 0;
     this.alienMoveInterval = 1;
+    this.alienMoveNote = 0;
     this.hud.hideMessage();
+
+    // Play start sound
+    Sound.select({ frequency: 880, volume: 0.25 });
 
     // Clear bullets and explosions
     for (const bullet of this.bullets) {
