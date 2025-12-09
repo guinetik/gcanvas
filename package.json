@@ -3,6 +3,7 @@
   "version": "0.0.3-alpha",
   "description": "Canvas Utilities and 2d Primitives",
   "main": "index.js",
+  "types": "types/index.d.ts",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -49,6 +50,6 @@
     "vitest": "^3.1.1"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "*"
+    "@rollup/rollup-linux-x64-gnu": "^4.53.3"
   }
 }

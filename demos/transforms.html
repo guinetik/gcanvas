@@ -6,56 +6,40 @@
   <title>Transform API Demo</title>
   <link rel="stylesheet" href="demos.css" />
   <style>
-    #info {
-      max-width: 800px;
-    }
-    code {
-      background: rgba(0, 0, 0, 0.1);
-      padding: 2px 6px;
-      border-radius: 3px;
+    #debug-toggle {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 100;
+      padding: 10px 20px;
       font-family: monospace;
+      font-size: 14px;
+      background: #333;
+      color: #ff00ff;
+      border: 2px solid #ff00ff;
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
-    .code-example {
-      background: #1e1e1e;
-      color: #d4d4d4;
-      padding: 12px;
-      border-radius: 4px;
-      margin: 10px 0;
-      font-family: monospace;
-      font-size: 13px;
-      overflow-x: auto;
+    #debug-toggle:hover {
+      background: #ff00ff;
+      color: #000;
     }
-    .code-example .comment { color: #6a9955; }
-    .code-example .keyword { color: #569cd6; }
-    .code-example .method { color: #dcdcaa; }
-    .code-example .number { color: #b5cea8; }
+    #debug-toggle.active {
+      background: #ff00ff;
+      color: #000;
+    }
   </style>
 </head>
 
 <body>
-  <div id="info">
-    <strong>Transform API Demo</strong> — Demonstrates the new fluent Transform API for shapes.<br><br>
-
-    <b>The Transform API</b> provides a consistent, chainable interface for modifying shape properties:
-
-    <div class="code-example">
-      <span class="comment">// Fluent chaining</span><br>
-      shape.<span class="method">transform</span><br>
-      &nbsp;&nbsp;.<span class="method">x</span>(<span class="number">100</span>).<span class="method">y</span>(<span class="number">200</span>)<br>
-      &nbsp;&nbsp;.<span class="method">width</span>(<span class="number">50</span>).<span class="method">height</span>(<span class="number">50</span>)<br>
-      &nbsp;&nbsp;.<span class="method">rotation</span>(<span class="number">45</span>)<br>
-      &nbsp;&nbsp;.<span class="method">scale</span>(<span class="number">0.8</span>);<br><br>
-
-      <span class="comment">// Batch updates</span><br>
-      shape.<span class="method">transform</span>.<span class="method">set</span>({ x: <span class="number">100</span>, rotation: <span class="number">45</span> });<br><br>
-
-      <span class="comment">// Relative transforms</span><br>
-      shape.<span class="method">transform</span>.<span class="method">translateBy</span>(<span class="number">10</span>, <span class="number">20</span>);<br>
-      shape.<span class="method">transform</span>.<span class="method">rotateBy</span>(<span class="number">15</span>);<br>
-    </div>
-
-    <b>Controls:</b> Click to randomize colors. Watch the shapes animate using the Transform API.
+  <div id="info" class="light">
+    <strong>Transform API Demo</strong> — The <code>Transform</code> API provides a consistent, chainable interface for modifying shape properties.
+    Use <code>shape.transform.x(100).y(200).rotation(45).scale(0.8)</code> for fluent chaining,
+    <code>shape.transform.set({ x: 100, rotation: 45 })</code> for batch updates, or
+    <code>shape.transform.translateBy(10, 20)</code> for relative transforms.
+    Click to randomize colors.
   </div>
+  <button id="debug-toggle">Toggle Debug</button>
   <canvas id="game"></canvas>
 
   <script type="module">
@@ -75,6 +59,9 @@
       Easing
     } from "../src/index";
 
+    // Track all shapes for debug toggle
+    const allShapes = [];
+
     /**
      * TransformDemo Game
      * Showcases the new Transform API with animated shapes
@@ -83,7 +70,7 @@
       constructor(canvas) {
         super(canvas);
         this.enableFluidSize();
-        this.backgroundColor = "#1a1a2e";
+        this.backgroundColor = "black";
       }
 
       onResize() {
@@ -130,8 +117,11 @@
           height: 60,
           color: "#e94560",
           stroke: "#fff",
-          lineWidth: 2
+          lineWidth: 2,
+          debug: false,
+          debugColor: "#ff00ff"
         });
+        allShapes.push(this.rect);
 
         // Use fluent API to set initial position
         this.rect.transform
@@ -177,16 +167,19 @@
         super(game);
 
         // Create a group with multiple shapes
-        this.group = new Group({ debug: true, debugColor: "#4a4a6a" });
+        this.group = new Group({ debug: false, debugColor: "#ff00ff" });
+        allShapes.push(this.group);
 
         // Add shapes to group using transform API
-        const colors = ["#0f3460", "#16213e", "#1a1a2e"];
         for (let i = 0; i < 3; i++) {
           const circle = new Circle(15 + i * 5, {
             color: Painter.colors.randomColorHSL(),
             stroke: "#fff",
-            lineWidth: 1
+            lineWidth: 1,
+            debug: false,
+            debugColor: "#ff00ff"
           });
+          allShapes.push(circle);
           // Position using transform
           circle.transform.position(i * 40 - 40, 0);
           this.group.add(circle);
@@ -241,8 +234,11 @@
         this.star = new Star(30, 5, 0.5, {
           color: "#ffc107",
           stroke: "#fff",
-          lineWidth: 2
+          lineWidth: 2,
+          debug: false,
+          debugColor: "#ff00ff"
         });
+        allShapes.push(this.star);
 
         // Use batch set for initial state
         this.star.transform.set({
@@ -291,14 +287,14 @@
     }
 
     /**
-     * Demo 4: Relative Transforms
-     * Shows translateBy, rotateBy, scaleBy
+     * Demo 4: Animated Transforms
+     * Shows position, rotation, and scale animations
      */
     class RelativeTransformDemo extends GameObject {
       constructor(game) {
         super(game);
 
-        // Create shapes for demonstrating relative transforms
+        // Create shapes for demonstrating animated transforms
         this.shapes = [];
         const positions = [
           { x: -200, y: 80 },
@@ -307,12 +303,13 @@
         ];
 
         const types = [
-          { name: "translateBy", shape: new Rectangle({ width: 50, height: 50, color: "#00d9ff", stroke: "#fff", lineWidth: 2 }) },
-          { name: "rotateBy", shape: new Triangle(40, { color: "#ff6b6b", stroke: "#fff", lineWidth: 2 }) },
-          { name: "scaleBy", shape: new Circle(25, { color: "#7bed9f", stroke: "#fff", lineWidth: 2 }) }
+          { name: "position", shape: new Rectangle({ width: 50, height: 50, color: "#00d9ff", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) },
+          { name: "rotation", shape: new Triangle(40, { color: "#ff6b6b", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) },
+          { name: "scale", shape: new Circle(25, { color: "#7bed9f", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) }
         ];
 
         types.forEach((type, i) => {
+          allShapes.push(type.shape);
           type.shape.transform.position(positions[i].x, positions[i].y);
           type.label = new TextShape(type.name + "()", {
             x: positions[i].x,
@@ -334,16 +331,15 @@
         super.update(dt);
         this.elapsed += dt;
 
-        // translateBy demo - oscillate position
+        // position demo - oscillate position
         const tx = Math.sin(this.elapsed * 2) * 30;
         const ty = Math.cos(this.elapsed * 3) * 15;
         this.shapes[0].shape.transform.position(this.shapes[0].baseX + tx, this.shapes[0].baseY + ty);
 
-        // rotateBy demo - continuous rotation using relative
-        // We reset and apply fresh rotation to avoid accumulation issues in demo
+        // rotation demo - continuous rotation
         this.shapes[1].shape.transform.rotation(this.elapsed * 90);
 
-        // scaleBy demo - pulsing scale
+        // scale demo - pulsing scale
         const scale = 0.7 + Math.abs(Math.sin(this.elapsed * 2)) * 0.6;
         this.shapes[2].shape.transform.scale(scale);
       }
@@ -362,6 +358,21 @@
       const canvas = document.getElementById("game");
       const game = new TransformDemoGame(canvas);
       game.start();
+
+      // Debug toggle button
+      let debugEnabled = false;
+      const debugBtn = document.getElementById("debug-toggle");
+
+      debugBtn.addEventListener("click", () => {
+        debugEnabled = !debugEnabled;
+        debugBtn.classList.toggle("active", debugEnabled);
+        debugBtn.textContent = debugEnabled ? "Debug: ON" : "Toggle Debug";
+
+        // Toggle debug on all shapes
+        allShapes.forEach(shape => {
+          shape._debug = debugEnabled;
+        });
+      });
 
       // Randomize colors on click
       canvas.addEventListener("click", () => {
