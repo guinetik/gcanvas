@@ -11,3 +11,9 @@ export * from "./mixins";
 // Fluent API
 export * from "./fluent";
 export * from "./sound";
+
+// Collision detection
+export * from "./collision";
+
+// State management
+export * from "./state";
