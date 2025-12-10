@@ -12,6 +12,8 @@ GCanvas is a modular 2D rendering and game framework built on top of the HTML5 C
 | [Concepts](./concepts/architecture-overview.md) | Core architecture and design |
 | [Shapes Module](./modules/shapes/README.md) | Drawing primitives and hierarchy |
 | [Game Module](./modules/game/README.md) | Game loop and GameObjects |
+| [Collision Module](./modules/collision/README.md) | Collision detection and management |
+| [State Module](./modules/state/README.md) | State machines for entities and games |
 | [Painter Module](./modules/painter/README.md) | Low-level canvas API |
 
 ## Architecture Overview
@@ -25,18 +27,21 @@ GCanvas is a modular 2D rendering and game framework built on top of the HTML5 C
 │  │  (Drawing)  │  │ (Lifecycle) │  │   (Canvas API)      │  │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌───────┐  │
-│  │ Motion  │ │   IO    │ │  Math   │ │  Util   │ │Mixins │  │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └───────┘  │
+│  ┌───────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐         │
+│  │ Collision │ │  State  │ │ Motion  │ │   IO    │  ...    │
+│  │ (Physics) │ │  (FSM)  │ │ (Anim)  │ │ (Input) │         │
+│  └───────────┘ └─────────┘ └─────────┘ └─────────┘         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-GCanvas is organized into **9 core modules**:
+GCanvas is organized into **11 core modules**:
 
 | Module | Purpose |
 |--------|---------|
 | **[shapes](./modules/shapes/README.md)** | 40+ drawable primitives and shape classes |
 | **[game](./modules/game/README.md)** | Core game loop, Pipeline, GameObjects, Scenes |
+| **[collision](./modules/collision/README.md)** | Collision detection algorithms and group management |
+| **[state](./modules/state/README.md)** | State machines with lifecycle callbacks |
 | **[painter](./modules/painter/README.md)** | Low-level canvas drawing API |
 | **motion** | Animation with Tweenetik and Motion patterns |
 | **io** | Input handling (Mouse, Keyboard, Touch, Events) |
@@ -172,6 +177,8 @@ npm run dev
 - **Painter API** - Direct canvas control when needed
 - **GameObjects** - Interactive entities with lifecycle methods
 - **Scenes** - Hierarchical organization of game objects
+- **Collision Detection** - AABB, circles, lines, sweep tests, and group management
+- **State Machines** - FSM with enter/update/exit lifecycle, timed transitions
 - **UI Components** - Button, ToggleButton, Cursor, Layout managers
 - **Motion System** - Stateless animation patterns (orbit, bounce, spiral...)
 - **Tweenetik** - Property-based tweening with easing
@@ -192,6 +199,8 @@ npm run dev
 
 - [Shapes Module](./modules/shapes/README.md) - All drawable primitives
 - [Game Module](./modules/game/README.md) - Game loop and objects
+- [Collision Module](./modules/collision/README.md) - Collision detection
+- [State Module](./modules/state/README.md) - State machines
 - [Painter Module](./modules/painter/README.md) - Canvas abstraction
 
 ## Learn More
