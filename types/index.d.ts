@@ -239,3 +239,33 @@ export {
   applyAnchor,
   AnchorOptions
 } from './mixins';
+
+// ==========================================================================
+// Sound Module
+// ==========================================================================
+
+export {
+  // Main classes
+  Synth,
+  Sound,
+
+  // Sub-modules
+  SynthOscillators,
+  SynthEffects,
+  SynthEnvelope,
+  SynthNoise,
+  SynthMusical,
+  SynthAnalyzer,
+
+  // Types
+  SynthOptions,
+  ToneOptions,
+  ContinuousOscillatorController,
+  DelayEffect,
+  TremoloEffect,
+  DroneController,
+  EnvelopeOptions,
+  EnvelopePresets,
+  ScaleName,
+  ChordType
+} from './sound';

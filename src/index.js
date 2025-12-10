@@ -10,3 +10,4 @@ export * from "./mixins";
 
 // Fluent API
 export * from "./fluent";
+export * from "./sound";
