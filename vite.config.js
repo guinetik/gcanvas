@@ -7,6 +7,10 @@ export default defineConfig(({ mode }) => {
   const isDebug = mode === "debug";
 
   return {
+    server: {
+      port: 9195,
+      strictPort: true, // Don't try other ports if 9195 is in use
+    },
     build: {
       lib: {
         entry: libEntry,

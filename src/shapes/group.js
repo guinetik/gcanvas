@@ -29,7 +29,7 @@ export class Group extends Transformable {
    * @param {boolean} [options.inheritScale=false] - Whether scale should cascade to children
    */
   constructor(options = {}) {
-    // Call parent constructor with all options 
+    // Call parent constructor with all options
     super(options);
 
     // Create the z-ordered collection
@@ -38,7 +38,7 @@ export class Group extends Transformable {
     });
     this._collection._owner = this; // Give collection a reference to its owner
 
-    // Initialize state tracking 
+    // Initialize state tracking
     this._childrenVersion = 0;
     this._cachedBounds = null;
 
@@ -48,10 +48,24 @@ export class Group extends Transformable {
     // Track if dimensions were explicitly set in constructor
     this.userDefinedWidth = options.width;
     this.userDefinedHeight = options.height;
-    
+
     // Only consider dimensions as user-defined if they were explicitly provided in options
-    this.userDefinedDimensions = options.width !== undefined && options.height !== undefined && 
+    this.userDefinedDimensions = options.width !== undefined && options.height !== undefined &&
                                (options.width > 0 || options.height > 0);
+
+    // Render caching - when enabled, renders children to offscreen canvas once
+    // and blits the cached bitmap on subsequent frames for better performance
+    this._cacheRendering = options.cacheRendering ?? false;
+    this._cacheCanvas = null;
+    this._cacheDirty = true;
+  }
+
+  /**
+   * Mark the render cache as needing refresh.
+   * Call this when visual properties of children change (e.g., color, opacity).
+   */
+  invalidateCache() {
+    this._cacheDirty = true;
   }
 
   /**
@@ -70,6 +84,7 @@ export class Group extends Transformable {
     this._collection.add(object);
     this._childrenVersion++;
     this.markBoundsDirty();
+    this.invalidateCache();
     return object;
   }
 
@@ -84,6 +99,7 @@ export class Group extends Transformable {
       object.parent = null;
       this._childrenVersion++;
       this.markBoundsDirty();
+      this.invalidateCache();
     }
     return result;
   }
@@ -95,6 +111,7 @@ export class Group extends Transformable {
     this._collection.clear();
     this._childrenVersion++;
     this.markBoundsDirty();
+    this.invalidateCache();
   }
 
   // Z-ordering methods
@@ -115,16 +132,57 @@ export class Group extends Transformable {
   }
 
   /**
-   * Render group and all children with transformations
+   * Render group and all children with transformations.
+   * If cacheRendering is enabled, renders to an offscreen canvas once
+   * and blits the cached bitmap on subsequent frames.
    */
   draw() {
     super.draw();
-    this.logger.log("Group.draw chilren:", this.children.length);
-    
-    // Get sorted children
-    const sortedChildren = this._collection.getSortedChildren();
+    this.logger.log("Group.draw children:", this.children.length);
 
-    // For each child, completely isolate its rendering context
+    // If caching disabled, render children normally
+    if (!this._cacheRendering) {
+      this._renderChildren();
+      return;
+    }
+
+    // Get bounds for cache canvas sizing
+    const bounds = this.getBounds();
+    const cacheWidth = Math.ceil(bounds.width) || 1;
+    const cacheHeight = Math.ceil(bounds.height) || 1;
+
+    // Create or resize cache canvas if needed
+    if (!this._cacheCanvas ||
+        this._cacheCanvas.width !== cacheWidth ||
+        this._cacheCanvas.height !== cacheHeight) {
+      this._cacheCanvas = document.createElement("canvas");
+      this._cacheCanvas.width = cacheWidth;
+      this._cacheCanvas.height = cacheHeight;
+      this._cacheDirty = true;
+    }
+
+    // Re-render to cache if dirty
+    if (this._cacheDirty) {
+      this._renderToCache(cacheWidth, cacheHeight);
+      this._cacheDirty = false;
+    }
+
+    // Blit cached canvas (centered at origin since Group renders at center)
+    Painter.img.blit(
+      this._cacheCanvas,
+      -cacheWidth / 2,
+      -cacheHeight / 2,
+      cacheWidth,
+      cacheHeight
+    );
+  }
+
+  /**
+   * Render children normally (non-cached path)
+   * @private
+   */
+  _renderChildren() {
+    const sortedChildren = this._collection.getSortedChildren();
     for (let i = 0; i < sortedChildren.length; i++) {
       const child = sortedChildren[i];
       if (child.visible) {
@@ -133,6 +191,35 @@ export class Group extends Transformable {
         Painter.restore();
       }
     }
+  }
+
+  /**
+   * Render all children to the offscreen cache canvas
+   * @param {number} width - Cache canvas width
+   * @param {number} height - Cache canvas height
+   * @private
+   */
+  _renderToCache(width, height) {
+    const cacheCtx = this._cacheCanvas.getContext("2d");
+
+    // Clear cache canvas
+    cacheCtx.clearRect(0, 0, width, height);
+
+    // Save main context, swap to cache context
+    const mainCtx = Painter.ctx;
+    Painter.ctx = cacheCtx;
+
+    // Translate so children render centered in cache
+    cacheCtx.save();
+    cacheCtx.translate(width / 2, height / 2);
+
+    // Render all children to cache
+    this._renderChildren();
+
+    cacheCtx.restore();
+
+    // Restore main context
+    Painter.ctx = mainCtx;
   }
 
   /**
@@ -205,9 +292,30 @@ export class Group extends Transformable {
     const max = Math.max(0, v);
     this._height = max;
     this.userDefinedHeight = max;
-    this.userDefinedDimensions = (this.userDefinedWidth > 0 || this.userDefinedHeight > 0) && 
+    this.userDefinedDimensions = (this.userDefinedWidth > 0 || this.userDefinedHeight > 0) &&
                                this.userDefinedWidth !== undefined && this.userDefinedHeight !== undefined;
     this.markBoundsDirty();
+  }
+
+  /**
+   * Whether render caching is enabled for this group.
+   * When enabled, children are rendered to an offscreen canvas once
+   * and the cached bitmap is blitted on subsequent frames.
+   * @returns {boolean}
+   */
+  get cacheRendering() {
+    return this._cacheRendering;
+  }
+
+  /**
+   * Enable or disable render caching.
+   * @param {boolean} value - True to enable caching
+   */
+  set cacheRendering(value) {
+    this._cacheRendering = value;
+    if (value) {
+      this._cacheDirty = true;
+    }
   }
 
   /**
