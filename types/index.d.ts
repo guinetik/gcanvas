@@ -269,3 +269,41 @@ export {
   ScaleName,
   ChordType
 } from './sound';
+
+// ==========================================================================
+// Collision Module
+// ==========================================================================
+
+export {
+  // Main classes
+  Collision,
+  CollisionSystem,
+
+  // Types
+  CollisionCircle,
+  LineSegment,
+  SweepResult,
+  OverlapResult,
+  MTVResult,
+  Collidable,
+  CollisionPairOptions,
+  CollisionCallback
+} from './collision';
+
+// ==========================================================================
+// State Module
+// ==========================================================================
+
+export {
+  // Main class
+  StateMachine,
+
+  // Types
+  StateTransition,
+  StateEvents,
+  StateConfig,
+  States,
+  StateMachineOptions,
+  PhaseConfig,
+  SequenceOptions
+} from './state';
