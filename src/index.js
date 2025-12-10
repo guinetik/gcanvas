@@ -7,4 +7,7 @@ export * from "./io";
 export * from "./game";
 export * from "./motion";
 export * from "./mixins";
+
+// Fluent API
+export * from "./fluent";
 export * from "./sound";
