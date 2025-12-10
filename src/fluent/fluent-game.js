@@ -109,26 +109,58 @@ export class FluentGame {
 
   /**
    * Create or switch to a scene
-   * @param {string} name - Scene identifier
-   * @param {Object} [options] - Scene options
+   *
+   * Supports multiple signatures:
+   * - scene('name') - Create/switch to named scene
+   * - scene('name', options) - Create with options
+   * - scene('name', CustomSceneClass) - Create using custom class
+   * - scene('name', CustomSceneClass, options) - Custom class with options
+   * - scene(CustomSceneClass) - Custom class, name derived from class
+   * - scene(CustomSceneClass, options) - Custom class with options
+   *
+   * @param {string|Function} nameOrClass - Scene identifier or custom Scene class
+   * @param {Object|Function} [optionsOrClass] - Scene options or custom Scene class
+   * @param {Object} [options] - Scene options (when class is second arg)
    * @param {number} [options.zIndex=0] - Scene z-index
    * @param {boolean} [options.active=true] - Whether scene is visible
    * @param {Function} [options.onEnter] - Scene enter callback
    * @param {Function} [options.onExit] - Scene exit callback
    * @returns {FluentScene}
    */
-  scene(name, options = {}) {
+  scene(nameOrClass, optionsOrClass, options) {
+    // Parse flexible arguments
+    let name, SceneClass, opts;
+
+    if (typeof nameOrClass === 'function') {
+      // scene(CustomClass) or scene(CustomClass, options)
+      SceneClass = nameOrClass;
+      name = SceneClass.name || 'custom_scene';
+      opts = optionsOrClass || {};
+    } else if (typeof optionsOrClass === 'function') {
+      // scene('name', CustomClass) or scene('name', CustomClass, options)
+      name = nameOrClass;
+      SceneClass = optionsOrClass;
+      opts = options || {};
+    } else {
+      // scene('name') or scene('name', options)
+      name = nameOrClass;
+      SceneClass = Scene;
+      opts = optionsOrClass || {};
+    }
+
     const {
       zIndex = 0,
       active = true,
       onEnter,
-      onExit
-    } = options;
+      onExit,
+      ...customOpts
+    } = opts;
 
     let scene = this.#scenes.get(name);
 
     if (!scene) {
-      scene = new Scene(this.#game);
+      // Instantiate the scene class (custom or default)
+      scene = new SceneClass(this.#game, customOpts);
       scene.name = name;
       scene.zIndex = zIndex;
       scene.visible = active;
@@ -158,14 +190,21 @@ export class FluentGame {
 
   /**
    * Shortcut: create GO in current/default scene
-   * @param {Object} options - GameObject options
+   *
+   * Supports same signatures as FluentScene.go():
+   * - go(options) - Plain GameObject with options
+   * - go(CustomClass) - Custom GameObject class
+   * - go(CustomClass, options) - Custom class with options
+   *
+   * @param {Object|Function} [optionsOrClass] - GameObject options or custom class
+   * @param {Object} [options] - Options when class is first arg
    * @returns {FluentGO}
    */
-  go(options) {
+  go(optionsOrClass, options) {
     if (!this.#currentScene) {
       this.scene('default');
     }
-    return new FluentScene(this, this.#currentScene, this.#refs, this.#state).go(options);
+    return new FluentScene(this, this.#currentScene, this.#refs, this.#state).go(optionsOrClass, options);
   }
 
   // ─────────────────────────────────────────────────────────

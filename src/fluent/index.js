@@ -46,6 +46,24 @@
  *   .start();
  *
  * @example
+ * // Class injection - use custom classes with fluent API
+ * import { gcanvas } from 'gcanvas';
+ * import { SpaceScene } from './scenes/space-scene';
+ * import { Player, Alien, Boss } from './entities';
+ *
+ * gcanvas({ bg: 'black' })
+ *   // Pass custom scene class
+ *   .scene(SpaceScene)
+ *   // Or with name: .scene('game', SpaceScene, { zIndex: 0 })
+ *
+ *   // Pass custom GameObject classes
+ *   .go(Player, { x: 400, y: 500, name: 'player' })
+ *   .go(Alien, { x: 100, y: 100, type: 0 })
+ *   .go(Boss, { x: 400, y: 150, bossType: 2 })
+ *
+ *   .start();
+ *
+ * @example
  * // Composable scene modules
  * // scenes/player.js
  * export const playerScene = (g) => g

@@ -734,12 +734,42 @@ export class FluentGO {
 
   /**
    * Create a child GameObject
-   * @param {Object} [opts] - Child GO options
+   *
+   * Supports multiple signatures:
+   * - child() - Create plain child GO
+   * - child(options) - Create plain child with options
+   * - child(CustomClass) - Create custom child class
+   * - child(CustomClass, options) - Custom class with options
+   * - child(options, builderFn) - Plain child with builder
+   * - child(CustomClass, options, builderFn) - Custom class with builder
+   *
+   * @param {Object|Function} [optsOrClass] - Child GO options or custom class
+   * @param {Object|Function} [optsOrBuilder] - Options or builder function
    * @param {Function} [builderFn] - Optional builder callback
    * @returns {FluentGO}
    */
-  child(opts = {}, builderFn) {
-    const childGO = new GameObject(opts);
+  child(optsOrClass, optsOrBuilder, builderFn) {
+    // Parse flexible arguments
+    let GOClass, opts, builder;
+
+    if (typeof optsOrClass === 'function' && optsOrClass.prototype) {
+      // child(CustomClass) or child(CustomClass, options) or child(CustomClass, options, builder)
+      GOClass = optsOrClass;
+      if (typeof optsOrBuilder === 'function') {
+        opts = {};
+        builder = optsOrBuilder;
+      } else {
+        opts = optsOrBuilder || {};
+        builder = builderFn;
+      }
+    } else {
+      // child() or child(options) or child(options, builder)
+      GOClass = GameObject;
+      opts = optsOrClass || {};
+      builder = optsOrBuilder;
+    }
+
+    const childGO = new GOClass(opts);
 
     // Set game reference
     if (this.#go.game) {
@@ -755,8 +785,8 @@ export class FluentGO {
 
     const fluentChild = new FluentGO(this, childGO, this.#refs, this.#state);
 
-    if (builderFn) {
-      builderFn(fluentChild);
+    if (builder) {
+      builder(fluentChild);
       return this; // Return parent GO context
     }
 

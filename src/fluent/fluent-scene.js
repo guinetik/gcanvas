@@ -44,15 +44,41 @@ export class FluentScene {
 
   /**
    * Create a GameObject in this scene
-   * @param {Object} [options] - GameObject options
-   * @param {string} [options.name] - Name for refs lookup
-   * @param {number} [options.x=0] - X position
-   * @param {number} [options.y=0] - Y position
-   * @param {boolean} [options.visible=true] - Visibility
+   *
+   * Supports multiple signatures:
+   * - go() - Create plain GameObject at origin
+   * - go(options) - Create plain GameObject with options
+   * - go(CustomClass) - Create custom GameObject class
+   * - go(CustomClass, options) - Custom class with options
+   * - go(options, builderFn) - Plain GO with builder callback
+   * - go(CustomClass, options, builderFn) - Custom class with builder
+   *
+   * @param {Object|Function} [optionsOrClass] - GameObject options or custom class
+   * @param {Object|Function} [optionsOrBuilder] - Options or builder function
    * @param {Function} [builderFn] - Optional builder callback
    * @returns {FluentGO|FluentScene}
    */
-  go(options = {}, builderFn) {
+  go(optionsOrClass, optionsOrBuilder, builderFn) {
+    // Parse flexible arguments
+    let GOClass, options, builder;
+
+    if (typeof optionsOrClass === 'function' && optionsOrClass.prototype) {
+      // go(CustomClass) or go(CustomClass, options) or go(CustomClass, options, builder)
+      GOClass = optionsOrClass;
+      if (typeof optionsOrBuilder === 'function') {
+        options = {};
+        builder = optionsOrBuilder;
+      } else {
+        options = optionsOrBuilder || {};
+        builder = builderFn;
+      }
+    } else {
+      // go() or go(options) or go(options, builder)
+      GOClass = GameObject;
+      options = optionsOrClass || {};
+      builder = optionsOrBuilder;
+    }
+
     const {
       name,
       x = 0,
@@ -61,7 +87,8 @@ export class FluentScene {
       ...rest
     } = options;
 
-    const go = new GameObject({ x, y, visible, ...rest });
+    // Instantiate the GO class (custom or default)
+    const go = new GOClass({ x, y, visible, ...rest });
     go.game = this.#parent.game;
     this.#scene.add(go);
     this.#lastGO = go;
@@ -75,8 +102,8 @@ export class FluentScene {
     const fluentGO = new FluentGO(this, go, this.#refs, this.#state);
 
     // If builder function provided, execute and return scene context
-    if (builderFn) {
-      builderFn(fluentGO);
+    if (builder) {
+      builder(fluentGO);
       return this;
     }
 
