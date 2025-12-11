@@ -55,11 +55,11 @@ function initShapesDemo() {
       .go({ x: 40, y: 125 }).triangle({ size: 30, fill: '#ff6b6b' }).end()
       .go({ x: 105, y: 125 }).hexagon({ radius: 18, fill: '#c44dff' }).end()
       .go({ x: 170, y: 125 }).diamond({ width: 28, height: 36, fill: '#4ecdc4' }).end()
-      .go({ x: 235, y: 125 }).heart({ size: 26, fill: '#ff6b9d' }).end()
+      .go({ x: 235, y: 110 }).heart({ size: 26, fill: '#ff6b9d' }).end()
       .go({ x: 300, y: 125 }).cross({ size: 26, thickness: 6, fill: '#ffd93d' }).end()
       .go({ x: 365, y: 125 }).ring({ innerRadius: 10, outerRadius: 18, fill: '#a8e6cf' }).end()
       .go({ x: 430, y: 125 }).star({ points: 6, radius: 18, fill: '#ff8c42' }).end()
-      .go({ x: 470, y: 125 }).cloud({ size: 22, fill: '#dfe6e9' })
+      .go({ x: 485, y: 125 }).cloud({ size: 25, fill: '#dfe6e9' })
     .start();
 }
 
@@ -79,7 +79,7 @@ function initMotionDemo() {
         .pulse({ min: 0.7, max: 1.3, duration: 1 })
       .end()
       // Oscillating star
-      .go({ x: 200, y: 125 })
+      .go({ x: 220, y: 125 })
         .star({ points: 5, radius: 25, fill: '#ffd93d' })
         .oscillate({ prop: 'y', min: -30, max: 30, duration: 2 })
       .end()

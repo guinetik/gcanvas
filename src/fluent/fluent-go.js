@@ -296,9 +296,9 @@ export class FluentGO {
   cloud(opts = {}) {
     const normalized = this.#normalizeShapeOpts(opts);
     const { size, width, height, ...rest } = normalized;
-    // Cloud constructor: (x, y, size, options)
+    // Cloud constructor: (size, options)
     const cloudSize = size || Math.min(width || 40, height || 40);
-    const shape = new Cloud(0, 0, cloudSize, rest);
+    const shape = new Cloud(cloudSize, rest);
     return this.#addShapeInstance(shape);
   }
 
