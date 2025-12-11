@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Space Invaders - GCanvas Demo</title>
+  <link rel="stylesheet" href="demos.css" />
+  <style>
+    /* Fullscreen game layout */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000011;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+    #info {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      background: rgba(0, 0, 17, 0.85);
+      border-bottom: 1px solid #333;
+    }
+    canvas#game {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Space Invaders</strong> — A classic arcade game clone built with GCanvas.<br>
+    <strong>Controls:</strong> Arrow keys or A/D to move, Space to shoot.<br>
+    <strong>Objective:</strong> Destroy all aliens before they reach the bottom!
+  </div>
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { SpaceGame } from "./js/space/game.js";
+
+    let game = null;
+
+    function startGame() {
+      // Clean up any existing game instance (fixes HMR duplication bug)
+      if (game) {
+        game.stop();
+        game = null;
+      }
+
+      const canvas = document.getElementById("game");
+      game = new SpaceGame(canvas);
+      game.enablePauseOnBlur(true);
+      game.setFPS(60);
+      game.start();
+
+      // Store reference for HMR cleanup
+      window.__spaceGame = game;
+    }
+
+    // Clean up on HMR
+    if (import.meta.hot) {
+      import.meta.hot.dispose(() => {
+        if (window.__spaceGame) {
+          window.__spaceGame.stop();
+          window.__spaceGame = null;
+        }
+      });
+    }
+
+    window.addEventListener("load", startGame);
+  </script>
+</body>
+
+</html>

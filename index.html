@@ -25,19 +25,59 @@
 </head>
 
 <body>
-  <nav>
-    <!-- <svg>
-      <path
-        d="m 562.6845,164.9387 v -20.9177 -8.5136 h 17.1383 v -6.0917 h -11.9492 v -14.0263 h -5.1891 v 14.2982 5.8198 h -25.0713 v 8.9127 h 17.4776 v 20.5186 z m 21.7455,14.0269 v -14.2985 -5.8201 h 25.0713 v -8.9132 H 592.0231 V 129.4157 H 584.43 v 20.9172 8.5141 h -17.138 v 6.0928 h 11.9474 v 14.0258 z">
-      </path>
-    </svg> -->
-    <h3>Demos</h3>
-    <h1>Game</h1>
+  <!-- Mobile Header (hidden on desktop) -->
+  <header class="mobile-header">
+    <img src="./logo.svg" alt="GCanvas Logo" class="mobile-logo">
+    <span class="mobile-title">GCANVAS</span>
+    <button class="hamburger" id="hamburger-btn" aria-label="Toggle menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </header>
+
+  <!-- Overlay for closing menu when clicking outside -->
+  <div class="nav-overlay" id="nav-overlay"></div>
+
+  <nav id="main-nav">
+    <div class="nav-branding">
+      <div style="text-align: center; margin-bottom: 1em;">
+        <img src="./logo.svg" alt="Logo" width="90" height="80" style="display:inline-block; vertical-align:middle;">
+      </div>
+      <div style="text-align: center; margin-bottom: 1em;">
+        <h1 style="letter-spacing:2px; margin-bottom: 0.3em; margin-top: 0.25em; font-family:monospace; font-size:2em; color:#CCC;">GCANVAS</h1>
+        <hr style="margin: 0.5em 1.6em;" />
+        <a href="https://github.com/guinetik/gcanvas" target="_blank" title="View on GitHub"
+           style="display: inline-block; background: white; border-radius: 50%; width: 36px; height: 36px; margin: 0.5em; box-shadow:0 2px 6px #0002;">
+          <svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true" fill="#fff" style="margin:7px 0 0 0;">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+              0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52
+              -.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2
+              -3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12
+              0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04
+              2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15
+              0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01
+              2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z">
+            </path>
+          </svg>
+        </a>
+      </div>
+      <hr />
+    </div>
+    <h2 style="margin-bottom: 0.3em;">Games</h2>
+    <a href="space.html" target="demo-frame">Space Invaders</a>
+    <hr />
+    <h2>Demos</h2>
+    
+    <h3>Game</h3>
     <a href="basic.html" target="demo-frame">Basic</a>
     <a href="loop.html" target="demo-frame">Game Loop</a>
     <a href="events.html" target="demo-frame">Event Handlers</a>
     <hr />
-    <h1>Shapes</h1>
+    <h3>Fluent API</h3>
+    <a href="fluent.html" target="demo-frame">Fluent API</a>
+    <hr />
+    <h3>Shapes</h3>
     <a href="pipeline.html" target="demo-frame">Rendering Pipeline</a>
     <a href="shapes.html" target="demo-frame" class="active">Shape Gallery</a>
     <a href="visibility.html" target="demo-frame">Visibility</a>
@@ -48,24 +88,25 @@
     <a href="patterns.html" target="demo-frame">Image Patterns</a>
     <a href="fractals.html" target="demo-frame">Fractals</a>
     <hr />
-    <h1>Painter</h1>
+    <h3>Painter</h3>
     <a href="painter.html" target="demo-frame">Painter</a>
     <a href="bezier.html" target="demo-frame">Bezier Curves</a>
     <a href="beziersignature.html" target="demo-frame">Bezier Signature</a>
     <a href="blob.html" target="demo-frame">Bezier Blob</a>
     <a href="svgtween.html" target="demo-frame">SVG Motion</a>
     <hr />
-    <h1>Motion</h1>
+    <h3>Motion</h3>
     <a href="animations.html" target="demo-frame">Animations</a>
     <a href="tween.html" target="demo-frame">Tween</a>
     <hr />
-    <h1>Scene</h1>
+    <h3>Scene</h3>
     <a href="scene.html" target="demo-frame">Scene</a>
     <a href="mondrian.html" target="demo-frame">Mondrian</a>
     <a href="layouts.html" target="demo-frame">Scene Layouts</a>
     <a href="tiles.html" target="demo-frame">Tile Layout</a>
     <a href="isometric.html" target="demo-frame">Isometric</a>
     <a href="scenes.html" target="demo-frame">Transforms</a>
+    <hr />
   </nav>
   <iframe name="demo-frame" id="demo-frame" src="shapes.html"></iframe>
 
@@ -151,6 +192,40 @@
 
           // set the hash: "#/shapes"
           location.hash = "/" + routeName;
+        });
+      });
+    });
+  </script>
+
+  <!-- Hamburger Menu Toggle -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const hamburgerBtn = document.getElementById("hamburger-btn");
+      const nav = document.getElementById("main-nav");
+      const overlay = document.getElementById("nav-overlay");
+
+      function toggleMenu() {
+        nav.classList.toggle("open");
+        overlay.classList.toggle("open");
+        hamburgerBtn.classList.toggle("active");
+      }
+
+      function closeMenu() {
+        nav.classList.remove("open");
+        overlay.classList.remove("open");
+        hamburgerBtn.classList.remove("active");
+      }
+
+      hamburgerBtn.addEventListener("click", toggleMenu);
+      overlay.addEventListener("click", closeMenu);
+
+      // Close menu when a link is clicked (on mobile)
+      const links = document.querySelectorAll("nav a");
+      links.forEach(link => {
+        link.addEventListener("click", () => {
+          if (window.innerWidth <= 768) {
+            closeMenu();
+          }
         });
       });
     });
