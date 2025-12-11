@@ -353,6 +353,8 @@ export class Game {
    * the pipeline to render all GameObjects.
    */
   render() {
+    // Ensure Painter uses this game's context (supports multiple canvases)
+    Painter.setContext(this.ctx);
     if (this.running) {
       this.clear();
     }

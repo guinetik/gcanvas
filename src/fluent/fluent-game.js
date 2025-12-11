@@ -65,7 +65,7 @@ export class FluentGame {
       width = 800,
       height = 600,
       bg,
-      fluid = true,
+      fluid,  // Default determined below based on canvas presence
       container,
       fps = 60,
       pixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio : 1
@@ -80,7 +80,10 @@ export class FluentGame {
 
     // Apply options
     if (bg) this.#game.backgroundColor = bg;
-    if (fluid) this.#game.enableFluidSize();
+    // Only enable fluid sizing if explicitly requested, or if we auto-created the canvas
+    // When user provides their own canvas, default to respecting its dimensions
+    const shouldBeFluid = fluid !== undefined ? fluid : !canvas;
+    if (shouldBeFluid) this.#game.enableFluidSize();
     if (fps !== 60) this.#game.targetFPS = fps;
 
     // Store pixel ratio for shapes that need it

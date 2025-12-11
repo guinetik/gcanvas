@@ -6,6 +6,7 @@
  */
 
 import { GameObject } from "../game/objects/go.js";
+import { GameObjectShapeWrapper } from "../game/objects/wrapper.js";
 import { Group } from "../shapes/group.js";
 
 // Import all shapes
@@ -77,7 +78,10 @@ export class FluentGO {
    * @returns {FluentGO}
    */
   circle(opts = {}) {
-    return this.#addShape(Circle, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { radius = 30, ...rest } = normalized;
+    const shape = new Circle(radius, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
@@ -89,7 +93,9 @@ export class FluentGO {
    * @returns {FluentGO}
    */
   rect(opts = {}) {
-    return this.#addShape(Rectangle, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const shape = new Rectangle(normalized);
+    return this.#addShapeInstance(shape);
   }
 
   /**
@@ -99,7 +105,10 @@ export class FluentGO {
    * @returns {FluentGO}
    */
   roundRect(opts = {}) {
-    return this.#addShape(RoundedRectangle, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { radius = 10, ...rest } = normalized;
+    const shape = new RoundedRectangle(radius, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
@@ -109,19 +118,25 @@ export class FluentGO {
    * @returns {FluentGO}
    */
   square(opts = {}) {
-    return this.#addShape(Square, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { size = 50, ...rest } = normalized;
+    const shape = new Square(size, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
    * Add a Star shape
    * @param {Object} [opts] - Star options
-   * @param {number} [opts.points] - Number of points
+   * @param {number} [opts.points] - Number of points (spikes)
    * @param {number} [opts.radius] - Outer radius
-   * @param {number} [opts.innerRadius] - Inner radius
+   * @param {number} [opts.inset] - Inner radius ratio (0-1)
    * @returns {FluentGO}
    */
   star(opts = {}) {
-    return this.#addShape(Star, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { radius = 40, points = 5, inset = 0.5, ...rest } = normalized;
+    const shape = new Star(radius, points, inset, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
@@ -131,7 +146,10 @@ export class FluentGO {
    * @returns {FluentGO}
    */
   triangle(opts = {}) {
-    return this.#addShape(Triangle, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { size = 50, ...rest } = normalized;
+    const shape = new Triangle(size, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
@@ -141,18 +159,22 @@ export class FluentGO {
    * @returns {FluentGO}
    */
   poly(opts = {}) {
-    return this.#addShape(Polygon, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const shape = new Polygon(normalized);
+    return this.#addShapeInstance(shape);
   }
 
   /**
    * Add a Line shape
    * @param {Object} [opts] - Line options
-   * @param {number} [opts.x2] - End X
-   * @param {number} [opts.y2] - End Y
+   * @param {number} [opts.length] - Line length
    * @returns {FluentGO}
    */
   line(opts = {}) {
-    return this.#addShape(Line, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { length = 40, ...rest } = normalized;
+    const shape = new Line(length, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
@@ -162,7 +184,10 @@ export class FluentGO {
    * @returns {FluentGO}
    */
   hexagon(opts = {}) {
-    return this.#addShape(Hexagon, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { radius = 30, ...rest } = normalized;
+    const shape = new Hexagon(radius, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
@@ -171,16 +196,26 @@ export class FluentGO {
    * @returns {FluentGO}
    */
   diamond(opts = {}) {
-    return this.#addShape(Diamond, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const shape = new Diamond(normalized);
+    return this.#addShapeInstance(shape);
   }
 
   /**
    * Add a Heart shape
    * @param {Object} [opts] - Heart options
+   * @param {number} [opts.size] - Heart size (sets width and height)
+   * @param {number} [opts.width] - Heart width
+   * @param {number} [opts.height] - Heart height
    * @returns {FluentGO}
    */
   heart(opts = {}) {
-    return this.#addShape(Heart, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { size, ...rest } = normalized;
+    if (size && !rest.width) rest.width = size;
+    if (size && !rest.height) rest.height = size;
+    const shape = new Heart(rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
@@ -192,7 +227,10 @@ export class FluentGO {
    * @returns {FluentGO}
    */
   arc(opts = {}) {
-    return this.#addShape(Arc, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { radius = 30, startAngle = 0, endAngle = Math.PI, ...rest } = normalized;
+    const shape = new Arc(radius, startAngle, endAngle, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
@@ -203,43 +241,65 @@ export class FluentGO {
    * @returns {FluentGO}
    */
   ring(opts = {}) {
-    return this.#addShape(Ring, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { outerRadius = 40, innerRadius = 20, ...rest } = normalized;
+    const shape = new Ring(outerRadius, innerRadius, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
    * Add an Arrow shape
    * @param {Object} [opts] - Arrow options
+   * @param {number} [opts.length] - Arrow length
    * @returns {FluentGO}
    */
   arrow(opts = {}) {
-    return this.#addShape(Arrow, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { length = 50, ...rest } = normalized;
+    const shape = new Arrow(length, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
    * Add a Cross shape
    * @param {Object} [opts] - Cross options
+   * @param {number} [opts.size] - Cross size
+   * @param {number} [opts.thickness] - Cross thickness
    * @returns {FluentGO}
    */
   cross(opts = {}) {
-    return this.#addShape(Cross, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { size = 40, thickness = 10, ...rest } = normalized;
+    const shape = new Cross(size, thickness, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
    * Add a Pin shape
    * @param {Object} [opts] - Pin options
+   * @param {number} [opts.radius] - Pin radius
    * @returns {FluentGO}
    */
   pin(opts = {}) {
-    return this.#addShape(Pin, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { radius = 20, ...rest } = normalized;
+    const shape = new Pin(radius, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
    * Add a Cloud shape
    * @param {Object} [opts] - Cloud options
+   * @param {number} [opts.size] - Cloud size
    * @returns {FluentGO}
    */
   cloud(opts = {}) {
-    return this.#addShape(Cloud, this.#normalizeShapeOpts(opts));
+    const normalized = this.#normalizeShapeOpts(opts);
+    const { size, width, height, ...rest } = normalized;
+    // Cloud constructor: (x, y, size, options)
+    const cloudSize = size || Math.min(width || 40, height || 40);
+    const shape = new Cloud(0, 0, cloudSize, rest);
+    return this.#addShapeInstance(shape);
   }
 
   /**
@@ -304,20 +364,16 @@ export class FluentGO {
 
   /**
    * Generic shape add by class
+   * Note: This passes opts as the first argument to the constructor.
+   * For shapes with specific signatures, use the dedicated methods
+   * (circle, star, etc.) or create the shape instance and use addShapeInstance.
    * @param {Function} ShapeClass - Shape constructor
    * @param {Object} [opts] - Shape options
    * @returns {FluentGO}
    */
   add(ShapeClass, opts = {}) {
-    return this.#addShape(ShapeClass, this.#normalizeShapeOpts(opts));
-  }
-
-  /**
-   * Add a shape instance
-   * @private
-   */
-  #addShape(ShapeClass, opts) {
-    const shape = new ShapeClass(opts);
+    const normalized = this.#normalizeShapeOpts(opts);
+    const shape = new ShapeClass(normalized);
     return this.#addShapeInstance(shape);
   }
 
@@ -328,18 +384,39 @@ export class FluentGO {
   #addShapeInstance(shape) {
     this.#shapes.push(shape);
 
-    // If first shape, set as renderable; otherwise add to group
+    // Store shape reference on the GO for rendering
     if (this.#shapes.length === 1) {
-      this.#go.setRenderable(shape);
+      // First shape - store directly and set up rendering
+      this.#go._fluentShape = shape;
+      this.#go.renderable = shape;
+
+      // Hook into draw to render the shape
+      const originalDraw = this.#go.draw?.bind(this.#go) || (() => {});
+      this.#go.draw = function() {
+        originalDraw();
+        if (this._fluentShape && this.visible) {
+          this._fluentShape.render();
+        }
+      };
+
+      // Add getBounds for hit-testing support
+      const go = this.#go;
+      this.#go.getBounds = function() {
+        if (go._fluentShape && go._fluentShape.getBounds) {
+          return go._fluentShape.getBounds();
+        }
+        return null;
+      };
     } else {
-      // Convert to group if needed
-      if (!(this.#go.renderable instanceof Group)) {
+      // Multiple shapes - use a Group
+      if (!(this.#go._fluentShape instanceof Group)) {
         const firstShape = this.#shapes[0];
         const group = new Group();
         group.add(firstShape);
-        this.#go.setRenderable(group);
+        this.#go._fluentShape = group;
+        this.#go.renderable = group;
       }
-      this.#go.renderable.add(shape);
+      this.#go._fluentShape.add(shape);
     }
 
     return this;
@@ -769,12 +846,8 @@ export class FluentGO {
       builder = optsOrBuilder;
     }
 
-    const childGO = new GOClass(opts);
-
-    // Set game reference
-    if (this.#go.game) {
-      childGO.game = this.#go.game;
-    }
+    // GameObject constructor signature is (game, options)
+    const childGO = new GOClass(this.#go.game, opts);
 
     this.#go.addChild(childGO);
 
@@ -810,6 +883,12 @@ export class FluentGO {
       refs: this.#refs,
       state: this.#state
     };
+
+    // Enable interactivity for mouse/input events
+    const interactiveEvents = ['click', 'mousedown', 'mouseup', 'mousemove', 'mouseover', 'mouseout', 'inputdown', 'inputup', 'inputmove'];
+    if (interactiveEvents.includes(event)) {
+      this.#go.interactive = true;
+    }
 
     if (this.#go.events) {
       this.#go.events.on(event, (e) => handler(ctx, e));

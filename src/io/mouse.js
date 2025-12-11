@@ -44,6 +44,13 @@ export class Mouse {
 
   static _onClick = (e) => {
     Mouse._updatePosition(e);
+    // Emit enhanced event with canvas-relative coordinates
+    // Note: e is a MouseEvent, add canvas-relative x/y directly
+    e.canvasX = Mouse.x;
+    e.canvasY = Mouse.y;
+    // Also set x/y for convenience (matches expected fluent API)
+    Object.defineProperty(e, 'x', { value: Mouse.x, writable: false });
+    Object.defineProperty(e, 'y', { value: Mouse.y, writable: false });
     Mouse.game.events.emit("click", e);
   };
 

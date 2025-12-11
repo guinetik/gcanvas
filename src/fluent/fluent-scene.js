@@ -88,8 +88,8 @@ export class FluentScene {
     } = options;
 
     // Instantiate the GO class (custom or default)
-    const go = new GOClass({ x, y, visible, ...rest });
-    go.game = this.#parent.game;
+    // GameObject constructor signature is (game, options)
+    const go = new GOClass(this.#parent.game, { x, y, visible, ...rest });
     this.#scene.add(go);
     this.#lastGO = go;
 
@@ -155,10 +155,21 @@ export class FluentScene {
     layerGroup.name = name;
 
     // Create a wrapper GO to hold the group
-    const layerGO = new GameObject({ x: 0, y: 0 });
-    layerGO.game = this.#parent.game;
-    layerGO.setRenderable(layerGroup);
+    // GameObject constructor signature is (game, options)
+    const layerGO = new GameObject(this.#parent.game, { x: 0, y: 0 });
+    layerGO._fluentShape = layerGroup;
+    layerGO.renderable = layerGroup;
     layerGO.zIndex = zIndex;
+
+    // Hook into draw to render the group
+    const originalDraw = layerGO.draw?.bind(layerGO) || (() => {});
+    layerGO.draw = function() {
+      originalDraw();
+      if (this._fluentShape && this.visible) {
+        this._fluentShape.render();
+      }
+    };
+
     this.#scene.add(layerGO);
 
     if (name) {

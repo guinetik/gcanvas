@@ -112,6 +112,15 @@ export class Painter {
     Painter.saveStack = [];
   }
 
+  /**
+   * Switch the painter to a different canvas context.
+   * Used when multiple games/canvases exist on the same page.
+   * @param {CanvasRenderingContext2D} ctx - The canvas context to use
+   */
+  static setContext(ctx) {
+    this._ctx = ctx;
+  }
+
   static save() {
     // Extract just the method name from the stack trace
     const stackLine = new Error().stack.split("\n")[2] || "";
