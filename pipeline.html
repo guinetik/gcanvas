@@ -5,8 +5,52 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GCanvas Rendering Pipeline Documentation</title>
-  <!-- Prism.js for syntax highlighting -->
+  <!-- Prism.js - base theme then override -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.css">
+  <style>
+    /* Terminal-style Prism overrides */
+    code[class*="language-"],
+    pre[class*="language-"] {
+      color: #ccc;
+      background: #0a0a0a;
+      text-shadow: none;
+    }
+    pre[class*="language-"] {
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+    }
+    .token.comment,
+    .token.prolog,
+    .token.doctype,
+    .token.cdata { color: #555; }
+    .token.punctuation { color: #888; }
+    .token.property,
+    .token.tag,
+    .token.constant,
+    .token.symbol,
+    .token.deleted { color: #0f0; }
+    .token.boolean,
+    .token.number { color: #0ff; }
+    .token.selector,
+    .token.attr-name,
+    .token.string,
+    .token.char,
+    .token.builtin,
+    .token.inserted { color: #7fff7f; }
+    .token.operator,
+    .token.entity,
+    .token.url,
+    .language-css .token.string,
+    .style .token.string,
+    .token.variable { color: #ccc; }
+    .token.atrule,
+    .token.attr-value,
+    .token.function,
+    .token.class-name { color: #0f0; }
+    .token.keyword { color: #0f0; font-weight: bold; }
+    .token.regex,
+    .token.important { color: #fd8; }
+  </style>
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -73,7 +117,7 @@
       background-color: #0a0a0a;
       color: #ccc;
       padding: 15px;
-      border: 1px solid #333;
+      border: 1px solid #1a1a1a;
       overflow-x: auto;
       margin: 15px 0;
       font-family: 'Courier New', monospace;
@@ -82,14 +126,15 @@
 
     code {
       font-family: 'Courier New', monospace;
-      background-color: #0a0a0a;
-      color: #ccc;
-      padding: 2px 4px;
-      border: 1px solid #222;
+      background-color: #111;
+      color: #0f0;
+      padding: 2px 6px;
+      border: none;
     }
 
     pre code {
       background-color: transparent;
+      color: #ccc;
       padding: 0;
       border: none;
     }
@@ -151,25 +196,26 @@
     }
 
     .note {
-      background-color: #fff9c4;
+      background-color: #0a1a0a;
       padding: 15px;
-      border-left: 4px solid #fbc02d;
+      border-left: 2px solid #0f0;
       margin: 20px 0;
+      color: #7fff7f;
     }
 
     .example {
       background-color: #0a0a0a;
-      border: 1px solid #333;
+      border: 1px solid #1a1a1a;
       margin: 20px 0;
     }
 
     .example-title {
       font-weight: bold;
       color: #0f0;
-      background-color: #000;
+      background-color: #050505;
       padding: 10px 15px;
       margin: 0;
-      border-bottom: 1px solid #333;
+      border-bottom: 1px solid #1a1a1a;
       font-family: 'Courier New', monospace;
     }
 
@@ -182,8 +228,8 @@
     .canvas-demo {
       width: 100%;
       height: 250px;
-      background-color: #181818;
-      border-top: 1px solid #ddd;
+      background-color: #050505;
+      border-top: 1px solid #1a1a1a;
       position: relative;
     }
 
@@ -196,11 +242,11 @@
       position: absolute;
       bottom: 10px;
       right: 10px;
-      background-color: rgba(0, 0, 0, 0.6);
-      color: white;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: #0f0;
       padding: 4px 8px;
-      border-radius: 4px;
       font-size: 12px;
+      font-family: 'Courier New', monospace;
     }
 
     .shape-grid {
@@ -212,8 +258,7 @@
 
     .shape-item {
       background-color: #0a0a0a;
-      border: 1px solid #333;
-      border-radius: 5px;
+      border: 1px solid #1a1a1a;
       padding: 15px;
       text-align: center;
       font-family: 'Courier New', monospace;

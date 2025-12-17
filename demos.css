@@ -17,13 +17,14 @@ canvas#game {
 /* Side navigation */
 nav {
   width: 200px;
-  background: #222;
+  background: #0a0a0a;
   color: white;
   padding: 1rem;
   box-sizing: border-box;
   overflow-y: auto; /* enable scrolling inside nav if content is tall */
   overflow-x: hidden; /* usually don't want horizontal scroll in nav */
   font-family: monospace;
+  border-right: 1px solid #1a1a1a;
 }
 
 /* Links inside nav */
@@ -38,15 +39,16 @@ nav a {
 
 /* Hover effect for nav links */
 nav a:hover {
-  background: #333;
+  background: #151515;
+  color: #0f0;
 }
 
 /* Active link highlight */
 nav a.active {
-  background: #333;
-  color: #0f0; /* or whatever highlight color you prefer */
-  border-left: 4px solid #0f0;
-  padding-left: 0.5rem; /* shift text so it doesn't overlap border */
+  background: #111;
+  color: #0f0;
+  border-left: 2px solid #0f0;
+  padding-left: 0.5rem;
 }
 
 /* The iframe takes up remaining space */
@@ -169,13 +171,13 @@ path {
   left: 0;
   right: 0;
   height: 56px;
-  background: #222;
+  background: #0a0a0a;
   z-index: 1000;
   align-items: center;
   justify-content: space-between;
   padding: 0 1rem;
   box-sizing: border-box;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid #1a1a1a;
 }
 
 .mobile-logo {
