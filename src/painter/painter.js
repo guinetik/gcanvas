@@ -154,9 +154,9 @@ export class Painter {
     this.logger.log(`Painter.restore() balancing save from: ${caller}`);
 
     // Perform actual restore
+    // Note: ctx.restore() already restores fillStyle/strokeStyle from the save stack.
+    // Do NOT set fillStyle/strokeStyle to null here - it breaks subsequent fills.
     this.ctx.restore();
-    this.ctx.fillStyle = null;
-    this.ctx.strokeStyle = null;
     Painter.opacity.restoreOpacityState();
   }
 
@@ -240,5 +240,56 @@ export class Painter {
   static scale(x, y) {
     Painter.logger.log("Painter.scale", x, y);
     Painter.ctx.scale(x, y);
+  }
+
+  /**
+   * Safely use the canvas context for direct drawing operations.
+   * Automatically handles path cleanup to prevent fill/stroke bleeding
+   * between different drawing operations.
+   *
+   * @param {function(CanvasRenderingContext2D): void} callback - Function that receives ctx
+   * @param {object} [options={}] - Options for context handling
+   * @param {boolean} [options.saveState=false] - Whether to save/restore full canvas state
+   * @returns {void}
+   *
+   * @example
+   * // Basic usage - draws a custom path with automatic cleanup
+   * Painter.useCtx((ctx) => {
+   *   ctx.strokeStyle = "white";
+   *   ctx.lineWidth = 2;
+   *   ctx.moveTo(0, 0);
+   *   ctx.lineTo(100, 100);
+   *   ctx.stroke();
+   * });
+   *
+   * @example
+   * // With state preservation - restores all canvas state after
+   * Painter.useCtx((ctx) => {
+   *   ctx.fillStyle = "red";
+   *   ctx.fillRect(0, 0, 50, 50);
+   * }, { saveState: true });
+   */
+  static useCtx(callback, options = {}) {
+    const ctx = this.ctx;
+    const { saveState = false } = options;
+
+    // Optionally save full canvas state
+    if (saveState) {
+      this.save();
+    }
+
+    // Start with a fresh path
+    ctx.beginPath();
+
+    // Execute user's drawing code
+    callback(ctx);
+
+    // Clear path to prevent bleeding into subsequent renders
+    ctx.beginPath();
+
+    // Optionally restore full canvas state
+    if (saveState) {
+      this.restore();
+    }
   }
 }
