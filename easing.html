@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Easing Functions</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Easing Functions Demo</strong> - Displays all 30 easing functions available in the library as bezier curve graphs. Functions are organized by type: Linear, Quadratic, Cubic, Quartic, Sine, Exponential, Circular, Elastic, Back, and Bounce. Each curve shows how the easing transforms input time (x-axis) to output value (y-axis).
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module">
+    import { MyGame } from './js/easing.js';
+
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new MyGame(canvas);
+      game.start();
+    });
+  </script>
+</body>
+
+</html>
