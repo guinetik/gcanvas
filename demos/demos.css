@@ -105,6 +105,52 @@ code {
   pointer-events: none;
 }
 
+/* Info toggle button for mobile */
+#info-toggle {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #0f0;
+  font-family: monospace;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 11;
+  pointer-events: auto;
+  line-height: 1;
+}
+
+#info-toggle:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+/* Mobile info styles */
+@media (max-width: 768px) {
+  #info-toggle {
+    display: block;
+  }
+
+  #info {
+    max-height: 0;
+    padding: 0 20px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    pointer-events: auto;
+  }
+
+  #info.open {
+    max-height: 300px;
+    padding: 12px 20px;
+    padding-right: 48px;
+  }
+}
+
 strong {
   color: #fff;
 }
