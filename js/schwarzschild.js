@@ -13,20 +13,23 @@ import { GameObject } from "/gcanvas.es.min.js";
 import { Rectangle } from "/gcanvas.es.min.js";
 import { TextShape } from "/gcanvas.es.min.js";
 import { Position } from "/gcanvas.es.min.js";
+import { Tensor } from "/gcanvas.es.min.js";
+import { verticalLayout, applyLayout } from "/gcanvas.es.min.js";
+import { Tooltip } from "/gcanvas.es.min.js";
 
 // Configuration
 const CONFIG = {
   // Grid parameters
   gridSize: 20,
   gridResolution: 40,
-  baseGridScale: 12,        // Base scale, adjusted for screen size
+  baseGridScale: 12, // Base scale, adjusted for screen size
 
   // Physics (geometrized units: G = c = 1)
-  schwarzschildRadius: 2.0,  // rs = 2M in geometrized units
-  massRange: [1.0, 4.0],     // Mass range for shuffling
+  schwarzschildRadius: 2.0, // rs = 2M in geometrized units
+  massRange: [1.0, 4.0], // Mass range for shuffling
 
   // Embedding diagram
-  embeddingScale: 25,        // Scale for Flamm's paraboloid
+  embeddingScale: 25, // Scale for Flamm's paraboloid
 
   // 3D view
   rotationX: 0.6,
@@ -34,14 +37,14 @@ const CONFIG = {
   perspective: 1000,
 
   // Orbit parameters
-  orbitSemiMajor: 10,        // Semi-major axis (in units of M)
-  orbitEccentricity: 0.3,    // Orbital eccentricity
-  angularMomentum: 4.0,      // Specific angular momentum L/m
+  orbitSemiMajor: 10, // Semi-major axis (in units of M)
+  orbitEccentricity: 0.3, // Orbital eccentricity
+  angularMomentum: 4.0, // Specific angular momentum L/m
 
   // Animation
   autoRotateSpeed: 0.1,
-  orbitSpeed: 0.5,           // Base orbital angular velocity
-  precessionFactor: 0.15,    // GR precession rate
+  orbitSpeed: 0.5, // Base orbital angular velocity
+  precessionFactor: 0.15, // GR precession rate
 
   // Visual
   gridColor: "rgba(0, 180, 255, 0.3)",
@@ -55,22 +58,21 @@ const CONFIG = {
 
 /**
  * MetricPanelGO - Displays the Schwarzschild metric tensor components
+ * Uses verticalLayout for automatic positioning
  */
 class MetricPanelGO extends GameObject {
   constructor(game, options = {}) {
     const panelWidth = 320;
-    const panelHeight = 280;
+    const panelHeight = 150;
+    const lineHeight = 16;
+    const valueOffset = 160;
 
     super(game, {
       ...options,
       width: panelWidth,
       height: panelHeight,
       anchor: Position.BOTTOM_LEFT,
-      anchorMargin: 20,
     });
-
-    this.panelWidth = panelWidth;
-    this.panelHeight = panelHeight;
 
     // Background
     this.bgRect = new Rectangle({
@@ -79,219 +81,200 @@ class MetricPanelGO extends GameObject {
       color: "rgba(0, 0, 0, 0.7)",
     });
 
-    // Title
-    this.titleText = new TextShape("Schwarzschild Metric Tensor", {
-      font: "bold 13px monospace",
-      color: "#7af",
-      align: "left",
-      baseline: "top",
+    // Define all features as data with descriptions for tooltips
+    this.features = {
+      title: {
+        text: "Schwarzschild Metric Tensor",
+        font: "bold 13px monospace",
+        color: "#7af",
+        height: lineHeight + 4,
+        desc: "The Schwarzschild metric describes spacetime geometry around a non-rotating, spherically symmetric mass. It was the first exact solution to Einstein's field equations (1916).",
+      },
+      equation: {
+        text: "ds² = gμν dxμ dxν",
+        font: "12px monospace",
+        color: "#888",
+        height: lineHeight,
+        desc: "The line element ds² measures spacetime intervals. It uses the metric tensor gμν to convert coordinate differences into proper distances/times.",
+      },
+      mass: {
+        text: "M = 1.00",
+        font: "12px monospace",
+        color: "#888",
+        height: lineHeight + 8,
+        desc: "Mass of the black hole (in geometrized units where G = c = 1).\nClick anywhere to randomize between 1.0 and 4.0.",
+      },
+      gtt: {
+        text: "g_tt = -(1 - rs/r)",
+        font: "11px monospace",
+        color: "#f88",
+        height: lineHeight,
+        value: "= -0.800",
+        desc: "Time-time component: Controls how time flows.\nNegative sign indicates timelike direction.\nApproaches 0 at the event horizon (time freezes for distant observers).",
+      },
+      grr: {
+        text: "g_rr = (1 - rs/r)⁻¹",
+        font: "11px monospace",
+        color: "#8f8",
+        height: lineHeight,
+        value: "= 1.250",
+        desc: "Radial-radial component: Controls radial distances.\nDiverges at rs (coordinate singularity).\nRadial distances stretch near the black hole.",
+      },
+      gthth: {
+        text: "g_θθ = r²",
+        font: "11px monospace",
+        color: "#88f",
+        height: lineHeight,
+        value: "= 100.00",
+        desc: "Theta-theta component: Angular metric in the polar direction.\nSame as flat space - angles are unaffected by the mass.",
+      },
+      gphph: {
+        text: "g_φφ = r²sin²θ",
+        font: "11px monospace",
+        color: "#f8f",
+        height: lineHeight + 8,
+        value: "= 100.00",
+        desc: "Phi-phi component: Angular metric in azimuthal direction.\nAt equator (θ=π/2), sin²θ = 1.\nSpherical symmetry preserved.",
+      },
+      rs: {
+        text: "rs = 2M = 2.00",
+        font: "10px monospace",
+        color: "#f55",
+        height: lineHeight - 2,
+        desc: "Schwarzschild Radius (Event Horizon)\nThe point of no return - even light cannot escape from within.\nFor the Sun: rs ≈ 3 km. For Earth: rs ≈ 9 mm.",
+      },
+      rph: {
+        text: "r_photon = 1.5rs = 3.00",
+        font: "10px monospace",
+        color: "#fa5",
+        height: lineHeight - 2,
+        desc: "Photon Sphere\nUnstable circular orbit for light.\nPhotons can orbit here, but any perturbation sends them spiraling in or out.",
+      },
+      risco: {
+        text: "r_ISCO = 3rs = 6.00",
+        font: "10px monospace",
+        color: "#5f8",
+        height: lineHeight + 8,
+        desc: "Innermost Stable Circular Orbit (ISCO)\nThe closest stable orbit for massive particles.\nWithin this radius, orbits require constant thrust to maintain.",
+      },
+      pos: {
+        text: "Orbiter: r = 10.00, φ = 0.00",
+        font: "10px monospace",
+        color: "#aaa",
+        height: lineHeight,
+        desc: "Current position of the test particle in Schwarzschild coordinates.\nr = radial distance, φ = orbital angle.",
+      },
+    };
+
+    // Store panel dimensions for hit testing
+    this.panelWidth = panelWidth;
+    this.panelHeight = panelHeight;
+
+    // Create TextShapes from features
+    const rowItems = [];
+    for (const [key, config] of Object.entries(this.features)) {
+      config.shape = new TextShape(config.text, {
+        font: config.font,
+        color: config.color,
+        align: "left",
+        baseline: "top",
+        height: config.height,
+      });
+      rowItems.push(config.shape);
+
+      if (config.value) {
+        config.valueShape = new TextShape(config.value, {
+          font: config.font,
+          color: "#fff",
+          align: "left",
+          baseline: "top",
+        });
+      }
+    }
+
+    // Apply vertical layout
+    const layout = verticalLayout(rowItems, {
+      spacing: 5,
+      padding: 0,
+      align: "start",
+      centerItems: false,
+    });
+    applyLayout(rowItems, layout.positions, {
+      offsetX: -panelWidth / 2,
+      offsetY: -panelHeight / 2,
     });
 
-    // Metric equation
-    this.metricEqText = new TextShape("ds² = gμν dxμ dxν", {
-      font: "12px monospace",
-      color: "#888",
-      align: "left",
-      baseline: "top",
-    });
-
-    // Tensor components (will be updated)
-    this.gttLabel = new TextShape("g_tt = -(1 - rs/r)", {
-      font: "11px monospace",
-      color: "#f88",
-      align: "left",
-      baseline: "top",
-    });
-    this.gttValue = new TextShape("= -0.800", {
-      font: "11px monospace",
-      color: "#fff",
-      align: "left",
-      baseline: "top",
-    });
-
-    this.grrLabel = new TextShape("g_rr = (1 - rs/r)⁻¹", {
-      font: "11px monospace",
-      color: "#8f8",
-      align: "left",
-      baseline: "top",
-    });
-    this.grrValue = new TextShape("= 1.250", {
-      font: "11px monospace",
-      color: "#fff",
-      align: "left",
-      baseline: "top",
-    });
-
-    this.gththLabel = new TextShape("g_θθ = r²", {
-      font: "11px monospace",
-      color: "#88f",
-      align: "left",
-      baseline: "top",
-    });
-    this.gththValue = new TextShape("= 100.00", {
-      font: "11px monospace",
-      color: "#fff",
-      align: "left",
-      baseline: "top",
-    });
-
-    this.gphphLabel = new TextShape("g_φφ = r²sin²θ", {
-      font: "11px monospace",
-      color: "#f8f",
-      align: "left",
-      baseline: "top",
-    });
-    this.gphphValue = new TextShape("= 100.00", {
-      font: "11px monospace",
-      color: "#fff",
-      align: "left",
-      baseline: "top",
-    });
-
-    // Key radii
-    this.rsText = new TextShape("rs = 2GM/c² = 2.00", {
-      font: "10px monospace",
-      color: "#f55",
-      align: "left",
-      baseline: "top",
-    });
-    this.rphText = new TextShape("r_photon = 1.5rs = 3.00", {
-      font: "10px monospace",
-      color: "#fa5",
-      align: "left",
-      baseline: "top",
-    });
-    this.riscoText = new TextShape("r_ISCO = 3rs = 6.00", {
-      font: "10px monospace",
-      color: "#5f8",
-      align: "left",
-      baseline: "top",
-    });
-
-    // Current position
-    this.posText = new TextShape("Orbiter: r = 10.00, φ = 0.00", {
-      font: "10px monospace",
-      color: "#aaa",
-      align: "left",
-      baseline: "top",
-    });
+    // Position value shapes next to their labels
+    for (const config of Object.values(this.features)) {
+      if (config.valueShape) {
+        config.valueShape.x = config.shape.x + valueOffset;
+        config.valueShape.y = config.shape.y;
+      }
+    }
   }
 
-  setMetricValues(r, rs, theta = Math.PI / 2) {
-    // Calculate metric components
-    const factor = 1 - rs / r;
-    const gtt = -factor;
-    const grr = 1 / factor;
-    const gthth = r * r;
-    const gphph = r * r * Math.sin(theta) * Math.sin(theta);
+  setMetricValues(r, rs, mass, theta = Math.PI / 2) {
+    const metric = Tensor.schwarzschild(r, rs, theta);
+    const f = this.features;
 
-    this.gttValue.text = `= ${gtt.toFixed(4)}`;
-    this.grrValue.text = `= ${grr.toFixed(4)}`;
-    this.gththValue.text = `= ${gthth.toFixed(2)}`;
-    this.gphphValue.text = `= ${gphph.toFixed(2)}`;
+    f.gtt.valueShape.text = `= ${metric.get(0, 0).toFixed(4)}`;
+    f.grr.valueShape.text = `= ${metric.get(1, 1).toFixed(4)}`;
+    f.gthth.valueShape.text = `= ${metric.get(2, 2).toFixed(2)}`;
+    f.gphph.valueShape.text = `= ${metric.get(3, 3).toFixed(2)}`;
 
-    // Update key radii
-    this.rsText.text = `rs = 2GM/c² = ${rs.toFixed(2)}`;
-    this.rphText.text = `r_photon = 1.5rs = ${(1.5 * rs).toFixed(2)}`;
-    this.riscoText.text = `r_ISCO = 3rs = ${(3 * rs).toFixed(2)}`;
+    f.mass.shape.text = `M = ${mass.toFixed(2)}`;
+    f.rs.shape.text = `rs = 2M = ${rs.toFixed(2)}`;
+    f.rph.shape.text = `r_photon = 1.5rs = ${Tensor.photonSphereRadius(rs).toFixed(2)}`;
+    f.risco.shape.text = `r_ISCO = 3rs = ${Tensor.iscoRadius(rs).toFixed(2)}`;
   }
 
   setOrbiterPosition(r, phi) {
-    this.posText.text = `Orbiter: r = ${r.toFixed(2)}, φ = ${(phi % (2 * Math.PI)).toFixed(2)}`;
+    this.features.pos.shape.text = `Orbiter: r = ${r.toFixed(2)}, φ = ${(phi % (2 * Math.PI)).toFixed(2)}`;
+  }
+
+  /**
+   * Get the feature at a given screen position (for tooltip hit testing).
+   * @param {number} screenX - Screen X coordinate
+   * @param {number} screenY - Screen Y coordinate
+   * @returns {object|null} Feature config with desc, or null if not over panel
+   */
+  getFeatureAt(screenX, screenY) {
+    // Convert screen coords to local panel coords
+    const localX = screenX - this.x;
+    const localY = screenY - this.y;
+
+    // Check if within panel bounds
+    if (
+      localX < -this.panelWidth / 2 ||
+      localX > this.panelWidth / 2 ||
+      localY < -this.panelHeight / 2 ||
+      localY > this.panelHeight / 2
+    ) {
+      return null;
+    }
+
+    // Find which feature row we're over
+    for (const config of Object.values(this.features)) {
+      const shape = config.shape;
+      const rowTop = shape.y;
+      const rowBottom = shape.y + (config.height || 16);
+
+      if (localY >= rowTop && localY <= rowBottom) {
+        return config;
+      }
+    }
+
+    return null;
   }
 
   draw() {
     super.draw();
-
     this.bgRect.render();
 
-    const left = -this.panelWidth / 2 + 15;
-    let y = -this.panelHeight / 2 + 15;
-    const lineHeight = 16;
-    const sectionGap = 8;
-
-    // Title
-    Painter.save();
-    Painter.translate(left, y);
-    this.titleText.render();
-    Painter.restore();
-    y += lineHeight + 4;
-
-    // Metric equation
-    Painter.save();
-    Painter.translate(left, y);
-    this.metricEqText.render();
-    Painter.restore();
-    y += lineHeight + sectionGap;
-
-    // g_tt
-    Painter.save();
-    Painter.translate(left, y);
-    this.gttLabel.render();
-    Painter.restore();
-    Painter.save();
-    Painter.translate(left + 160, y);
-    this.gttValue.render();
-    Painter.restore();
-    y += lineHeight;
-
-    // g_rr
-    Painter.save();
-    Painter.translate(left, y);
-    this.grrLabel.render();
-    Painter.restore();
-    Painter.save();
-    Painter.translate(left + 160, y);
-    this.grrValue.render();
-    Painter.restore();
-    y += lineHeight;
-
-    // g_θθ
-    Painter.save();
-    Painter.translate(left, y);
-    this.gththLabel.render();
-    Painter.restore();
-    Painter.save();
-    Painter.translate(left + 160, y);
-    this.gththValue.render();
-    Painter.restore();
-    y += lineHeight;
-
-    // g_φφ
-    Painter.save();
-    Painter.translate(left, y);
-    this.gphphLabel.render();
-    Painter.restore();
-    Painter.save();
-    Painter.translate(left + 160, y);
-    this.gphphValue.render();
-    Painter.restore();
-    y += lineHeight + sectionGap;
-
-    // Key radii section
-    Painter.save();
-    Painter.translate(left, y);
-    this.rsText.render();
-    Painter.restore();
-    y += lineHeight - 2;
-
-    Painter.save();
-    Painter.translate(left, y);
-    this.rphText.render();
-    Painter.restore();
-    y += lineHeight - 2;
-
-    Painter.save();
-    Painter.translate(left, y);
-    this.riscoText.render();
-    Painter.restore();
-    y += lineHeight + sectionGap;
-
-    // Orbiter position
-    Painter.save();
-    Painter.translate(left, y);
-    this.posText.render();
-    Painter.restore();
+    for (const config of Object.values(this.features)) {
+      config.shape.render();
+      if (config.valueShape) config.valueShape.render();
+    }
   }
 }
 
@@ -308,7 +291,7 @@ class SchwarzschildDemo extends Game {
 
     // Mass (in geometrized units where G = c = 1)
     this.mass = 1.0;
-    this.rs = 2 * this.mass;  // Schwarzschild radius
+    this.rs = 2 * this.mass; // Schwarzschild radius
 
     // Initialize grid scale (will be updated for screen size)
     this.gridScale = CONFIG.baseGridScale;
@@ -322,15 +305,15 @@ class SchwarzschildDemo extends Game {
       maxRotationX: 1.3,
       autoRotate: true,
       autoRotateSpeed: CONFIG.autoRotateSpeed,
-      autoRotateAxis: 'y',
+      autoRotateAxis: "y",
     });
     this.camera.enableMouseControl(this.canvas);
 
     // Orbital state (using r, phi in equatorial plane)
     this.orbitR = CONFIG.orbitSemiMajor;
     this.orbitPhi = 0;
-    this.orbitVr = 0;  // Radial velocity
-    this.orbitL = CONFIG.angularMomentum;  // Angular momentum per unit mass
+    this.orbitVr = 0; // Radial velocity
+    this.orbitL = CONFIG.angularMomentum; // Angular momentum per unit mass
     this.precessionAngle = 0;
 
     // Trail stores actual positions
@@ -346,8 +329,68 @@ class SchwarzschildDemo extends Game {
     this.metricPanel = new MetricPanelGO(this, { name: "metricPanel" });
     this.pipeline.add(this.metricPanel);
 
+    // Create tooltip for explanations
+    this.tooltip = new Tooltip(this, {
+      maxWidth: 280,
+      font: "11px monospace",
+      padding: 10,
+    });
+    this.pipeline.add(this.tooltip);
+
+    // Track what's being hovered for tooltip
+    this.hoveredFeature = null;
+
+    // Mouse move for tooltip
+    this.canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e));
+    this.canvas.addEventListener("mouseleave", () => this.tooltip.hide());
+
     // Click to shuffle
     this.canvas.addEventListener("click", (e) => this.handleClick(e));
+  }
+
+  handleMouseMove(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Check if over metric panel
+    const feature = this.metricPanel.getFeatureAt(mouseX, mouseY);
+    if (feature && feature.desc) {
+      if (this.hoveredFeature !== feature) {
+        this.hoveredFeature = feature;
+        this.tooltip.show(feature.desc, mouseX, mouseY);
+      }
+      return;
+    }
+
+    // Check if over effective potential graph
+    const graphX = this.width - 180;
+    const graphY = 180;
+    const graphW = 160;
+    const graphH = 100;
+
+    if (
+      mouseX >= graphX - 10 &&
+      mouseX <= graphX + graphW + 10 &&
+      mouseY >= graphY - 10 &&
+      mouseY <= graphY + graphH + 30
+    ) {
+      if (this.hoveredFeature !== "graph") {
+        this.hoveredFeature = "graph";
+        this.tooltip.show(
+          "Effective Potential V_eff(r)\n\nShows the combined gravitational and centrifugal potential.\n\nThe blue dot marks the orbiter's current position.\n\nLocal minima = stable orbits\nLocal maxima = unstable orbits\n\nThe GR term (-ML²/r³) creates the inner peak that doesn't exist in Newtonian gravity.",
+          mouseX,
+          mouseY
+        );
+      }
+      return;
+    }
+
+    // Not over anything - hide tooltip
+    if (this.hoveredFeature) {
+      this.hoveredFeature = null;
+      this.tooltip.hide();
+    }
   }
 
   initGrid() {
@@ -378,11 +421,13 @@ class SchwarzschildDemo extends Game {
 
   shuffleParameters() {
     // Randomize mass
-    this.mass = CONFIG.massRange[0] + Math.random() * (CONFIG.massRange[1] - CONFIG.massRange[0]);
+    this.mass =
+      CONFIG.massRange[0] +
+      Math.random() * (CONFIG.massRange[1] - CONFIG.massRange[0]);
     this.rs = 2 * this.mass;
 
-    // Randomize orbit (keep it outside ISCO)
-    const isco = 3 * this.rs;
+    // Randomize orbit (keep it outside ISCO using Tensor utility)
+    const isco = Tensor.iscoRadius(this.rs);
     this.orbitR = isco + 2 + Math.random() * 8;
     this.orbitPhi = Math.random() * Math.PI * 2;
     this.orbitL = 3.5 + Math.random() * 2;
@@ -397,21 +442,20 @@ class SchwarzschildDemo extends Game {
    * Inverted so it looks like a gravity well going DOWN
    */
   getEmbeddingHeight(r) {
-    if (r <= this.rs) return CONFIG.embeddingScale * 2;  // Deep well at horizon
+    if (r <= this.rs) return CONFIG.embeddingScale * 2; // Deep well at horizon
     const height = Math.sqrt(8 * this.mass * (r - this.rs));
     // Invert: far = flat (y=0), near horizon = deep (y=positive into well)
     const maxHeight = Math.sqrt(8 * this.mass * (CONFIG.gridSize - this.rs));
-    return (maxHeight - height) * CONFIG.embeddingScale / 4;
+    return ((maxHeight - height) * CONFIG.embeddingScale) / 4;
   }
 
   /**
    * Effective potential for geodesic motion
    * V_eff = -M/r + L²/(2r²) - ML²/r³
+   * Uses Tensor.effectivePotential static utility
    */
   effectivePotential(r) {
-    const M = this.mass;
-    const L = this.orbitL;
-    return -M / r + (L * L) / (2 * r * r) - (M * L * L) / (r * r * r);
+    return Tensor.effectivePotential(this.mass, this.orbitL, r);
   }
 
   /**
@@ -424,7 +468,7 @@ class SchwarzschildDemo extends Game {
 
     // Kepler's 3rd law base: ω ∝ 1/r^(3/2), scaled for visibility
     // Closer orbits are faster (like real gravity)
-    const baseOmega = CONFIG.orbitSpeed * Math.sqrt(M) / Math.pow(r / 5, 1.5);
+    const baseOmega = (CONFIG.orbitSpeed * Math.sqrt(M)) / Math.pow(r / 5, 1.5);
 
     // Update orbital angle
     this.orbitPhi += baseOmega * dt;
@@ -434,8 +478,8 @@ class SchwarzschildDemo extends Game {
     const radialOscillation = eccentricity * Math.sin(this.orbitPhi * 2);
     this.orbitR = CONFIG.orbitSemiMajor + radialOscillation * 2;
 
-    // Keep orbit bounded outside ISCO
-    const minR = this.rs * 3 + 1;
+    // Keep orbit bounded outside ISCO (using Tensor utility)
+    const minR = Tensor.iscoRadius(this.rs) + 1;
     if (this.orbitR < minR) this.orbitR = minR;
 
     // GR precession: orbit doesn't close, rotates over time
@@ -464,7 +508,7 @@ class SchwarzschildDemo extends Game {
 
     this.camera.update(dt);
     this.updateGeodesic(dt);
-    this.updateGridScale();  // Keep grid responsive
+    this.updateGridScale(); // Keep grid responsive
 
     // Update grid with Flamm's paraboloid embedding
     const { gridResolution } = CONFIG;
@@ -478,7 +522,7 @@ class SchwarzschildDemo extends Game {
 
     // Update metric panel
     if (this.metricPanel) {
-      this.metricPanel.setMetricValues(this.orbitR, this.rs);
+      this.metricPanel.setMetricValues(this.orbitR, this.rs, this.mass);
       this.metricPanel.setOrbiterPosition(this.orbitR, this.orbitPhi);
     }
   }
@@ -534,7 +578,7 @@ class SchwarzschildDemo extends Game {
           const p = this.camera.project(
             x * this.gridScale,
             y,
-            z * this.gridScale
+            z * this.gridScale,
           );
 
           if (i === 0) {
@@ -553,11 +597,11 @@ class SchwarzschildDemo extends Game {
     const { gridResolution, gridColor, gridHighlight } = CONFIG;
     const gridScale = this.gridScale;
 
-    const projected = this.gridVertices.map(row =>
-      row.map(v => {
+    const projected = this.gridVertices.map((row) =>
+      row.map((v) => {
         const p = this.camera.project(v.x * gridScale, v.y, v.z * gridScale);
         return { x: cx + p.x, y: cy + p.y, z: p.z };
-      })
+      }),
     );
 
     // Draw grid lines
@@ -593,13 +637,48 @@ class SchwarzschildDemo extends Game {
   }
 
   drawHorizon(cx, cy) {
-    // Draw filled event horizon
+    // Draw filled event horizon - the BLACK hole
     const segments = 32;
     const r = this.rs;
     const y = this.getEmbeddingHeight(r + 0.1);
 
+    // Project center for black hole body
+    const centerP = this.camera.project(0, y + 10, 0);
+    const centerX = cx + centerP.x;
+    const centerY = cy + centerP.y;
+    const size = 12 * centerP.scale;
+
+    // Draw dark glow around black hole
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = "rgba(20, 0, 30, 0.9)";
+      const gradient = ctx.createRadialGradient(
+        centerX, centerY, size,
+        centerX, centerY, size * 3
+      );
+      gradient.addColorStop(0, "rgba(80, 40, 120, 0.6)");
+      gradient.addColorStop(1, "transparent");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, size * 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Draw the black hole (actually black!)
+    Painter.useCtx((ctx) => {
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Event horizon ring (accretion disk hint)
+      ctx.strokeStyle = "rgba(150, 100, 200, 0.8)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, size * 1.3, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    // Draw event horizon circle on the grid
+    Painter.useCtx((ctx) => {
       ctx.strokeStyle = CONFIG.horizonColor;
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -612,27 +691,14 @@ class SchwarzschildDemo extends Game {
         const p = this.camera.project(
           x * this.gridScale,
           y,
-          z * this.gridScale
+          z * this.gridScale,
         );
 
         if (i === 0) ctx.moveTo(cx + p.x, cy + p.y);
         else ctx.lineTo(cx + p.x, cy + p.y);
       }
       ctx.closePath();
-      ctx.fill();
       ctx.stroke();
-    });
-
-    // Singularity point
-    const centerP = this.camera.project(0, y + 20, 0);
-    Painter.useCtx((ctx) => {
-      ctx.fillStyle = "#fff";
-      ctx.shadowColor = "#f0f";
-      ctx.shadowBlur = 20;
-      ctx.beginPath();
-      ctx.arc(cx + centerP.x, cy + centerP.y, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
     });
   }
 
@@ -648,7 +714,7 @@ class SchwarzschildDemo extends Game {
     const p = this.camera.project(
       orbiterX * this.gridScale,
       orbiterY,
-      orbiterZ * this.gridScale
+      orbiterZ * this.gridScale,
     );
 
     const screenX = cx + p.x;
@@ -658,8 +724,12 @@ class SchwarzschildDemo extends Game {
     // Glow
     Painter.useCtx((ctx) => {
       const gradient = ctx.createRadialGradient(
-        screenX, screenY, 0,
-        screenX, screenY, size * 4
+        screenX,
+        screenY,
+        0,
+        screenX,
+        screenY,
+        size * 4,
       );
       gradient.addColorStop(0, CONFIG.orbiterGlow);
       gradient.addColorStop(1, "transparent");
@@ -672,8 +742,12 @@ class SchwarzschildDemo extends Game {
     // Body
     Painter.useCtx((ctx) => {
       const gradient = ctx.createRadialGradient(
-        screenX - size * 0.3, screenY - size * 0.3, 0,
-        screenX, screenY, size
+        screenX - size * 0.3,
+        screenY - size * 0.3,
+        0,
+        screenX,
+        screenY,
+        size,
       );
       gradient.addColorStop(0, "#fff");
       gradient.addColorStop(0.5, CONFIG.orbiterColor);
@@ -716,7 +790,7 @@ class SchwarzschildDemo extends Game {
         const p = this.camera.project(
           x * this.gridScale,
           y,
-          z * this.gridScale
+          z * this.gridScale,
         );
 
         if (i === 0) {
@@ -748,13 +822,13 @@ class SchwarzschildDemo extends Game {
         const p = this.camera.project(
           point.x * this.gridScale,
           trailY,
-          point.z * this.gridScale
+          point.z * this.gridScale,
         );
 
         const prevP = this.camera.project(
           prevPoint.x * this.gridScale,
           prevY,
-          prevPoint.z * this.gridScale
+          prevPoint.z * this.gridScale,
         );
 
         const alpha = (1 - t) * 0.5;
@@ -770,7 +844,7 @@ class SchwarzschildDemo extends Game {
 
   drawEffectivePotential() {
     const graphX = this.width - 180;
-    const graphY = 180;  // Offset down to clear title area
+    const graphY = 180; // Offset down to clear title area
     const graphW = 160;
     const graphH = 100;
 
@@ -830,7 +904,8 @@ class SchwarzschildDemo extends Game {
       ctx.stroke();
 
       // Current position marker
-      const currentPx = graphX + ((this.orbitR - rMin) / (rMax - rMin)) * graphW;
+      const currentPx =
+        graphX + ((this.orbitR - rMin) / (rMax - rMin)) * graphW;
       const currentV = this.effectivePotential(this.orbitR);
       const currentPy = graphY + graphH - 20 - (currentV + 0.1) * 300;
 
@@ -859,7 +934,11 @@ class SchwarzschildDemo extends Game {
       ctx.font = "10px monospace";
       ctx.textAlign = "right";
       ctx.fillText("click to shuffle  |  drag to rotate", w - 15, h - 30);
-      ctx.fillText("Flamm's paraboloid embedding  |  Geodesic precession", w - 15, h - 15);
+      ctx.fillText(
+        "Flamm's paraboloid embedding  |  Geodesic precession",
+        w - 15,
+        h - 15,
+      );
     });
   }
 }
