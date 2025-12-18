@@ -6,6 +6,85 @@
 
 import { Game, ImageGo, Painter } from "/gcanvas.es.min.js";
 
+// Configuration constants
+const CONFIG = {
+  // Rendering
+  scaleFactor: 3,
+  blendMode: "screen",
+
+  // Physics
+  gravity: 0.000052,
+  buoyancyStrength: 0.00018,
+  maxSpeed: 0.00088,
+  dampingX: 0.995,
+  dampingY: 0.998,
+
+  // Temperature
+  tempRate: 0.0055,
+  heatZoneY: 0.92,
+  coolZoneY: 0.2,
+  heatZoneMultiplier: 1.5,
+  coolZoneMultiplier: 1.5,
+  middleZoneMultiplier: 0.05,
+  heatTransferRate: 0.0022,
+  heatTransferRange: 1.5,
+
+  // Spawning
+  initialSpawnMin: 1,
+  initialSpawnRange: 1.5,
+  spawnMin: 1.5,
+  spawnRange: 2,
+  spawnOffsetY: 0.01,
+  spawnOffsetYRange: 0.01,
+  spawnOffsetX: 0.02,
+  initialRadius: 0.005,
+  targetRadiusMin: 0.04,
+  targetRadiusRange: 0.025,
+  growthRate: 0.0165,
+  growthThreshold: 0.7,
+  initialRiseVelocity: -0.00022,
+  maxBlobs: 10,
+  poolClearThreshold: 0.75,
+
+  // Drift
+  driftSpeedMin: 0.165,
+  driftSpeedRange: 0.165,
+  driftAmountMin: 0.0000055,
+  driftAmountRange: 0.0000044,
+  wobbleForce: 0.000011,
+  wobbleZoneTop: 0.2,
+  wobbleZoneBottom: 0.7,
+
+  // Boundaries
+  boundaryLeft: 0.1,
+  boundaryRight: 0.9,
+  boundaryTop: -0.1,
+  boundaryBounce: -0.3,
+  removalY: 1.15,
+
+  // Deformation
+  stretchBase: 0.75,
+  stretchTempFactor: 0.5,
+  wobble1Speed: 1.32,
+  wobble1Amount: 0.12,
+  wobble2Speed: 0.88,
+  wobble2PhaseFactor: 1.7,
+  wobble2Amount: 0.08,
+
+  // Rendering
+  metaballThreshold: 1.0,
+  edgeWidth: 0.15,
+  poolGlowStart: 0.7,
+  poolGlowBoost: 0.4,
+  brightnessBase: 0.35,
+  brightnessTempFactor: 1.0,
+  glowMax: 0.2,
+  glowFactor: 0.1,
+  glowR: 50,
+  glowG: 35,
+  glowB: 25,
+};
+
 class LavaLampDemo extends Game {
   constructor(canvas) {
     super(canvas);
@@ -17,9 +96,8 @@ class LavaLampDemo extends Game {
     super.init();
 
     // Render resolution - proportional to screen, divided for performance
-    const scaleFactor = 2; // Divide screen size by this
-    this.renderWidth = Math.floor(this.width / scaleFactor);
-    this.renderHeight = Math.floor(this.height / scaleFactor);
+    this.renderWidth = Math.floor(this.width / CONFIG.scaleFactor);
+    this.renderHeight = Math.floor(this.height / CONFIG.scaleFactor);
 
     // Create ImageData for rendering
     this.imageData = Painter.img.createImageData(
@@ -90,10 +168,11 @@ class LavaLampDemo extends Game {
     });
 
     // Metaball threshold
-    this.threshold = 1.0;
+    this.threshold = CONFIG.metaballThreshold;
     this.time = 0;
     this.lastSpawnTime = 0;
-    this.spawnInterval = 7 + Math.random() * 5.5; // Spawn every 7-12.5 seconds
+    this.spawnInterval =
+      CONFIG.initialSpawnMin + Math.random() * CONFIG.initialSpawnRange;
 
     // Re-shuffle colors on click/touch
     this.canvas.addEventListener("click", () => this.shuffleColors());
@@ -139,11 +218,14 @@ class LavaLampDemo extends Game {
     // Spawn new blobs from pool periodically
     // But only if no blobs are near the pool (to avoid immediate merging)
     if (this.time - this.lastSpawnTime > this.spawnInterval) {
-      const poolClear = !this.blobs.some((b) => b.y > 0.75 && !b.growing);
+      const poolClear = !this.blobs.some(
+        (b) => b.y > CONFIG.poolClearThreshold && !b.growing,
+      );
       if (poolClear) {
         this.spawnBlob();
         this.lastSpawnTime = this.time;
-        this.spawnInterval = 9 + Math.random() * 7; // Next spawn in 9-16 seconds
+        this.spawnInterval =
+          CONFIG.spawnMin + Math.random() * CONFIG.spawnRange;
       }
     }
 
@@ -164,9 +246,9 @@ class LavaLampDemo extends Game {
     this.ctx.fillRect(0, 0, this.width, this.height);
 
     // Draw lava with blend mode
-    this.ctx.globalCompositeOperation = "screen"; // or 'screen', 'overlay', 'soft-light'
+    this.ctx.globalCompositeOperation = CONFIG.blendMode;
     this.pipeline.render();
-    this.ctx.globalCompositeOperation = "source-over"; // Reset to default
+    this.ctx.globalCompositeOperation = "source-over";
   }
 
   spawnBlob() {
@@ -174,58 +256,60 @@ class LavaLampDemo extends Game {
     const poolBlob =
       this.poolBlobs[Math.floor(Math.random() * this.poolBlobs.length)];
     this.blobs.push({
-      x: poolBlob.x + (Math.random() - 0.5) * 0.02, // Tight to pool center
-      y: poolBlob.y + 0.04 + Math.random() * 0.02, // Start deeper in the pool
+      x: poolBlob.x + (Math.random() - 0.5) * CONFIG.spawnOffsetX,
+      y:
+        poolBlob.y +
+        CONFIG.spawnOffsetY +
+        Math.random() * CONFIG.spawnOffsetYRange,
       vx: 0,
-      vy: 0, // No velocity until it grows
-      r: 0.005, // Start very tiny
-      targetR: 0.04 + Math.random() * 0.025, // Grow to this size
-      temp: 1.0, // Start very hot (from pool)
-      growing: true, // Flag to track spawn phase
+      vy: 0,
+      r: CONFIG.initialRadius,
+      targetR:
+        CONFIG.targetRadiusMin + Math.random() * CONFIG.targetRadiusRange,
+      temp: 1.0,
+      growing: true,
     });
 
-    // Limit max blobs - allow more for interactions
-    if (this.blobs.length > 10) {
-      this.blobs.shift(); // Remove oldest
+    // Limit max blobs
+    if (this.blobs.length > CONFIG.maxBlobs) {
+      this.blobs.shift();
     }
   }
 
   updateBlobs(dt) {
     for (const blob of this.blobs) {
       // Temperature changes based on position
-      // Bottom (y=1) = hot, Top (y=0) = cold
-      const targetTemp = blob.y; // y=1 (bottom) -> hot, y=0 (top) -> cold
+      const targetTemp = blob.y;
 
       // Slowly adjust temperature toward target
-      const tempRate = 0.005;
-      if (blob.y > 0.92) {
-        // In the heat zone at bottom - warm up faster
-        blob.temp += (1.0 - blob.temp) * tempRate * 1.5;
-      } else if (blob.y < 0.2) {
-        // In the cool zone at very top - cool down faster
-        blob.temp += (0.0 - blob.temp) * tempRate * 1.5;
+      if (blob.y > CONFIG.heatZoneY) {
+        blob.temp +=
+          (1.0 - blob.temp) * CONFIG.tempRate * CONFIG.heatZoneMultiplier;
+      } else if (blob.y < CONFIG.coolZoneY) {
+        blob.temp +=
+          (0.0 - blob.temp) * CONFIG.tempRate * CONFIG.coolZoneMultiplier;
       } else {
-        // Middle - very gradual change, stay warm longer
-        blob.temp += (targetTemp - blob.temp) * tempRate * 0.15;
+        blob.temp +=
+          (targetTemp - blob.temp) *
+          CONFIG.tempRate *
+          CONFIG.middleZoneMultiplier;
       }
       blob.temp = Math.max(0, Math.min(1, blob.temp));
 
       // Buoyancy based on temperature
-      // Hot (temp > 0.5) = rises (negative vy)
-      // Cold (temp < 0.5) = sinks (positive vy)
-      const buoyancy = (blob.temp - 0.5) * 0.00006;
+      const buoyancy = (blob.temp - 0.5) * CONFIG.buoyancyStrength;
       blob.vy -= buoyancy;
 
-      // Gravity pulls everything down slightly
-      blob.vy += 0.000006;
+      // Gravity pulls everything down - heavier blobs sink faster
+      const weight = blob.r / CONFIG.targetRadiusMin; // Larger blobs = more weight
+      blob.vy += CONFIG.gravity * weight;
 
       // Gradually grow to target size (smooth spawn)
       if (blob.targetR && blob.r < blob.targetR) {
-        blob.r += (blob.targetR - blob.r) * 0.015;
-        // Only start moving once grown enough
-        if (blob.growing && blob.r > blob.targetR * 0.7) {
+        blob.r += (blob.targetR - blob.r) * CONFIG.growthRate;
+        if (blob.growing && blob.r > blob.targetR * CONFIG.growthThreshold) {
           blob.growing = false;
-          blob.vy = -0.0002; // Start rising
+          blob.vy = CONFIG.initialRiseVelocity;
         }
       }
 
@@ -237,23 +321,25 @@ class LavaLampDemo extends Game {
         const dist = Math.sqrt(dx * dx + dy * dy);
         const touchDist = blob.r + other.r;
 
-        // If blobs are close/overlapping, transfer heat
-        if (dist < touchDist * 1.5) {
+        if (dist < touchDist * CONFIG.heatTransferRange) {
           const heatDiff = other.temp - blob.temp;
-          const transfer = heatDiff * 0.002; // Gradual transfer
+          const transfer = heatDiff * CONFIG.heatTransferRate;
           blob.temp += transfer;
         }
       }
 
       // Damping
-      blob.vx *= 0.995;
-      blob.vy *= 0.998;
+      blob.vx *= CONFIG.dampingX;
+      blob.vy *= CONFIG.dampingY;
 
       // Organic horizontal drift using sine waves (unique per blob)
       if (!blob.driftPhase) blob.driftPhase = Math.random() * Math.PI * 2;
-      if (!blob.driftSpeed) blob.driftSpeed = 0.15 + Math.random() * 0.15;
+      if (!blob.driftSpeed)
+        blob.driftSpeed =
+          CONFIG.driftSpeedMin + Math.random() * CONFIG.driftSpeedRange;
       if (!blob.driftAmount)
-        blob.driftAmount = 0.000005 + Math.random() * 0.000004;
+        blob.driftAmount =
+          CONFIG.driftAmountMin + Math.random() * CONFIG.driftAmountRange;
 
       const drift =
         Math.sin(this.time * blob.driftSpeed + blob.driftPhase) *
@@ -261,40 +347,37 @@ class LavaLampDemo extends Game {
       blob.vx += drift;
 
       // Subtle extra wobble when near top or bottom
-      if (blob.y < 0.2 || blob.y > 0.7) {
-        blob.vx += (Math.random() - 0.5) * 0.00001;
+      if (blob.y < CONFIG.wobbleZoneTop || blob.y > CONFIG.wobbleZoneBottom) {
+        blob.vx += (Math.random() - 0.5) * CONFIG.wobbleForce;
       }
 
       // Apply velocity
       blob.x += blob.vx;
       blob.y += blob.vy;
 
-      // Soft boundaries - allow going off top of screen
-      if (blob.x < 0.1) {
-        blob.x = 0.1;
-        blob.vx *= -0.3;
+      // Soft boundaries
+      if (blob.x < CONFIG.boundaryLeft) {
+        blob.x = CONFIG.boundaryLeft;
+        blob.vx *= CONFIG.boundaryBounce;
       }
-      if (blob.x > 0.9) {
-        blob.x = 0.9;
-        blob.vx *= -0.3;
+      if (blob.x > CONFIG.boundaryRight) {
+        blob.x = CONFIG.boundaryRight;
+        blob.vx *= CONFIG.boundaryBounce;
       }
-      // Allow blobs to go slightly off-screen at top before bouncing
-      if (blob.y < -0.1) {
-        blob.y = -0.1;
-        blob.vy *= -0.3;
-        blob.temp = 0; // Very cold at top
+      if (blob.y < CONFIG.boundaryTop) {
+        blob.y = CONFIG.boundaryTop;
+        blob.vy *= CONFIG.boundaryBounce;
+        blob.temp = 0;
       }
-      if (blob.y > 1.02 && blob.vy > 0) {
-        // Mark blob for removal - it's fully merged back into the pool
+      if (blob.y > CONFIG.removalY && blob.vy > 0 && !blob.growing) {
         blob.removeMe = true;
       }
 
-      // Speed limit - keep it slow and languid
-      const maxSpeed = 0.0008;
+      // Speed limit
       const speed = Math.sqrt(blob.vx * blob.vx + blob.vy * blob.vy);
-      if (speed > maxSpeed) {
-        blob.vx = (blob.vx / speed) * maxSpeed;
-        blob.vy = (blob.vy / speed) * maxSpeed;
+      if (speed > CONFIG.maxSpeed) {
+        blob.vx = (blob.vx / speed) * CONFIG.maxSpeed;
+        blob.vy = (blob.vy / speed) * CONFIG.maxSpeed;
       }
     }
 
@@ -311,8 +394,11 @@ class LavaLampDemo extends Game {
       const ny = py / h;
 
       // Background gradient with extra glow near pool at bottom
-      const poolGlow = ny > 0.7 ? (ny - 0.7) / 0.3 : 0; // 0 to 1 near bottom
-      const glowBoost = poolGlow * poolGlow * 0.4; // Quadratic falloff, up to 40% brighter
+      const poolGlow =
+        ny > CONFIG.poolGlowStart
+          ? (ny - CONFIG.poolGlowStart) / (1 - CONFIG.poolGlowStart)
+          : 0;
+      const glowBoost = poolGlow * poolGlow * CONFIG.poolGlowBoost;
 
       const bgR =
         this.colors.bgTop[0] +
@@ -352,13 +438,19 @@ class LavaLampDemo extends Game {
 
           // Organic wobble - each blob pulses uniquely over time
           const phase = blob.driftPhase || 0;
-          const wobble1 = Math.sin(this.time * 1.2 + phase) * 0.12;
-          const wobble2 = Math.sin(this.time * 0.8 + phase * 1.7) * 0.08;
+          const wobble1 =
+            Math.sin(this.time * CONFIG.wobble1Speed + phase) *
+            CONFIG.wobble1Amount;
+          const wobble2 =
+            Math.sin(
+              this.time * CONFIG.wobble2Speed +
+                phase * CONFIG.wobble2PhaseFactor,
+            ) * CONFIG.wobble2Amount;
 
           // Hot blobs stretch vertically, cold blobs squish horizontally
-          // Plus continuous wobble for organic movement
-          const stretch = 0.75 + blob.temp * 0.5 + wobble1;
-          const skew = 1.0 + wobble2; // Subtle asymmetric distortion
+          const stretch =
+            CONFIG.stretchBase + blob.temp * CONFIG.stretchTempFactor + wobble1;
+          const skew = 1.0 + wobble2;
 
           const distSq = dx * dx * stretch * skew + (dy * dy) / stretch;
           const influence = (blob.r * blob.r) / (distSq + 0.0001);
@@ -367,10 +459,10 @@ class LavaLampDemo extends Game {
         }
         if (sum > 0) avgTemp /= sum;
 
-        // Blob color based on temperature
-        // Hot = much brighter, Cold = darker
-        const t = avgTemp;
-        const brightness = 0.35 + t * 1.0; // 0.35 to 1.35 based on temp
+        // Blob color based on y position (bottom = hot/bright, top = cool/dim)
+        const t = ny; // ny=1 at bottom (hot), ny=0 at top (cool)
+        const brightness =
+          CONFIG.brightnessBase + t * CONFIG.brightnessTempFactor;
         const blobR =
           (this.colors.blob1[0] * (1 - t) + this.colors.blob2[0] * t) *
           brightness;
@@ -382,20 +474,22 @@ class LavaLampDemo extends Game {
           brightness;
 
         // Anti-aliasing: smooth blend at edges
-        const edgeWidth = 0.15; // Width of the soft edge
         const innerThreshold = this.threshold;
-        const outerThreshold = this.threshold - edgeWidth;
+        const outerThreshold = this.threshold - CONFIG.edgeWidth;
 
         if (sum >= innerThreshold) {
           // Fully inside blob
-          const glow = Math.min((sum - innerThreshold) * 0.1, 0.2);
-          data[idx] = Math.min(255, blobR + glow * 50);
-          data[idx + 1] = Math.min(255, blobG + glow * 35);
-          data[idx + 2] = Math.min(255, blobB + glow * 25);
+          const glow = Math.min(
+            (sum - innerThreshold) * CONFIG.glowFactor,
+            CONFIG.glowMax,
+          );
+          data[idx] = Math.min(255, blobR + glow * CONFIG.glowR);
+          data[idx + 1] = Math.min(255, blobG + glow * CONFIG.glowG);
+          data[idx + 2] = Math.min(255, blobB + glow * CONFIG.glowB);
         } else if (sum >= outerThreshold) {
           // Edge zone - blend between blob and background
-          const blend = (sum - outerThreshold) / edgeWidth; // 0 to 1
-          const smoothBlend = blend * blend * (3 - 2 * blend); // Smoothstep
+          const blend = (sum - outerThreshold) / CONFIG.edgeWidth;
+          const smoothBlend = blend * blend * (3 - 2 * blend);
           data[idx] = bgR + (blobR - bgR) * smoothBlend;
           data[idx + 1] = bgG + (blobG - bgG) * smoothBlend;
           data[idx + 2] = bgB + (blobB - bgB) * smoothBlend;
