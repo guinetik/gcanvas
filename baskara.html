@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Root Dance - Bhaskara Formula</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Bhaskara Dance</strong> - Visualizing the quadratic formula (Bhaskara).
+    Particles represent the roots of ax² + bx + c = 0. Watch them dance
+    as coefficients animate, merge when the discriminant hits zero, and spiral
+    into the complex plane when roots become imaginary.
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module">
+    import { MyGame } from './js/baskara.js';
+
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = MyGame(canvas);
+      game.start();
+    });
+  </script>
+</body>
+
+</html>
