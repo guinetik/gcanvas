@@ -17,3 +17,6 @@ export * from "./collision";
 
 // State management
 export * from "./state";
+
+// Particle system
+export * from "./particle";
