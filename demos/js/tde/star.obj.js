@@ -371,6 +371,10 @@ export class Star extends GameObject {
    * Update during approach phase - star spirals in on elliptical orbit.
    */
   updateApproach(dt, progress) {
+    // Save previous position to calculate velocity
+    const prevX = this.centerX;
+    const prevZ = this.centerZ;
+
     // Advance orbital angle (faster as it approaches periapsis - Kepler's 2nd law)
     const speedFactor = 1 + progress * 2;
     this.orbitAngle += dt * CONFIG.orbitSpeed * speedFactor;
@@ -386,6 +390,13 @@ export class Star extends GameObject {
 
     // Slight vertical oscillation
     this.centerY = Math.sin(this.orbitAngle * 2) * this.baseScale * 0.02;
+
+    // Calculate velocity (units per second)
+    if (dt > 0) {
+      this.velocityX = (this.centerX - prevX) / dt;
+      this.velocityZ = (this.centerZ - prevZ) / dt;
+      this.velocityY = (this.centerY - 0) / dt; // approx
+    }
   }
 
   /**
@@ -393,6 +404,9 @@ export class Star extends GameObject {
    * Creates TEARDROP spaghettification like the reference image.
    */
   updateStretch(dt, progress, bhPosition) {
+    const prevX = this.centerX;
+    const prevZ = this.centerZ;
+
     // Continue orbiting faster at periapsis
     const speedFactor = 2 + progress;
     this.orbitAngle += dt * CONFIG.orbitSpeed * speedFactor;
@@ -405,6 +419,13 @@ export class Star extends GameObject {
     this.centerX = pos.x;
     this.centerZ = pos.z;
     this.centerY = Math.sin(this.orbitAngle * 2) * this.baseScale * 0.015;
+
+    // Calculate velocity
+    if (dt > 0) {
+      this.velocityX = (this.centerX - prevX) / dt;
+      this.velocityZ = (this.centerZ - prevZ) / dt;
+      this.velocityY = (this.centerY - 0) / dt;
+    }
 
     // Apply tidal stretching - increases dramatically with progress
     this.stretchFactor =
@@ -444,6 +465,9 @@ export class Star extends GameObject {
    * Creates extreme spaghettification as star is torn apart.
    */
   updateDisrupt(dt, progress) {
+    const prevX = this.centerX;
+    const prevZ = this.centerZ;
+
     // Continue orbiting past periapsis
     const speedFactor = 3 - progress * 1.5;
     this.orbitAngle += dt * CONFIG.orbitSpeed * speedFactor;
@@ -455,6 +479,13 @@ export class Star extends GameObject {
     const pos = polarToCartesian(this.orbitRadius, this.orbitAngle);
     this.centerX = pos.x;
     this.centerZ = pos.z;
+
+    // Calculate velocity
+    if (dt > 0) {
+      this.velocityX = (this.centerX - prevX) / dt;
+      this.velocityZ = (this.centerZ - prevZ) / dt;
+      this.velocityY = (this.centerY - 0) / dt;
+    }
 
     // EXTREME stretching during disruption
     this.stretchFactor = CONFIG.stretchMaxFactor * (1 + progress * 3);
@@ -531,23 +562,18 @@ export class Star extends GameObject {
         const worldY = this.centerY + p.offsetY + p.driftY;
         const worldZ = this.centerZ + p.offsetZ + p.driftZ;
 
-        // Velocity ALWAYS toward BH center (0,0,0)
-        // Calculate direction from particle position to BH
-        const particleDist = Math.sqrt(worldX ** 2 + worldZ ** 2) || 1;
-        const toOriginX = -worldX / particleDist;
-        const toOriginZ = -worldZ / particleDist;
-
-        // Strong velocity toward BH center
-        const speed = CONFIG.streamSpeed * (0.8 + Math.random() * 0.4);
+        // Inherit Star Velocity + Ejection Kick
+        // This is key for the "S" shape - conservation of momentum
+        const ejectionSpeed = 10 + Math.random() * 20;
 
         released.push({
           x: worldX,
           y: worldY,
           z: worldZ,
-          // Velocity TOWARD BH center (origin)
-          vx: toOriginX * speed,
-          vy: -Math.abs(worldY) * 0.2,
-          vz: toOriginZ * speed,
+          // Velocity = Star Velocity + Ejection (toward BH)
+          vx: (this.velocityX || 0) + toBHx * ejectionSpeed,
+          vy: (this.velocityY || 0) + (Math.random() - 0.5) * 5,
+          vz: (this.velocityZ || 0) + toBHz * ejectionSpeed,
           size: p.size,
           color: { ...p.color },
         });

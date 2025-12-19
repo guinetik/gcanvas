@@ -208,9 +208,10 @@ export class DebrisManager extends GameObject {
       // Target angle - continue in spiral direction toward BH
       const targetAngle = angle + spiralTurns * Math.PI * 2;
 
-      // Inward velocity - ALWAYS toward BH
-      const baseInwardVel = 20 + Math.random() * 30;
-      const inwardVel = willFallIn ? baseInwardVel * 1.5 : baseInwardVel;
+      // Initial velocities from star stream
+      const vx = d.vx || 0;
+      const vy = d.vy || 0;
+      const vz = d.vz || 0;
 
       // FLAT DISK like the original blackhole demo
       const yVariation = this.baseScale * 0.006;
@@ -220,8 +221,11 @@ export class DebrisManager extends GameObject {
         x: d.x,
         y: d.y,
         z: d.z,
+        vx: vx,
+        vy: vy,
+        vz: vz,
 
-        // SPIRAL trajectory state
+        // SPIRAL trajectory state (for disk formation logic)
         startAngle: angle,
         startDistance: dist,
         startYOffset: d.y,
@@ -240,16 +244,15 @@ export class DebrisManager extends GameObject {
         spiralTurns: spiralTurns,
         spiralProgress: 0, // Start at zero - no jump
 
-        // Initial inward velocity - moderate for visible streaming
-        inwardVel: inwardVel + (willFallIn ? 20 + Math.random() * 40 : 0),
-
         // Behavior flags
         willFallIn: willFallIn,
-        isFalling: willFallIn,
+        // Treat ALL incoming debris as dynamic "falling" physics initially
+        // They will transition to disk orbit later if not consumed
+        isFalling: true, 
 
         // Appearance - slight size variation
         size: d.size * (0.6 + Math.random() * 0.6),
-        baseColor: this.getHeatColor(willFallIn ? dist : targetDist),
+        baseColor: this.getHeatColor(dist),
 
         // State
         age: 0,
@@ -301,41 +304,66 @@ export class DebrisManager extends GameObject {
       p.age += dt;
 
       if (p.isFalling) {
-        // PHYSICS-BASED INWARD PULL + spiral rotation
-        // Visible streaming toward black hole
+        // --- NEW PHYSICS: ORBITAL MECHANICS ---
+        
+        // 1. Gravity (Newtonian approx)
+        const distSq = p.x * p.x + p.y * p.y + p.z * p.z;
+        const dist = Math.sqrt(distSq);
+        
+        // Gravity force = G * M / r^2
+        // We can tune strength to match visual scale
+        const gravityAccel = CONFIG.gravityStrength / Math.max(distSq, 100);
+        
+        // Direction to center
+        const dirX = -p.x / dist;
+        const dirY = -p.y / dist;
+        const dirZ = -p.z / dist;
+        
+        // Apply Gravity
+        p.vx = (p.vx || 0) + dirX * gravityAccel * dt;
+        p.vy = (p.vy || 0) + dirY * gravityAccel * dt;
+        p.vz = (p.vz || 0) + dirZ * gravityAccel * dt;
+        
+        // 2. Drag / Circularization / Accretion Force
+        // Gently nudge velocity towards a circular orbit to form disk
+        // Target velocity for circular orbit: sqrt(GM/r)
+        // Tangent direction: cross product of vertical axis (0,1,0) and radius
+        
+        // But for "S" shape, we primarily just want gravity to do the work first.
+        // We add a small "drag" to prevent them from flying off forever if they are too fast.
+        
+        const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy + p.vz * p.vz);
+        if (speed > 200) {
+            // Drag if moving too fast
+            p.vx *= 0.99;
+            p.vy *= 0.99;
+            p.vz *= 0.99;
+        }
 
-        // 1. Apply inward velocity
-        p.distance -= p.inwardVel * dt;
-
-        // 2. GRAVITY PULL - gradual acceleration (visible spiral)
-        const gravityAccel =
-          (CONFIG.gravityStrength * dt) / Math.max(p.distance, 20);
-        p.inwardVel += gravityAccel * 0.5; // Gradual acceleration
-
-        // Clamp distance to prevent negative
-        p.distance = Math.max(accretionDist * 0.2, p.distance);
-
-        // 3. ANGULAR ROTATION - Keplerian faster when closer
-        const angularSpeed =
-          2.5 / Math.sqrt(Math.max(1, p.distance / this.bhRadius));
-        p.angle += angularSpeed * dt;
-
-        // 4. Advance spiral progress for visual tracking
-        const progressBoost = 1 + (1 - p.distance / p.startDistance) * 2;
-        p.spiralProgress = Math.min(
-          1,
-          p.spiralProgress + CONFIG.fallingSpiralRate * progressBoost,
-        );
-
-        // Flatten to disk plane as it falls in
-        const flattenRate = 1 - p.distance / p.startDistance;
-        p.yOffset = Easing.lerp(p.yOffset, 0, flattenRate * 0.1);
-
-        // Check if consumed
-        if (p.distance < accretionDist) {
+        // 3. Move
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.z += p.vz * dt;
+        
+        // Update derived polar coords for rendering logic
+        p.distance = Math.sqrt(p.x * p.x + p.z * p.z);
+        p.angle = Math.atan2(p.z, p.x);
+        
+        // Check accretion
+        if (dist < accretionDist) {
           p.consumed = true;
           newAccretions++;
         }
+        
+        // 4. Force Capture (Prevent flying off to infinity)
+        // If particle gets too far, nudge it back strongly
+        if (dist > this.bhRadius * 15) {
+             const pullBack = 2.0;
+             p.vx += dirX * pullBack * dt;
+             p.vy += dirY * pullBack * dt;
+             p.vz += dirZ * pullBack * dt;
+        }
+
       } else {
         // Disk-forming particles - ALWAYS move inward first, then settle
         p.spiralProgress = Math.min(1, p.spiralProgress + 0.05);
@@ -382,29 +410,44 @@ export class DebrisManager extends GameObject {
           // VERY rarely, inner particles fall in (keeps disk dynamic but dense)
           if (p.distance < this.diskInner * 1.1 && Math.random() < 0.00001) {
             p.isFalling = true;
-            p.startAngle = p.angle;
-            p.startDistance = p.distance;
-            p.startYOffset = p.yOffset;
-            p.spiralProgress = 0;
-            p.spiralTurns = CONFIG.spiralTurnsMin + Math.random();
-            p.inwardVel = 30;
+            // Initialize velocity for falling physics
+            // Tangent velocity + slight inward kick
+            const tangentX = -Math.sin(p.angle);
+            const tangentZ = Math.cos(p.angle);
+            const orbSpeed = orbitalSpeed * p.distance; // rad/s * dist = units/s
+            
+            p.vx = tangentX * orbSpeed * 0.9; // 0.9 to start spiral
+            p.vz = tangentZ * orbSpeed * 0.9;
+            p.vy = 0;
+            
+            // Explicitly set positions from polar
+            p.x = Math.cos(p.angle) * p.distance;
+            p.z = Math.sin(p.angle) * p.distance;
+            p.y = p.yOffset;
           }
         }
 
         // Convert stray particles that haven't settled
         if (p.age > 5 && p.distance > this.diskOuter) {
           p.isFalling = true;
-          p.inwardVel = 50;
+          p.vx = (Math.random()-0.5) * 10;
+          p.vz = (Math.random()-0.5) * 10;
+          p.vy = 0;
         }
       }
 
-      // Update Cartesian coordinates from polar
-      p.x = Math.cos(p.angle) * p.distance;
-      p.z = Math.sin(p.angle) * p.distance;
-      p.y = p.yOffset;
+      // Update Cartesian coordinates from polar (ONLY FOR DISK PARTICLES)
+      // Falling particles update Cartesian directly in physics block above
+      if (!p.isFalling) {
+        p.x = Math.cos(p.angle) * p.distance;
+        p.z = Math.sin(p.angle) * p.distance;
+        p.y = p.yOffset;
+      }
 
       // Update color based on current distance
-      p.baseColor = this.getHeatColor(p.distance);
+      // For falling particles, use full distance (3D)
+      const colorDist = p.isFalling ? Math.sqrt(p.x*p.x + p.z*p.z) : p.distance;
+      p.baseColor = this.getHeatColor(colorDist);
     }
 
     // Remove consumed particles and expired particles
@@ -584,53 +627,70 @@ export class DebrisManager extends GameObject {
 
       // Apply gravitational lensing
       if (lensingStrength > 0) {
-        let currentR = Math.sqrt(xCam * xCam + yCam * yCam);
-        const ringRadius = this.bhRadius * 1.5;
+        const rSq = xCam * xCam + yCam * yCam;
+        const currentR = Math.sqrt(rSq);
+        const ringRadius = this.bhRadius * 1.5; // Approx Einstein ring radius
 
         if (zCam > 0) {
-          // Behind BH - The "Interstellar" Halo Effect
-          // 1. Radial expansion
-          const lensFactor = Math.exp(-currentR / (this.bhRadius * 2.0));
-          const warp = lensFactor * 2.0 * lensingStrength;
-
-          if (currentR > 0) {
-            const ratio = (currentR + ringRadius * warp) / currentR;
-            xCam *= ratio;
-            yCam *= ratio;
+          // BEHIND THE BLACK HOLE (The "Halo")
+          // Light from the back of the disk is bent around the BH.
+          // We see it as a halo/ring surrounding the shadow.
+          
+          // Warp factor: increases as we get closer to the center axis
+          // This pushes the image OUTWARD towards the Einstein ring radius
+          const distToRing = Math.abs(currentR - ringRadius);
+          
+          // Simple geometric warp for the "Interstellar" look:
+          // If we are behind, we map the coordinates to the ring radius vertically.
+          
+          // Strength of the warp depends on how close we are to the BH shadow
+          // Particles directly behind (small currentR) get pushed to the ring.
+          if (currentR < ringRadius * 2) {
+             const t = Math.max(0, 1 - currentR / (ringRadius * 2.5));
+             
+             // Push Y towards the ring edge, preserving sign
+             // This creates the "arch" over and under the shadow
+             const targetY = (yCam > 0 ? 1 : -1) * Math.sqrt(Math.max(0, ringRadius*ringRadius - xCam*xCam * 0.5));
+             
+             // Blend between original position and warped position
+             // Stronger blend near the center (high t)
+             const blend = t * t * lensingStrength * 0.9;
+             yCam = yCam * (1 - blend) + targetY * blend;
+             
+             // Also slight radial expansion
+             const radialPush = 1 + t * 0.5 * lensingStrength;
+             xCam *= radialPush;
+             yCam *= radialPush;
           }
 
-          // 2. Vertical Arching
-          const archStrength =
-            Math.exp(-(xCam * xCam) / (ringRadius * ringRadius * 4)) *
-            lensingStrength;
-          
-          const targetY = -ringRadius * 0.9; 
-          yCam = yCam + (targetY - yCam) * archStrength * 0.8;
-
         } else if (currentR > 0 && currentR < this.bhRadius * 3) {
-          // In front of BH - bend around the black hole edge
+          // FRONT OF BLACK HOLE (Accretion Disk proper)
+          // Light is still bent, but less dramatically. 
+          // Main effect is slight apparent magnification and distortion near the shadow.
+          
           const edgeProximity = currentR / this.bhRadius;
-
-          if (edgeProximity < 2.5) {
-            const bendStrength =
-              Math.exp(-edgeProximity * 0.8) * lensingStrength;
-            const pushOut = 1 + bendStrength * 0.4;
-            const angle = Math.atan2(yCam, xCam);
-            const curvature = bendStrength * 0.3 * Math.sign(yCam || 1);
-
-            xCam =
-              xCam * pushOut +
-              Math.cos(angle + Math.PI / 2) * curvature * this.bhRadius;
-            yCam =
-              yCam * pushOut +
-              Math.sin(angle + Math.PI / 2) * curvature * this.bhRadius;
+          if (edgeProximity < 3.0) {
+             // Warp space slightly near the event horizon
+             const warp = 1.0 + Math.exp(-edgeProximity * 2.0) * 0.2 * lensingStrength;
+             xCam *= warp;
+             yCam *= warp;
           }
         }
       }
 
-      // OCCLUSION: Cull particles behind BH that project inside the shadow
-      const finalDist = Math.sqrt(xCam * xCam + yCam * yCam);
-      if (zCam > 0 && finalDist < this.bhRadius * 0.95) continue;
+      // OCCLUSION: Cull particles that end up inside the Event Horizon shadow
+      // The shadow is slightly larger than the BH radius due to light capture
+      const finalRSq = xCam * xCam + yCam * yCam;
+      const shadowRadiusSq = (this.bhRadius * 0.9) ** 2; // 0.9 to allow slight overlap/glow
+      
+      // If behind (z>0) AND projected inside shadow, it's occluded
+      if (zCam > 0 && finalRSq < shadowRadiusSq) continue;
+      
+      // If in front (z<0) AND inside, it might be blocking the view (but we usually draw on top)
+      // Actually, particles *in front* should be visible even if projected on the black circle,
+      // because they are between us and the BH.
+      // BUT if they physically fell in (r < radius), they are gone.
+      // Our physics handles physical consumption. This check is purely for visual occlusion of background.
 
       // Perspective projection
       const perspectiveScale =
