@@ -9,32 +9,57 @@
  * Grid deformation: y = Σ(-M_i / |r - r_i|)
  */
 
-import { Game, Painter, Camera3D, Text, applyAnchor, Position, Scene, verticalLayout, applyLayout } from "/gcanvas.es.min.js";
+import {
+  Game,
+  Painter,
+  Camera3D,
+  Text,
+  applyAnchor,
+  Position,
+  Scene,
+  verticalLayout,
+  applyLayout,
+} from "/gcanvas.es.min.js";
 
 // Configuration
 const CONFIG = {
   // Grid parameters
-  gridSize: 20,           // Grid extends from -gridSize to +gridSize
-  gridResolution: 40,     // Number of grid lines
-  gridScale: 15,          // Scale factor for grid spacing
+  gridSize: 20, // Grid extends from -gridSize to +gridSize
+  gridResolution: 40, // Number of grid lines
+  gridScale: 15, // Scale factor for grid spacing
 
   // Physics - Gaussian well profile for smooth falloff to flat edges
-  wellDepth: 100,              // Base depth (scaled by sqrt of mass)
-  wellWidth: 4.0,              // Base width (scaled by mass)
+  wellDepth: 75, // Base depth (scaled by sqrt of mass)
+  wellWidth: 4.0, // Base width (scaled by mass)
 
   // 3D view
-  rotationX: 0.7,         // Initial tilt (looking down at grid)
-  rotationY: 0.3,         // Initial rotation
-  perspective: 1000,      // Perspective depth
+  rotationX: 0.7, // Initial tilt (looking down at grid)
+  rotationY: 0.3, // Initial rotation
+  perspective: 1000, // Perspective depth
 
   // Stellar body
   initialBody: { x: 0, z: 0, mass: 3.0, type: "blackhole" },
 
   // Body properties by type
   bodyTypes: {
-    blackhole: { color: "#111", glowColor: "rgba(100, 50, 150, 0.8)", minMass: 2.0, maxMass: 5.0 },
-    star: { color: "#ff8800", glowColor: "rgba(255, 200, 50, 0.6)", minMass: 0.5, maxMass: 2.0 },
-    neutron: { color: "#88ccff", glowColor: "rgba(150, 200, 255, 0.7)", minMass: 1.5, maxMass: 3.0 },
+    blackhole: {
+      color: "#111",
+      glowColor: "rgba(100, 50, 150, 0.8)",
+      minMass: 2.0,
+      maxMass: 5.0,
+    },
+    star: {
+      color: "#ff8800",
+      glowColor: "rgba(255, 200, 50, 0.6)",
+      minMass: 0.5,
+      maxMass: 2.0,
+    },
+    neutron: {
+      color: "#88ccff",
+      glowColor: "rgba(150, 200, 255, 0.7)",
+      minMass: 1.5,
+      maxMass: 3.0,
+    },
   },
 
   // Visual
@@ -44,16 +69,16 @@ const CONFIG = {
   wellGradientEnd: "rgba(0, 100, 200, 0.1)",
 
   // Animation
-  autoRotateSpeed: 0.15,  // Auto-rotate speed (radians per second)
-  pulseSpeed: 2.0,        // Glow pulse speed
-  wellPulseSpeed: 1.5,    // Well breathing speed
-  wellPulseAmount: 0.08,  // How much the well pulses (0-1)
+  autoRotateSpeed: 0.15, // Auto-rotate speed (radians per second)
+  pulseSpeed: 2.0, // Glow pulse speed
+  wellPulseSpeed: 1.5, // Well breathing speed
+  wellPulseAmount: 0.08, // How much the well pulses (0-1)
 
   // Orbiting body
-  orbitRadiusMultiplier: 2.0,  // Orbit at this multiple of well width (sigma)
-  orbitSpeed: 0.8,             // Base orbit speed (faster for heavier central mass)
-  orbiterSize: 4,         // Size of orbiting body
-  orbiterColor: "#4af",   // Color of orbiter
+  orbitRadiusMultiplier: 2.0, // Orbit at this multiple of well width (sigma)
+  orbitSpeed: 0.8, // Base orbit speed (faster for heavier central mass)
+  orbiterSize: 4, // Size of orbiting body
+  orbiterColor: "#4af", // Color of orbiter
   orbiterGlow: "rgba(100, 180, 255, 0.6)",
 };
 
@@ -73,11 +98,11 @@ class SpacetimeDemo extends Game {
       rotationX: CONFIG.rotationX,
       rotationY: CONFIG.rotationY,
       perspective: CONFIG.perspective,
-      minRotationX: 0.2,    // Don't allow looking from below
-      maxRotationX: 1.3,    // Don't flip over
+      minRotationX: 0.2, // Don't allow looking from below
+      maxRotationX: 1.3, // Don't flip over
       autoRotate: true,
       autoRotateSpeed: CONFIG.autoRotateSpeed,
-      autoRotateAxis: 'y',
+      autoRotateAxis: "y",
     });
     this.camera.enableMouseControl(this.canvas);
 
@@ -115,12 +140,16 @@ class SpacetimeDemo extends Game {
       baseline: "middle",
     });
 
-    this.equationText = new Text(this, "g\u03BC\u03BD = \u03B7\u03BC\u03BD + h\u03BC\u03BD   |   R\u03BC\u03BD - \u00BDRg\u03BC\u03BD = 8\u03C0GT\u03BC\u03BD", {
-      font: "12px monospace",
-      color: "#888",
-      align: "center",
-      baseline: "middle",
-    });
+    this.equationText = new Text(
+      this,
+      "g\u03BC\u03BD = \u03B7\u03BC\u03BD + h\u03BC\u03BD   |   R\u03BC\u03BD - \u00BDRg\u03BC\u03BD = 8\u03C0GT\u03BC\u03BD",
+      {
+        font: "12px monospace",
+        color: "#888",
+        align: "center",
+        baseline: "middle",
+      },
+    );
 
     this.statsText = new Text(this, "Blackhole | Mass: 3.0 M\u2609", {
       font: "12px monospace",
@@ -132,7 +161,7 @@ class SpacetimeDemo extends Game {
     const textItems = [this.titleText, this.equationText, this.statsText];
     const layout = verticalLayout(textItems, { spacing: 18, align: "center" });
     applyLayout(textItems, layout.positions);
-    textItems.forEach(item => this.infoPanel.add(item));
+    textItems.forEach((item) => this.infoPanel.add(item));
   }
 
   initGrid() {
@@ -164,7 +193,9 @@ class SpacetimeDemo extends Game {
     else if (rand > 0.3) type = "neutron";
 
     const typeConfig = CONFIG.bodyTypes[type];
-    const mass = typeConfig.minMass + Math.random() * (typeConfig.maxMass - typeConfig.minMass);
+    const mass =
+      typeConfig.minMass +
+      Math.random() * (typeConfig.maxMass - typeConfig.minMass);
 
     // Always centered
     this.body = {
@@ -194,7 +225,8 @@ class SpacetimeDemo extends Game {
     const baseAmplitude = CONFIG.wellDepth * Math.sqrt(this.body.mass);
 
     // Pulsing animation - well "breathes"
-    const pulse = 1 + CONFIG.wellPulseAmount * Math.sin(this.time * CONFIG.wellPulseSpeed);
+    const pulse =
+      1 + CONFIG.wellPulseAmount * Math.sin(this.time * CONFIG.wellPulseSpeed);
     const amplitude = baseAmplitude * pulse;
 
     return amplitude * Math.exp(-rSquared / (2 * sigma * sigma));
@@ -223,7 +255,8 @@ class SpacetimeDemo extends Game {
 
     // Update stats text
     if (this.statsText) {
-      const typeName = this.body.type.charAt(0).toUpperCase() + this.body.type.slice(1);
+      const typeName =
+        this.body.type.charAt(0).toUpperCase() + this.body.type.slice(1);
       this.statsText.text = `${typeName} | Mass: ${this.body.mass.toFixed(1)} M\u2609`;
     }
   }
@@ -253,8 +286,8 @@ class SpacetimeDemo extends Game {
     const { gridResolution, gridScale, gridColor, gridHighlight } = CONFIG;
 
     // Project all vertices
-    const projected = this.gridVertices.map(row =>
-      row.map(v => {
+    const projected = this.gridVertices.map((row) =>
+      row.map((v) => {
         const p = this.camera.project(v.x * gridScale, v.y, v.z * gridScale);
         return {
           x: cx + p.x,
@@ -262,7 +295,7 @@ class SpacetimeDemo extends Game {
           z: p.z,
           depth: v.y,
         };
-      })
+      }),
     );
 
     // Draw grid lines along X direction
@@ -322,7 +355,7 @@ class SpacetimeDemo extends Game {
     const p = this.camera.project(
       orbiterX * CONFIG.gridScale,
       wellDepth,
-      orbiterZ * CONFIG.gridScale
+      orbiterZ * CONFIG.gridScale,
     );
 
     const screenX = cx + p.x;
@@ -332,8 +365,12 @@ class SpacetimeDemo extends Game {
     // Draw glow
     Painter.useCtx((ctx) => {
       const gradient = ctx.createRadialGradient(
-        screenX, screenY, 0,
-        screenX, screenY, size * 3
+        screenX,
+        screenY,
+        0,
+        screenX,
+        screenY,
+        size * 3,
       );
       gradient.addColorStop(0, CONFIG.orbiterGlow);
       gradient.addColorStop(1, "transparent");
@@ -347,8 +384,12 @@ class SpacetimeDemo extends Game {
     // Draw orbiter body
     Painter.useCtx((ctx) => {
       const gradient = ctx.createRadialGradient(
-        screenX - size * 0.3, screenY - size * 0.3, 0,
-        screenX, screenY, size
+        screenX - size * 0.3,
+        screenY - size * 0.3,
+        0,
+        screenX,
+        screenY,
+        size,
       );
       gradient.addColorStop(0, "#fff");
       gradient.addColorStop(0.5, CONFIG.orbiterColor);
@@ -369,8 +410,8 @@ class SpacetimeDemo extends Game {
     const sigma = CONFIG.wellWidth * Math.sqrt(this.body.mass);
     const orbitRadius = sigma * CONFIG.orbitRadiusMultiplier;
 
-    const trailLength = 40;  // Number of trail segments
-    const trailArc = Math.PI * 0.8;  // How much of the orbit to show as trail
+    const trailLength = 40; // Number of trail segments
+    const trailArc = Math.PI * 0.8; // How much of the orbit to show as trail
 
     Painter.useCtx((ctx) => {
       ctx.lineCap = "round";
@@ -386,19 +427,20 @@ class SpacetimeDemo extends Game {
         const p = this.camera.project(
           trailX * CONFIG.gridScale,
           wellDepth,
-          trailZ * CONFIG.gridScale
+          trailZ * CONFIG.gridScale,
         );
 
         if (i === 0) continue;
 
-        const prevAngle = this.orbiterAngle - ((i - 1) / trailLength) * trailArc;
+        const prevAngle =
+          this.orbiterAngle - ((i - 1) / trailLength) * trailArc;
         const prevX = this.body.x + Math.cos(prevAngle) * orbitRadius;
         const prevZ = this.body.z + Math.sin(prevAngle) * orbitRadius;
         const prevDepth = this.calculateWellDepth(prevX, prevZ);
         const prevP = this.camera.project(
           prevX * CONFIG.gridScale,
           prevDepth,
-          prevZ * CONFIG.gridScale
+          prevZ * CONFIG.gridScale,
         );
 
         const alpha = (1 - t) * 0.5;
@@ -419,8 +461,8 @@ class SpacetimeDemo extends Game {
     const wellDepth = this.calculateWellDepth(body.x, body.z);
     const p = this.camera.project(
       body.x * CONFIG.gridScale,
-      wellDepth * 0.7,  // Place body in the well
-      body.z * CONFIG.gridScale
+      wellDepth * 0.7, // Place body in the well
+      body.z * CONFIG.gridScale,
     );
 
     const screenX = cx + p.x;
@@ -431,13 +473,18 @@ class SpacetimeDemo extends Game {
     const size = baseSize * p.scale;
 
     // Pulsing glow effect
-    const pulse = 0.8 + 0.2 * Math.sin(this.time * CONFIG.pulseSpeed + body.orbitPhase);
+    const pulse =
+      0.8 + 0.2 * Math.sin(this.time * CONFIG.pulseSpeed + body.orbitPhase);
 
     // Draw glow
     Painter.useCtx((ctx) => {
       const gradient = ctx.createRadialGradient(
-        screenX, screenY, 0,
-        screenX, screenY, size * 3 * pulse
+        screenX,
+        screenY,
+        0,
+        screenX,
+        screenY,
+        size * 3 * pulse,
       );
       gradient.addColorStop(0, typeConfig.glowColor);
       gradient.addColorStop(1, "transparent");
@@ -466,8 +513,12 @@ class SpacetimeDemo extends Game {
       } else {
         // Stars and neutron stars: bright center
         const gradient = ctx.createRadialGradient(
-          screenX - size * 0.3, screenY - size * 0.3, 0,
-          screenX, screenY, size
+          screenX - size * 0.3,
+          screenY - size * 0.3,
+          0,
+          screenX,
+          screenY,
+          size,
         );
         gradient.addColorStop(0, "#fff");
         gradient.addColorStop(0.3, typeConfig.color);
@@ -486,8 +537,16 @@ class SpacetimeDemo extends Game {
       ctx.fillStyle = "#445";
       ctx.font = "10px monospace";
       ctx.textAlign = "right";
-      ctx.fillText("click to shuffle  |  drag to rotate  |  double-click to reset", w - 15, h - 30);
-      ctx.fillText("Mass curves spacetime  |  Objects follow geodesics", w - 15, h - 15);
+      ctx.fillText(
+        "click to shuffle  |  drag to rotate  |  double-click to reset",
+        w - 15,
+        h - 30,
+      );
+      ctx.fillText(
+        "Mass curves spacetime  |  Objects follow geodesics",
+        w - 15,
+        h - 15,
+      );
       ctx.textAlign = "left";
     });
   }

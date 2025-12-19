@@ -14,6 +14,14 @@ import { Rectangle } from "/gcanvas.es.min.js";
 import { TextShape } from "/gcanvas.es.min.js";
 import { Position } from "/gcanvas.es.min.js";
 import { Tensor } from "/gcanvas.es.min.js";
+import { flammEmbeddingHeight } from "/gcanvas.es.min.js";
+import {
+  keplerianOmega,
+  schwarzschildPrecessionRate,
+  orbitalRadiusSimple,
+  updateTrail,
+  createTrailPoint,
+} from "/gcanvas.es.min.js";
 import { verticalLayout, applyLayout } from "/gcanvas.es.min.js";
 import { Tooltip } from "/gcanvas.es.min.js";
 
@@ -28,8 +36,9 @@ const CONFIG = {
   schwarzschildRadius: 2.0, // rs = 2M in geometrized units
   massRange: [1.0, 4.0], // Mass range for shuffling
 
-  // Embedding diagram
-  embeddingScale: 25, // Scale for Flamm's paraboloid
+  // Embedding diagram - INTENTIONALLY EXAGGERATED for visualization
+  // Real Flamm's paraboloid is subtle; we amplify for "rubber sheet" pedagogy
+  embeddingScale: 75, // Scale for Flamm's paraboloid (exaggerated)
 
   // 3D view
   rotationX: 0.6,
@@ -45,6 +54,11 @@ const CONFIG = {
   autoRotateSpeed: 0.1,
   orbitSpeed: 0.5, // Base orbital angular velocity
   precessionFactor: 0.15, // GR precession rate
+
+  // Black hole visualization - mass-proportional sizing (rubber sheet analogy)
+  // "Heavier objects dent the fabric more" - intuitive for users
+  blackHoleSizeBase: 8, // Base size of black hole sphere
+  blackHoleSizeMassScale: 6, // Additional size per unit mass
 
   // Visual
   gridColor: "rgba(0, 180, 255, 0.3)",
@@ -380,7 +394,7 @@ class SchwarzschildDemo extends Game {
         this.tooltip.show(
           "Effective Potential V_eff(r)\n\nShows the combined gravitational and centrifugal potential.\n\nThe blue dot marks the orbiter's current position.\n\nLocal minima = stable orbits\nLocal maxima = unstable orbits\n\nThe GR term (-ML²/r³) creates the inner peak that doesn't exist in Newtonian gravity.",
           mouseX,
-          mouseY
+          mouseY,
         );
       }
       return;
@@ -438,15 +452,17 @@ class SchwarzschildDemo extends Game {
   }
 
   /**
-   * Flamm's paraboloid embedding: z² = 8M(r - 2M)
-   * Inverted so it looks like a gravity well going DOWN
+   * Flamm's paraboloid embedding using shared gr.js module.
+   * Inverted so it looks like a gravity well going DOWN.
    */
   getEmbeddingHeight(r) {
-    if (r <= this.rs) return CONFIG.embeddingScale * 2; // Deep well at horizon
-    const height = Math.sqrt(8 * this.mass * (r - this.rs));
-    // Invert: far = flat (y=0), near horizon = deep (y=positive into well)
-    const maxHeight = Math.sqrt(8 * this.mass * (CONFIG.gridSize - this.rs));
-    return ((maxHeight - height) * CONFIG.embeddingScale) / 4;
+    return flammEmbeddingHeight(
+      r,
+      this.rs,
+      this.mass,
+      CONFIG.gridSize,
+      CONFIG.embeddingScale,
+    );
   }
 
   /**
@@ -459,47 +475,40 @@ class SchwarzschildDemo extends Game {
   }
 
   /**
-   * Update geodesic motion using effective potential
-   * Simplified for visualization while maintaining GR character
+   * Update geodesic motion using orbital.js utilities.
+   * Simplified for visualization while maintaining GR character.
    */
   updateGeodesic(dt) {
-    const M = this.mass;
     const r = this.orbitR;
 
-    // Kepler's 3rd law base: ω ∝ 1/r^(3/2), scaled for visibility
-    // Closer orbits are faster (like real gravity)
-    const baseOmega = (CONFIG.orbitSpeed * Math.sqrt(M)) / Math.pow(r / 5, 1.5);
+    // Kepler's 3rd law angular velocity
+    const baseOmega = keplerianOmega(r, this.mass, CONFIG.orbitSpeed);
 
     // Update orbital angle
     this.orbitPhi += baseOmega * dt;
 
-    // Add radial oscillation for slight eccentricity effect
-    const eccentricity = 0.15;
-    const radialOscillation = eccentricity * Math.sin(this.orbitPhi * 2);
-    this.orbitR = CONFIG.orbitSemiMajor + radialOscillation * 2;
+    // Radial oscillation for eccentricity effect
+    this.orbitR = orbitalRadiusSimple(
+      CONFIG.orbitSemiMajor,
+      CONFIG.orbitEccentricity,
+      this.orbitPhi,
+    );
 
-    // Keep orbit bounded outside ISCO (using Tensor utility)
+    // Keep orbit bounded outside ISCO
     const minR = Tensor.iscoRadius(this.rs) + 1;
     if (this.orbitR < minR) this.orbitR = minR;
 
     // GR precession: orbit doesn't close, rotates over time
-    // Rate increases closer to black hole: Δφ ≈ 6πM/r per orbit
-    const precessionRate = CONFIG.precessionFactor * (this.rs / r);
+    const precessionRate = schwarzschildPrecessionRate(
+      r,
+      this.rs,
+      CONFIG.precessionFactor,
+    );
     this.precessionAngle += precessionRate * dt;
 
     // Store current position in trail
     const totalAngle = this.orbitPhi + this.precessionAngle;
-    this.orbitTrail.unshift({
-      x: Math.cos(totalAngle) * this.orbitR,
-      z: Math.sin(totalAngle) * this.orbitR,
-      r: this.orbitR,
-    });
-
-    // Limit trail length
-    const maxTrailLength = 80;
-    if (this.orbitTrail.length > maxTrailLength) {
-      this.orbitTrail.pop();
-    }
+    updateTrail(this.orbitTrail, createTrailPoint(this.orbitR, totalAngle), 80);
   }
 
   update(dt) {
@@ -646,13 +655,21 @@ class SchwarzschildDemo extends Game {
     const centerP = this.camera.project(0, y + 10, 0);
     const centerX = cx + centerP.x;
     const centerY = cy + centerP.y;
-    const size = 12 * centerP.scale;
+
+    // Mass-proportional sizing: heavier = bigger (rubber sheet intuition)
+    const baseSize =
+      CONFIG.blackHoleSizeBase + this.mass * CONFIG.blackHoleSizeMassScale;
+    const size = baseSize * centerP.scale;
 
     // Draw dark glow around black hole
     Painter.useCtx((ctx) => {
       const gradient = ctx.createRadialGradient(
-        centerX, centerY, size,
-        centerX, centerY, size * 3
+        centerX,
+        centerY,
+        size,
+        centerX,
+        centerY,
+        size * 3,
       );
       gradient.addColorStop(0, "rgba(80, 40, 120, 0.6)");
       gradient.addColorStop(1, "transparent");
@@ -767,7 +784,6 @@ class SchwarzschildDemo extends Game {
 
   drawOrbitPath(cx, cy) {
     const segments = 64;
-    const eccentricity = 0.15;
 
     Painter.useCtx((ctx) => {
       ctx.strokeStyle = "rgba(100, 180, 255, 0.25)";
@@ -780,8 +796,11 @@ class SchwarzschildDemo extends Game {
         const phi = (i / segments) * Math.PI * 2;
 
         // Same radius formula as the orbiter
-        const radialOscillation = eccentricity * Math.sin(phi * 2);
-        const r = CONFIG.orbitSemiMajor + radialOscillation * 2;
+        const r = orbitalRadiusSimple(
+          CONFIG.orbitSemiMajor,
+          CONFIG.orbitEccentricity,
+          phi,
+        );
 
         const x = Math.cos(angle) * r;
         const z = Math.sin(angle) * r;
@@ -933,9 +952,15 @@ class SchwarzschildDemo extends Game {
       ctx.fillStyle = "#445";
       ctx.font = "10px monospace";
       ctx.textAlign = "right";
-      ctx.fillText("click to shuffle  |  drag to rotate", w - 15, h - 30);
+      ctx.fillText("click to shuffle  |  drag to rotate", w - 15, h - 45);
       ctx.fillText(
         "Flamm's paraboloid embedding  |  Geodesic precession",
+        w - 15,
+        h - 30,
+      );
+      ctx.fillStyle = "#553";
+      ctx.fillText(
+        "Curvature exaggerated for visibility (rubber sheet analogy)",
         w - 15,
         h - 15,
       );

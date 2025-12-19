@@ -8,7 +8,7 @@
  */
 
 import { Game, Painter, Camera3D, Text, applyAnchor, Position, Scene, verticalLayout, applyLayout } from "/gcanvas.es.min.js";
-import { Complex } from "/gcanvas.es.min.js";
+import { gaussianWavePacket } from "/gcanvas.es.min.js";
 
 // Configuration
 const CONFIG = {
@@ -123,24 +123,17 @@ class SchrodingerDemo extends Game {
   }
 
   /**
-   * Compute Gaussian wave packet at position x and time t
+   * Compute Gaussian wave packet using quantum.js module.
    * Ψ(x,t) = A * e^(-(x-vt)²/4σ²) * e^(i(kx-ωt))
    */
   computeWavePacket(x, t) {
-    const { amplitude, sigma, k, omega, velocity } = CONFIG;
-
-    // Center of wave packet moves with velocity
-    const x0 = velocity * t;
-
-    // Gaussian envelope
-    const dx = x - x0;
-    const envelope = amplitude * Math.exp(-(dx * dx) / (4 * sigma * sigma));
-
-    // Complex phase: e^(i(kx - ωt))
-    const phase = k * x - omega * t;
-    const psi = Complex.fromPolar(envelope, phase);
-
-    return { psi, envelope };
+    return gaussianWavePacket(x, t, {
+      amplitude: CONFIG.amplitude,
+      sigma: CONFIG.sigma,
+      k: CONFIG.k,
+      omega: CONFIG.omega,
+      velocity: CONFIG.velocity,
+    });
   }
 
   /**

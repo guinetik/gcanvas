@@ -13,6 +13,13 @@ import { Rectangle } from "/gcanvas.es.min.js";
 import { TextShape } from "/gcanvas.es.min.js";
 import { Position } from "/gcanvas.es.min.js";
 import { Tensor } from "/gcanvas.es.min.js";
+import { flammEmbeddingHeight } from "/gcanvas.es.min.js";
+import {
+  keplerianOmega,
+  kerrPrecessionRate,
+  orbitalRadiusSimple,
+  updateTrail,
+} from "/gcanvas.es.min.js";
 import { verticalLayout, applyLayout } from "/gcanvas.es.min.js";
 import { Tooltip } from "/gcanvas.es.min.js";
 
@@ -29,8 +36,9 @@ const CONFIG = {
   massRange: [1.0, 3.0],
   spinRange: [0.1, 0.95], // As fraction of M
 
-  // Embedding diagram (exaggerated for visual drama)
-  embeddingScale: 50,
+  // Embedding diagram - INTENTIONALLY EXAGGERATED for visualization
+  // Real curvature would be subtle; we amplify it so users can see the effect
+  embeddingScale: 75,
 
   // 3D view
   rotationX: 0.6,
@@ -47,6 +55,18 @@ const CONFIG = {
   orbitSpeed: 0.5,
   precessionFactor: 0.15,
   frameDraggingAmplification: 3.0, // Visual enhancement
+
+  // Formation animation (λ: 0→1 interpolation from flat to Kerr)
+  // Slow enough for users to notice the transformation
+  formationDuration: 6.0, // Seconds to form the black hole
+  formationEasing: 0.3, // Easing factor for smooth transition
+
+  // Visual exaggeration for user understanding (rubber sheet analogy)
+  // These values are NOT physically accurate - intentionally amplified
+  frameDraggingReach: 3.0, // How far frame dragging visually extends (multiplier)
+  frameDraggingStrength: 25, // Strength of twist effect
+  blackHoleSizeBase: 8, // Base visual size of black hole
+  blackHoleSizeMassScale: 8, // How much mass affects visual size
 
   // Colors
   gridColor: "rgba(0, 180, 255, 0.3)",
@@ -68,7 +88,7 @@ const CONFIG = {
 class KerrMetricPanelGO extends GameObject {
   constructor(game, options = {}) {
     const panelWidth = 340;
-    const panelHeight = 300;
+    const panelHeight = 320;
     const lineHeight = 14;
     const valueOffset = 180;
 
@@ -92,7 +112,7 @@ class KerrMetricPanelGO extends GameObject {
         font: "bold 12px monospace",
         color: "#f7a",
         height: lineHeight + 4,
-        desc: "The Kerr metric describes spacetime around a rotating (spinning) black hole. Discovered by Roy Kerr in 1963, it's more realistic than Schwarzschild since real black holes spin.",
+        desc: "The Kerr metric describes spacetime around a rotating black hole.\n\nKerr is STATIONARY - it doesn't evolve over time. This animation shows geometric interpolation from flat to Kerr.\n\nNOTE: Visual effects are EXAGGERATED (like rubber sheet analogy) to make curvature and frame dragging easier to see.",
       },
       equation: {
         text: "ds² = gμν dxμ dxν (Boyer-Lindquist)",
@@ -358,8 +378,10 @@ class KerrDemo extends Game {
     this.precessionAngle = 0;
     this.orbitTrail = [];
 
-    // Separate timer for frame dragging (resets on shuffle)
-    this.frameDragTime = 0;
+    // Formation parameter λ: interpolates from flat (0) to Kerr (1)
+    // This is NOT physical time - it's a geometric interpolation parameter
+    // representing the cumulative effects during black hole formation
+    this.formationProgress = 0; // λ ∈ [0, 1]
 
     // Initialize grid
     this.initGrid();
@@ -487,8 +509,9 @@ class KerrDemo extends Game {
     this.precessionAngle = 0;
     this.orbitTrail = [];
 
-    // Reset spacetime - grid goes back to flat, then starts twisting fresh
-    this.frameDragTime = 0;
+    // Reset formation - grid goes back to flat, then forms into new Kerr
+    this.formationProgress = 0;
+    this.formationCompleteTime = null; // Reset for new orbiter fade-in
 
     // Reset grid to original positions
     const { gridResolution } = CONFIG;
@@ -510,30 +533,22 @@ class KerrDemo extends Game {
   }
 
   /**
-   * Embedding height for Kerr (approximation based on Flamm's paraboloid)
-   * Exaggerated for visual drama - steeper near horizon
+   * Embedding height for Kerr using shared gr.js module.
+   * Uses r+ (outer horizon) instead of 2M for the Kerr case.
    */
   getEmbeddingHeight(r) {
     const rPlus = Tensor.kerrHorizonRadius(this.mass, this.spin, false);
-    if (r <= rPlus) return CONFIG.embeddingScale * 3; // Deep well at horizon
-
-    // Modified Flamm's paraboloid for Kerr
-    const M = this.mass;
-    const height = Math.sqrt(8 * M * (r - rPlus));
-    const maxHeight = Math.sqrt(8 * M * (CONFIG.gridSize - rPlus));
-
-    // Base embedding
-    let embedding = ((maxHeight - height) * CONFIG.embeddingScale) / 3;
-
-    // Extra steepness near horizon (exponential falloff)
-    const proximity = rPlus / r;
-    const extraDepth = Math.pow(proximity, 3) * CONFIG.embeddingScale * 0.8;
-
-    return embedding + extraDepth;
+    return flammEmbeddingHeight(
+      r,
+      rPlus,
+      this.mass,
+      CONFIG.gridSize,
+      CONFIG.embeddingScale,
+    );
   }
 
   /**
-   * Update geodesic motion with frame dragging
+   * Update geodesic motion with frame dragging using orbital.js utilities.
    */
   updateGeodesic(dt) {
     const M = this.mass;
@@ -541,9 +556,9 @@ class KerrDemo extends Game {
     const r = this.orbitR;
 
     // Base Keplerian angular velocity
-    const baseOmega = (CONFIG.orbitSpeed * Math.sqrt(M)) / Math.pow(r / 5, 1.5);
+    const baseOmega = keplerianOmega(r, M, CONFIG.orbitSpeed);
 
-    // Frame dragging contribution
+    // Frame dragging contribution (Kerr-specific, stays in Tensor)
     const omegaDrag = Tensor.kerrFrameDraggingOmega(r, Math.PI / 2, M, a);
 
     // Total angular velocity (frame dragging adds to prograde motion)
@@ -553,48 +568,76 @@ class KerrDemo extends Game {
     // Update orbital angle
     this.orbitPhi += totalOmega * dt;
 
-    // Radial oscillation
-    const eccentricity = CONFIG.orbitEccentricity;
-    const radialOscillation = eccentricity * Math.sin(this.orbitPhi * 2);
-    this.orbitR = CONFIG.orbitSemiMajor + radialOscillation * 2;
+    // Radial oscillation for eccentricity
+    this.orbitR = orbitalRadiusSimple(
+      CONFIG.orbitSemiMajor,
+      CONFIG.orbitEccentricity,
+      this.orbitPhi,
+    );
 
     // Keep orbit outside prograde ISCO
     const minR = Tensor.kerrISCO(M, a, true) + 1;
     if (this.orbitR < minR) this.orbitR = minR;
 
     // GR precession (enhanced by frame dragging)
-    const precessionRate = CONFIG.precessionFactor * (M / r) * (1 + a / M);
+    const precessionRate = kerrPrecessionRate(r, M, a, CONFIG.precessionFactor);
     this.precessionAngle += precessionRate * dt;
 
     // Store in trail
     const totalAngle = this.orbitPhi + this.precessionAngle;
-    this.orbitTrail.unshift({
-      x: Math.cos(totalAngle) * this.orbitR,
-      z: Math.sin(totalAngle) * this.orbitR,
-      r: this.orbitR,
-      omega: omegaDrag,
-    });
-
-    if (this.orbitTrail.length > 80) {
-      this.orbitTrail.pop();
-    }
+    updateTrail(
+      this.orbitTrail,
+      {
+        x: Math.cos(totalAngle) * this.orbitR,
+        z: Math.sin(totalAngle) * this.orbitR,
+        r: this.orbitR,
+        omega: omegaDrag,
+      },
+      80,
+    );
   }
 
   update(dt) {
     super.update(dt);
     this.time += dt;
-    this.frameDragTime += dt; // Separate timer for frame dragging
+
+    // Formation progress: λ goes from 0 to 1 over formationDuration
+    // Once at 1, stays there (Kerr is stationary - the final state)
+    const wasForming = this.formationProgress < 1;
+    if (this.formationProgress < 1) {
+      this.formationProgress += dt / CONFIG.formationDuration;
+      if (this.formationProgress >= 1) {
+        this.formationProgress = 1;
+        // Record when formation completed (for orbiter fade-in)
+        this.formationCompleteTime = this.time;
+      }
+    }
+
+    // Smooth easing for formation (ease-out cubic)
+    const lambda = 1 - Math.pow(1 - this.formationProgress, 3);
 
     this.camera.update(dt);
-    this.updateGeodesic(dt);
+
+    // Only update geodesic motion after black hole has formed
+    // The orbiter appears after formation completes
+    if (this.formationProgress >= 1) {
+      this.updateGeodesic(dt);
+    }
+
     this.updateGridScale();
 
-    // Update grid with FRAME DRAGGING TWIST
+    // Update grid with Kerr geometry
+    // The twist is proportional to λ (formation progress), NOT accumulating over time
+    // This shows the FINAL Kerr geometry, not "evolving" spacetime
     const { gridResolution } = CONFIG;
     const M = this.mass;
     const a = this.spin;
     const rPlus = Tensor.kerrHorizonRadius(M, a, false);
     const rErgo = Tensor.kerrErgosphereRadius(M, a, Math.PI / 2);
+
+    // Extended reach for frame dragging visualization (rubber sheet analogy)
+    // Real effect falls off as ~1/r³, but we extend it for visual clarity
+    const visualReach = rErgo * CONFIG.frameDraggingReach;
 
     for (let i = 0; i <= gridResolution; i++) {
       for (let j = 0; j <= gridResolution; j++) {
@@ -603,9 +646,11 @@ class KerrDemo extends Game {
           vertex.baseX * vertex.baseX + vertex.baseZ * vertex.baseZ,
         );
 
-        // Frame dragging twist: rotate grid points based on local ω
-        // Stronger near the black hole, falls off as ~1/r³
-        if (baseR > rPlus * 0.5) {
+        // Frame dragging twist proportional to formation progress (λ)
+        // At λ=0: flat spacetime, no twist
+        // At λ=1: full Kerr geometry with frame dragging
+        // INTENTIONALLY EXAGGERATED: extends beyond physical ergosphere for visibility
+        if (baseR > rPlus * 0.5 && baseR < visualReach) {
           const omega = Tensor.kerrFrameDraggingOmega(
             Math.max(baseR, rPlus + 0.1),
             Math.PI / 2,
@@ -613,13 +658,17 @@ class KerrDemo extends Game {
             a,
           );
 
-          // Continuous rotation (resets when black hole changes)
-          const twistAngle = omega * this.frameDragTime * 8;
+          // Visual falloff: smooth transition from max twist near horizon to zero at visualReach
+          // Uses quadratic falloff for smoother visual effect
+          const proximityFactor =
+            1 - Math.pow((baseR - rPlus) / (visualReach - rPlus), 2);
+          const clampedProximity = Math.max(0, proximityFactor);
 
-          // Cap the twist to max ~45 degrees to keep grid readable
-          const maxTwist = Math.PI / 4;
-          const cappedTwist =
-            Math.sin(twistAngle) * maxTwist * (rErgo / Math.max(baseR, rErgo));
+          // Static twist angle - EXAGGERATED for visualization
+          const maxTwist = Math.PI / 4; // ~45 degrees max for dramatic effect
+          const twistAngle =
+            omega * CONFIG.frameDraggingStrength * lambda * clampedProximity;
+          const cappedTwist = Math.min(twistAngle, maxTwist);
 
           // Apply rotation to grid point
           const cosT = Math.cos(cappedTwist);
@@ -628,8 +677,9 @@ class KerrDemo extends Game {
           vertex.z = vertex.baseX * sinT + vertex.baseZ * cosT;
         }
 
+        // Embedding depth also scales with λ (flat → curved)
         const r = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
-        vertex.y = this.getEmbeddingHeight(Math.max(r, rPlus + 0.1));
+        vertex.y = this.getEmbeddingHeight(Math.max(r, rPlus + 0.1)) * lambda;
       }
     }
 
@@ -687,8 +737,63 @@ class KerrDemo extends Game {
     // Draw effective potential graph
     this.drawEffectivePotential();
 
+    // Draw formation progress indicator
+    this.drawFormationProgress(w, h);
+
     // Draw controls
     this.drawControls(w, h);
+  }
+
+  drawFormationProgress(w, h) {
+    const progress = this.formationProgress;
+    const lambda = 1 - Math.pow(1 - progress, 3); // Eased progress
+    const barWidth = 120;
+    const barHeight = 6;
+    const barX = 10;
+    const barY = h - 25;
+
+    Painter.useCtx((ctx) => {
+      // Phase-aware label
+      ctx.font = "10px monospace";
+      ctx.textAlign = "left";
+      let label, color;
+
+      if (progress >= 1) {
+        label = "Kerr (stationary)";
+        color = "#8f8";
+      } else if (lambda < 0.2) {
+        label = "Collapse...";
+        color = "#fff";
+      } else if (lambda < 0.5) {
+        label = "Horizon forming...";
+        color = "#f88";
+      } else if (lambda < 0.8) {
+        label = "Ergosphere emerging...";
+        color = "#fa8";
+      } else {
+        label = "Frame dragging stabilizing...";
+        color = "#ff0";
+      }
+
+      ctx.fillStyle = color;
+      ctx.fillText(label, barX, barY - 8);
+
+      // Background bar
+      ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.fillRect(barX, barY, barWidth, barHeight);
+
+      // Progress bar
+      const gradient = ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
+      gradient.addColorStop(0, "rgba(100, 100, 255, 0.8)");
+      gradient.addColorStop(1, "rgba(255, 100, 100, 0.8)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(barX, barY, barWidth * progress, barHeight);
+
+      // λ indicator
+      ctx.fillStyle = "#888";
+      ctx.font = "9px monospace";
+      ctx.fillText(`\u03BB = ${progress.toFixed(2)}`, barX, barY + 16);
+    });
   }
 
   drawKeyRadii(cx, cy) {
@@ -758,11 +863,17 @@ class KerrDemo extends Game {
 
     if (isNaN(rErgo) || isNaN(rPlus) || rErgo <= rPlus) return;
 
+    // Ergosphere only visible after significant formation (λ > 0.4)
+    // This is a property of the final Kerr geometry
+    const lambda = 1 - Math.pow(1 - this.formationProgress, 3);
+    const ergoVisibility = Math.max(0, (lambda - 0.4) / 0.6); // 0 at λ=0.4, 1 at λ=1
+    if (ergoVisibility <= 0) return;
+
     const segments = 64;
 
     Painter.useCtx((ctx) => {
-      // Semi-transparent orange fill for ergosphere
-      ctx.fillStyle = "rgba(255, 100, 0, 0.15)";
+      // Semi-transparent orange fill for ergosphere - fades in with formation
+      ctx.fillStyle = `rgba(255, 100, 0, ${0.15 * ergoVisibility})`;
       ctx.beginPath();
 
       // Outer boundary (ergosphere)
@@ -802,7 +913,8 @@ class KerrDemo extends Game {
     });
 
     // Draw dragged particles in ergosphere - shows frame dragging!
-    if (this.draggedParticles) {
+    // Particles also fade in with ergosphere visibility
+    if (this.draggedParticles && ergoVisibility > 0) {
       Painter.useCtx((ctx) => {
         for (const p of this.draggedParticles) {
           // Only draw if within ergosphere
@@ -819,7 +931,7 @@ class KerrDemo extends Game {
 
             // Particles glow orange - they're being dragged!
             const size = 3 * proj.scale;
-            ctx.fillStyle = "rgba(255, 180, 50, 0.9)";
+            ctx.fillStyle = `rgba(255, 180, 50, ${0.9 * ergoVisibility})`;
             ctx.beginPath();
             ctx.arc(cx + proj.x, cy + proj.y, size, 0, Math.PI * 2);
             ctx.fill();
@@ -834,7 +946,7 @@ class KerrDemo extends Game {
               trailZ * this.gridScale,
             );
 
-            ctx.strokeStyle = "rgba(255, 150, 50, 0.4)";
+            ctx.strokeStyle = `rgba(255, 150, 50, ${0.4 * ergoVisibility})`;
             ctx.lineWidth = 2 * proj.scale;
             ctx.beginPath();
             ctx.moveTo(cx + trailProj.x, cy + trailProj.y);
@@ -890,18 +1002,65 @@ class KerrDemo extends Game {
 
   drawHorizon(cx, cy) {
     const rPlus = Tensor.kerrHorizonRadius(this.mass, this.spin, false);
-    const y = this.getEmbeddingHeight(rPlus + 0.1);
+
+    // Formation progress affects size, intensity, AND vertical position
+    // Smooth easing for formation (ease-out cubic)
+    const lambda = 1 - Math.pow(1 - this.formationProgress, 3);
+
+    // Black hole sinks down as space curves around it
+    // At λ=0: sits at flat space level (y=0)
+    // At λ=1: sits at bottom of the well
+    const finalY = this.getEmbeddingHeight(rPlus + 0.1);
+    const y = finalY * lambda; // Interpolate from 0 to final depth
 
     const centerP = this.camera.project(0, y + 10, 0);
     const centerX = cx + centerP.x;
     const centerY = cy + centerP.y;
-    const size = 12 * centerP.scale;
+
+    // Black hole size scales with mass AND formation progress
+    // Starts as tiny seed (3px), grows to full size
+    const fullSize =
+      CONFIG.blackHoleSizeBase + this.mass * CONFIG.blackHoleSizeMassScale;
+    const seedSize = 3; // Initial collapse seed
+    const size = (seedSize + (fullSize - seedSize) * lambda) * centerP.scale;
 
     // Spin direction indicator (which way the hole rotates)
     const spinDirection = this.spin > 0 ? 1 : -1;
-    const rotationAngle = this.time * 2 * spinDirection;
+    // Rotation speed increases as formation progresses
+    const rotationAngle = this.time * 2 * spinDirection * lambda;
 
-    // Outer glow
+    // During early formation, show bright collapse point
+    if (lambda < 0.3) {
+      const collapseIntensity = 1 - lambda / 0.3; // Fades out as formation progresses
+      Painter.useCtx((ctx) => {
+        // Bright white-blue collapse flash
+        const flashSize = (10 + (1 - lambda) * 30) * centerP.scale;
+        const gradient = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          0,
+          centerX,
+          centerY,
+          flashSize,
+        );
+        gradient.addColorStop(
+          0,
+          `rgba(255, 255, 255, ${0.9 * collapseIntensity})`,
+        );
+        gradient.addColorStop(
+          0.3,
+          `rgba(150, 200, 255, ${0.6 * collapseIntensity})`,
+        );
+        gradient.addColorStop(1, "transparent");
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, flashSize, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // Outer glow - intensity grows with formation
+    const glowIntensity = 0.2 + lambda * 0.8; // 20% → 100%
     Painter.useCtx((ctx) => {
       const gradient = ctx.createRadialGradient(
         centerX,
@@ -911,8 +1070,8 @@ class KerrDemo extends Game {
         centerY,
         size * 4,
       );
-      gradient.addColorStop(0, "rgba(100, 50, 150, 0.5)");
-      gradient.addColorStop(0.5, "rgba(255, 100, 50, 0.2)");
+      gradient.addColorStop(0, `rgba(100, 50, 150, ${0.5 * glowIntensity})`);
+      gradient.addColorStop(0.5, `rgba(255, 100, 50, ${0.2 * glowIntensity})`);
       gradient.addColorStop(1, "transparent");
       ctx.fillStyle = gradient;
       ctx.beginPath();
@@ -920,61 +1079,66 @@ class KerrDemo extends Game {
       ctx.fill();
     });
 
-    // ROTATING ACCRETION DISK - the key visual!
-    Painter.useCtx((ctx) => {
-      ctx.save();
-      ctx.translate(centerX, centerY);
+    // ROTATING ACCRETION DISK - fades in as black hole forms
+    // Only visible after initial collapse phase (λ > 0.2)
+    const diskVisibility = Math.max(0, (lambda - 0.2) / 0.8); // 0 at λ=0.2, 1 at λ=1
+    if (diskVisibility > 0) {
+      Painter.useCtx((ctx) => {
+        ctx.save();
+        ctx.translate(centerX, centerY);
 
-      // Draw spinning spiral arms
-      const numArms = 3;
-      for (let arm = 0; arm < numArms; arm++) {
-        const armAngle = (arm / numArms) * Math.PI * 2 + rotationAngle;
+        // Draw spinning spiral arms
+        const numArms = 3;
+        for (let arm = 0; arm < numArms; arm++) {
+          const armAngle = (arm / numArms) * Math.PI * 2 + rotationAngle;
 
-        // Spiral gradient for each arm
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
+          // Spiral gradient for each arm
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
 
-        // Draw spiral
-        for (let t = 0; t <= 1; t += 0.02) {
-          const r = size * 1.2 + t * size * 2.5;
-          const angle = armAngle + t * Math.PI * 1.5 * spinDirection;
-          const x = Math.cos(angle) * r;
-          const y = Math.sin(angle) * r * 0.4; // Flatten for disk perspective
-          ctx.lineTo(x, y);
+          // Draw spiral
+          for (let t = 0; t <= 1; t += 0.02) {
+            const r = size * 1.2 + t * size * 2.5;
+            const angle = armAngle + t * Math.PI * 1.5 * spinDirection;
+            const x = Math.cos(angle) * r;
+            const y = Math.sin(angle) * r * 0.4; // Flatten for disk perspective
+            ctx.lineTo(x, y);
+          }
+
+          const baseAlpha = 0.6 - arm * 0.15;
+          const alpha = baseAlpha * diskVisibility;
+          ctx.strokeStyle = `rgba(255, ${150 + arm * 30}, ${50 + arm * 20}, ${alpha})`;
+          ctx.lineWidth = 3 - arm * 0.5;
+          ctx.stroke();
         }
 
-        const alpha = 0.6 - arm * 0.15;
-        ctx.strokeStyle = `rgba(255, ${150 + arm * 30}, ${50 + arm * 20}, ${alpha})`;
-        ctx.lineWidth = 3 - arm * 0.5;
-        ctx.stroke();
-      }
-
-      // Inner bright ring (hot gas closest to horizon)
-      ctx.strokeStyle = "rgba(255, 200, 100, 0.8)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, size * 1.5, size * 0.6, 0, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Spinning particles in the disk
-      const numParticles = 12;
-      for (let i = 0; i < numParticles; i++) {
-        const baseAngle = (i / numParticles) * Math.PI * 2;
-        const particleR = size * 1.8 + Math.sin(i * 2.7) * size * 0.5;
-        const particleAngle =
-          baseAngle + rotationAngle * (2 - particleR / (size * 3));
-        const px = Math.cos(particleAngle) * particleR;
-        const py = Math.sin(particleAngle) * particleR * 0.4;
-
-        const brightness = 150 + Math.sin(this.time * 3 + i) * 50;
-        ctx.fillStyle = `rgba(255, ${brightness}, 50, 0.8)`;
+        // Inner bright ring (hot gas closest to horizon)
+        ctx.strokeStyle = `rgba(255, 200, 100, ${0.8 * diskVisibility})`;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(px, py, 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
+        ctx.ellipse(0, 0, size * 1.5, size * 0.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
 
-      ctx.restore();
-    });
+        // Spinning particles in the disk
+        const numParticles = 12;
+        for (let i = 0; i < numParticles; i++) {
+          const baseAngle = (i / numParticles) * Math.PI * 2;
+          const particleR = size * 1.8 + Math.sin(i * 2.7) * size * 0.5;
+          const particleAngle =
+            baseAngle + rotationAngle * (2 - particleR / (size * 3));
+          const px = Math.cos(particleAngle) * particleR;
+          const py = Math.sin(particleAngle) * particleR * 0.4;
+
+          const brightness = 150 + Math.sin(this.time * 3 + i) * 50;
+          ctx.fillStyle = `rgba(255, ${brightness}, 50, ${0.8 * diskVisibility})`;
+          ctx.beginPath();
+          ctx.arc(px, py, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      });
+    }
 
     // Black hole body (actual black center)
     Painter.useCtx((ctx) => {
@@ -1027,6 +1191,16 @@ class KerrDemo extends Game {
   }
 
   drawOrbiter(cx, cy) {
+    // Only show orbiter after black hole has fully formed
+    // Geodesic motion is a property of the final Kerr spacetime
+    if (this.formationProgress < 1) return;
+
+    // Fade in the orbiter over 0.5 seconds after formation completes
+    const timeSinceFormation = this.formationProgress >= 1
+      ? (this.time - this.formationCompleteTime || 0)
+      : 0;
+    const orbiterAlpha = Math.min(1, timeSinceFormation * 2); // 0.5s fade-in
+
     const totalAngle = this.orbitPhi + this.precessionAngle;
     const orbiterX = Math.cos(totalAngle) * this.orbitR;
     const orbiterZ = Math.sin(totalAngle) * this.orbitR;
@@ -1044,6 +1218,7 @@ class KerrDemo extends Game {
 
     // Glow
     Painter.useCtx((ctx) => {
+      ctx.globalAlpha = orbiterAlpha;
       const gradient = ctx.createRadialGradient(
         screenX,
         screenY,
@@ -1058,10 +1233,12 @@ class KerrDemo extends Game {
       ctx.beginPath();
       ctx.arc(screenX, screenY, size * 4, 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalAlpha = 1;
     });
 
     // Body
     Painter.useCtx((ctx) => {
+      ctx.globalAlpha = orbiterAlpha;
       const gradient = ctx.createRadialGradient(
         screenX - size * 0.3,
         screenY - size * 0.3,
@@ -1077,17 +1254,19 @@ class KerrDemo extends Game {
       ctx.beginPath();
       ctx.arc(screenX, screenY, size, 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalAlpha = 1;
     });
 
-    this.drawOrbitPath(cx, cy);
-    this.drawOrbitalTrail(cx, cy);
+    this.drawOrbitPath(cx, cy, orbiterAlpha);
+    this.drawOrbitalTrail(cx, cy, orbiterAlpha);
   }
 
-  drawOrbitPath(cx, cy) {
+  drawOrbitPath(cx, cy, alpha = 1) {
     const segments = 64;
     const eccentricity = CONFIG.orbitEccentricity;
 
     Painter.useCtx((ctx) => {
+      ctx.globalAlpha = alpha;
       ctx.strokeStyle = "rgba(100, 180, 255, 0.25)";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -1114,10 +1293,11 @@ class KerrDemo extends Game {
 
       ctx.closePath();
       ctx.stroke();
+      ctx.globalAlpha = 1;
     });
   }
 
-  drawOrbitalTrail(cx, cy) {
+  drawOrbitalTrail(cx, cy, fadeAlpha = 1) {
     if (this.orbitTrail.length < 2) return;
 
     Painter.useCtx((ctx) => {
@@ -1143,7 +1323,7 @@ class KerrDemo extends Game {
           prevPoint.z * this.gridScale,
         );
 
-        const alpha = (1 - t) * 0.5;
+        const alpha = (1 - t) * 0.5 * fadeAlpha;
         ctx.strokeStyle = `rgba(100, 180, 255, ${alpha})`;
         ctx.lineWidth = (1 - t) * 2.5 * p.scale;
         ctx.beginPath();
@@ -1260,9 +1440,13 @@ class KerrDemo extends Game {
       ctx.fillStyle = "#445";
       ctx.font = "10px monospace";
       ctx.textAlign = "right";
-      ctx.fillText("click to shuffle  |  drag to rotate", w - 15, h - 30);
       ctx.fillText(
-        "Frame Dragging  |  Ergosphere  |  Kerr Geodesics",
+        "click to form new black hole  |  drag to rotate",
+        w - 15,
+        h - 30,
+      );
+      ctx.fillText(
+        "Flat \u2192 Kerr  |  Effects exaggerated for visibility",
         w - 15,
         h - 15,
       );
