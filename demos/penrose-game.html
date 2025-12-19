@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Penrose Diagram Game - Navigate Spacetime</title>
+        <link rel="stylesheet" href="demos.css" />
+        <script src="./js/info-toggle.js"></script>
+    </head>
+
+    <body>
+        <div id="info">
+            <strong>Penrose Diagram</strong> — Navigate spacetime, avoid
+            singularities.<br />
+            <span style="color: #ccc">
+                <li><code>A/D or Arrows</code> — Steer through space.</li>
+                <li><code>W or SHIFT</code> — Boost (uses Kerr energy).</li>
+                <li>
+                    <code>Ergosphere</code> — Harvest Kerr energy with light
+                    cone.
+                </li>
+                <li><code>Black Holes</code> — Cross the horizon = death.</li>
+                <li><code>Wormhole</code> — Teleport to start, keep score!</li>
+                <li><code>Artifact</code> — Survive singularity! (after wormhole)</li>
+                <li><code>SPACE</code> — Start / Restart.</li>
+            </span>
+        </div>
+        <canvas id="game"></canvas>
+        <script type="module" src="./js/penrose/game.js"></script>
+    </body>
+</html>

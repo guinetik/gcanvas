@@ -3,6 +3,10 @@ export class Easing {
   // EASING FUNCTIONS
   // =========================================================================
 
+  static lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
   /**
    * Linear - no easing, straight line
    * @param {number} t - Input (0-1)

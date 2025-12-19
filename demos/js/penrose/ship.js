@@ -12,7 +12,10 @@ export class PenroseShip extends GameObject {
     this.u = 0;
     this.v = CONFIG.shipStartV;
 
-    // Velocity (spatial motion)
+    // Heading angle (direction ship is traveling, 0 = straight up/forward)
+    this.heading = 0;
+
+    // Velocity is now derived from heading for compatibility
     this.velocity = 0;
 
     // Time progression speed (accelerates)
@@ -109,6 +112,7 @@ export class PenroseShip extends GameObject {
   reset() {
     this.u = 0;
     this.v = CONFIG.shipStartV;
+    this.heading = 0;
     this.velocity = 0;
     this.timeSpeed = CONFIG.shipTimeSpeed;
     this.worldline = [];
@@ -148,30 +152,34 @@ export class PenroseShip extends GameObject {
     this.timeSpeed *= Math.pow(CONFIG.shipAcceleration, dt);
     this.v += this.timeSpeed * this.boostMultiplier * dt;
 
-    // Steering input
+    // Steering input - changes heading (direction you're traveling)
     const leftPressed =
       Keys.isDown("a") || Keys.isDown("A") || Keys.isDown(Keys.LEFT);
     const rightPressed =
       Keys.isDown("d") || Keys.isDown("D") || Keys.isDown(Keys.RIGHT);
 
     if (leftPressed) {
-      this.velocity -= CONFIG.shipSteering * dt;
+      this.heading -= CONFIG.shipSteering * dt;
     }
     if (rightPressed) {
-      this.velocity += CONFIG.shipSteering * dt;
+      this.heading += CONFIG.shipSteering * dt;
     }
 
-    // Apply drag
-    this.velocity *= Math.pow(CONFIG.shipDrag, dt * 60);
+    // When not steering, heading springs back to center
+    if (!leftPressed && !rightPressed) {
+      this.heading *= 0.92; // Decay toward 0
+    }
 
-    // Clamp velocity (must stay timelike - can't go faster than light!)
-    this.velocity = Math.max(
-      -CONFIG.shipMaxVelocity,
-      Math.min(CONFIG.shipMaxVelocity, this.velocity),
-    );
+    // Clamp heading (can't go more than ~60 degrees off forward - would be spacelike!)
+    const maxHeading = Math.PI / 3; // 60 degrees
+    this.heading = Math.max(-maxHeading, Math.min(maxHeading, this.heading));
 
-    // Apply spatial velocity
-    this.u += this.velocity * this.timeSpeed * dt;
+    // Update velocity for compatibility (used by camera rotation)
+    this.velocity = this.heading;
+
+    // Movement based on heading direction
+    // sin(heading) gives lateral movement, heading=0 means straight up
+    this.u += Math.sin(this.heading) * this.timeSpeed * dt;
 
     // Clamp to diamond bounds (|u| + |v| <= 1)
     // Hitting the edge = spatial infinity (i0) - you can never reach it!

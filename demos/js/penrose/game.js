@@ -304,11 +304,8 @@ class PenroseGame extends Game {
     this.viewCenter.v += (this.ship.v + CONFIG.cameraLookAhead - this.viewCenter.v) * CONFIG.cameraLag;
     this.viewScale = CONFIG.baseViewScale + this.ship.timeSpeed * 0.5;
 
-    // Camera rotation
-    this.targetCameraRotation = this.ship.velocity * 0.8;
-    const maxRotation = Math.PI * 0.67;
-    this.targetCameraRotation = Math.max(-maxRotation, Math.min(maxRotation, this.targetCameraRotation));
-    this.cameraRotation += (this.targetCameraRotation - this.cameraRotation) * 0.04;
+    // No camera rotation - world stays stable, ship moves in heading direction
+    this.cameraRotation = 0;
 
     // Timers
     this.timeSurvived += dt;
@@ -803,11 +800,10 @@ class PenroseGame extends Game {
       const shipPos = this.penroseScene.penroseToScreen(this.ship.u, this.ship.v);
       const scale = Math.min(this.width, this.height) / this.viewScale;
       const coneLength = CONFIG.coneLength * scale;
-      const coneRotation = (this.ship.velocity * 25 * Math.PI) / 180 + this.cameraRotation;
 
-      // Calculate tip position accounting for camera rotation
-      const tipX = shipPos.x + Math.sin(coneRotation) * (coneLength + 60);
-      const tipY = shipPos.y - Math.cos(coneRotation) * (coneLength + 60);
+      // Position at tip of light cone (follows heading direction)
+      const tipX = shipPos.x + Math.sin(this.ship.heading) * (coneLength + 60);
+      const tipY = shipPos.y - Math.cos(this.ship.heading) * (coneLength + 60);
 
       this.lore.render(ctx, tipX, tipY);
     } else {

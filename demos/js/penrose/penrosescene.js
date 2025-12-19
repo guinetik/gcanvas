@@ -667,7 +667,8 @@ export class PenroseScene extends Scene {
       fillColor = "rgba(255, 220, 100, 0.15)";
     }
 
-    const coneRotation = (this.ship.velocity * 25 * Math.PI) / 180;
+    // Light cone points in ship's heading direction
+    const coneRotation = this.ship.heading;
 
     ctx.save();
     ctx.translate(shipPos.x, shipPos.y);
@@ -837,8 +838,9 @@ export class PenroseScene extends Scene {
     this.ship.shipGroup.x = pos.x;
     this.ship.shipGroup.y = pos.y;
 
-    const tilt = this.ship.velocity * 60;
-    this.ship.shipGroup.rotation = tilt;
+    // Ship tilts to show heading direction
+    const tiltDegrees = this.ship.heading * (180 / Math.PI) * 0.5; // Subtle tilt
+    this.ship.shipGroup.rotation = tiltDegrees;
 
     if (!this.ship.alive) {
       ctx.save();

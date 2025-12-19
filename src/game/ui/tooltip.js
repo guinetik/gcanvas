@@ -5,7 +5,7 @@ import { Rectangle, TextShape, Group } from "../../shapes/index.js";
  * Tooltip
  *
  * A GameObject that displays text near the cursor when shown.
- * Useful for showing information on hover.
+ * Supports multiline text with automatic word wrapping.
  *
  * Usage:
  *   const tooltip = new Tooltip(game, { ... });
@@ -29,6 +29,7 @@ export class Tooltip extends GameObject {
    * @param {number} [options.offsetX=15] - X offset from cursor.
    * @param {number} [options.offsetY=15] - Y offset from cursor.
    * @param {number} [options.maxWidth=300] - Maximum width before wrapping.
+   * @param {number} [options.lineHeight=1.4] - Line height multiplier.
    */
   constructor(game, options = {}) {
     super(game, { ...options, zIndex: 9999 }); // Always on top
@@ -41,12 +42,14 @@ export class Tooltip extends GameObject {
     this.offsetX = options.offsetX ?? 15;
     this.offsetY = options.offsetY ?? 15;
     this.maxWidth = options.maxWidth ?? 300;
+    this.lineHeightMultiplier = options.lineHeight ?? 1.4;
 
-    // Current text
+    // Current text and wrapped lines
     this._text = "";
+    this._lines = [];
     this._visible = false;
 
-    // Create shapes
+    // Create background shape
     this.bg = new Rectangle({
       width: 100,
       height: 30,
@@ -55,16 +58,11 @@ export class Tooltip extends GameObject {
       lineWidth: 1,
     });
 
-    this.label = new TextShape("", {
-      font: this.font,
-      color: this.textColor,
-      align: "left",
-      baseline: "middle",
-    });
+    // Line shapes will be created dynamically
+    this.lineShapes = [];
 
     this.group = new Group();
     this.group.add(this.bg);
-    this.group.add(this.label);
 
     // Follow mouse
     this.game.events.on("inputmove", (e) => {
@@ -75,21 +73,91 @@ export class Tooltip extends GameObject {
   }
 
   /**
+   * Wrap text into multiple lines based on maxWidth.
+   * @param {string} text - Text to wrap.
+   * @returns {string[]} Array of lines.
+   */
+  wrapText(text) {
+    const ctx = this.game.ctx;
+    ctx.font = this.font;
+
+    const lines = [];
+    // Split by explicit newlines first
+    const paragraphs = text.split("\n");
+
+    for (const paragraph of paragraphs) {
+      const words = paragraph.split(" ");
+      let currentLine = "";
+
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const metrics = ctx.measureText(testLine);
+
+        if (metrics.width > this.maxWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+
+      if (currentLine) {
+        lines.push(currentLine);
+      } else if (paragraph === "") {
+        lines.push(""); // Preserve empty lines
+      }
+    }
+
+    return lines;
+  }
+
+  /**
    * Show the tooltip with the given text at the specified position.
-   * @param {string} text - Text to display.
+   * @param {string} text - Text to display (supports newlines and auto-wrapping).
    * @param {number} [mouseX] - X position (defaults to current mouse).
    * @param {number} [mouseY] - Y position (defaults to current mouse).
    */
   show(text, mouseX, mouseY) {
     this._text = text;
     this._visible = true;
-    this.label.text = text;
+
+    // Wrap text into lines
+    this._lines = this.wrapText(text);
+
+    // Create/update line shapes
+    this.updateLineShapes();
 
     // Measure text to size background
     this.updateSize();
 
     if (mouseX !== undefined && mouseY !== undefined) {
       this.updatePosition(mouseX, mouseY);
+    }
+  }
+
+  /**
+   * Create or update TextShape objects for each line.
+   */
+  updateLineShapes() {
+    // Remove old line shapes from group
+    for (const shape of this.lineShapes) {
+      this.group.remove(shape);
+    }
+
+    // Create new line shapes
+    this.lineShapes = this._lines.map(
+      (line) =>
+        new TextShape(line, {
+          font: this.font,
+          color: this.textColor,
+          align: "left",
+          baseline: "top",
+        })
+    );
+
+    // Add to group
+    for (const shape of this.lineShapes) {
+      this.group.add(shape);
     }
   }
 
@@ -140,22 +208,35 @@ export class Tooltip extends GameObject {
   }
 
   /**
-   * Update the background size based on text.
+   * Update the background size based on wrapped text lines.
    */
   updateSize() {
-    // Use canvas measureText for accurate width
     const ctx = this.game.ctx;
     ctx.font = this.font;
-    const metrics = ctx.measureText(this._text);
-    const textWidth = Math.min(metrics.width, this.maxWidth);
-    const textHeight = parseInt(this.font) * 1.4;
+
+    // Find widest line
+    let maxLineWidth = 0;
+    for (const line of this._lines) {
+      const metrics = ctx.measureText(line);
+      maxLineWidth = Math.max(maxLineWidth, metrics.width);
+    }
+
+    const textWidth = Math.min(maxLineWidth, this.maxWidth);
+    const fontSize = parseInt(this.font);
+    const lineHeight = fontSize * this.lineHeightMultiplier;
+    const textHeight = lineHeight * this._lines.length;
 
     this.bg.width = textWidth + this.padding * 2;
     this.bg.height = textHeight + this.padding * 2;
 
-    // Position label inside bg (left-aligned, vertically centered)
-    this.label.x = -this.bg.width / 2 + this.padding;
-    this.label.y = 0; // Vertically centered (baseline: middle)
+    // Position each line inside bg
+    const startX = -this.bg.width / 2 + this.padding;
+    const startY = -this.bg.height / 2 + this.padding;
+
+    for (let i = 0; i < this.lineShapes.length; i++) {
+      this.lineShapes[i].x = startX;
+      this.lineShapes[i].y = startY + i * lineHeight;
+    }
   }
 
   /**
