@@ -73,6 +73,15 @@ export class Tensor {
    * @param {number} [theta=Math.PI/2] - Polar angle (default: equatorial plane)
    * @returns {Tensor} Schwarzschild metric tensor
    */
+  /**
+   * Create a Schwarzschild metric tensor at a given radial position.
+   * Uses geometrized units where G = c = 1.
+   *
+   * @param {number} r - Radial coordinate (must be > rs)
+   * @param {number} rs - Schwarzschild radius (2GM/c²)
+   * @param {number} [theta=Math.PI/2] - Polar angle (default: equatorial plane)
+   * @returns {Tensor} Schwarzschild metric tensor
+   */
   static schwarzschild(r, rs, theta = Math.PI / 2) {
     if (r <= rs) {
       // Inside event horizon - metric components swap signature
@@ -92,6 +101,34 @@ export class Tensor {
       ],
       {
         name: "Schwarzschild",
+        signature: [-1, 1, 1, 1],
+        coordinates: ["t", "r", "θ", "φ"],
+      }
+    );
+  }
+
+  /**
+   * Create a contravariant (inverse) Schwarzschild metric tensor.
+   * @param {number} r - Radial coordinate
+   * @param {number} rs - Schwarzschild radius
+   * @param {number} [theta=Math.PI/2] - Polar angle
+   * @returns {Tensor} Inverse Schwarzschild metric
+   */
+  static schwarzschildContravariant(r, rs, theta = Math.PI / 2) {
+    if (r <= rs) r = rs * 1.001;
+
+    const factor = 1 - rs / r;
+    const sinTheta = Math.sin(theta);
+
+    return new Tensor(
+      [
+        [-1 / factor, 0, 0, 0],
+        [0, factor, 0, 0],
+        [0, 0, 1 / (r * r), 0],
+        [0, 0, 0, 1 / (r * r * sinTheta * sinTheta)],
+      ],
+      {
+        name: "Schwarzschild (Contravariant)",
         signature: [-1, 1, 1, 1],
         coordinates: ["t", "r", "θ", "φ"],
       }
@@ -139,6 +176,61 @@ export class Tensor {
     }
 
     return Tensor._buildKerrMetric(r, theta, M, a, Sigma, Delta, sin2Theta);
+  }
+
+  /**
+   * Create a contravariant (inverse) Kerr metric tensor.
+   * Uses analytical block-inversion for the t-φ coupling.
+   *
+   * @param {number} r - Radial coordinate
+   * @param {number} theta - Polar angle
+   * @param {number} M - Mass parameter
+   * @param {number} a - Spin parameter
+   * @returns {Tensor} Inverse Kerr metric
+   */
+  static kerrContravariant(r, theta, M, a) {
+    a = Math.min(Math.abs(a), M);
+    const a2 = a * a;
+    const r2 = r * r;
+    const cosTheta = Math.cos(theta);
+    const sinTheta = Math.sin(theta);
+    const sin2Theta = sinTheta * sinTheta;
+
+    const Sigma = r2 + a2 * cosTheta * cosTheta;
+    const Delta = r2 - 2 * M * r + a2;
+
+    const rPlus = M + Math.sqrt(Math.max(0, M * M - a2));
+    if (r <= rPlus) r = rPlus * 1.001;
+
+    // Direct analytical inverse components for Kerr metric
+    // g^tt = -( (r²+a²)² - a²Δsin²θ ) / (ΣΔ)
+    const g_inv_tt = -(Math.pow(r2 + a2, 2) - a2 * Delta * sin2Theta) / (Sigma * Delta);
+
+    // g^rr = Δ / Σ
+    const g_inv_rr = Delta / Sigma;
+
+    // g^θθ = 1 / Σ
+    const g_inv_thth = 1 / Sigma;
+
+    // g^φφ = (Δ - a²sin²θ) / (ΣΔsin²θ)
+    const g_inv_phph = (Delta - a2 * sin2Theta) / (Sigma * Delta * sin2Theta);
+
+    // g^tφ = -(2Mar) / (ΣΔ)
+    const g_inv_tph = -(2 * M * a * r) / (Sigma * Delta);
+
+    return new Tensor(
+      [
+        [g_inv_tt, 0, 0, g_inv_tph],
+        [0, g_inv_rr, 0, 0],
+        [0, 0, g_inv_thth, 0],
+        [g_inv_tph, 0, 0, g_inv_phph],
+      ],
+      {
+        name: "Kerr (Contravariant)",
+        signature: [-1, 1, 1, 1],
+        coordinates: ["t", "r", "θ", "φ"],
+      }
+    );
   }
 
   /**
@@ -504,6 +596,22 @@ export class Tensor {
   inverse() {
     const n = this.#dimension;
 
+    // Fast path for diagonal tensors: O(n)
+    if (this.isDiagonal()) {
+      const diag = this.getDiagonal();
+      const invDiag = diag.map((v) => {
+        if (Math.abs(v) < 1e-15) {
+          throw new Error("Diagonal matrix is singular, cannot compute inverse");
+        }
+        return 1 / v;
+      });
+      return Tensor.diagonal(invDiag, {
+        name: this.#name ? `${this.#name}⁻¹` : "",
+        signature: this.#signature,
+        coordinates: this.#coordinates,
+      });
+    }
+
     // Create augmented matrix [A|I]
     const aug = [];
     for (let i = 0; i < n; i++) {
@@ -578,6 +686,11 @@ export class Tensor {
    */
   determinant() {
     const n = this.#dimension;
+
+    // Fast path for diagonal tensors: O(n)
+    if (this.isDiagonal()) {
+      return this.getDiagonal().reduce((acc, v) => acc * v, 1);
+    }
 
     // For small matrices, use direct formulas
     if (n === 2) {
@@ -684,21 +797,25 @@ export class Tensor {
 
   /**
    * Compute Christoffel symbols (connection coefficients) for a metric.
-   * Uses numerical differentiation.
-   *
-   * Γ^λ_μν = ½ g^λσ (∂_μ g_νσ + ∂_ν g_μσ - ∂_σ g_μν)
+   * Uses numerical differentiation by default, but switches to analytical
+   * forms for recognized metrics (e.g., Schwarzschild).
    *
    * @param {Function} metricFn - Function(position: number[]) => Tensor
    * @param {number[]} position - Position [t, r, θ, φ] at which to evaluate
    * @param {number} [delta=0.001] - Step size for numerical differentiation
-   * @returns {number[][][]} Christoffel symbols Γ[λ][μ][ν]
+   * @returns {number[][][]} Christoffel symbols Γ[lambda][mu][nu]
    */
   static christoffel(metricFn, position, delta = 0.001) {
+    const g = metricFn(position);
+
+    // Fast path for Schwarzschild metric (analytical)
+    if (g.name === "Schwarzschild") {
+      const rs = position._rs || 2; // Expecting rs attached to position or default
+      return Tensor.schwarzschildChristoffel(position[1], rs, position[2]);
+    }
+
     const dim = 4;
     const result = [];
-
-    // Get metric and inverse at position
-    const g = metricFn(position);
     const gInv = g.inverse();
 
     // Calculate partial derivatives ∂_ρ g_μν
@@ -721,7 +838,8 @@ export class Tensor {
       }
     }
 
-    // Compute Christoffel symbols
+    // Compute Christoffel symbols using Einstein notation logic
+    // Γ^λ_μν = ½ g^λσ (∂_μ g_νσ + ∂_ν g_μσ - ∂_σ g_μν)
     for (let lambda = 0; lambda < dim; lambda++) {
       result[lambda] = [];
       for (let mu = 0; mu < dim; mu++) {
@@ -729,8 +847,11 @@ export class Tensor {
         for (let nu = 0; nu < dim; nu++) {
           let sum = 0;
           for (let sigma = 0; sigma < dim; sigma++) {
+            const g_inv_ls = gInv.get(lambda, sigma);
+            if (Math.abs(g_inv_ls) < 1e-15) continue; // Skip zero terms
+
             sum +=
-              (gInv.get(lambda, sigma) *
+              (g_inv_ls *
                 (dg[mu][nu][sigma] + dg[nu][mu][sigma] - dg[sigma][mu][nu])) /
               2;
           }
@@ -740,6 +861,61 @@ export class Tensor {
     }
 
     return result;
+  }
+
+  /**
+   * Analytical Christoffel symbols for Schwarzschild metric.
+   * @param {number} r - Radial coordinate
+   * @param {number} rs - Schwarzschild radius
+   * @param {number} theta - Polar angle
+   * @returns {number[][][]} Christoffel symbols
+   */
+  static schwarzschildChristoffel(r, rs, theta) {
+    const dim = 4;
+    const G = []; // Gamma[lambda][mu][nu]
+    for (let i = 0; i < dim; i++) {
+      G[i] = [];
+      for (let j = 0; j < dim; j++) {
+        G[i][j] = new Array(dim).fill(0);
+      }
+    }
+
+    const factor = 1 - rs / r;
+    if (Math.abs(factor) < 1e-10) return G; // singularity
+
+    const rs_2r2 = rs / (2 * r * r);
+    const cotTheta = 1 / Math.tan(theta);
+    const sinTheta = Math.sin(theta);
+    const cosTheta = Math.cos(theta);
+
+    // Gamma^t_tr = Gamma^t_rt
+    G[0][0][1] = G[0][1][0] = rs_2r2 / factor;
+
+    // Gamma^r_tt
+    G[1][0][0] = (rs * factor) / (2 * r * r);
+
+    // Gamma^r_rr
+    G[1][1][1] = -rs_2r2 / factor;
+
+    // Gamma^r_thth
+    G[1][2][2] = -(r - rs);
+
+    // Gamma^r_phph
+    G[1][3][3] = -(r - rs) * sinTheta * sinTheta;
+
+    // Gamma^th_rth = Gamma^th_thr
+    G[2][1][2] = G[2][2][1] = 1 / r;
+
+    // Gamma^th_phph
+    G[2][3][3] = -sinTheta * cosTheta;
+
+    // Gamma^ph_rph = Gamma^ph_phr
+    G[3][1][3] = G[3][3][1] = 1 / r;
+
+    // Gamma^ph_thph = Gamma^ph_phth
+    G[3][2][3] = G[3][3][2] = cotTheta;
+
+    return G;
   }
 
   /**
