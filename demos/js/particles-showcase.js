@@ -27,10 +27,14 @@ const CONFIG = {
   backgroundColor: "#0a0a12",
   maxParticles: 20000, // Stress test: 20k particles
 
-  // Station layout
-  stationWidth: 200,
-  stationHeight: 250,
-  stationSpacing: 40,
+  // Station layout (as ratios of screen size)
+  stationWidthRatio: 0.18, // 18% of screen width per station
+  stationHeightRatio: 0.45, // 45% of screen height
+  stationSpacingRatio: 0.03, // 3% of screen width between stations
+  minStationWidth: 120,
+  maxStationWidth: 220,
+  minStationHeight: 150,
+  maxStationHeight: 280,
 
   // Fountain settings
   fountain: {
@@ -77,6 +81,7 @@ class ParticleStation extends GameObject {
   constructor(game, x, y, width, height, label) {
     super(game, { x, y, width, height });
     this.z = 0; // For Scene3D projection
+    this.label = label;
 
     // Background box using Rectangle shape
     this.bg = new Rectangle({
@@ -95,6 +100,28 @@ class ParticleStation extends GameObject {
       align: "center",
       baseline: "middle",
     });
+    this.labelText.x = x;
+    this.bg.x = x;
+    this.bg.y = y;
+  }
+
+  /**
+   * Update station size and position
+   */
+  updateLayout(x, width, height) {
+    this.x = x;
+    this.width = width;
+    this.height = height;
+
+    // Update background rectangle
+    this.bg.width = width;
+    this.bg.height = height;
+    this.bg.x = x;
+    this.bg.y = this.y;
+
+    // Update label position
+    this.labelText.y = height / 2 - 15;
+    this.labelText.x = x;
   }
 
   // Get emitter spawn position (center-bottom of station)
@@ -106,14 +133,33 @@ class ParticleStation extends GameObject {
     };
   }
 
+  // Get top position for snow
+  getTopPosition() {
+    return {
+      x: this.x,
+      y: -this.height / 2 + 10,
+      z: 0,
+    };
+  }
+
+  // Get bottom position for fountain/fire
+  getBottomPosition() {
+    return {
+      x: this.x,
+      y: this.height / 2 - 10,
+      z: 0,
+    };
+  }
+
   // Get center position for confetti
   getCenterPosition() {
     return { x: this.x, y: this.y, z: 0 };
   }
 
-  draw() {
-    this.bg.draw();
-    this.labelText.draw();
+  render() {
+    super.render();
+    this.bg.render();
+    this.labelText.render();
   }
 }
 
@@ -126,6 +172,9 @@ class ParticlesShowcase extends Game {
 
   init() {
     super.init();
+
+    // Calculate initial sizes
+    this.updateScaledSizes();
 
     // Setup Camera3D (subtle rotation for depth)
     this.camera = new Camera3D({
@@ -196,11 +245,11 @@ class ParticlesShowcase extends Game {
   }
 
   createStations() {
-    const { stationWidth, stationHeight, stationSpacing } = CONFIG;
     const labels = ["Fountain", "Fire", "Snow", "Confetti"];
     const totalWidth =
-      labels.length * stationWidth + (labels.length - 1) * stationSpacing;
-    const startX = -totalWidth / 2 + stationWidth / 2;
+      labels.length * this.stationWidth +
+      (labels.length - 1) * this.stationSpacing;
+    const startX = -totalWidth / 2 + this.stationWidth / 2;
 
     // Create Scene3D to hold stations with camera projection
     this.stationScene = new Scene3D(this, {
@@ -212,13 +261,13 @@ class ParticlesShowcase extends Game {
     });
 
     this.stations = labels.map((label, i) => {
-      const x = startX + i * (stationWidth + stationSpacing);
+      const x = startX + i * (this.stationWidth + this.stationSpacing);
       const station = new ParticleStation(
         this,
         x,
         0,
-        stationWidth,
-        stationHeight,
+        this.stationWidth,
+        this.stationHeight,
         label,
       );
       this.stationScene.add(station);
@@ -230,16 +279,13 @@ class ParticlesShowcase extends Game {
   }
 
   createEmitters() {
-    const { stationHeight, stationWidth } = CONFIG;
-    const bottomY = stationHeight / 2 - 10; // Near bottom edge
-    const topY = -stationHeight / 2 + 10; // Near top edge
-
     // Fountain (station 0) - bottom of station, shoots up
     const fountainStation = this.stations[0];
+    const fountainPos = fountainStation.getBottomPosition();
     this.particles.addEmitter(
       "fountain",
       new ParticleEmitter({
-        position: { x: fountainStation.x, y: bottomY + 20, z: 0 },
+        position: { x: fountainPos.x, y: fountainPos.y + 20, z: 0 },
         spread: { x: 5, y: 0, z: 5 },
         velocity: CONFIG.fountain.velocity,
         velocitySpread: CONFIG.fountain.velocitySpread,
@@ -253,10 +299,11 @@ class ParticlesShowcase extends Game {
 
     // Fire (station 1) - bottom of station, flames rise up
     const fireStation = this.stations[1];
+    const firePos = fireStation.getBottomPosition();
     this.particles.addEmitter(
       "fire",
       new ParticleEmitter({
-        position: { x: fireStation.x, y: bottomY, z: 0 },
+        position: { x: firePos.x, y: firePos.y, z: 0 },
         spread: { x: 60, y: 0, z: 30 },
         velocity: CONFIG.fire.velocity,
         velocitySpread: { x: 40, y: 15, z: 40 },
@@ -270,11 +317,12 @@ class ParticlesShowcase extends Game {
 
     // Snow (station 2) - top of station, falls down
     const snowStation = this.stations[2];
+    const snowPos = snowStation.getTopPosition();
     this.particles.addEmitter(
       "snow",
       new ParticleEmitter({
-        position: { x: snowStation.x, y: topY - 10, z: 0 },
-        spread: { x: stationWidth * 0.4, y: 0, z: 30 },
+        position: { x: snowPos.x, y: snowPos.y - 10, z: 0 },
+        spread: { x: this.stationWidth * 0.4, y: 0, z: 30 },
         velocity: CONFIG.snow.velocity,
         velocitySpread: CONFIG.snow.velocitySpread,
         lifetime: CONFIG.snow.lifetime,
@@ -332,11 +380,88 @@ class ParticlesShowcase extends Game {
     }
   }
 
+  /**
+   * Calculate responsive station sizes based on screen dimensions
+   */
+  updateScaledSizes() {
+    // Calculate station dimensions from ratios with min/max bounds
+    this.stationWidth = Math.max(
+      CONFIG.minStationWidth,
+      Math.min(CONFIG.maxStationWidth, this.width * CONFIG.stationWidthRatio),
+    );
+    this.stationHeight = Math.max(
+      CONFIG.minStationHeight,
+      Math.min(CONFIG.maxStationHeight, this.height * CONFIG.stationHeightRatio),
+    );
+    this.stationSpacing = this.width * CONFIG.stationSpacingRatio;
+  }
+
+  /**
+   * Update station positions and sizes, then update emitters to match
+   */
+  updateStationLayout() {
+    if (!this.stations) return;
+
+    const totalWidth =
+      this.stations.length * this.stationWidth +
+      (this.stations.length - 1) * this.stationSpacing;
+    const startX = -totalWidth / 2 + this.stationWidth / 2;
+
+    // Update each station's position and size
+    for (let i = 0; i < this.stations.length; i++) {
+      const x = startX + i * (this.stationWidth + this.stationSpacing);
+      this.stations[i].updateLayout(x, this.stationWidth, this.stationHeight);
+    }
+
+    // Update emitter positions to follow stations
+    this.updateEmitterPositions();
+  }
+
+  /**
+   * Update emitter positions to match station positions
+   */
+  updateEmitterPositions() {
+    if (!this.particles || !this.stations) return;
+
+    // Fountain emitter
+    const fountainEmitter = this.particles.emitters.get("fountain");
+    if (fountainEmitter) {
+      const pos = this.stations[0].getBottomPosition();
+      fountainEmitter.position.x = pos.x;
+      fountainEmitter.position.y = pos.y + 20;
+    }
+
+    // Fire emitter
+    const fireEmitter = this.particles.emitters.get("fire");
+    if (fireEmitter) {
+      const pos = this.stations[1].getBottomPosition();
+      fireEmitter.position.x = pos.x;
+      fireEmitter.position.y = pos.y;
+    }
+
+    // Snow emitter
+    const snowEmitter = this.particles.emitters.get("snow");
+    if (snowEmitter) {
+      const pos = this.stations[2].getTopPosition();
+      snowEmitter.position.x = pos.x;
+      snowEmitter.position.y = pos.y - 10;
+      snowEmitter.spread.x = this.stationWidth * 0.4;
+    }
+  }
+
+  /**
+   * Handle window resize
+   */
+  onResize() {
+    this.updateScaledSizes();
+    this.updateStationLayout();
+  }
+
   update(dt) {
     super.update(dt);
     this.camera.update(dt);
 
-    // Keep stationScene centered on resize
+    // Keep stationScene centered
     this.stationScene.x = this.width / 2;
     this.stationScene.y = this.height / 2;
   }

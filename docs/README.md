@@ -12,6 +12,8 @@ GCanvas is a modular 2D rendering and game framework built on top of the HTML5 C
 | [Concepts](./concepts/architecture-overview.md) | Core architecture and design |
 | [Shapes Module](./modules/shapes/README.md) | Drawing primitives and hierarchy |
 | [Game Module](./modules/game/README.md) | Game loop and GameObjects |
+| [Particle Module](./modules/particle/README.md) | High-performance particle systems |
+| [Util Module](./modules/util/README.md) | Camera3D, Scene3D, layouts |
 | [Collision Module](./modules/collision/README.md) | Collision detection and management |
 | [State Module](./modules/state/README.md) | State machines for entities and games |
 | [Painter Module](./modules/painter/README.md) | Low-level canvas API |
@@ -34,19 +36,20 @@ GCanvas is a modular 2D rendering and game framework built on top of the HTML5 C
 └─────────────────────────────────────────────────────────────┘
 ```
 
-GCanvas is organized into **11 core modules**:
+GCanvas is organized into **12 core modules**:
 
 | Module | Purpose |
 |--------|---------|
 | **[shapes](./modules/shapes/README.md)** | 40+ drawable primitives and shape classes |
 | **[game](./modules/game/README.md)** | Core game loop, Pipeline, GameObjects, Scenes |
+| **[particle](./modules/particle/README.md)** | High-performance particle systems with pooling |
 | **[collision](./modules/collision/README.md)** | Collision detection algorithms and group management |
 | **[state](./modules/state/README.md)** | State machines with lifecycle callbacks |
 | **[painter](./modules/painter/README.md)** | Low-level canvas drawing API |
+| **[util](./modules/util/README.md)** | Camera3D, Scene3D, Layout, Position utilities |
 | **motion** | Animation with Tweenetik and Motion patterns |
 | **io** | Input handling (Mouse, Keyboard, Touch, Events) |
 | **math** | Random, Noise, Fractals, Patterns |
-| **util** | Layout, Position, Z-ordering utilities |
 | **mixins** | Draggable, Anchor behaviors |
 | **logger** | Debug logging system |
 
@@ -176,7 +179,9 @@ npm run dev
 - **Transforms** - Rotation, scale, opacity, constraints
 - **Painter API** - Direct canvas control when needed
 - **GameObjects** - Interactive entities with lifecycle methods
-- **Scenes** - Hierarchical organization of game objects
+- **Scenes & Scene3D** - Hierarchical organization with optional 3D projection
+- **Camera3D** - Pseudo-3D projection with mouse-controlled rotation
+- **Particle Systems** - High-performance particles with object pooling and composable updaters
 - **Collision Detection** - AABB, circles, lines, sweep tests, and group management
 - **State Machines** - FSM with enter/update/exit lifecycle, timed transitions
 - **UI Components** - Button, ToggleButton, Cursor, Layout managers
@@ -199,6 +204,8 @@ npm run dev
 
 - [Shapes Module](./modules/shapes/README.md) - All drawable primitives
 - [Game Module](./modules/game/README.md) - Game loop and objects
+- [Particle Module](./modules/particle/README.md) - Particle systems
+- [Util Module](./modules/util/README.md) - Camera3D, Scene3D, layouts
 - [Collision Module](./modules/collision/README.md) - Collision detection
 - [State Module](./modules/state/README.md) - State machines
 - [Painter Module](./modules/painter/README.md) - Canvas abstraction

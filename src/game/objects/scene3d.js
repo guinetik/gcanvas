@@ -48,11 +48,21 @@ export class Scene3D extends Scene {
   /**
    * Override Scene's draw to project children through Camera3D
    */
-  draw() {
+  render() {
+    // Do NOT call super.render() as it triggers the 2D Scene.draw() pass,
+    // causing double rendering (one 2D, one 3D).
+
+    if (!this.visible) return;
+
+    Painter.save();
+    // Translate to the Scene3D's position (e.g., center of screen)
+    // This defines the "origin" (0,0) of the 3D projection on the 2D canvas.
+    Painter.translateTo(this.x, this.y);
+
     // Build render list with projections
     const renderList = [];
 
-    for (const child of this.children) {
+    for (const child of this._collection.getSortedChildren()) {
       if (!child.visible) continue;
 
       const z = child.z ?? 0;
@@ -78,14 +88,25 @@ export class Scene3D extends Scene {
     // Render each child at projected position
     for (const item of renderList) {
       Painter.save();
+
+      // 1. Move to the projected screen position
       Painter.translateTo(item.x, item.y);
 
+      // 2. Apply perspective scale
       if (this.scaleByDepth) {
         Painter.ctx.scale(item.scale, item.scale);
       }
 
-      item.child.draw();
+      // 3. Neutralize the child's own translation logic
+      // GameObject.render() will translate by (child.x, child.y).
+      // By applying (-child.x, -child.y) first (in the scaled context),
+      // we ensure the net visual position is exactly at (item.x, item.y).
+      Painter.translateTo(-item.child.x, -item.child.y);
+
+      item.child.render();
       Painter.restore();
     }
+
+    Painter.restore();
   }
 }

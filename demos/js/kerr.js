@@ -27,7 +27,7 @@ import { Tooltip } from "../../src/game/ui/tooltip.js";
 const CONFIG = {
   // Grid parameters
   gridSize: 20,
-  gridResolution: 40,
+  gridResolution: 80, // Increased to 80 for much finer grid
   baseGridScale: 12,
 
   // Physics (geometrized units: G = c = 1)
@@ -38,7 +38,7 @@ const CONFIG = {
 
   // Embedding diagram - INTENTIONALLY EXAGGERATED for visualization
   // Real curvature would be subtle; we amplify it so users can see the effect
-  embeddingScale: 75,
+  embeddingScale: 200, // Increased from 75 for deeper dip
 
   // 3D view
   rotationX: 0.6,
@@ -64,7 +64,7 @@ const CONFIG = {
   // Visual exaggeration for user understanding (rubber sheet analogy)
   // These values are NOT physically accurate - intentionally amplified
   frameDraggingReach: 3.0, // How far frame dragging visually extends (multiplier)
-  frameDraggingStrength: 25, // Strength of twist effect
+  frameDraggingStrength: 40, // INCREASED from 25 for stronger twist
   blackHoleSizeBase: 8, // Base visual size of black hole
   blackHoleSizeMassScale: 8, // How much mass affects visual size
 
@@ -404,7 +404,37 @@ class KerrDemo extends Game {
     // Event listeners
     this.canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e));
     this.canvas.addEventListener("mouseleave", () => this.tooltip.hide());
+    this.initControls();
     this.canvas.addEventListener("click", (e) => this.handleClick(e));
+  }
+
+  initControls() {
+    // Instructions (click/drag)
+    this.controlsText = new TextShape(
+      "click to form new black hole  |  drag to rotate",
+      {
+        font: "10px monospace",
+        color: "#aaa",
+        align: "right",
+        baseline: "bottom",
+      }
+    );
+
+    // Explanatory text lines
+    const explanationLines = [
+      "Geometric Demonstration: Flat Spacetime \u2192 Kerr Metric", // Top line
+      "Visualizes the structural contrast, not physical time evolution.",
+      "Effects exaggerated for visibility.",
+    ];
+
+    this.explanationShapes = explanationLines.map((line) => {
+      return new TextShape(line, {
+        font: "10px monospace",
+        color: "#aaa",
+        align: "right",
+        baseline: "bottom",
+      });
+    });
   }
 
   handleMouseMove(e) {
@@ -696,17 +726,23 @@ class KerrDemo extends Game {
 
     // Update metric panel
     if (this.metricPanel) {
+      // Use EFFECTIVE mass and spin based on formation progress (lambda)
+      // This allows the numbers to evolve from Flat Spacetime values to final Kerr values
+      // Note: We clamp at a small epsilon for M to avoid division by zero if lambda is 0
+      const effectiveM = Math.max(0.001, this.mass * lambda);
+      const effectiveA = this.spin * lambda;
+
       this.metricPanel.setMetricValues(
         this.orbitR,
         Math.PI / 2,
-        this.mass,
-        this.spin,
+        effectiveM,
+        effectiveA,
       );
       this.metricPanel.setOrbiterPosition(
         this.orbitR,
         this.orbitPhi,
-        this.mass,
-        this.spin,
+        effectiveM,
+        effectiveA,
       );
     }
   }
@@ -741,7 +777,37 @@ class KerrDemo extends Game {
     this.drawFormationProgress(w, h);
 
     // Draw controls
-    this.drawControls(w, h);
+    this.renderControls();
+  }
+
+  renderControls() {
+    const w = this.width;
+    const h = this.height;
+
+    // Position and render main controls text
+    this.controlsText.x = w - 15;
+    this.controlsText.y = h - 30 - (this.explanationShapes.length * 15); // Above explanation
+    this.controlsText.render();
+
+    // Position and render explanation lines
+    // Stacked from bottom up
+    this.explanationShapes.forEach((shape, i) => {
+      // Last line at h - 15
+      // Previous lines 15px above
+      // i=0 (Top line) should be highest?
+      // Let's render them top-down for logical reading, but anchored bottom-right.
+
+      // Let's position from bottom:
+      // Line N (last): h - 15
+      // Line N-1: h - 30
+      // ...
+      // So index 0 (Top) should be at h - 15 - (N-1-i)*15 ?
+
+      const lineIndexFromBottom = this.explanationShapes.length - 1 - i;
+      shape.x = w - 15;
+      shape.y = h - 15 - (lineIndexFromBottom * 15);
+      shape.render();
+    });
   }
 
   drawFormationProgress(w, h) {
@@ -1348,7 +1414,7 @@ class KerrDemo extends Game {
       ctx.fillRect(graphX - 10, graphY - 10, graphW + 20, graphH + 40);
 
       // Title
-      ctx.fillStyle = "#888";
+      ctx.fillStyle = "#ccc"; // Brightened from #888
       ctx.font = "10px monospace";
       ctx.textAlign = "center";
       ctx.fillText("Kerr Effective Potential", graphX + graphW / 2, graphY);
@@ -1364,7 +1430,7 @@ class KerrDemo extends Game {
       ctx.stroke();
 
       // Labels
-      ctx.fillStyle = "#666";
+      ctx.fillStyle = "#aaa"; // Brightened from #666
       ctx.font = "10px monospace";
       ctx.textAlign = "left";
       ctx.fillText("r", graphX + graphW - 10, graphY + graphH + 12);
@@ -1432,24 +1498,6 @@ class KerrDemo extends Game {
       }
 
       ctx.setLineDash([]);
-    });
-  }
-
-  drawControls(w, h) {
-    Painter.useCtx((ctx) => {
-      ctx.fillStyle = "#445";
-      ctx.font = "10px monospace";
-      ctx.textAlign = "right";
-      ctx.fillText(
-        "click to form new black hole  |  drag to rotate",
-        w - 15,
-        h - 30,
-      );
-      ctx.fillText(
-        "Flat \u2192 Kerr  |  Effects exaggerated for visibility",
-        w - 15,
-        h - 15,
-      );
     });
   }
 }

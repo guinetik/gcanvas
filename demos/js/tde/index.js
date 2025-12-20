@@ -7,8 +7,12 @@ import {
   Text,
   Scene3D,
   Circle,
+  Scene,
+  Sphere3D,
 } from "../../../src/index.js";
 import { StarField } from "../blackhole/starfield.obj.js";
+import { polarToCartesian } from "../../../src/math/gr.js";
+import { keplerianOmega } from "../../../src/math/orbital.js";
 
 const CONFIG = {
   blackHole: {
@@ -18,6 +22,12 @@ const CONFIG = {
     pressure: 1000000,
     density: 1000000,
     velocity: 1000000,
+  },
+  star: {
+    radius: 15,
+    color: "#FFD700",
+    orbitalRadius: 300,
+    mass: 1,
   },
   sceneOptions: {
     starCount: 5000,
@@ -51,24 +61,57 @@ class BlackHole extends GameObject {
         { offset: 1, color: "#181818" },
       ]
     );
-    this.core = new Circle(this.radius, { color: gradient });
+    this.core = new Sphere3D(this.radius, { color: gradient, camera: this.game.camera });
     // SHAPE HAS IT OWN INTERNAL DRAW FUNCTION THAT IS CALLED BY THE RENDER FUNCTION
   }
 
   update(dt) {
     super.update(dt);
     // ADJUST GAME STATE IN THE UPDATE FUNCTION
-    // Position is handled by Scene3D projection now, so we keep local coordinates relative to the scene origin (0,0,0)
-    // The previous implementation set this.core.x = this.game.width/2 which was mixing screen and world space
-    this.core.x = 0; 
-    this.core.y = 0;
   }
 
-  render() {
-    super.render();
-    // RENDER SHAPE TO THE SCREEN
-    // Scene3D handles the translation/scaling, so we just draw the shape
-    this.core.render();
+  draw() {
+    // Sphere3D handles its own projection and positioning relative to (0,0,0)
+    // Since super.render() (in Renderable) already translated us to (this.x, this.y),
+    // and this is called from Scene3D which translated us to the PROJECTED (x,y),
+    // we just need to draw the core.
+    this.core.draw();
+  }
+}
+
+class Star extends GameObject {
+  constructor(game, options = {}) {
+    super(game, options);
+    this.radius = options.radius ?? CONFIG.star.radius;
+    this.orbitalRadius = options.orbitalRadius ?? CONFIG.star.orbitalRadius;
+    this.phi = options.phi ?? 0;
+    this.mass = options.mass ?? CONFIG.star.mass;
+  }
+
+  init() {
+    this.visual = new Sphere3D(this.radius, {
+      color: CONFIG.star.color,
+      camera: this.game.camera,
+    });
+  }
+
+  update(dt) {
+    super.update(dt);
+
+    // Calculate angular velocity using Kepler's 3rd law
+    // Scaling mass and speed factor to get a more cinematic rotation speed
+    const omega = keplerianOmega(this.orbitalRadius, CONFIG.blackHole.mass, 0.001, 300);
+    this.phi += omega * dt;
+
+    // Convert polar orbital position to Cartesian
+    const pos = polarToCartesian(this.orbitalRadius, this.phi);
+    this.x = pos.x;
+    this.z = pos.z;
+    this.y = 0; // Keep it in the equatorial plane for now
+  }
+
+  draw() {
+    this.visual.draw();
   }
 }
 
@@ -79,32 +122,20 @@ class BlackholeScene extends Scene3D {
   }
 
   init() {
-    this.starField = new StarField(this, {
-      camera: this.camera,
-      starCount: CONFIG.sceneOptions.starCount,
-    });
-    this.starField.init();
-    
-    // StarField handles its own projection internally usually, but if we add it to Scene3D
-    // it might get double-projected if we aren't careful.
-    // However, StarField usually isn't a GameObject with a simple (x,y,z), it's a manager.
-    // Let's check StarField implementation. Assuming it works as a background object.
-    this.add(this.starField);
-    
     // Add BlackHole at (0,0,0)
     const bh = new BlackHole(this.game, CONFIG.blackHole);
     bh.x = 0;
     bh.y = 0;
     bh.z = 0;
     this.add(bh);
-    
-    this.starField.onResize(this.game.width, this.game.height);
+
+    // Add a Star orbiting the black hole
+    const star = new Star(this.game, CONFIG.star);
+    this.add(star);
   }
 
   onResize() {
-    if (this.starField) {
-        this.starField.onResize(this.game.width, this.game.height);
-    }
+
   }
 }
 
@@ -125,7 +156,6 @@ class TDEDemo extends Game {
     this.time = 0;
     // Calculate scaled sizes
     this.updateScaledSizes();
-    
     // Setup Camera3D
     // Center the camera on the screen
     this.camera = new Camera3D({
@@ -134,32 +164,34 @@ class TDEDemo extends Game {
       perspective: this.baseScale * 0.6,
       autoRotate: true,
       autoRotateSpeed: 0.2,
-      // Camera3D usually projects relative to (0,0), so we translate the scene context to center screen
-      // Scene3D might expect to render centered.
     });
     this.camera.enableMouseControl(this.canvas);
-    
+    this.starField = new StarField(this, {
+      camera: this.camera,
+      starCount: CONFIG.sceneOptions.starCount,
+    });
+    this.pipeline.add(this.starField);
     // Pass camera to Scene3D
     // Scene3D will project its children using this camera
-    this.scene = new BlackholeScene(this, { 
-        camera: this.camera,
-        // Center the scene on screen so (0,0,0) projection renders at center
-        x: this.width / 2, 
-        y: this.height / 2 
+    this.scene = new BlackholeScene(this, {
+      camera: this.camera,
+      x: this.width / 2,
+      y: this.height / 2,
     });
-    
+
     this.pipeline.add(this.scene);
   }
 
   onResize() {
-    this.updateScaledSizes();
     if (this.camera) {
       this.camera.perspective = this.baseScale * 0.6;
     }
+    this.updateScaledSizes();
+
     if (this.scene) {
-        this.scene.x = this.width / 2;
-        this.scene.y = this.height / 2;
-        this.scene.onResize();
+      this.scene.x = this.width / 2;
+      this.scene.y = this.height / 2;
+      this.scene.onResize();
     }
   }
 }

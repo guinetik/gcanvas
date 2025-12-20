@@ -179,8 +179,8 @@ export class ParticleSystem extends GameObject {
   /**
    * Render all particles.
    */
-  draw() {
-    super.draw();
+  render() {
+    super.render();
 
     if (this.particles.length === 0) return;
 
@@ -236,7 +236,10 @@ export class ParticleSystem extends GameObject {
       ctx.globalCompositeOperation = this.blendMode;
 
       // Translate to center if using camera (camera projects relative to origin)
-      if (!this.worldSpace) {
+      // Only do this if NOT inside a Scene3D (which already handles projection/centering)
+      const isProjected = this.parent && this.parent.constructor.name === "Scene3D";
+
+      if (!this.worldSpace && !isProjected) {
         ctx.save();
         ctx.translate(this.game.width / 2, this.game.height / 2);
       }
@@ -245,7 +248,7 @@ export class ParticleSystem extends GameObject {
         this.drawParticle(ctx, item.p, item.x, item.y, item.scale);
       }
 
-      if (!this.worldSpace) {
+      if (!this.worldSpace && !isProjected) {
         ctx.restore();
       }
 

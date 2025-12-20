@@ -97,6 +97,7 @@ export { Line } from "./line.js";
 export { Triangle } from "./triangle.js";
 export { Star } from "./star.js";
 export { Sphere } from "./sphere.js";
+export { Sphere3D } from "./sphere3d.js";
 export { SVGShape } from "./svg.js";
 export { StickFigure } from "./figure.js";
 export { Ring } from "./ring.js";
