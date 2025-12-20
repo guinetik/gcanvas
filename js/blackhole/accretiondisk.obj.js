@@ -369,6 +369,8 @@ export class AccretionDisk extends GameObject {
         color: p.baseColor,
         doppler: doppler,
         diskAlpha: diskAlpha,
+        isFalling: p.isFalling || p.willFallIn,
+        horizonProximity: p.distance / this.bhRadius,
       });
     }
 

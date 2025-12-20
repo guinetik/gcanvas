@@ -258,8 +258,21 @@ class BlackHoleDemo extends Game {
     const state = this.formationFSM.state;
     const isInfalling = state === "infall" || state === "collapse";
 
-    // During infall, particles are cooler (bluer) and transition to hot
-    if (isInfalling) {
+    // Gravitational redshift for particles falling into the black hole
+    // As they approach the event horizon, light shifts to red and dims (time dilation)
+    if (item.isFalling && item.horizonProximity < 3) {
+      const redshift = 1 - (item.horizonProximity - 0.5) / 2.5;
+      const rs = Math.max(0, Math.min(1, redshift));
+
+      // Shift toward deep red (reduce green/blue more than red)
+      r = Math.floor(r * (1 - rs * 0.2));
+      g = Math.floor(g * (1 - rs * 0.85));
+      b = Math.floor(b * (1 - rs * 0.95));
+
+      // Time dilation dimming - particles appear to freeze and fade
+      a *= 1 - rs * 0.8;
+    } else if (isInfalling) {
+      // Non-falling particles during infall: cooler (bluer) transitioning to hot
       const heatProgress = 1 - item.z / (this.baseScale * 0.5);
       const coolFactor = Math.max(0, 1 - heatProgress);
       r = Math.floor(r * (0.6 + heatProgress * 0.4));
