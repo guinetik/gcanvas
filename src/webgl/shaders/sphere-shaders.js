@@ -217,6 +217,76 @@ uniform float uTemperature;      // Kelvin, affects color
 uniform float uActivityLevel;    // 0-1, affects turbulence
 uniform float uRotationSpeed;    // Self-rotation speed (radians/second)
 
+// Tidal disruption uniforms
+uniform float uTidalStretch;     // 0 = sphere, 1+ = elongated toward BH
+uniform float uStretchDirX;      // Direction to black hole (X component)
+uniform float uStretchDirZ;      // Direction to black hole (Z component)
+uniform float uStressLevel;      // 0-1, surface chaos from tidal forces
+
+// =============================================================================
+// TIDAL DISTORTION - True Spaghettification via Ellipsoid Deformation
+// Uses ray-ellipsoid intersection for physically correct stretching
+// =============================================================================
+
+/**
+ * Ray-Ellipsoid intersection
+ * Ellipsoid defined by semi-axes (a, b, c) where:
+ * - a = stretch along BH direction (in XZ plane)
+ * - b = Y axis (slight compression)
+ * - c = perpendicular to BH direction in XZ plane (compression)
+ *
+ * Technique: Transform ray into "unit sphere space" via inverse scaling
+ */
+float rayEllipsoidIntersect(vec3 rayOrigin, vec3 rayDir, vec3 center, vec3 semiAxes) {
+    // Scale ray into unit sphere space
+    vec3 scaledOrigin = (rayOrigin - center) / semiAxes;
+    vec3 scaledDir = rayDir / semiAxes;
+
+    // Standard ray-sphere intersection in scaled space
+    float a = dot(scaledDir, scaledDir);
+    float b = 2.0 * dot(scaledOrigin, scaledDir);
+    float c = dot(scaledOrigin, scaledOrigin) - 1.0;
+    float discriminant = b * b - 4.0 * a * c;
+
+    if (discriminant < 0.0) {
+        return -1.0;
+    }
+
+    return (-b - sqrt(discriminant)) / (2.0 * a);
+}
+
+/**
+ * Calculate ellipsoid normal at hit point
+ * Normal = gradient of ellipsoid equation = 2*(x/a², y/b², z/c²)
+ */
+vec3 ellipsoidNormal(vec3 hitPoint, vec3 center, vec3 semiAxes) {
+    vec3 localPos = hitPoint - center;
+    // Gradient of (x/a)² + (y/b)² + (z/c)² = 1
+    vec3 grad = localPos / (semiAxes * semiAxes);
+    return normalize(grad);
+}
+
+/**
+ * Build tidal stretch axes from BH direction
+ * Returns semi-axes (stretchAxis, Y, perpAxis) for ellipsoid
+ */
+vec3 tidalSemiAxes(float stretch, vec2 stretchDir, float baseRadius) {
+    // Stretch factor along BH direction (elongation toward/away from BH)
+    float stretchFactor = 1.0 + stretch * 0.8;  // Up to 1.8x longer
+
+    // Compression factor perpendicular (volume roughly conserved)
+    float compressFactor = 1.0 / sqrt(stretchFactor);  // Compress to conserve volume
+
+    // Y axis gets slight compression too
+    float yFactor = 1.0 - stretch * 0.15;
+
+    return vec3(
+        baseRadius * stretchFactor,   // Stretch along BH radial
+        baseRadius * yFactor,         // Slight Y compression
+        baseRadius * compressFactor   // Compress perpendicular
+    );
+}
+
 // =============================================================================
 // PLASMA NOISE with flowing distortion
 // =============================================================================
@@ -331,97 +401,134 @@ vec3 rotateY(vec3 v, float angle) {
 
 void main() {
     // === CIRCULAR MASK - prevents square canvas artifacts ===
-    // UV goes 0-1, so center goes -0.5 to 0.5
-    // Corner distance = sqrt(0.5² + 0.5²) = 0.707
-    // We multiply by 2 so sphere surface is at dist=1.0
     vec2 center = vUv - 0.5;
-    float distFromCenter = length(center) * 2.0;  // 0 at center, ~1.414 at corners
+    float distFromCenter = length(center) * 2.0;
 
-    // Hard circular cutoff - corners are at ~1.414, cut off at 1.35
-    if (distFromCenter > 1.35) {
+    // Wider cutoff for stretched ellipsoid
+    if (distFromCenter > 1.6) {
         gl_FragColor = vec4(0.0);
         return;
     }
 
-    // Circular fade for smooth edges (fade from 1.15 to 1.35)
-    float circularMask = 1.0 - smoothstep(1.15, 1.35, distFromCenter);
+    float circularMask = 1.0 - smoothstep(1.3, 1.6, distFromCenter);
 
     // Setup ray - camera looking at sphere from fixed position
     vec3 rayOrigin = vec3(0.0, 0.0, -2.5);
     vec3 rayDir = getRayDirection(vUv);
 
     float time = uTime;
-
-    // Self-rotation angle
     float selfRotation = time * uRotationSpeed;
 
-    // Ray-sphere intersection for CORONA (larger radius for glow)
-    float coronaRadius = 0.65;  // Corona extends beyond surface
-    float tCorona = raySphereIntersect(rayOrigin, rayDir, vec3(0.0), coronaRadius);
+    // === TIDAL ELLIPSOID SETUP ===
+    // Direction toward black hole in XZ plane
+    vec2 stretchDir2D = normalize(vec2(uStretchDirX, uStretchDirZ) + 0.0001);
+    float stretch = uTidalStretch;
 
-    // Ray-sphere intersection for SURFACE (sphere at origin with radius 0.5)
-    float t = raySphereIntersect(rayOrigin, rayDir, vec3(0.0), 0.5);
+    // Build rotation matrix to align ellipsoid X-axis with stretch direction
+    // This rotates the ellipsoid so its long axis points toward the BH
+    float stretchAngle = atan(stretchDir2D.y, stretchDir2D.x);
+    float cs = cos(stretchAngle);
+    float sn = sin(stretchAngle);
+
+    // Rotation matrix around Y axis (to align stretch in XZ plane)
+    mat3 stretchRot = mat3(
+        cs,  0.0, -sn,
+        0.0, 1.0, 0.0,
+        sn,  0.0,  cs
+    );
+    mat3 stretchRotInv = mat3(
+        cs,  0.0,  sn,
+        0.0, 1.0, 0.0,
+        -sn, 0.0,  cs
+    );
+
+    // Transform ray into ellipsoid-aligned space
+    vec3 rotatedRayDir = stretchRotInv * rayDir;
+    vec3 rotatedRayOrigin = stretchRotInv * rayOrigin;
+
+    // Calculate ellipsoid semi-axes based on stretch
+    // Star body fills the visible area - minimal corona
+    float baseRadius = 0.95;  // Nearly fills the entire quad
+    vec3 semiAxes = tidalSemiAxes(stretch, stretchDir2D, baseRadius);
+
+    // Corona is paper-thin
+    vec3 coronaSemiAxes = tidalSemiAxes(stretch, stretchDir2D, 0.98);
+
+    // Ray-ellipsoid intersection for CORONA
+    float tCorona = rayEllipsoidIntersect(rotatedRayOrigin, rotatedRayDir, vec3(0.0), coronaSemiAxes);
+
+    // Ray-ellipsoid intersection for SURFACE
+    float t = rayEllipsoidIntersect(rotatedRayOrigin, rotatedRayDir, vec3(0.0), semiAxes);
 
     // === CORONA / OUTER GLOW ===
+    // Only render corona in the thin rim outside the star body
     if (t < 0.0) {
         float dist = distFromCenter;
         float angle = atan(center.y, center.x);
 
-        // Fade glow toward edges (within circular mask bounds)
-        float edgeFade = 1.0 - smoothstep(1.1, 1.3, dist);
+        // Star edge is at ~1.9 in dist space (0.95 * 2)
+        // Corona is barely visible - just a whisper at the edge
+        float starEdge = 1.9;
+
+        // Quick exit if too far from star edge
+        float edgeFade = 1.0 - smoothstep(starEdge + 0.08, starEdge + 0.15, dist);
         if (edgeFade <= 0.0) {
             gl_FragColor = vec4(0.0);
             return;
         }
 
-        // Distance from sphere edge (0 at edge, increases outward)
-        float rimFactor = smoothstep(1.0, 1.2, dist);
+        // How far outside the star edge (0 at edge, small positive outside)
+        float rimDist = max(0.0, dist - starEdge);
+        float rimFactor = smoothstep(0.0, 0.1, rimDist);
 
-        // Base glow - tight falloff, only visible very close to sphere
-        float glow = exp(-(dist - 1.0) * (dist - 1.0) * 20.0) * 0.4;
-        glow *= smoothstep(1.4, 1.0, dist);  // Tight fade
+        // Tight glow - exponential falloff from star edge
+        float glow = exp(-rimDist * rimDist * 200.0) * 0.5;  // Much tighter falloff
 
-        // Corona flames at the edge
+        // Corona flames at the edge (subtle)
         float flames = coronaFlames(angle + selfRotation, rimFactor, time, uActivityLevel);
+        flames *= 0.5;  // Reduce flame intensity
 
         // Turbulent corona edges
         float coronaTurb = noise3D(vec3(angle * 3.0 + selfRotation, dist * 2.0, time * 0.3));
         coronaTurb = coronaTurb * 0.5 + 0.5;
 
-        // Corona intensity peaks just outside the sphere
-        float coronaIntensity = smoothstep(1.0, 1.05, dist) * smoothstep(1.5, 1.1, dist);
-        coronaIntensity *= (0.6 + coronaTurb * 0.4 + flames * 0.8);
-        coronaIntensity *= 0.5 + uActivityLevel * 0.5;
+        // Corona intensity - very tight peak just outside star
+        float coronaIntensity = smoothstep(0.0, 0.02, rimDist) * smoothstep(0.12, 0.03, rimDist);
+        coronaIntensity *= (0.5 + coronaTurb * 0.3 + flames * 0.5);
+        coronaIntensity *= 0.4 + uActivityLevel * 0.4;
 
-        // Combined outer effect
-        float totalGlow = glow + coronaIntensity * 0.6;
-        totalGlow *= edgeFade;  // Apply edge fade to prevent box
+        // Combined outer effect - reduced overall
+        float totalGlow = glow * 0.6 + coronaIntensity * 0.4;
+        totalGlow *= edgeFade;
 
         // Corona color - warmer/redder than surface
         vec3 coronaColor = uStarColor * vec3(1.3, 1.0, 0.7);
         vec3 glowColor = mix(uStarColor, coronaColor, coronaIntensity);
 
-        // For proper glow: use premultiplied alpha approach
-        // Only show glow where it's actually bright enough to see
         float brightness = max(max(glowColor.r, glowColor.g), glowColor.b) * totalGlow;
         float alpha = smoothstep(0.01, 0.15, brightness) * totalGlow;
 
-        // Threshold very low values to pure transparent
         if (alpha < 0.02) {
             gl_FragColor = vec4(0.0);
             return;
         }
 
         glowColor *= totalGlow;
-        // Apply circular mask and output premultiplied alpha
         alpha *= circularMask;
         gl_FragColor = vec4(glowColor * alpha, alpha);
         return;
     }
 
     // === SURFACE RENDERING ===
-    vec3 hitPoint = rayOrigin + rayDir * t;
-    vec3 normal = normalize(hitPoint);
+    // Calculate hit point in rotated (ellipsoid-aligned) space
+    vec3 rotatedHitPoint = rotatedRayOrigin + rotatedRayDir * t;
+
+    // Calculate ellipsoid normal (gradient of implicit surface)
+    vec3 rotatedNormalRaw = ellipsoidNormal(rotatedHitPoint, vec3(0.0), semiAxes);
+
+    // Transform hit point and normal back to world space
+    vec3 hitPoint = stretchRot * rotatedHitPoint;
+    vec3 normal = normalize(stretchRot * rotatedNormalRaw);
 
     // Apply inverse camera rotation to the normal (camera orbit)
     mat3 camRotMat = rotationMatrix(-uCameraRotation);
@@ -462,21 +569,41 @@ void main() {
     float edgeDist = 1.0 - viewAngle;
     float limbDarkening = pow(max(0.0, viewAngle), 0.4);
 
-    // === MULTI-LAYER EFFECTS ===
-    float turbIntensity = boilingTurbulence(rotatedNormal, time) * 0.5;
-    float bubbles = hotBubbles(rotatedNormal, time);
+    // === MULTI-LAYER EFFECTS (stress-enhanced) ===
+    // Stress amplifies all turbulent effects - star is being torn apart!
+    // Much more violent - up to 5x chaos at max stress
+    float stressBoost = 1.0 + uStressLevel * 4.0;
 
-    // Granulation (convection cells)
-    float gran = noise3D(rotatedNormal * 20.0 + time * 0.3);
+    float turbIntensity = boilingTurbulence(rotatedNormal, time * stressBoost) * 0.6;
+    turbIntensity *= stressBoost;
 
-    // === PULSATION ===
+    float bubbles = hotBubbles(rotatedNormal, time * stressBoost);
+    bubbles *= stressBoost * 1.5;  // More dramatic bubbles
+
+    // Granulation becomes violent under stress - larger and faster
+    float gran = noise3D(rotatedNormal * 15.0 + time * 0.5 * stressBoost);
+    gran *= stressBoost * 1.2;
+
+    // === TIDAL FRACTURING ===
+    // Stress causes visible cracks/tears - starts earlier and more intense
+    float fractures = 0.0;
+    if (uStressLevel > 0.15) {  // Start fractures earlier (was 0.3)
+        float fractureNoise = noise3D(rotatedNormal * 6.0 + time * 0.8);  // Larger cracks, faster animation
+        float fractureThreshold = 1.0 - (uStressLevel - 0.15) * 1.2;
+        fractures = smoothstep(fractureThreshold, fractureThreshold + 0.08, fractureNoise);
+        fractures *= uStressLevel * 1.2;  // More intense (was 0.8)
+    }
+
+    // === PULSATION (amplified by stress) ===
     float pulse1 = cos(time * 0.5) * 0.5;
     float pulse2 = sin(time * 0.25) * 0.5;
-    float pulse = (pulse1 + pulse2) * 0.3 * uActivityLevel;
+    float pulseAmp = uActivityLevel * (1.0 + uStressLevel);
+    float pulse = (pulse1 + pulse2) * 0.3 * pulseAmp;
 
     // === COMBINED INTENSITY ===
     float totalIntensity = plasma * 0.35 + turbIntensity * 0.25 + gran * 0.2;
     totalIntensity += bubbles * 0.4;
+    totalIntensity += fractures * 0.5;  // Fractures glow hot
     totalIntensity *= 1.0 + pulse;
 
     // === 4-TIER COLOR SYSTEM ===
@@ -543,64 +670,39 @@ void main() {
 // =============================================================================
 
 /**
- * Black hole shader with gravitational lensing, photon sphere, and spacetime warping
+ * Black hole shader - subtle, physics-based with gravitational lensing
  *
- * Physics simulated:
- * - Event horizon (Schwarzschild radius) - point of no return
- * - Photon sphere at 1.5x event horizon - where light orbits
- * - Gravitational lensing - light bending around the black hole
- * - Doppler beaming - approaching side brighter
- * - Relativistic aberration
+ * Design philosophy:
+ * - Dormant: Nearly invisible, just a dark void with subtle edge
+ * - Main effect is gravitational lensing of background starfield
+ * - Only shows glow effects when awakened/feeding
+ * - The accretion disk handles most visual drama (separate component)
  */
 export const BLACK_HOLE_FRAGMENT = `
 ${SPHERE_COMMON}
 
 uniform float uAwakeningLevel;  // 0 = dormant, 1 = fully active
 uniform float uFeedingPulse;    // Temporary glow from feeding
-
-// Schwarzschild metric light bending
-// Returns deflection angle based on impact parameter
-float gravitationalDeflection(float impactParam, float rsRadius) {
-    // Simplified Einstein deflection: angle ≈ 4GM/(c²b) = 2rs/b
-    // where rs = Schwarzschild radius, b = impact parameter
-    if (impactParam < rsRadius * 1.5) return 3.14159; // Captured
-    return 2.0 * rsRadius / impactParam;
-}
-
-// Distort UV based on gravitational lensing
-vec2 lensDistort(vec2 uv, float strength, float rsRadius) {
-    vec2 center = uv - 0.5;
-    float dist = length(center);
-
-    if (dist < 0.001) return uv;
-
-    // Impact parameter (closest approach to BH center)
-    float b = dist;
-
-    // Light bending - stronger closer to BH
-    float deflection = gravitationalDeflection(b, rsRadius);
-
-    // Apply radial distortion (push outward = inversion of what we see)
-    float distortFactor = 1.0 + strength * deflection * 0.3;
-
-    return center * distortFactor + 0.5;
-}
+uniform float uRotation;        // Black hole spin angle (Kerr rotation)
 
 void main() {
     vec2 uv = vUv;
     vec2 center = uv - 0.5;
-    float dist = length(center) * 2.0;
+    float dist = length(center) * 2.0;  // 0 at center, 1 at edge
     float angle = atan(center.y, center.x);
 
     float time = uTime;
     float awakeFactor = uAwakeningLevel;
     float pulseFactor = uFeedingPulse;
 
-    // === RADII ===
-    float eventHorizon = 0.5;           // Visual radius of event horizon
-    float photonSphere = 0.75;          // 1.5x event horizon
-    float innerAccretion = 0.85;        // Inner edge of visible accretion
-    float outerGlow = 1.4;              // Outer extent of effects
+    // Spin angle for rotating effects (frame dragging)
+    // Using uTime since custom uniforms don't update properly
+    float spinAngle = angle + uTime * 4.0;  // Faster spin
+
+    // === RADII (normalized to quad size) ===
+    float eventHorizon = 0.4;           // Event horizon visual size
+    float photonSphere = 0.6;           // 1.5x event horizon
+    float shadowEdge = 0.52;            // Shadow boundary (~1.3x Rs)
 
     // === CIRCULAR MASK ===
     if (dist > 1.5) {
@@ -608,135 +710,96 @@ void main() {
         return;
     }
 
-    // === EVENT HORIZON - Pure black void ===
-    if (dist < eventHorizon) {
-        // Absolute darkness inside event horizon
-        // Subtle edge gradient for depth
-        float edgeDist = dist / eventHorizon;
-        float edgeGlow = pow(edgeDist, 4.0) * 0.08 * awakeFactor;
+    // === NO INTERNAL STARFIELD ===
+    // The real starfield is rendered separately in the scene
+    // This shader just renders the dark void + subtle edge effects
+    // True gravitational lensing would require render-to-texture of background
 
-        vec3 voidColor = vec3(edgeGlow * 0.3, edgeGlow * 0.15, edgeGlow * 0.05);
-        gl_FragColor = vec4(voidColor, 1.0);
+    // === EVENT HORIZON - Gradient from pure black to very dark edge ===
+    // Edge color ~#110b06 = RGB(17,11,6) = vec3(0.067, 0.043, 0.024)
+    if (dist < shadowEdge) {
+        // Use shadowEdge (0.52) as outer boundary for smooth transition to ring
+        float edgeT = dist / shadowEdge;  // 0 at center, 1 at shadow edge
+
+        // Very steep curve - stays pure black until very close to edge
+        float glowFactor = pow(edgeT, 8.0);
+
+        // Very dark brownish-black - NO yellow, matches #110b06
+        vec3 edgeColor = vec3(0.067, 0.043, 0.024) * glowFactor;
+
+        gl_FragColor = vec4(edgeColor, 1.0);
         return;
     }
 
-    // === PHOTON SPHERE - Bright ring of trapped light ===
-    // This is where photons orbit the black hole
-    float photonRingWidth = 0.08;
+    // === PHOTON SPHERE - Subtle ring with spin asymmetry ===
+    float photonRingWidth = 0.05;
     float photonDist = abs(dist - photonSphere);
     float photonRing = exp(-photonDist * photonDist / (photonRingWidth * photonRingWidth));
 
-    // Photon ring flickers and rotates
-    float photonFlicker = noise3D(vec3(angle * 3.0, time * 2.0, 0.0)) * 0.4 + 0.6;
-    float photonRotation = noise3D(vec3(angle * 5.0 + time * 0.5, dist * 2.0, time * 0.3));
-    photonRing *= photonFlicker * (0.8 + photonRotation * 0.2);
+    // Doppler asymmetry - approaching side brighter (shows spin)
+    float doppler = 0.5 + 0.5 * cos(spinAngle);  // 0 to 1 range
+    photonRing *= 0.3 + doppler * 0.7;  // 30% to 100% brightness
 
-    // Doppler effect - approaching side brighter
-    float doppler = 1.0 + 0.3 * cos(angle + time * 0.2);
-    photonRing *= doppler;
+    // Hot spot - orbiting bright region
+    float hotSpot = pow(max(0.0, cos(spinAngle)), 4.0);
+    float hotSpotRing = exp(-pow(dist - photonSphere * 0.95, 2.0) * 20.0);
+    float hotSpotGlow = hotSpot * hotSpotRing * 0.5;
 
-    // Photon ring color - hot white-yellow with orange edges
-    vec3 photonColor = mix(
-        vec3(1.0, 0.95, 0.8),    // Core - bright white
-        vec3(1.0, 0.6, 0.2),     // Edge - orange
-        pow(photonDist / photonRingWidth, 2.0)
-    );
+    // Scale with awakening - more visible when feeding
+    photonRing *= 0.15 + awakeFactor * 0.35;
 
-    // === GRAVITATIONAL LENSING DISTORTION ===
-    // Background "stars" or noise that gets warped
-    float lensStrength = awakeFactor * 0.5;
-    vec2 lensedUV = lensDistort(uv, lensStrength, eventHorizon * 0.5);
-
-    // Warped background pattern (simulates lensed starlight)
-    vec3 lensedCoord = vec3(lensedUV * 10.0, time * 0.1);
-    float warpedStars = noise3D(lensedCoord);
-    warpedStars = pow(warpedStars, 3.0) * 0.3; // Sparse bright points
-
-    // Einstein ring - light from directly behind gets spread into a ring
-    float einsteinRadius = photonSphere * 1.1;
-    float einsteinWidth = 0.15;
-    float einsteinRing = exp(-pow(dist - einsteinRadius, 2.0) / (einsteinWidth * einsteinWidth));
-    einsteinRing *= 0.4 * awakeFactor;
-
-    // === INNER ACCRETION GLOW ===
-    // Hot gas just outside photon sphere
-    float accretionGlow = 0.0;
-    if (dist > photonSphere && dist < innerAccretion + 0.2) {
-        float accretionDist = (dist - photonSphere) / (innerAccretion - photonSphere + 0.2);
-        accretionGlow = (1.0 - accretionDist) * 0.5;
-
-        // Turbulent accretion flow
-        float turbulence = noise3D(vec3(angle * 4.0 + time, dist * 3.0, time * 0.5));
-        accretionGlow *= (0.7 + turbulence * 0.3);
-        accretionGlow *= doppler; // Doppler brightening
-    }
-
-    // === RELATIVISTIC JET HINTS ===
-    // Faint glow along polar axis (perpendicular to disk)
-    float polarAngle = abs(sin(angle));
-    float jetHint = pow(polarAngle, 8.0) * 0.15 * awakeFactor;
-    jetHint *= smoothstep(outerGlow, photonSphere, dist);
-
-    // === HAWKING RADIATION (very subtle) ===
-    // Quantum fluctuations at event horizon edge
-    float hawking = 0.0;
-    if (dist > eventHorizon * 0.95 && dist < eventHorizon * 1.1) {
-        float hawkingNoise = noise3D(vec3(angle * 20.0, time * 5.0, dist * 10.0));
-        hawking = hawkingNoise * 0.05 * (1.0 - abs(dist - eventHorizon) / (eventHorizon * 0.15));
-    }
-
-    // === FEEDING PULSE ===
-    // Ripple effect when black hole consumes matter
+    // === FEEDING PULSE - Subtle ripple when consuming ===
     float pulseRipple = 0.0;
     if (pulseFactor > 0.01) {
-        float ripplePhase = fract(time * 2.0) * 0.5;
-        float rippleRadius = eventHorizon + ripplePhase;
-        float ripple = exp(-pow(dist - rippleRadius, 2.0) * 50.0);
-        pulseRipple = ripple * pulseFactor * 0.5;
+        float ripplePhase = fract(time * 1.5) * 0.3;
+        float rippleRadius = shadowEdge + ripplePhase;
+        float ripple = exp(-pow(dist - rippleRadius, 2.0) * 80.0);
+        pulseRipple = ripple * pulseFactor * 0.15;  // Subtle
     }
 
-    // === COMBINE ALL EFFECTS ===
+    // === EDGE GLOW - Very faint warm edge when feeding ===
+    float edgeGlow = 0.0;
+    if (dist > shadowEdge && dist < photonSphere + 0.1) {
+        float edgeFactor = smoothstep(shadowEdge, photonSphere, dist);
+        edgeFactor *= smoothstep(photonSphere + 0.1, photonSphere, dist);
+        edgeGlow = edgeFactor * pulseFactor * 0.1;
+    }
+
+    // === COMBINE EFFECTS ===
     vec3 color = vec3(0.0);
 
-    // Photon sphere (dominant feature)
-    color += photonColor * photonRing * (0.5 + awakeFactor * 0.5);
+    // Photon sphere ring (warm orange-yellow)
+    vec3 photonColor = vec3(1.0, 0.75, 0.4);
+    color += photonColor * photonRing;
 
-    // Einstein ring
-    vec3 einsteinColor = vec3(0.8, 0.7, 0.5);
-    color += einsteinColor * einsteinRing;
+    // Hot spot - brighter orbiting region
+    vec3 hotSpotColor = vec3(1.0, 0.9, 0.7);
+    color += hotSpotColor * hotSpotGlow * (0.3 + awakeFactor * 0.7);
 
-    // Inner accretion glow
-    vec3 accretionColor = mix(
-        vec3(1.0, 0.4, 0.1),     // Hot orange
-        vec3(1.0, 0.8, 0.5),     // White-hot
-        accretionGlow
-    );
-    color += accretionColor * accretionGlow * awakeFactor;
+    // Edge glow when feeding
+    vec3 glowColor = vec3(1.0, 0.5, 0.2);
+    color += glowColor * edgeGlow;
 
-    // Warped background
-    color += vec3(0.6, 0.7, 1.0) * warpedStars * awakeFactor;
+    // Feeding pulse ripple
+    vec3 pulseColor = vec3(1.0, 0.6, 0.3);
+    color += pulseColor * pulseRipple;
 
-    // Jet hints
-    color += vec3(0.5, 0.6, 1.0) * jetHint;
+    // === OUTER FADE ===
+    float outerFade = 1.0 - smoothstep(1.0, 1.5, dist);
+    color *= outerFade;
 
-    // Hawking radiation
-    color += vec3(0.8, 0.9, 1.0) * hawking * awakeFactor;
-
-    // Feeding pulse
-    color += vec3(1.0, 0.6, 0.2) * pulseRipple;
-
-    // === EDGE FADE ===
-    float edgeFade = 1.0 - smoothstep(1.2, 1.5, dist);
-    color *= edgeFade;
-
-    // === ALPHA for compositing ===
-    float alpha = max(max(color.r, color.g), color.b);
-    alpha = smoothstep(0.01, 0.1, alpha);
-    alpha *= edgeFade;
-
-    // Ensure event horizon area is fully opaque black
-    if (dist < eventHorizon * 1.05) {
-        alpha = 1.0;
+    // === ALPHA ===
+    // Event horizon area is opaque black
+    // Outside fades based on content
+    float alpha;
+    if (dist < shadowEdge) {
+        alpha = 1.0;  // Solid black shadow
+    } else {
+        // Alpha based on visible content
+        float contentBrightness = max(max(color.r, color.g), color.b);
+        alpha = smoothstep(0.005, 0.05, contentBrightness);
+        alpha = max(alpha, smoothstep(photonSphere + 0.2, shadowEdge, dist) * 0.3);
+        alpha *= outerFade;
     }
 
     gl_FragColor = vec4(color, alpha);

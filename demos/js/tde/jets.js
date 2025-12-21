@@ -12,28 +12,27 @@ import { GameObject, Painter, Tweenetik, Easing } from "../../../src/index.js";
 
 const JET_CONFIG = {
     // Particle properties
-    maxParticles: 4000,
-    particleLifetime: 20.0,     // Long lifetime - visible from Earth!
-    spawnRate: 100,              // Particles per frame when active
+    maxParticles: 6000,
+    particleLifetime: 8.0,      // Shorter lifetime - continuous turnover
+    spawnRatePerSecond: 800,    // Particles per SECOND (not per frame)
 
     // Jet geometry
-    coneAngle: 0.08,            // Tighter cone for more focused jets
-    initialSpeed: 600,          // Ejection speed
-    speedVariation: 200,        // Random variation in speed
-    deceleration: 0.9995,       // Very low deceleration - continuous stream
+    coneAngle: 0.06,            // Tight cone for focused beams
+    initialSpeed: 1200,         // Fast ejection - relativistic!
+    speedVariation: 300,        // Random variation in speed
 
     // Jet length - shoots off screen
-    maxLength: 1000,             // Way off screen
+    maxLength: 50000,           // Way off screen
 
-    // Visual - smaller particles
-    colorCore: { r: 200, g: 220, b: 255 },    // Blue-white core
-    colorEdge: { r: 255, g: 180, b: 100 },    // Orange edge
-    sizeMin: 1.0,
-    sizeMax: 2.5,
+    // Visual - bright particles
+    colorCore: { r: 220, g: 240, b: 255 },    // Blue-white core
+    colorEdge: { r: 255, g: 160, b: 80 },     // Orange edge
+    sizeMin: 0.8,
+    sizeMax: 1.0,
 
     // Animation
-    activationDuration: .5,    // Longer ramp-up
-    deactivationDuration: 5,  // Slow fade out
+    activationDuration: 0.3,    // Quick ignition
+    deactivationDuration: 5.0,  // Graceful fade
 };
 
 export class RelativisticJets extends GameObject {
@@ -46,6 +45,7 @@ export class RelativisticJets extends GameObject {
         // State
         this.active = false;
         this.intensity = 0;     // 0-1, controls spawn rate and brightness
+        this.isDeactivating = false;  // Prevent multiple deactivate() calls
 
         // Particle arrays - one for each jet (up and down)
         this.particles = [];
@@ -71,11 +71,13 @@ export class RelativisticJets extends GameObject {
      * Deactivate jets with fade-out
      */
     deactivate() {
-        if (!this.active) return;
+        if (!this.active || this.isDeactivating) return;
+        this.isDeactivating = true;
         // Slow graceful fade
         Tweenetik.to(this, { intensity: 0 }, JET_CONFIG.deactivationDuration, Easing.easeInQuad, {
             onComplete: () => {
                 this.active = false;
+                this.isDeactivating = false;
             }
         });
     }
@@ -91,11 +93,13 @@ export class RelativisticJets extends GameObject {
 
     /**
      * Spawn jet particles from both poles
+     * @param {number} dt - Delta time for frame-rate independent spawning
      */
-    spawnParticles() {
+    spawnParticles(dt) {
         if (this.particles.length >= JET_CONFIG.maxParticles) return;
 
-        const spawnCount = Math.floor(JET_CONFIG.spawnRate * this.intensity);
+        // Frame-rate independent spawning
+        const spawnCount = Math.floor(JET_CONFIG.spawnRatePerSecond * dt * this.intensity);
 
         for (let i = 0; i < spawnCount; i++) {
             // Spawn from both poles (up and down)
@@ -116,7 +120,7 @@ export class RelativisticJets extends GameObject {
             const vz = spreadMag * Math.sin(azimuth);
 
             // Start position - slightly offset from BH center along jet axis
-            const startOffset = this.bhRadius * 0.5;
+            const startOffset = this.bhRadius * 1.034;
 
             this.particles.push({
                 x: vx * 0.01,   // Tiny initial spread
@@ -139,8 +143,8 @@ export class RelativisticJets extends GameObject {
 
         if (!this.active) return;
 
-        // Spawn new particles
-        this.spawnParticles();
+        // Spawn new particles (dt-based for consistent rate)
+        this.spawnParticles(dt);
 
         // Update existing particles
         const maxDist = this.bhRadius * JET_CONFIG.maxLength;
@@ -162,10 +166,8 @@ export class RelativisticJets extends GameObject {
                 continue;
             }
 
-            // Apply deceleration
-            p.vx *= JET_CONFIG.deceleration;
-            p.vy *= JET_CONFIG.deceleration;
-            p.vz *= JET_CONFIG.deceleration;
+            // No deceleration - relativistic jets maintain speed
+            // Particles stream continuously at near-constant velocity
 
             // Move particle
             p.x += p.vx * dt;
@@ -249,6 +251,7 @@ export class RelativisticJets extends GameObject {
         this.particles = [];
         this.active = false;
         this.intensity = 0;
+        this.isDeactivating = false;
     }
 
     /**

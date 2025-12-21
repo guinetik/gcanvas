@@ -125,3 +125,77 @@ export function cartesianToPolar(x, z) {
     phi: Math.atan2(z, x),
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GRAVITATIONAL LENSING
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Calculate gravitational lensing displacement for a point near a massive object.
+ *
+ * Light passing near a massive object is deflected, causing background objects
+ * to appear displaced radially outward from the lens center. This creates the
+ * "Einstein ring" effect where objects directly behind the lens form a ring.
+ *
+ * This is a simplified screen-space approximation suitable for real-time rendering.
+ * True lensing would require ray-tracing through curved spacetime.
+ *
+ * @param {number} screenDist - Distance from lens center in screen pixels
+ * @param {number} effectRadius - Maximum radius of lensing effect in pixels
+ * @param {number} strength - Displacement strength (higher = more dramatic)
+ * @param {number} falloff - Exponential falloff rate (higher = tighter effect)
+ * @param {number} minDist - Minimum distance to apply lensing (avoids singularity)
+ * @returns {number} Radial displacement in pixels (0 if outside effect radius)
+ *
+ * @example
+ * // Calculate displacement for a star 100px from black hole center
+ * const displacement = gravitationalLensing(100, 500, 200, 0.008, 5);
+ * // Apply: newRadius = screenDist + displacement
+ */
+export function gravitationalLensing(screenDist, effectRadius, strength, falloff, minDist = 5) {
+  if (screenDist <= minDist || screenDist >= effectRadius) {
+    return 0;
+  }
+
+  // Exponential falloff: stronger closer to lens center
+  const lensFactor = Math.exp(-screenDist * falloff);
+
+  return lensFactor * strength;
+}
+
+/**
+ * Apply gravitational lensing to screen coordinates.
+ *
+ * Takes a point's screen position (relative to lens center) and returns
+ * the displaced position after lensing.
+ *
+ * @param {number} x - X coordinate relative to lens center
+ * @param {number} y - Y coordinate relative to lens center
+ * @param {number} effectRadius - Maximum radius of lensing effect
+ * @param {number} strength - Displacement strength
+ * @param {number} falloff - Exponential falloff rate
+ * @param {number} minDist - Minimum distance for lensing
+ * @returns {{ x: number, y: number, displacement: number }} Displaced coordinates and displacement amount
+ *
+ * @example
+ * const result = applyGravitationalLensing(50, 30, 500, 200, 0.008);
+ * ctx.drawImage(star, centerX + result.x, centerY + result.y, ...);
+ */
+export function applyGravitationalLensing(x, y, effectRadius, strength, falloff, minDist = 5) {
+  const dist = Math.sqrt(x * x + y * y);
+
+  if (dist <= minDist || dist >= effectRadius) {
+    return { x, y, displacement: 0 };
+  }
+
+  const displacement = gravitationalLensing(dist, effectRadius, strength, falloff, minDist);
+
+  // Radial displacement: push point outward from center
+  const ratio = (dist + displacement) / dist;
+
+  return {
+    x: x * ratio,
+    y: y * ratio,
+    displacement
+  };
+}

@@ -14,36 +14,36 @@ import { CONFIG } from "./config.js";
 
 const DISK_CONFIG = {
     // Orbital bounds (multiplier of BH radius)
-    innerRadiusMultiplier: 0.7,     // Very close to BH for max lensing
-    outerRadiusMultiplier: 8.0,    // Wide disk spanning screen
+    innerRadiusMultiplier: 0.75,     // Very close to BH for max lensing
+    outerRadiusMultiplier: 8.2,    // Wide disk spanning screen
 
     // Particle properties
-    maxParticles: 5000,        // VERY dense disk for rich lensing
-    particleLifetime: 30,       // Seconds
-    spawnRate: 120,             // Fast spawn for full disk
+    maxParticles: 5000,        // Dense but manageable
+    particleLifetime: 100,      // Shorter lifetime for continuous turnover
+    spawnRate: 60,             // Steady spawn rate (avoids batch death)
 
     // Orbital physics
     baseOrbitalSpeed: 0.8,
 
-    // Decay mechanics
-    decayChanceBase: 0.00002,   // Less decay so more particles survive
-    decaySpeedFactor: 0.998,
+    // Decay mechanics - particles spiral into BH over time
+    decayChanceBase: 0.0002,    // Higher chance to fall in (feeds BH glow)
+    decaySpeedFactor: 0.995,    // Faster spiral when falling
 
-    // Disk geometry - thicker disk so front side is visible
-    diskThickness: 0.02,        // Y-spread as fraction of baseScale
+    // Disk geometry - thin but with enough spread for visible lensing arch
+    diskThickness: 0.0012,       // Y-spread as fraction of baseScale (blackhole.js uses 0.006)
 
-    // Lensing - STRONGER for dramatic Einstein ring effect
-    lensingStrength: 3.0,
-    ringRadiusFactor: 1.5,
-    lensingFalloff: 0.8,        // Tighter falloff = more concentrated effect
+    // Lensing - match blackhole.js parameters for proper Einstein ring
+    lensingStrength: 1.5,       // Moderate strength (was 3.0 - too strong)
+    ringRadiusFactor: 1.3,      // Match blackhole.js
+    lensingFalloff: 1.5,        // Match blackhole.js (was 0.8 - way too tight)
 
-    // Visual - heat gradient from inner to outer
-    colorHot: { r: 255, g: 255, b: 250 },   // Inner edge (white-hot)
-    colorMid: { r: 255, g: 200, b: 120 },   // Mid disk (orange)
-    colorCool: { r: 240, g: 100, b: 50 },   // Outer edge (deep red-orange)
+    // Visual - heat gradient from inner to outer (BRIGHT)
+    colorHot: { r: 255, g: 255, b: 255 },   // Inner edge (pure white)
+    colorMid: { r: 255, g: 220, b: 150 },   // Mid disk (bright orange)
+    colorCool: { r: 255, g: 140, b: 80 },   // Outer edge (vivid orange-red)
 
-    sizeMin: 1.5,
-    sizeMax: 3.5,
+    sizeMin: 1,
+    sizeMax: 2,
 };
 
 export class AccretionDisk extends GameObject {
@@ -76,12 +76,12 @@ export class AccretionDisk extends GameObject {
     activate() {
         if (this.active) return;
         this.active = true;
-        this.scale = 0;
+        this.scale = 0.3;  // Start partially expanded so it's visible immediately
         this.lensingStrength = 0;
-        // Slow expansion from BH center - 4 seconds feels more cosmic
-        Tweenetik.to(this, { scale: 1 }, 4.0, Easing.easeOutQuart);
+        // Expansion from BH center - 2 seconds (was 4, felt too slow)
+        Tweenetik.to(this, { scale: 1 }, 2.0, Easing.easeOutQuart);
         // Lensing ramps up alongside scale
-        Tweenetik.to(this, { lensingStrength: 1 }, 3.0, Easing.easeOutQuad);
+        Tweenetik.to(this, { lensingStrength: 1 }, 2.5, Easing.easeOutQuad);
     }
 
     init() {
@@ -137,7 +137,8 @@ export class AccretionDisk extends GameObject {
             distance,
             yOffset,
             speed,
-            age: 0,
+            // Small random initial age prevents batch death
+            age: Math.random() * DISK_CONFIG.particleLifetime * 0.1,  // Only 10% spread
             isFalling: false,
             size: DISK_CONFIG.sizeMin + Math.random() * (DISK_CONFIG.sizeMax - DISK_CONFIG.sizeMin),
             baseColor: this.getHeatColor(distance),
@@ -279,7 +280,8 @@ export class AccretionDisk extends GameObject {
             let yCam = y * cosX - zCam * sinX;
             zCam = y * sinX + zCam * cosX;
 
-            // Apply gravitational lensing (particles behind BH only)
+            // Gravitational lensing (particles behind BH only)
+            // Original blackhole.js formula - proven to work
             if (lensingStrength > 0 && zCam > 0) {
                 const currentR = Math.sqrt(xCam * xCam + yCam * yCam);
                 const ringRadius = this.bhRadius * DISK_CONFIG.ringRadiusFactor;
@@ -303,12 +305,14 @@ export class AccretionDisk extends GameObject {
             // Skip particles behind camera
             if (zCam < -this.camera.perspective + 10) continue;
 
-            // Doppler beaming - approaching side brighter
+            // Doppler beaming - approaching side brighter (reduced effect)
             const velocityDir = Math.cos(p.angle + this.camera.rotationY);
-            const doppler = 1 + velocityDir * 0.4;
+            const doppler = 1 + velocityDir * 0.25;  // Was 0.4 - too much dimming on receding side
 
-            // Age-based fade
-            const alpha = Math.max(0, 1 - p.age / DISK_CONFIG.particleLifetime);
+            // Age-based fade - stay opaque longer, fade only near end
+            const ageRatio = p.age / DISK_CONFIG.particleLifetime;
+            // Use power curve: stays at 1.0 longer, then drops quickly
+            const alpha = Math.max(0.3, 1 - Math.pow(ageRatio, 2.5));
 
             // Redshift falling particles
             let color = p.baseColor;
@@ -387,10 +391,10 @@ export class AccretionDisk extends GameObject {
             for (const item of renderList) {
                 const { r, g, b } = item.color;
 
-                // Apply Doppler brightness shift
+                // Apply Doppler brightness shift (reduced channel dimming)
                 const dr = Math.min(255, Math.round(r * item.doppler));
-                const dg = Math.min(255, Math.round(g * item.doppler * 0.9));
-                const db = Math.min(255, Math.round(b * item.doppler * 0.8));
+                const dg = Math.min(255, Math.round(g * item.doppler * 0.95));
+                const db = Math.min(255, Math.round(b * item.doppler * 0.9));
 
                 ctx.fillStyle = `rgba(${dr}, ${dg}, ${db}, ${item.alpha})`;
                 ctx.beginPath();

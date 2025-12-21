@@ -19,6 +19,7 @@ export class BlackHoleScene extends Scene3D {
 
         // Add a Star orbiting the black hole
         this.star = new Star(this.game);
+        this.star.zIndex = 50;  // Render on top of stream particles
         this.add(this.star);
 
         // Add accretion disk (starts inactive)
@@ -47,6 +48,7 @@ export class BlackHoleScene extends Scene3D {
                 this.disk.captureParticle(p);
             },
         });
+        this.stream.zIndex = 10;  // Render behind star
         this.add(this.stream);
 
         // Add relativistic jets (activated during flare phase)
