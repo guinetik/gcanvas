@@ -117,6 +117,39 @@ export function orbitalRadiusSimple(semiMajor, eccentricity, phi, amplitudeFacto
   return semiMajor + oscillation * amplitudeFactor;
 }
 
+/**
+ * Decaying orbital radius.
+ * Applies a decay factor to the orbital radius over time/angle.
+ *
+ * @param {number} r0 - Initial orbital radius
+ * @param {number} decayFactor - How fast the orbit decays (0 to 1)
+ * @param {number} t - Time or progress factor
+ * @returns {number} Decayed radius
+ */
+export function decayingOrbitalRadius(r0, decayFactor, t) {
+  return r0 * Math.exp(-decayFactor * t);
+}
+
+/**
+ * Computes a terminal trajectory (direct fall).
+ * Interpolates between a starting point and the center (0,0,0).
+ *
+ * @param {number} startX - Start X
+ * @param {number} startY - Start Y
+ * @param {number} startZ - Start Z
+ * @param {number} progress - Progress (0 to 1)
+ * @param {Function} easingFn - Optional easing function
+ * @returns {Object} Position { x, y, z }
+ */
+export function getTerminalTrajectory(startX, startY, startZ, progress, easingFn = null) {
+  const t = easingFn ? easingFn(progress) : progress;
+  return {
+    x: startX * (1 - t),
+    y: startY * (1 - t),
+    z: startZ * (1 - t),
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // TRAIL MANAGEMENT
 // ─────────────────────────────────────────────────────────────────────────────

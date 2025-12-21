@@ -20,3 +20,6 @@ export * from "./state";
 
 // Particle system
 export * from "./particle";
+
+// WebGL (optional, for shader effects)
+export * from "./webgl";

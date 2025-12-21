@@ -1,5 +1,7 @@
 import { Shape } from "./shape.js";
 import { Painter } from "../painter/painter.js";
+import { WebGLRenderer } from "../webgl/webgl-renderer.js";
+import { SPHERE_SHADERS } from "../webgl/shaders/sphere-shaders.js";
 
 /**
  * Sphere3D - A true 3D sphere that integrates with Camera3D
@@ -14,18 +16,55 @@ import { Painter } from "../painter/painter.js";
  * - Debug wireframe mode
  * - Depth-sorted face rendering
  * - Surface normal-based lighting
+ * - Optional WebGL shader rendering for advanced effects
  *
  * @example
+ * // Basic sphere with Canvas 2D rendering
  * const sphere = new Sphere3D(50, {
- *   color: Painter.colors.radialGradient(0, 0, 0, 0, 0, 50, [
- *     { offset: 0, color: "#000" },
- *     { offset: 1, color: "#333" }
- *   ]),
+ *   color: "#FFD700",
  *   camera: this.camera,
- *   debug: true
+ * });
+ *
+ * @example
+ * // Sphere with WebGL shader for star effect
+ * const star = new Sphere3D(50, {
+ *   camera: this.camera,
+ *   useShader: true,
+ *   shaderType: "star",
+ *   shaderUniforms: {
+ *     uStarColor: [1.0, 0.9, 0.5],
+ *     uTemperature: 5778,
+ *     uActivityLevel: 0.5,
+ *   },
  * });
  */
 export class Sphere3D extends Shape {
+    // Shared WebGL renderer for all shader-enabled spheres
+    static _glRenderer = null;
+    static _glRendererSize = { width: 0, height: 0 };
+
+    /**
+     * Get or create shared WebGL renderer
+     * @param {number} width - Required width
+     * @param {number} height - Required height
+     * @returns {WebGLRenderer|null}
+     * @private
+     */
+    static _getGLRenderer(width, height) {
+        // Create or resize renderer as needed
+        if (!Sphere3D._glRenderer) {
+            Sphere3D._glRenderer = new WebGLRenderer(width, height);
+            Sphere3D._glRendererSize = { width, height };
+        } else if (
+            Sphere3D._glRendererSize.width !== width ||
+            Sphere3D._glRendererSize.height !== height
+        ) {
+            Sphere3D._glRenderer.resize(width, height);
+            Sphere3D._glRendererSize = { width, height };
+        }
+        return Sphere3D._glRenderer;
+    }
+
     /**
      * Create a 3D sphere
      * @param {number} radius - Sphere radius
@@ -36,6 +75,9 @@ export class Sphere3D extends Shape {
      * @param {number} [options.segments=20] - Number of latitude/longitude segments
      * @param {string} [options.stroke] - Wireframe line color
      * @param {number} [options.lineWidth=1] - Wireframe line width
+     * @param {boolean} [options.useShader=false] - Use WebGL shader rendering
+     * @param {string} [options.shaderType='star'] - Shader type: 'star', 'blackHole', 'rockyPlanet', 'gasGiant'
+     * @param {Object} [options.shaderUniforms={}] - Custom shader uniforms
      */
     constructor(radius, options = {}) {
         super(options);
@@ -45,7 +87,13 @@ export class Sphere3D extends Shape {
         this.debug = options.debug ?? false;
         this.segments = options.segments ?? 20;
 
-        // Generate sphere geometry
+        // WebGL shader options
+        this.useShader = options.useShader ?? false;
+        this.shaderType = options.shaderType ?? "star";
+        this.shaderUniforms = options.shaderUniforms ?? {};
+        this._shaderInitialized = false;
+
+        // Generate sphere geometry (for Canvas 2D fallback)
         this._generateGeometry();
     }
 
@@ -56,6 +104,125 @@ export class Sphere3D extends Shape {
     setCamera(camera) {
         this.camera = camera;
         return this;
+    }
+
+    /**
+     * Update shader uniforms dynamically
+     * @param {Object} uniforms - Uniform name -> value pairs
+     */
+    setShaderUniforms(uniforms) {
+        Object.assign(this.shaderUniforms, uniforms);
+        return this;
+    }
+
+    /**
+     * Get fragment shader source for the current shader type
+     * @returns {string}
+     * @private
+     */
+    _getFragmentShader() {
+        switch (this.shaderType) {
+            case "star":
+                return SPHERE_SHADERS.star;
+            case "blackHole":
+                return SPHERE_SHADERS.blackHole;
+            case "rockyPlanet":
+                return SPHERE_SHADERS.rockyPlanet;
+            case "gasGiant":
+                return SPHERE_SHADERS.gasGiant;
+            default:
+                return SPHERE_SHADERS.star;
+        }
+    }
+
+    /**
+     * Initialize or update the WebGL shader
+     * @param {number} renderWidth - Render width
+     * @param {number} renderHeight - Render height
+     * @private
+     */
+    _initShader(renderWidth, renderHeight) {
+        const gl = Sphere3D._getGLRenderer(renderWidth, renderHeight);
+        if (!gl || !gl.isAvailable()) {
+            this.useShader = false; // Fallback to Canvas 2D
+            return;
+        }
+
+        // Initialize shader program
+        const programName = `sphere_${this.shaderType}`;
+        gl.useProgram(programName, SPHERE_SHADERS.vertex, this._getFragmentShader());
+        this._shaderInitialized = true;
+    }
+
+    /**
+     * Render using WebGL shader
+     * @param {CanvasRenderingContext2D} ctx - 2D context to composite onto
+     * @param {number} screenX - Screen X position
+     * @param {number} screenY - Screen Y position
+     * @param {number} screenRadius - Radius on screen
+     * @private
+     */
+    _renderWithShader(ctx, screenX, screenY, screenRadius) {
+        // Calculate render size (larger for glow effects and to prevent clipping)
+        const padding = screenRadius * 1.0;  // 100% padding for glow/halo
+        const renderSize = Math.ceil((screenRadius + padding) * 2);
+
+        const gl = Sphere3D._getGLRenderer(renderSize, renderSize);
+        if (!gl || !gl.isAvailable()) {
+            return false;
+        }
+
+        // Initialize shader if needed
+        if (!this._shaderInitialized) {
+            this._initShader(renderSize, renderSize);
+        }
+
+        // Use the program
+        const programName = `sphere_${this.shaderType}`;
+        gl.useProgram(programName, SPHERE_SHADERS.vertex, this._getFragmentShader());
+
+        // Clear with transparency
+        gl.clear(0, 0, 0, 0);
+
+        // Set common uniforms
+        gl.setUniforms({
+            uTime: performance.now() / 1000,
+            uResolution: [renderSize, renderSize],
+            uCameraRotation: [
+                this.camera?.rotationX ?? 0,
+                this.camera?.rotationY ?? 0,
+                this.camera?.rotationZ ?? 0,
+            ],
+        });
+
+        // Set shader-specific uniforms
+        gl.setUniforms(this.shaderUniforms);
+
+        // Handle color uniforms (convert hex to RGB)
+        for (const [name, value] of Object.entries(this.shaderUniforms)) {
+            if (typeof value === "string" && value.startsWith("#")) {
+                gl.setColorUniform(name, value);
+            }
+        }
+
+        // Render
+        gl.render();
+
+        // Composite onto 2D canvas with circular clip to prevent box artifacts
+        const drawX = screenX - renderSize / 2;
+        const drawY = screenY - renderSize / 2;
+
+        // Apply circular clip path
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, renderSize / 2, 0, Math.PI * 2);
+        ctx.clip();
+
+        gl.compositeOnto(ctx, drawX, drawY, renderSize, renderSize);
+
+        ctx.restore();
+
+        return true;
     }
 
     /**
@@ -185,9 +352,53 @@ export class Sphere3D extends Shape {
             return;
         }
 
+        // WebGL shader rendering path
+        if (this.useShader && !this.debug) {
+            // Project sphere center to get screen position and scale
+            const projected = this.camera.project(
+                this.x || 0,
+                this.y || 0,
+                this.z || 0
+            );
+
+            // Calculate screen radius based on perspective
+            const scale = this.camera.perspective / (this.camera.perspective + projected.z);
+            const screenRadius = this.radius * scale;
+
+            // Get the current canvas transform to find the scene center
+            // The Scene3D translates to (game.width/2, game.height/2)
+            // We need absolute screen coordinates for WebGL compositing
+            const ctx = Painter.ctx;
+            const transform = ctx.getTransform();
+            const sceneX = transform.e;  // Translation X (scene center)
+            const sceneY = transform.f;  // Translation Y (scene center)
+
+            // Render with shader at absolute screen position
+            // Reset transform temporarily for compositing
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            const success = this._renderWithShader(
+                ctx,
+                sceneX + projected.x,
+                sceneY + projected.y,
+                screenRadius
+            );
+            ctx.restore();
+
+            if (success) {
+                return; // Successfully rendered with shader
+            }
+            // Fall through to Canvas 2D if shader failed
+        }
+
         // Project all vertices and normals through the camera
+        // Add position offset so sphere appears at correct world position
         const projectedVertices = this.vertices.map((v) => {
-            const projected = this.camera.project(v.x, v.y, v.z);
+            const projected = this.camera.project(
+                v.x + (this.x || 0),
+                v.y + (this.y || 0),
+                v.z + (this.z || 0)
+            );
 
             // Rotate normals using the same rotation sequence as Camera3D.project
             // (Z, then Y, then X)
