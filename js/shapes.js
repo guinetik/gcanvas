@@ -37,6 +37,8 @@ import {
   Heart,
   Group,
   TextShape,
+  applyAnchor,
+  Position,
 } from "/gcanvas.es.min.js";
 
 class ShapeGalleryGame extends Game {
@@ -44,6 +46,8 @@ class ShapeGalleryGame extends Game {
     super(canvas);
     this.backgroundColor = "#fff";
     this.enableFluidSize();
+    this.cellSize = 120;
+    this.maxColumns = 5;
   }
 
   init() {
@@ -142,7 +146,7 @@ class ShapeGalleryGame extends Game {
         name: "Line",
         class: Line,
         args: [40],
-        options: { stroke: "black", lineWidth: 3},
+        options: { stroke: "black", lineWidth: 3 },
       },
       {
         name: "Bezier",
@@ -393,25 +397,18 @@ class ShapeGalleryGame extends Game {
     );
     // Title
     this.pipeline.add(
-      new Text(this, "GCanvas Shape Gallery", {
-        x: this.canvas.width / 2,
-        y: 30,
+      applyAnchor(new Text(this, "GCanvas Shape Gallery", {
         font: "bold 24px monospace",
         color: "#222",
-        align: "center",
-        baseline: "top",
-      })
+      }), { anchor: Position.TOP_CENTER, anchorOffsetY: 30 })
     );
+
     // Subtitle
     this.pipeline.add(
-      new Text(this, "Mouse over any shape to rotate or animate it", {
-        x: this.canvas.width / 2,
-        y: 60,
+      applyAnchor(new Text(this, "Mouse over any shape to rotate or animate it", {
         font: "16px monospace",
         color: "#666",
-        align: "center",
-        baseline: "top",
-      })
+      }), { anchor: Position.TOP_CENTER, anchorOffsetY: 60 })
     );
     this.events.on("click", (e) => {
       this.gallery.children.forEach((go) => {
@@ -446,10 +443,21 @@ class ShapeGalleryGame extends Game {
     this.createGallery();
     this.onResize();
   }
-  
+
   onResize() {
-    if(this.gallery) {
-      // Use Transform API for positioning
+    if (this.gallery) {
+      // Calculate responsive columns based on available width
+      const margin = 40; // Horizontal margin
+      const availableWidth = this.canvas.width - margin;
+      const columns = Math.min(this.maxColumns, Math.max(1, Math.floor(availableWidth / this.cellSize)));
+
+      if (this.gallery.columns !== columns) {
+        this.gallery.columns = columns;
+        // Trigger layout update
+        this.gallery.markBoundsDirty();
+      }
+
+      // Use Transform API for positioning (centered)
       this.gallery.transform.position(
         Math.round(this.canvas.width / 2),
         Math.round(this.canvas.height / 2)
@@ -458,14 +466,15 @@ class ShapeGalleryGame extends Game {
   }
 
   createGallery() {
-    const cellSize = 120;
+    const cellSize = this.cellSize;
+    const margin = 40;
+    const initialColumns = Math.min(this.maxColumns, Math.max(1, Math.floor((this.canvas.width - margin) / cellSize)));
+
     const gallery = new TileLayout(this, {
       debug: true,
       debugColor: "grey",
-      columns: 5,
-      debug: true,
-      width: cellSize * 5,
-      height: cellSize * 5,
+      columns: initialColumns,
+      spacing: 10,
     });
 
     this.shapeEntries.forEach((entry, index) => {
@@ -521,7 +530,7 @@ class ShapeGalleryGame extends Game {
         game.canvas.style.cursor = "pointer";
         Tweenetik.to(
           group,
-          { scaleX: 1.3, scaleY: 1.3},
+          { scaleX: 1.3, scaleY: 1.3 },
           1, // duration
           Easing.easeOutElastic,
           { onComplete: () => (go.tweening = false) }
@@ -532,7 +541,7 @@ class ShapeGalleryGame extends Game {
         game.canvas.style.cursor = "default";
         Tweenetik.to(
           group, // the shape to scale
-          { scaleX: 1, scaleY: 1},
+          { scaleX: 1, scaleY: 1 },
           1, // duration
           Easing.easeOutElastic
         );

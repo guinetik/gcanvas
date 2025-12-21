@@ -13,6 +13,10 @@ export class BlackHole extends GameObject {
         this.feedingPulse = 0;      // Temporary glow boost when consuming
         this.totalConsumed = 0;     // Track total mass consumed
 
+        // Rotation - black holes spin!
+        this.rotation = 0;
+        this.rotationSpeed = options.rotationSpeed ?? 2.9; // Slow, ominous spin
+
         // Use WebGL shaders for rendering
         this.useShader = options.useShader ?? true;
     }
@@ -42,6 +46,7 @@ export class BlackHole extends GameObject {
         this.awakeningLevel = 0;
         this.feedingPulse = 0;
         this.totalConsumed = 0;
+        this.rotation = 0;
         this.isStabilizing = false;  // Reset stabilization state
     }
 
@@ -101,6 +106,7 @@ export class BlackHole extends GameObject {
                 shaderUniforms: {
                     uAwakeningLevel: awakeFactor,
                     uFeedingPulse: pulseFactor,
+                    uRotation: this.rotation,
                 },
             });
         } else {
@@ -111,6 +117,7 @@ export class BlackHole extends GameObject {
                 this.core.setShaderUniforms({
                     uAwakeningLevel: awakeFactor,
                     uFeedingPulse: pulseFactor,
+                    uRotation: this.rotation,
                 });
             }
             this.core._generateGeometry();
@@ -119,6 +126,10 @@ export class BlackHole extends GameObject {
 
     update(dt) {
         super.update(dt);
+
+        // Spin the black hole - rotation speeds up when feeding
+        const spinMultiplier = 1 + this.feedingPulse * 2 + this.awakeningLevel * 0.5;
+        this.rotation += this.rotationSpeed * spinMultiplier * dt;
 
         // Decay feeding pulse over time
         if (this.feedingPulse > 0) {

@@ -8,7 +8,7 @@ import {
   Tweenetik,
   Easing,
 } from "/gcanvas.es.min.js";
-import { StarField } from "../blackhole/starfield.obj.js";
+import { LensedStarfield } from "./lensedstarfield.js";
 import { polarToCartesian } from "/gcanvas.es.min.js";
 import { keplerianOmega, decayingOrbitalRadius } from "/gcanvas.es.min.js";
 import { applyAnchor } from "/gcanvas.es.min.js";
@@ -21,7 +21,7 @@ export class TDEDemo extends Game {
   constructor(canvas) {
     super(canvas);
     this.enableFluidSize();
-    this.backgroundColor = "#090909";
+    this.backgroundColor = "#020202";
   }
 
   updateScaledSizes() {
@@ -41,12 +41,6 @@ export class TDEDemo extends Game {
     });
     this.camera.enableMouseControl(this.canvas);
 
-    this.starField = new StarField(this, {
-      camera: this.camera,
-      starCount: CONFIG.sceneOptions.starCount,
-    });
-    this.pipeline.add(this.starField);
-
     this.scene = new BlackHoleScene(this, {
       camera: this.camera,
       x: this.width / 2,
@@ -56,6 +50,16 @@ export class TDEDemo extends Game {
 
     // Initialize scene sizes and positions before first frame
     this.scene.onResize();
+
+    // Create lensed starfield AFTER scene so we can pass the black hole reference
+    this.starField = new LensedStarfield(this, {
+      camera: this.camera,
+      starCount: CONFIG.sceneOptions.starCount,
+      blackHole: this.scene.bh,
+      lensingStrength: 0, // Starts at 0, ramps up during disruption
+    });
+    this.pipeline.add(this.starField);
+    this.pipeline.sendToBack(this.starField);
 
     // Flash overlay for dramatic collision moment
     this.flashIntensity = 0;
@@ -205,10 +209,55 @@ export class TDEDemo extends Game {
     // Reset flash
     this.flashIntensity = 0;
 
+    // Reset starfield lensing to subtle base level
+    if (this.starField) {
+      this.starField.lensingStrength = 0.15;
+    }
+
     // Hide replay button
     if (this.replayButton) this.replayButton.visible = false;
 
     this.fsm.setState("approach");
+  }
+
+  /**
+   * Centralized particle emission with interpolation and angular detail
+   */
+  emitStreamParticles(dt, rate, phiStep) {
+    const star = this.scene.star;
+    const stream = this.scene.stream;
+
+    if (!stream || star.mass <= 0) return;
+
+    // Calculate rotation step based on star's current rotation speed
+    const massRatio = (star.mass || 1) / (star.initialMass || 1);
+    const spinUpFactor = 1 + (1 - massRatio) * 2;
+    const rotationSpeed = (CONFIG.star.rotationSpeed ?? 0.5) * spinUpFactor;
+    const rotationStep = rotationSpeed * dt;
+
+    for (let i = 0; i < rate; i++) {
+      const t = i / rate;
+
+      // 1. Interpolate angle (phi) and radius for perfect curved arc
+      const interpPhi = star.phi - (phiStep * t);
+      const interpRadius = star.orbitalRadius;
+
+      // 2. Interpolate rotation for angular detail at the source
+      const interpRotation = star.rotation - (rotationStep * t);
+
+      // 3. Convert to Cartesian coordinates
+      const pos = polarToCartesian(interpRadius, interpPhi);
+
+      // 4. Emit! Use star.y to include vertical wobble from chaotic orbit
+      // Scale radius up to match actual visual star edge
+      const bodyRadius = star.currentRadius * 1.5;
+      this.scene.stream.emit(
+        pos.x, pos.y || 0, pos.z,
+        star.velocityX, star.velocityY, star.velocityZ,
+        bodyRadius,
+        interpRotation
+      );
+    }
   }
 
   update(dt) {
@@ -265,6 +314,25 @@ export class TDEDemo extends Game {
       }
     }
 
+    // === GRAVITATIONAL LENSING RAMP ===
+    // Black holes always warp spacetime - subtle base, INTENSE when feeding
+    if (this.starField) {
+      const baseLensing = 0.15;  // Subtle base - dormant BH
+      if (state === "approach") {
+        this.starField.lensingStrength = baseLensing;
+      } else if (state === "stretch") {
+        // Gentle ramp: 0.15 -> 0.4
+        this.starField.lensingStrength = baseLensing + progress * 0.25;
+      } else if (state === "disrupt") {
+        // AGGRESSIVE ramp: 0.4 -> 2.0 (goes past 1.0 for dramatic effect)
+        const disruptProgress = Math.min(1, this.fsm.stateTime / CONFIG.durations.disrupt);
+        this.starField.lensingStrength = 0.4 + disruptProgress * 1.6;
+      } else {
+        // Max lensing during accrete/flare/stable
+        this.starField.lensingStrength = 2.0;
+      }
+    }
+
     // Approach phase: Stable wide orbit - constant radius
     if (state === "approach") {
       const omega = keplerianOmega(star.orbitalRadius, bh.mass, 1.0, star.initialOrbitalRadius);
@@ -285,7 +353,8 @@ export class TDEDemo extends Game {
       );
 
       const omega = keplerianOmega(star.orbitalRadius, bh.mass, 1.0, star.initialOrbitalRadius);
-      star.phi += omega * dt * CONFIG.star.orbitSpeed * (1 + stretchProgress * 0.5);
+      const phiStep = omega * dt * CONFIG.star.orbitSpeed * 1.1;
+      star.phi += phiStep;
 
       const pos = polarToCartesian(star.orbitalRadius, star.phi);
       star.x = pos.x;
@@ -293,16 +362,7 @@ export class TDEDemo extends Game {
 
       // Start emitting particles during stretch (slowly at first)
       if (this.scene.stream && stretchProgress > 0.3) {
-        const emitRate = 2 + stretchProgress * 8; // 2-10 particles per frame
-        for (let i = 0; i < emitRate; i++) {
-          if (Math.random() < 0.5) { // 50% chance each
-            this.scene.stream.emit(
-              star.x, star.y || 0, star.z,
-              star.velocityX, star.velocityY, star.velocityZ,
-              star.currentRadius
-            );
-          }
-        }
+        this.emitStreamParticles(dt, 15, phiStep);
       }
     }
     // Disrupt phase: Rapid decay with mass transfer
@@ -319,32 +379,43 @@ export class TDEDemo extends Game {
       );
 
       // Exponential decay of orbital radius
-      star.orbitalRadius = decayingOrbitalRadius(
+      const baseRadius = decayingOrbitalRadius(
         stretchEndRadius,
         CONFIG.star.decayRate,
         disruptProgress * 5
       );
 
-      // Angular velocity increases as orbit shrinks (Kepler's 3rd law)
+      // === ORBITAL CHAOS ===
+      // As the star loses mass asymmetrically, its orbit becomes unstable
+      // Subtle at first, builds gradually
+      const chaos = 0.1 + disruptProgress * 0.5;  // Reduced: starts at 10%, builds to 60%
+      const time = this.fsm.stateTime;
+
+      // Radial wobble - tidal forces pull the star in and out
+      const radialWobble = Math.sin(time * 2.5) * chaos * baseRadius * 0.15
+        + Math.sin(time * 5.8) * chaos * baseRadius * 0.08;
+      star.orbitalRadius = baseRadius + radialWobble;
+
+      // Angular velocity - slight jitter in orbital speed
       const omega = keplerianOmega(star.orbitalRadius, bh.mass, 1.0, star.initialOrbitalRadius);
-      star.phi += omega * dt * CONFIG.star.orbitSpeed * (1 + disruptProgress * 2);
+      const angularJitter = Math.sin(time * 3.7) * chaos * 0.2;
+      const phiStep = omega * dt * CONFIG.star.orbitSpeed * (1 + disruptProgress * 2 + angularJitter);
+      star.phi += phiStep;
 
       const pos = polarToCartesian(star.orbitalRadius, star.phi);
+
+      // Vertical wobble - star bobs out of orbital plane
+      const verticalWobble = Math.sin(time * 1.7) * chaos * baseRadius * 0.12
+        + Math.cos(time * 3.9) * chaos * baseRadius * 0.06;
+
       star.x = pos.x;
+      star.y = verticalWobble;
       star.z = pos.z;
 
       // Emit particles throughout disrupt phase (more than stretch)
       if (this.scene.stream && star.mass > 0) {
-        const emitRate = 10 + disruptProgress * 20; // 10-30 particles per frame
-        for (let i = 0; i < emitRate; i++) {
-          if (Math.random() < 0.6) { // 60% chance each
-            this.scene.stream.emit(
-              star.x, star.y || 0, star.z,
-              star.velocityX, star.velocityY, star.velocityZ,
-              star.currentRadius
-            );
-          }
-        }
+        const emitRate = 10 + Math.floor(disruptProgress * 30);
+        this.emitStreamParticles(dt, emitRate, phiStep);
       }
 
       // Mass transfer starts at configured percentage of disrupt phase
@@ -353,6 +424,9 @@ export class TDEDemo extends Game {
 
         star.mass = Math.max(0, star.mass - transferRate);
         bh.mass += transferRate;
+
+        // AWAKEN the black hole as it feeds! This triggers the glow
+        bh.addConsumedMass(transferRate * 0.5);
 
         // Force visual updates to reflect mass changes
         star.updateVisual();

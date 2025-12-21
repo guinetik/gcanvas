@@ -14,24 +14,24 @@ import { CONFIG } from "./config.js";
 // Stream-specific config
 const STREAM_CONFIG = {
     gravity: 120000,        // Strong gravity (linear falloff G/r)
-    maxParticles: 4000,
-    particleLifetime: 8,
+    maxParticles: 5000,
+    particleLifetime: 1000,
 
     // Velocity inheritance - how much of star's velocity particles get
     // Lower = particles emit more "from" the star, not ahead of it
-    velocityInheritance: 0.15998746,  // 10% inheritance
+    velocityInheritance: 0.10638684,  // 10% inheritance
 
     // Inward velocity - particles should FALL toward BH, not orbit
     // This is the key to making particles flow INTO the black hole
-    inwardVelocity: 80,     // Base inward velocity toward BH
-    inwardSpread: 10,       // Random spread on inward velocity
+    inwardVelocity: 50,     // Base inward velocity toward BH
+    inwardSpread: 30,       // Random spread on inward velocity
 
     // Tangent spread for S-shape (reduced - we want mostly inward flow)
-    tangentSpread: 30,
+    tangentSpread: 10,
 
     // Emission offset: 1.0 = star's BH-facing edge (L1 Lagrange point)
     // Positive = toward BH, negative = away from BH
-    emissionOffset: PI * -1,  // Emit from the tidal bulge facing the BH
+    emissionOffset: PI * -1.121,  // Emit from the tidal bulge facing the BH
 
     // Drag factor - removes angular momentum so orbits decay
     // 1.0 = no drag, 0.99 = slight drag, 0.95 = strong drag
@@ -52,6 +52,10 @@ export class TidalStream extends GameObject {
 
         this.camera = options.camera;
         this.bhRadius = options.bhRadius ?? 50;
+
+        // Callbacks for particle lifecycle
+        this.onParticleConsumed = options.onParticleConsumed ?? null;
+        this.onParticleCaptured = options.onParticleCaptured ?? null;
 
         // Particle array - simple flat structure
         this.particles = [];
@@ -76,8 +80,9 @@ export class TidalStream extends GameObject {
      * @param {number} vy - Star velocity y
      * @param {number} vz - Star velocity z
      * @param {number} starRadius - Current star radius (for position spread)
+     * @param {number} starRotation - Current star rotation (for angular offset)
      */
-    emit(x, y, z, vx, vy, vz, starRadius) {
+    emit(x, y, z, vx, vy, vz, starRadius, starRotation = 0) {
         if (this.particles.length >= STREAM_CONFIG.maxParticles) return;
 
         const dist = Math.sqrt(x * x + z * z) || 1;
@@ -86,13 +91,17 @@ export class TidalStream extends GameObject {
         const radialX = -x / dist;
         const radialZ = -z / dist;
 
-        // Emit from POLE of star facing BH
+        // Combine radial direction toward BH with star's internal rotation
+        // This adds a "tornado" or "spiral" effect at the base of the stream
+        const angleToBH = Math.atan2(radialZ, radialX);
+        const emissionAngle = angleToBH + starRotation;
+
         const edgeOffset = starRadius * STREAM_CONFIG.emissionOffset;
 
-        // Emit position: offset along radial direction + random spread
-        const emitX = x + radialX * edgeOffset + (Math.random() - 0.5) * starRadius * 0.25;
+        // Emit position: offset along the ROTATED radial direction
+        const emitX = x + Math.cos(emissionAngle) * edgeOffset + (Math.random() - 0.5) * starRadius * 0.25;
         const emitY = y + (Math.random() - 0.5) * starRadius * 0.3;
-        const emitZ = z + radialZ * edgeOffset + (Math.random() - 0.5) * starRadius * 0.25;
+        const emitZ = z + Math.sin(emissionAngle) * edgeOffset + (Math.random() - 0.5) * starRadius * 0.25;
 
         // Tangent is perpendicular to radial - gives the orbital direction
         const tangentX = -radialZ;
@@ -110,9 +119,9 @@ export class TidalStream extends GameObject {
         const tangent = (Math.random() - 0.5) * STREAM_CONFIG.tangentSpread;
 
         this.particles.push({
-            x: emitX - tangent,
-            y: emitY - tangent,
-            z: emitZ + vy,
+            x: emitX,
+            y: emitY,
+            z: emitZ,
 
             // Velocity = inherited + INWARD toward BH + small tangent spread
             vx: inheritedVx + radialX * inward + tangentX * tangent,
@@ -128,8 +137,10 @@ export class TidalStream extends GameObject {
     }
 
     updateDiskBounds(innerRadius, outerRadius) {
-        this.bhRadius = innerRadius;
-        //this.bhRadius = outerRadius;
+        // Don't override bhRadius here - it's set by updateBHRadius
+        // We only care about disk bounds for potential capture detection
+        this.diskInnerRadius = innerRadius;
+        this.diskOuterRadius = outerRadius;
     }
 
     /**
@@ -138,7 +149,9 @@ export class TidalStream extends GameObject {
     update(dt) {
         super.update(dt);
 
-        const accretionRadius = this.bhRadius * .786465;
+        // Consume particles at the BH's visual edge (not inside it)
+        // Use 1.0x so particles disappear right at the event horizon
+        const accretionRadius = this.bhRadius * 1.1;
 
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
@@ -154,18 +167,22 @@ export class TidalStream extends GameObject {
             // Distance to BH (at origin)
             const dist = Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
 
-            // Accreted?
+            // Accreted by black hole?
             if (dist < accretionRadius) {
                 this.particles.splice(i, 1);
+                // Trigger callback - feeds the black hole's glow!
+                if (this.onParticleConsumed) {
+                    this.onParticleConsumed();
+                }
                 continue;
             }
 
             // Gravity: F = G/r (linear falloff for better visuals)
             // Linear falloff keeps gravity significant at larger distances
             const gravity = STREAM_CONFIG.gravity / dist;
-            const dirX = -p.x / dist;
-            const dirY = -p.y / dist;
-            const dirZ = -p.z / dist;
+            const dirX = -p.x * 2 / dist;
+            const dirY = -p.y * 2 / dist;
+            const dirZ = -p.z * 2 / dist;
 
             // Apply gravity acceleration
             p.vx += dirX * gravity * dt;

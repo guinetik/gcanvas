@@ -6,11 +6,11 @@ export const CONFIG = {
 
     // Phase durations (seconds)
     durations: {
-        approach: 4.0,      // Stable wide orbit
-        stretch: 5.0,       // Orbit begins to decay
+        approach: 10.0,      // Stable wide orbit
+        stretch: 10.0,       // Orbit begins to decay
         disrupt: 30.0,      // Mass transfer (event-based exit)
         accrete: 2.0,       // Debris accretion
-        flare: 3.0,        // Jets firing - observable from across the universe
+        flare: 8.0,         // Jets firing - spectacular cosmic event!
         stable: Infinity,   // Final stable state
     },
 
@@ -23,13 +23,13 @@ export const CONFIG = {
     },
     star: {
         initialMass: 25,
-        color: "#FFD700",
-        initialOrbitRadius: 0.5, // Wide orbit - star drifted here from the cosmos
+        color: "#FF6030",  // Deep red-orange (cooler K/M type star)
+        initialOrbitRadius: 0.4, // Wide orbit - star drifted here from the cosmos
         orbitSpeed: 0.35,
         decayRate: 0.4, // Decay factor for exponential radius reduction
         massTransferStart: 0.1, // Start mass transfer at 50% of decay phase
         rotationSpeed: 0.71, // Self-rotation speed (radians/second) - visible rotation
-        temperature: 5500, // Kelvin (Sun is ~5778K)
+        temperature: 3800, // Kelvin - cool red dwarf, heats up dramatically under tidal stress
     },
     sceneOptions: {
         starCount: 3000,
