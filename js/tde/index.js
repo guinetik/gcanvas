@@ -8,6 +8,7 @@ import {
   Tweenetik,
   Easing,
 } from "/gcanvas.es.min.js";
+import { FPSCounter } from "/gcanvas.es.min.js";
 import { LensedStarfield } from "./lensedstarfield.js";
 import { polarToCartesian } from "/gcanvas.es.min.js";
 import { keplerianOmega, decayingOrbitalRadius } from "/gcanvas.es.min.js";
@@ -64,12 +65,25 @@ export class TDEDemo extends Game {
     // Flash overlay for dramatic collision moment
     this.flashIntensity = 0;
 
-    // Replay button (hidden until stable state)
+    // Phase Info Label (bottom left)
+    this.infoLabel = new Text(this, "", {
+      color: "#888",
+      font: "14px monospace",
+    });
+    applyAnchor(this.infoLabel, {
+      anchor: Position.BOTTOM_LEFT,
+      anchorOffsetX: -60,
+      anchorMargin: 20,
+    });
+    this.infoLabel.zIndex = 100;
+    this.pipeline.add(this.infoLabel);
+
+    // Replay button (above phase text)
     this.replayButton = new Button(this, {
       width: 120,
-      height: 40,
+      height: 32,
       text: "▶ Replay",
-      font: "16px monospace",
+      font: "14px monospace",
       colorDefaultBg: "rgba(0, 0, 0, 0.6)",
       colorDefaultStroke: "#666",
       colorDefaultText: "#aaa",
@@ -79,28 +93,27 @@ export class TDEDemo extends Game {
       colorPressedBg: "rgba(50, 50, 50, 0.9)",
       colorPressedStroke: "#ffaa66",
       colorPressedText: "#ffaa66",
-      debug: true,
       onClick: () => this.restart(),
     });
     applyAnchor(this.replayButton, {
+      anchor: Position.BOTTOM_LEFT,
+      anchorMargin: 20,
+      anchorOffsetY: -30, // Above the phase text
+    });
+    this.replayButton.zIndex = 100;
+    this.pipeline.add(this.replayButton);
+
+    // FPS Counter (bottom right)
+    this.fpsCounter = new FPSCounter(this, {
+      font: "12px monospace",
+      color: "#666",
+    });
+    applyAnchor(this.fpsCounter, {
       anchor: Position.BOTTOM_RIGHT,
       anchorMargin: 20,
     });
-    this.replayButton.zIndex = 100;
-    //this.replayButton.visible = false; // Hidden until stable
-    this.pipeline.add(this.replayButton);
-
-    // Phase Info Label
-    this.infoLabel = new Text(this, "", {
-      color: "#888",
-      font: "14px monospace",
-    });
-    applyAnchor(this.infoLabel, {
-      anchor: Position.BOTTOM_LEFT,
-      anchorOffsetX: -60
-    });
-    this.infoLabel.zIndex = 100;
-    this.pipeline.add(this.infoLabel);
+    this.fpsCounter.zIndex = 100;
+    this.pipeline.add(this.fpsCounter);
 
     this.initStateMachine();
 
