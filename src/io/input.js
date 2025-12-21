@@ -19,19 +19,24 @@ export class Input {
 
   static _onDown = (e) => {
     Input.down = true;
-    //this.logger.log("mousedown", e.offsetX, e.offsetY);
     Input._setPosition(e.offsetX, e.offsetY);
+    Object.defineProperty(e, "x", { value: e.offsetX, configurable: true });
+    Object.defineProperty(e, "y", { value: e.offsetY, configurable: true });
     Input.game.events.emit("inputdown", e);
   };
 
   static _onUp = (e) => {
     Input.down = false;
     Input._setPosition(e.offsetX, e.offsetY);
+    Object.defineProperty(e, "x", { value: e.offsetX, configurable: true });
+    Object.defineProperty(e, "y", { value: e.offsetY, configurable: true });
     Input.game.events.emit("inputup", e);
   };
 
   static _onMove = (e) => {
     Input._setPosition(e.offsetX, e.offsetY);
+    Object.defineProperty(e, "x", { value: e.offsetX, configurable: true });
+    Object.defineProperty(e, "y", { value: e.offsetY, configurable: true });
     Input.game.events.emit("inputmove", e);
   };
 
@@ -39,7 +44,11 @@ export class Input {
     const touch = e.touches[0];
     const rect = Input.game.canvas.getBoundingClientRect();
     Input.down = true;
-    Input._setPosition(touch.clientX - rect.left, touch.clientY - rect.top);
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    Input._setPosition(x, y);
+    Object.defineProperty(e, "x", { value: x, configurable: true });
+    Object.defineProperty(e, "y", { value: y, configurable: true });
     Input.game.events.emit("inputdown", e);
   };
 
@@ -51,7 +60,11 @@ export class Input {
   static _onTouchMove = (e) => {
     const touch = e.touches[0];
     const rect = Input.game.canvas.getBoundingClientRect();
-    Input._setPosition(touch.clientX - rect.left, touch.clientY - rect.top);
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    Input._setPosition(x, y);
+    Object.defineProperty(e, "x", { value: x, configurable: true });
+    Object.defineProperty(e, "y", { value: y, configurable: true });
     Input.game.events.emit("inputmove", e);
   };
 }
