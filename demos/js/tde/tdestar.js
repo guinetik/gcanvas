@@ -109,21 +109,21 @@ export class Star extends GameObject {
         let dirX = -this.x / dist;
         let dirZ = -(this.z || 0) / dist;
         let proximityFactor = 0;
-
-        if (collapseProgress > 0.4 || this.angularVelocity > 1.5) {
+        this.tidalStretch = 0; //disabling for now
+        /*if (collapseProgress > 0.1 || this.angularVelocity > 1.3) {
             // Star is collapsing fast or spinning - disable deformation
             this.tidalStretch = 0;
         } else {
             // Normal deformation calculation
-            proximityFactor = Math.max(0, 1 - dist / this.initialOrbitalRadius);
+             proximityFactor = Math.max(0, 1 - dist / this.initialOrbitalRadius);
             const externalStretch = this.tidalProgress * 0.6;
 
             this.tidalStretch = Math.max(
                 externalStretch,
                 proximityFactor * 0.8 + collapseProgress * 0.5
             );
-            this.tidalStretch = Math.min(1.5, this.tidalStretch);
-        }
+            this.tidalStretch = Math.min(1.5, this.tidalStretch); 
+        }*/
 
         // === BREATHING (Slow, ominous expansion/contraction) ===
         // Very slow rhythm - like a dying star's final gasps

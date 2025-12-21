@@ -12,12 +12,12 @@ import { GameObject, Painter } from "../../../src/index.js";
 // Stream-specific config
 const STREAM_CONFIG = {
     gravity: 120000,        // Strong gravity (linear falloff G/r)
-    maxParticles: 5000,
-    particleLifetime: 10,
+    maxParticles: 3000,
+    particleLifetime: 1000,
 
     // Velocity inheritance - how much of star's velocity particles get
     // Lower = particles emit more "from" the star, not ahead of it
-    velocityInheritance: 0.20638684,  // 10% inheritance
+    velocityInheritance: 0.30638684,  // 10% inheritance
 
     // Inward velocity - particles should FALL toward BH, not orbit
     // This is the key to making particles flow INTO the black hole
@@ -25,7 +25,7 @@ const STREAM_CONFIG = {
     inwardSpread: 12,       // Random spread on inward velocity
 
     // Tangent spread for S-shape - higher = more spread along orbit direction
-    tangentSpread: Math.PI * 100,      // Increased for visible S-shape
+    tangentSpread: Math.PI * 120,      // Increased for visible S-shape
 
     // Emission offset: 1.0 = star's BH-facing edge (L1 Lagrange point)
     // Positive = toward BH, negative = away from BH
@@ -40,8 +40,8 @@ const STREAM_CONFIG = {
     colorCool: { r: 180, g: 40, b: 15 },    // Darker red near BH
 
     // Particle size
-    sizeMin: .5,
-    sizeMax: 1.5,
+    sizeMin: 1,
+    sizeMax: 3,
 };
 
 export class TidalStream extends GameObject {

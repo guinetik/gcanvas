@@ -278,7 +278,8 @@ export class TDEDemo extends Game {
 
     if (!stream || star.mass <= 0) return;
 
-    const bodyRadius = star.currentRadius * 1.5;
+    // Use minimum of current or 50% of base radius to prevent emission collapse as star shrinks
+    const bodyRadius = star.currentRadius * 2;
 
     // Use star's actual position (set by update loop before this is called)
     const starX = star.x;
@@ -290,9 +291,8 @@ export class TDEDemo extends Game {
     const tangentX = -starZ / dist;
     const tangentZ = starX / dist;
 
-    // Orbital speed = angular velocity * radius
-    const omega = keplerianOmega(star.orbitalRadius, bh.mass, 1.0, star.initialSemiMajorAxis || star.initialOrbitalRadius);
-    const orbitalSpeed = omega * star.orbitalRadius * CONFIG.star.orbitSpeed;
+    // Use effective orbit speed from star (set per-phase) for consistent perspective
+    const orbitalSpeed = star.effectiveOrbitSpeed || (star.orbitalRadius * CONFIG.star.orbitSpeed);
     const vx = tangentX * orbitalSpeed;
     const vz = tangentZ * orbitalSpeed;
 
@@ -307,13 +307,13 @@ export class TDEDemo extends Game {
 
       // Perspective factor: closer to camera = scale down position slightly
       // farther = scale up slightly (to compensate for projection shrinking)
-      const perspectiveFactor = 1 + (zCam / (this.baseScale * 2)) * 0.01;
+      const perspectiveFactor = 1 + (zCam / (orbitalSpeed)) * dt * 0.01;
 
       const emitX = starX * perspectiveFactor;
       const emitZ = starZ * perspectiveFactor;
 
       // Spaghetti spread: larger radius for more dispersed particles
-      const spreadRadius = bodyRadius * 1.5;
+      const spreadRadius = bodyRadius * 1.8;
 
       this.scene.stream.emit(
         emitX, star.y || 0, emitZ,
@@ -413,6 +413,10 @@ export class TDEDemo extends Game {
       const omega = baseOmega * (a * a) / (r * r);
 
       star.phi += omega * dt * CONFIG.star.orbitSpeed;
+
+      // Store effective orbit speed for particle emission
+      star.effectiveOrbitSpeed = omega * r * CONFIG.star.orbitSpeed;
+
       const pos = polarToCartesian(r, star.phi);
       star.x = pos.x;
       star.z = pos.z;
@@ -443,8 +447,12 @@ export class TDEDemo extends Game {
       // Angular velocity with Kepler's 2nd law
       const baseOmega = keplerianOmega(a, bh.mass, 1.0, star.initialSemiMajorAxis);
       const omega = baseOmega * (a * a) / (r * r);
-      const phiStep = omega * dt * CONFIG.star.orbitSpeed * 1.1;
+      const speedMultiplier = 1.1;
+      const phiStep = omega * dt * CONFIG.star.orbitSpeed * speedMultiplier;
       star.phi += phiStep;
+
+      // Store effective orbit speed for particle emission
+      star.effectiveOrbitSpeed = omega * r * CONFIG.star.orbitSpeed * speedMultiplier;
 
       const pos = polarToCartesian(r, star.phi);
       star.x = pos.x;
@@ -471,38 +479,58 @@ export class TDEDemo extends Game {
         2 // stretch ended at progress=1, factor=2
       );
 
-      // Exponential decay of semi-major axis
-      const baseRadius = decayingOrbitalRadius(
+      // Semi-major axis decays with easing - slow start, accelerates later
+      const decayEase = disruptProgress * disruptProgress; // easeIn quadratic
+      // Blend from stretch rate (0.3x) to full rate over first 50% of disrupt
+      const decayRateBlend = 0.3 + Math.min(disruptProgress * 2, 1) * 0.7; // 0.3 -> 1.0
+      const a = decayingOrbitalRadius(
         stretchEndAxis,
-        CONFIG.star.decayRate,
-        disruptProgress * 5
+        CONFIG.star.decayRate * decayRateBlend,
+        decayEase * 5
       );
 
-      // Eccentricity nearly gone by disrupt phase (orbit mostly circular now)
+      // Eccentricity continues from stretch end (0.5 * initial) and decays to 0
       const e = star.eccentricity * 0.5 * (1 - disruptProgress);
 
+      // Current radius from ellipse equation
+      const baseRadius = orbitalRadius(a, e, star.phi);
+
       // === ORBITAL CHAOS ===
-      // As the star loses mass asymmetrically, its orbit becomes unstable
-      // Subtle at first, builds gradually
-      const chaos = 0.1 + disruptProgress * 0.5;  // Reduced: starts at 10%, builds to 60%
+      // Starts at 0, builds with easeIn curve for gradual onset
+      const chaosProgress = disruptProgress * disruptProgress; // easeIn
+      const chaos = chaosProgress * 0.6;  // 0% -> 60%
       const time = this.fsm.stateTime;
 
-      // Radial wobble - tidal forces pull the star in and out
-      const radialWobble = Math.sin(time * 2.5) * chaos * baseRadius * 0.15
-        + Math.sin(time * 5.8) * chaos * baseRadius * 0.08;
+      // Radial wobble - only after chaos builds
+      const radialWobble = chaos > 0.01
+        ? Math.sin(time * 2.5) * chaos * baseRadius * 0.15
+        + Math.sin(time * 5.8) * chaos * baseRadius * 0.08
+        : 0;
       star.orbitalRadius = baseRadius + radialWobble;
 
-      // Angular velocity - slight jitter in orbital speed
-      const omega = keplerianOmega(star.orbitalRadius, bh.mass, 1.0, star.initialSemiMajorAxis);
-      const angularJitter = Math.sin(time * 3.7) * chaos * 0.2;
-      const phiStep = omega * dt * CONFIG.star.orbitSpeed * (1 + disruptProgress * 2 + angularJitter);
+      // Angular velocity with Kepler's 2nd law (same as stretch phase)
+      const baseOmega = keplerianOmega(a, bh.mass, 1.0, star.initialSemiMajorAxis);
+      const omega = baseOmega * (a * a) / (star.orbitalRadius * star.orbitalRadius);
+
+      // Speed ramp: starts at 1.1x (matching stretch end), accelerates toward end
+      const speedRamp = Math.pow(disruptProgress, 4); // easeIn quartic
+      const speedMultiplier = 1.1 + speedRamp * 1.4; // 1.1x -> 2.5x
+
+      // Angular jitter only kicks in as chaos builds
+      const angularJitter = chaos > 0.05 ? Math.sin(time * 3.7) * chaos * 0.15 : 0;
+      const phiStep = omega * dt * CONFIG.star.orbitSpeed * (speedMultiplier + angularJitter);
       star.phi += phiStep;
+
+      // Store effective orbit speed for particle emission
+      star.effectiveOrbitSpeed = omega * star.orbitalRadius * CONFIG.star.orbitSpeed * (speedMultiplier);
 
       const pos = polarToCartesian(star.orbitalRadius, star.phi);
 
-      // Vertical wobble - star bobs out of orbital plane
-      const verticalWobble = Math.sin(time * 1.7) * chaos * baseRadius * 0.12
-        + Math.cos(time * 3.9) * chaos * baseRadius * 0.06;
+      // Vertical wobble - only after chaos builds
+      const verticalWobble = chaos > 0.01
+        ? Math.sin(time * 1.7) * chaos * baseRadius * 0.12
+        + Math.cos(time * 3.9) * chaos * baseRadius * 0.06
+        : 0;
 
       star.x = pos.x;
       star.y = verticalWobble;
@@ -510,7 +538,7 @@ export class TDEDemo extends Game {
 
       // Emit particles throughout disrupt phase (more than stretch)
       if (this.scene.stream && star.mass > 0) {
-        const emitRate = 10 + Math.floor(disruptProgress * 50);
+        const emitRate = 10 + Math.floor(star.effectiveOrbitSpeed * disruptProgress);
         this.emitStreamParticles(dt, emitRate);
       }
 

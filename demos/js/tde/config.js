@@ -1,16 +1,16 @@
 export const CONFIG = {
     // Sizing (as fraction of screen baseScale)
-    bhRadiusRatio: 0.02,        // Initial dormant black hole size
-    bhFinalRadiusRatio: 0.1,   // Final size after consuming star (half screen width)
+    bhRadiusRatio: 0.05,        // Initial dormant black hole size (larger for visible lensing)
+    bhFinalRadiusRatio: 0.12,   // Final size after consuming star
     starRadiusRatio: 0.08,
 
     // Phase durations (seconds)
     durations: {
-        approach: 1.0,      // Stable wide orbit
-        stretch: 1.0,       // Orbit begins to decay
-        disrupt: 1.0,      // Mass transfer (event-based exit)
-        accrete: 2.0,       // Debris accretion
-        flare: 4.0,         // Jets firing - spectacular cosmic event!
+        approach: 5.0,      // Stable wide orbit
+        stretch: 10.0,       // Orbit begins to decay
+        disrupt: 15.0,      // Mass transfer (event-based exit)
+        accrete: 1.0,       // Debris accretion
+        flare: 5.0,         // Jets firing - spectacular cosmic event!
         stable: Infinity,   // Final stable state
     },
 
@@ -33,14 +33,14 @@ export const CONFIG = {
         temperature: 3800, // Kelvin - cool red dwarf, heats up dramatically under tidal stress
     },
     sceneOptions: {
-        starCount: 5000,
+        starCount: 3000,
     },
 
     // Accretion disk settings
     disk: {
         innerRadiusRatio: 0.03,     // ISCO (innermost stable orbit)
         outerRadiusRatio: 0.15,     // Outer halo edge
-        maxParticles: 1500,
+        maxParticles: 2000,
         orbitalSpeed: 0.8,
         activationProgress: 0.8,   // Start at 80% of disrupt phase
     },
