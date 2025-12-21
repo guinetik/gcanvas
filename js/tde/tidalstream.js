@@ -138,7 +138,7 @@ export class TidalStream extends GameObject {
     update(dt) {
         super.update(dt);
 
-        const accretionRadius = this.bhRadius * 0.98;
+        const accretionRadius = this.bhRadius * .786465;
 
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
