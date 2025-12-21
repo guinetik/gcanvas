@@ -154,5 +154,58 @@ export const PenroseSounds = {
     // Descending doom
     Synth.osc.sweep(400, 60, 1.5, { type: "sawtooth", volume: 0.2 });
     Synth.osc.fm(100, 3, 50, 2, { volume: 0.15 });
+
+    this.stopEngine();
+  },
+
+  /**
+   * Continuous engine drone
+   */
+  engine: null,
+
+  startEngine() {
+    if (!initialized || this.engine) return;
+
+    // Create a rich droning sound using FM or a simple oscillator
+    // We use a low-frequency sawtooth for that 'engine' feel
+    this.engine = Synth.osc.continuous({
+      type: "sawtooth",
+      frequency: 60,
+      volume: 0, // Start silent, ramp up
+    });
+
+    this.engine.setVolume(0.1, 0.5);
+  },
+
+  updateEngine(timeSpeed, isBoosting) {
+    if (!this.engine) return;
+
+    // Base frequency increases with ship's time acceleration
+    const baseFreq = 60 + timeSpeed * 50;
+    // Frequency jumps when boosting
+    const targetFreq = isBoosting ? baseFreq * 1.5 : baseFreq;
+    // Volume also increases with boost
+    const targetVolume = isBoosting ? 0.25 : 0.12;
+
+    this.engine.setFrequency(targetFreq, 0.1);
+    this.engine.setVolume(targetVolume, 0.1);
+  },
+
+  stopEngine() {
+    if (this.engine) {
+      this.engine.stop(0.5);
+      this.engine = null;
+    }
+  },
+
+  /**
+   * Boost activation sound
+   */
+  boost() {
+    if (!initialized) return;
+
+    // Short energetic burst
+    Synth.osc.sweep(400, 1200, 0.2, { type: "square", volume: 0.2 });
+    Synth.osc.tone(800, 0.1, { type: "sine", volume: 0.15 });
   },
 };

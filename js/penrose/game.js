@@ -181,6 +181,8 @@ class PenroseGame extends Game {
     this.cameraRotation = 0;
     this.targetCameraRotation = 0;
     this.fsm.setState("playing");
+
+    PenroseSounds.startEngine();
   }
 
   update(dt) {
@@ -266,6 +268,7 @@ class PenroseGame extends Game {
     this.isBoosting = boostPressed && this.kerrEnergy > 0;
 
     if (this.isBoosting) {
+      if (!this._lastBoosting) PenroseSounds.boost();
       this.kerrEnergy = Math.max(0, this.kerrEnergy - CONFIG.boostDrainRate * dt);
       this.ship.boostMultiplier = CONFIG.boostSpeedMultiplier;
 
@@ -281,6 +284,10 @@ class PenroseGame extends Game {
     } else {
       this.ship.boostMultiplier = 1;
     }
+    this._lastBoosting = this.isBoosting;
+
+    // Update engine sound
+    PenroseSounds.updateEngine(this.ship.timeSpeed, this.isBoosting);
 
     // Frame dragging
     let totalFrameDrag = 0;
@@ -471,6 +478,7 @@ class PenroseGame extends Game {
 
     // Win condition
     if (this.ship.v >= 0.95) {
+      PenroseSounds.stopEngine();
       this.fsm.setState("gameover");
     }
 
