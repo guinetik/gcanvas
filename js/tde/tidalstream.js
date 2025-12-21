@@ -1,6 +1,4 @@
 import { GameObject, Painter } from "/gcanvas.es.min.js";
-import { PI } from "/gcanvas.es.min.js";
-import { CONFIG } from "./config.js";
 
 /**
  * TidalStream - Simple particle stream from star to black hole
@@ -31,7 +29,7 @@ const STREAM_CONFIG = {
 
     // Emission offset: 1.0 = star's BH-facing edge (L1 Lagrange point)
     // Positive = toward BH, negative = away from BH
-    emissionOffset: PI * -1.121,  // Emit from the tidal bulge facing the BH
+    emissionOffset: Math.PI * -1.121,  // Emit from the tidal bulge facing the BH
 
     // Drag factor - removes angular momentum so orbits decay
     // 1.0 = no drag, 0.99 = slight drag, 0.95 = strong drag
