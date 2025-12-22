@@ -5,45 +5,43 @@ import { CONFIG } from "./config.js";
 /**
  * AccretionDisk - Keplerian particle disk with gravitational lensing
  *
- * Physics:
- * - Particles orbit with Keplerian velocity (v ∝ 1/sqrt(r))
- * - Gravitational lensing applied in camera-space
- * - Particles gradually decay inward via angular momentum loss
- * - Doppler beaming: approaching side brighter
+ * Uses the same proven lensing formula as demos/js/blackhole.js:
+ * - Single-pass lensing that pushes particles outward
+ * - Einstein ring forms naturally from disk geometry
+ * - Doppler beaming for brightness variation
  */
 
 const DISK_CONFIG = {
     // Orbital bounds (multiplier of BH radius)
-    innerRadiusMultiplier: 0.75,     // Very close to BH for max lensing
-    outerRadiusMultiplier: 8.2,    // Wide disk spanning screen
+    innerRadiusMultiplier: 1.5,
+    outerRadiusMultiplier: 9.0,    // Wide disk with margin from screen edges
 
     // Particle properties
-    maxParticles: 5000,        // Dense but manageable
-    particleLifetime: 12,      // Shorter lifetime for continuous turnover
-    spawnRate: 60,             // Steady spawn rate (avoids batch death)
+    maxParticles: 4000,
+    particleLifetime: 80,
+    spawnRate: 50,
 
     // Orbital physics
     baseOrbitalSpeed: 0.8,
 
-    // Decay mechanics - particles spiral into BH over time
-    decayChanceBase: 0.0002,    // Higher chance to fall in (feeds BH glow)
-    decaySpeedFactor: 0.995,    // Faster spiral when falling
+    // Decay mechanics
+    decayChanceBase: 0.0002,
+    decaySpeedFactor: 0.995,
 
-    // Disk geometry - thicker disk so front side is visible
-    diskThickness: 0.02,        // Y-spread as fraction of baseScale
+    // Disk geometry - thin disk with some spread
+    diskThickness: 0.006,
 
-    // Lensing - STRONGER for dramatic Einstein ring effect
-    lensingStrength: 3.0,
-    ringRadiusFactor: 1.5,
-    lensingFalloff: 0.8,        // Tighter falloff = more concentrated effect
+    // Lensing - pushes particles outward to form Einstein ring
+    ringRadiusFactor: 1.8,      // Higher = more margin between BH and ring
+    lensingFalloff: 1.8,        // Slightly wider falloff
 
-    // Visual - heat gradient from inner to outer (BRIGHT)
-    colorHot: { r: 255, g: 255, b: 255 },   // Inner edge (pure white)
-    colorMid: { r: 255, g: 220, b: 150 },   // Mid disk (bright orange)
-    colorCool: { r: 255, g: 140, b: 80 },   // Outer edge (vivid orange-red)
+    // Visual - heat gradient (white-hot inner to deep red outer)
+    colorHot: { r: 255, g: 250, b: 220 },   // Inner (white-hot)
+    colorMid: { r: 255, g: 160, b: 50 },    // Mid (orange)
+    colorCool: { r: 180, g: 40, b: 40 },    // Outer (deep red)
 
     sizeMin: 1,
-    sizeMax: 1.75,
+    sizeMax: 2.5,
 };
 
 export class AccretionDisk extends GameObject {
@@ -254,22 +252,22 @@ export class AccretionDisk extends GameObject {
 
     /**
      * Build render list with camera-space lensing
+     * Uses the proven formula from demos/js/blackhole.js
      */
     buildRenderList() {
         const renderList = [];
         if (!this.camera || this.particles.length === 0) return renderList;
 
-        const lensingStrength = this.lensingStrength * DISK_CONFIG.lensingStrength;
+        const lensingStrength = this.lensingStrength;
 
         for (const p of this.particles) {
             // World coordinates (flat disk in x-z plane)
-            // Apply scale for expand-from-center animation
             const scaledDist = p.distance * this.scale;
             let x = Math.cos(p.angle) * scaledDist;
             let y = p.yOffset * this.scale;
             let z = Math.sin(p.angle) * scaledDist;
 
-            // Transform to camera space (manual rotation matrices)
+            // Transform to camera space
             const cosY = Math.cos(this.camera.rotationY);
             const sinY = Math.sin(this.camera.rotationY);
             let xCam = x * cosY - z * sinY;
@@ -280,7 +278,8 @@ export class AccretionDisk extends GameObject {
             let yCam = y * cosX - zCam * sinX;
             zCam = y * sinX + zCam * cosX;
 
-            // Apply gravitational lensing (particles behind BH only)
+            // === GRAVITATIONAL LENSING (from blackhole.js) ===
+            // Only affects particles behind the BH (zCam > 0)
             if (lensingStrength > 0 && zCam > 0) {
                 const currentR = Math.sqrt(xCam * xCam + yCam * yCam);
                 const ringRadius = this.bhRadius * DISK_CONFIG.ringRadiusFactor;
@@ -304,16 +303,15 @@ export class AccretionDisk extends GameObject {
             // Skip particles behind camera
             if (zCam < -this.camera.perspective + 10) continue;
 
-            // Doppler beaming - approaching side brighter (reduced effect)
+            // Doppler beaming - approaching side brighter
             const velocityDir = Math.cos(p.angle + this.camera.rotationY);
-            const doppler = 1 + velocityDir * 0.25;  // Was 0.4 - too much dimming on receding side
+            const doppler = 1 + velocityDir * 0.4;
 
-            // Age-based fade - stay opaque longer, fade only near end
+            // Age-based fade
             const ageRatio = p.age / DISK_CONFIG.particleLifetime;
-            // Use power curve: stays at 1.0 longer, then drops quickly
             const alpha = Math.max(0.3, 1 - Math.pow(ageRatio, 2.5));
 
-            // Redshift falling particles
+            // Color (redshift for falling particles)
             let color = p.baseColor;
             if (p.isFalling) {
                 const fallProgress = 1 - (p.distance / this.innerRadius);
@@ -380,28 +378,41 @@ export class AccretionDisk extends GameObject {
 
         const cx = this.game.width / 2;
         const cy = this.game.height / 2;
+        const baseScale = this.game.baseScale ?? Math.min(this.game.width, this.game.height);
         const renderList = this.buildRenderList();
 
         Painter.useCtx((ctx) => {
             // Reset transform (bypass Scene3D transforms)
             ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.globalCompositeOperation = "lighter";
 
             for (const item of renderList) {
                 const { r, g, b } = item.color;
+                const size = baseScale * 0.003 * item.scale;
+                if (size < 0.1) continue;
 
-                // Apply Doppler brightness shift (reduced channel dimming)
+                // Apply Doppler brightness
                 const dr = Math.min(255, Math.round(r * item.doppler));
                 const dg = Math.min(255, Math.round(g * item.doppler * 0.95));
                 const db = Math.min(255, Math.round(b * item.doppler * 0.9));
 
-                ctx.fillStyle = `rgba(${dr}, ${dg}, ${db}, ${item.alpha})`;
-                ctx.beginPath();
-                ctx.arc(cx + item.x, cy + item.y, item.size * item.scale, 0, Math.PI * 2);
-                ctx.fill();
-            }
+                const finalAlpha = Math.max(0, Math.min(1, item.alpha * item.doppler));
 
-            ctx.globalCompositeOperation = "source-over";
+                // Core particle
+                ctx.fillStyle = `rgba(${dr}, ${dg}, ${db}, ${finalAlpha})`;
+                ctx.beginPath();
+                ctx.arc(cx + item.x, cy + item.y, size / 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Additive glow for bright/close particles (from blackhole.js)
+                if (item.doppler > 1.1 && item.alpha > 0.5) {
+                    ctx.globalCompositeOperation = "screen";
+                    ctx.fillStyle = `rgba(${dr}, ${dg}, ${db}, ${finalAlpha * 0.4})`;
+                    ctx.beginPath();
+                    ctx.arc(cx + item.x, cy + item.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalCompositeOperation = "source-over";
+                }
+            }
         });
     }
 }

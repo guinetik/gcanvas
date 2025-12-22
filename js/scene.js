@@ -18,13 +18,24 @@ import {
 export class DemoGame extends Game {
   constructor(canvas) {
     super(canvas);
-    this.MARGIN = 10;
+    this.MARGIN = 0;
     this.enableFluidSize();
     this.backgroundColor = "white";
   }
 
+  getResponsiveConfig() {
+    const isNarrow = this.width < 500;
+    return {
+      buttonWidth: isNarrow ? 120 : 150,
+      layerCount: isNarrow ? 25 : 50,
+    };
+  }
+
   init() {
     super.init();
+    const config = this.getResponsiveConfig();
+    this.currentButtonWidth = config.buttonWidth;
+
     this.scene = new Scene(this, { debug: true, debugColor: "black" });
     this.ui = new Scene(this, {
       debug: true,
@@ -44,7 +55,7 @@ export class DemoGame extends Game {
         padding: 10,
       })
     );
-    this.buttons.width = 150;
+    this.buttons.width = config.buttonWidth;
     this.buttons.height = 200;
     // Small demo of Random functions
     let random = Random.symmetric;
@@ -74,8 +85,7 @@ export class DemoGame extends Game {
     });
     this.buttons.add(rollBtn);
     // Add random layers
-    const LAYERS = 50;
-    for (let i = 0; i < LAYERS; i++) {
+    for (let i = 0; i < config.layerCount; i++) {
       this.addLayer(random, i);
     }
     this.positionScene();
@@ -84,7 +94,7 @@ export class DemoGame extends Game {
   createButton(text, onClick) {
     return new Button(this, {
       text: text,
-      width: 150,
+      width: this.currentButtonWidth,
       textAlign: "left",
       onClick: onClick,
     });
@@ -122,6 +132,30 @@ export class DemoGame extends Game {
     this.scene.add(layer);
     setTimeout(layer.randomize.bind(layer), 50 * i);
     return layer;
+  }
+
+  onResize() {
+    if (!this.buttons) return;
+
+    const config = this.getResponsiveConfig();
+
+    // Update button widths if changed
+    if (this.currentButtonWidth !== config.buttonWidth) {
+      this.currentButtonWidth = config.buttonWidth;
+      this.buttons.transform.width(config.buttonWidth);
+
+      // Update each button's width
+      if (this.buttons.children) {
+        this.buttons.children.forEach((btn) => {
+          if (btn.transform) {
+            btn.transform.width(config.buttonWidth);
+          }
+        });
+      }
+      this.buttons.markBoundsDirty();
+    }
+
+    this.positionScene();
   }
 }
 // LayerBox class

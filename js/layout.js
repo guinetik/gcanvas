@@ -18,140 +18,211 @@ export class LayoutDemo extends Game {
   constructor(canvas) {
     super(canvas);
     this.enableFluidSize();
-    this.backgroundColor = "white";
+    this.backgroundColor = "black";
+    this.cellSize = 110;
+    this.maxColumns = 6;
   }
 
-  // Define layout modes configuration
-  layoutModes = {
-    horizontal: {
-      layoutClass: HorizontalLayout,
-      itemDimensions: () => ({
-        width: 40 + Math.random() * 60,
-        height: 100,
-      }),
-    },
-    vertical: {
-      layoutClass: VerticalLayout,
-      itemDimensions: () => ({
-        width: 200,
-        height: 40 + Math.random() * 60,
-      }),
-    },
-    tile: {
-      layoutClass: TileLayout,
-      itemDimensions: () => ({
-        width: 100,
-        height: 100,
-      }),
-      layoutOptions: (baseOpts) => ({
-        ...baseOpts,
-        columns: 4,
-      }),
-    },
-    grid: {
-      layoutClass: GridLayout,
-      itemDimensions: () => {
-        // Randomly choose between portrait or landscape
-        const isPortrait = Math.random() > 0.5;
-        if (isPortrait) {
-          // Portrait: taller than wide
-          if (Math.random() > 0.3) {
-            return {
-              width: 100,
-              height: 200,
-            };
-          } else {
-            return {
-              width: 100,
-              height: 100,
-            };
-          }
-        } else {
-          if (Math.random() > 0.3) {
-            // Landscape: wider than tall
-            return {
-              width: 100,
-              height: 50,
-            };
-          } else {
-            return {
-              width: 100,
-              height: 100,
-            };
-          }
-        }
+  getResponsiveColumns() {
+    const margin = 100; // space for UI
+    const availableWidth = this.width - margin;
+    return Math.min(
+      this.maxColumns,
+      Math.max(1, Math.floor(availableWidth / this.cellSize))
+    );
+  }
+
+  isMobile() {
+    return this.width < 600;
+  }
+
+  getLayoutYOffset() {
+    // On mobile (no info bar), move layout up; on desktop keep lower to avoid info bar
+    return this.isMobile() ? -80 : 0;
+  }
+
+  /**
+   * Get viewport dimensions based on current layout mode.
+   * - Horizontal: fixed height (item height + padding), width = screen - margins
+   * - Vertical: fixed width (item width + padding), height = screen - nav - margins
+   * - Tile/Grid: square-ish viewport with margins on sides, scrolls vertically
+   */
+  getViewportDimensions() {
+    const navHeight = 320; // bottom nav (two rows at -30 and -100 offset + button heights)
+    const margin = 50;
+
+    const layoutModes = this.getLayoutModes();
+    const modeConfig = layoutModes[this.mode];
+
+    switch (this.mode) {
+      case "horizontal":
+        // Horizontal: fixed height based on item height, scroll horizontally
+        return {
+          width: Math.max(200, this.width - margin * 2),
+          height: 100 + 20, // item height (100) + padding
+        };
+
+      case "vertical":
+        // Vertical: fixed width based on item width, scroll vertically
+        return {
+          width: 200 + 20, // item width (200) + padding
+          height: Math.max(200, this.height - navHeight - margin),
+        };
+
+      case "tile":
+      case "grid":
+      default:
+        // Tile/Grid: responsive square-ish viewport, scroll vertically
+        return {
+          width: Math.max(200, this.width - margin * 2),
+          height: Math.max(200, this.height - navHeight - margin),
+        };
+    }
+  }
+
+  // Define layout modes configuration (uses arrow functions to access `this`)
+  getLayoutModes() {
+    const columns = this.getResponsiveColumns();
+    return {
+      horizontal: {
+        layoutClass: HorizontalLayout,
+        itemDimensions: () => ({
+          width: 40 + Math.random() * 60,
+          height: 100,
+        }),
       },
-      layoutOptions: (baseOpts) => ({
-        ...baseOpts,
-        columns: 4,
-        spacing: 10,
-        padding: 10,
-        centerItems: true,
-      }),
-    },
-  };
+      vertical: {
+        layoutClass: VerticalLayout,
+        itemDimensions: () => ({
+          width: 200,
+          height: 40 + Math.random() * 60,
+        }),
+      },
+      tile: {
+        layoutClass: TileLayout,
+        itemDimensions: () => ({
+          width: 100,
+          height: 100,
+        }),
+        layoutOptions: (baseOpts) => ({
+          ...baseOpts,
+          columns: columns,
+        }),
+      },
+      grid: {
+        layoutClass: GridLayout,
+        itemDimensions: () => {
+          // Randomly choose between portrait or landscape
+          const isPortrait = Math.random() > 0.5;
+          if (isPortrait) {
+            // Portrait: taller than wide
+            if (Math.random() > 0.3) {
+              return {
+                width: 100,
+                height: 200,
+              };
+            } else {
+              return {
+                width: 100,
+                height: 100,
+              };
+            }
+          } else {
+            if (Math.random() > 0.3) {
+              // Landscape: wider than tall
+              return {
+                width: 100,
+                height: 50,
+              };
+            } else {
+              return {
+                width: 100,
+                height: 100,
+              };
+            }
+          }
+        },
+        layoutOptions: (baseOpts) => ({
+          ...baseOpts,
+          columns: columns,
+          spacing: 10,
+          padding: 10,
+          centerItems: true,
+        }),
+      },
+    };
+  }
 
   init() {
     super.init();
     // Config Options
     this.items = [];
     this.mode = "horizontal";
+    this.currentColumns = this.getResponsiveColumns();
+
     // Create UI
     this.ui = new Scene(this, {
       debug: true,
       debugColor: "pink",
       anchor: Position.CENTER,
-      padding: 10,
     });
     this.pipeline.add(this.ui);
+
     // Add FPS Counter
     this.pipeline.add(
-      new FPSCounter(this, { color: "black", anchor: "bottom-right" })
+      new FPSCounter(this, { color: "#00FF00", anchor: "bottom-right" })
     );
-    // Create Right Side navigation buttons
-    this.rightSide = new VerticalLayout(this, {
+
+    // Create bottom navigation - layout type selection (at very bottom)
+    this.layoutNav = new HorizontalLayout(this, {
       debug: true,
       debugColor: "purple",
-      anchor: Position.CENTER_RIGHT,
-      anchorRelative: this.ui,
+      anchor: Position.BOTTOM_CENTER,
+      anchorOffsetY: -30,
       padding: 10,
+      spacing: 10,
     });
-    // Add right side to UI
-    this.ui.add(this.rightSide);
-    // Add right side buttons
-    Object.keys(this.layoutModes).forEach((mode) => {
-      this.rightSide.add(
+    this.ui.add(this.layoutNav);
+
+    // Add layout type buttons
+    const layoutModes = this.getLayoutModes();
+    Object.keys(layoutModes).forEach((mode) => {
+      this.layoutNav.add(
         new Button(this, {
           text: mode.charAt(0).toUpperCase() + mode.slice(1),
           onClick: () => this.setLayout(mode),
         })
       );
     });
-    // Create bottom navigation buttons
-    this.bottomNav = new HorizontalLayout(this, {
+
+    // Create action buttons (add/remove) - positioned above layout nav
+    this.actionNav = new HorizontalLayout(this, {
       anchor: Position.BOTTOM_CENTER,
       debug: true,
       debugColor: "cyan",
-      anchorRelative: this.ui,
+      anchorOffsetY: -100, // Space above the layout nav
       padding: 10,
+      spacing: 10,
     });
-    this.bottomNav.add(
+    this.actionNav.add(
       new Button(this, {
         text: "ADD",
         onClick: this.addItem.bind(this),
       })
     );
-    this.bottomNav.add(
+    this.actionNav.add(
       new Button(this, {
         text: "REMOVE",
         onClick: () => this.removeItem(),
       })
     );
-    this.ui.add(this.bottomNav);
+    this.ui.add(this.actionNav);
+
     // Create initial layout
     this.createLayout();
-    // Add a few items
-    for (let i = 0; i < 8; i++) {
+
+    // Add enough items to enable scrolling
+    for (let i = 0; i < 5; i++) {
       this.addItem(i);
     }
   }
@@ -159,22 +230,29 @@ export class LayoutDemo extends Game {
   createLayout() {
     if (this.layout) {
       // Properly clear the layout
-      const itemsToKeep = [...this.items]; // Save references before clearing
       this.layout.clear();
       this.pipeline.remove(this.layout);
       this.layout = null;
     }
 
+    const viewport = this.getViewportDimensions();
+
     const baseOpts = {
       anchor: Position.CENTER,
+      anchorOffsetY: this.getLayoutYOffset(),
       spacing: 10,
       padding: 10,
       debug: true,
       autoSize: true,
       debugColor: Painter.colors.randomColorHSL(),
+      // Enable scrolling with responsive viewport
+      scrollable: true,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
     };
 
-    const modeConfig = this.layoutModes[this.mode];
+    const layoutModes = this.getLayoutModes();
+    const modeConfig = layoutModes[this.mode];
     const layoutOpts = modeConfig.layoutOptions
       ? modeConfig.layoutOptions(baseOpts)
       : baseOpts;
@@ -204,8 +282,8 @@ export class LayoutDemo extends Game {
     // stuff that has to do with bound checking should be done after super.update.
     if (this.boundsDirty) {
       console.log("update", this.boundsDirty);
-      this.ui.width = this.width - 20;
-      this.ui.height = this.height - 20;
+      this.ui.width = this.width;
+      this.ui.height = this.height;
       this.ui.markBoundsDirty();
       this.layout.markBoundsDirty();
       this.boundsDirty = false;
@@ -220,12 +298,15 @@ export class LayoutDemo extends Game {
   }
 
   addItem(i) {
-    const modeConfig = this.layoutModes[this.mode];
+    const layoutModes = this.getLayoutModes();
+    const modeConfig = layoutModes[this.mode];
     const dimensions = modeConfig.itemDimensions();
     const rect = new Rectangle({
       width: dimensions.width,
       height: dimensions.height,
       color: Painter.colors.randomColorHSL(),
+      stroke: "white",
+      lineWidth: 2,
     });
     const go = ShapeGOFactory.create(this, rect);
     go.name = "item " + i;
@@ -238,5 +319,36 @@ export class LayoutDemo extends Game {
       const go = this.items.pop();
       this.layout.remove(go);
     }
+  }
+
+  onResize() {
+    if (!this.layout) return;
+
+    const newColumns = this.getResponsiveColumns();
+
+    // Recreate layout if columns changed (for tile/grid modes)
+    if (this.currentColumns !== newColumns) {
+      this.currentColumns = newColumns;
+      if (this.mode === "tile" || this.mode === "grid") {
+        this.createLayout();
+        return; // createLayout already sets up viewport
+      }
+    }
+
+    // Update viewport dimensions for scrolling (mode-specific)
+    const viewport = this.getViewportDimensions();
+    this.layout._viewportWidth = viewport.width;
+    this.layout._viewportHeight = viewport.height;
+
+    // Update layout Y offset based on mobile/desktop
+    this.layout.anchorOffsetY = this.getLayoutYOffset();
+
+    // Update UI dimensions
+    this.ui.width = this.width - 20;
+    this.ui.height = this.height - 20;
+    this.ui.markBoundsDirty();
+    this.layoutNav.markBoundsDirty();
+    this.actionNav.markBoundsDirty();
+    this.layout.markBoundsDirty();
   }
 }

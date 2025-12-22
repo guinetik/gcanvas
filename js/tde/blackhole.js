@@ -1,4 +1,4 @@
-import { GameObject, Sphere3D, Painter } from "/gcanvas.es.min.js";
+import { GameObject, Sphere3D, Painter, Easing } from "/gcanvas.es.min.js";
 import { CONFIG } from "./config.js";
 
 export class BlackHole extends GameObject {
@@ -13,6 +13,11 @@ export class BlackHole extends GameObject {
         this.feedingPulse = 0;      // Temporary glow boost when consuming
         this.totalConsumed = 0;     // Track total mass consumed
 
+        // Dynamic growth animation
+        this.growthSpurt = 0;       // Overshoot when consuming (decays to 0)
+        this.breathPhase = 0;       // Oscillation phase for breathing effect
+        this.targetRadius = this.baseRadius;  // Smooth radius target
+
         // Rotation - black holes spin!
         this.rotation = 0;
         this.rotationSpeed = options.rotationSpeed ?? 2.9; // Slow, ominous spin
@@ -26,10 +31,21 @@ export class BlackHole extends GameObject {
     }
 
     /**
-     * Add mass from consumed particles - triggers awakening
+     * Add mass from consumed particles - triggers awakening and pulse
+     *
+     * @param {number} amount - Amount of mass to add
+     *
+     * Note: Feeding pulse is only triggered before the stable phase.
+     * Once stabilizing, particles can still be consumed but won't
+     * cause the visual pulse effect.
      */
     addConsumedMass(amount) {
         this.totalConsumed += amount;
+
+        // Skip pulse effects if we're in the stable phase
+        if (this.isStabilizing) {
+            return;
+        }
 
         // Awakening increases as BH feeds (slow ramp up)
         const awakeningProgress = Math.min(1, this.totalConsumed * 0.1);
@@ -37,6 +53,11 @@ export class BlackHole extends GameObject {
 
         // Feeding pulse - temporary glow boost
         this.feedingPulse = Math.min(1, this.feedingPulse + amount * 0.2);
+
+        // Growth spurt - overshoot effect when consuming
+        // More dramatic spurts as awakening increases
+        const spurtIntensity = 0.03 + this.awakeningLevel * 0.05;
+        this.growthSpurt = Math.min(0.15, this.growthSpurt + amount * spurtIntensity);
     }
 
     /**
@@ -47,6 +68,8 @@ export class BlackHole extends GameObject {
         this.feedingPulse = 0;
         this.totalConsumed = 0;
         this.rotation = 0;
+        this.growthSpurt = 0;
+        this.breathPhase = 0;
         this.isStabilizing = false;  // Reset stabilization state
     }
 
@@ -55,11 +78,26 @@ export class BlackHole extends GameObject {
         const massAbsorbed = Math.max(0, this.mass - CONFIG.blackHole.initialMass);
         const absorptionProgress = massAbsorbed / CONFIG.star.initialMass;
 
-        // Interpolate radius between initial and final size based on absorption
+        // Apply easing to make growth feel more organic
+        // easeOutCubic: rapid initial growth that slows as it fills
+        const easedProgress = Easing.easeOutCubic(absorptionProgress);
+
+        // Base radius from absorption with easing
         const baseScale = this.baseRadius / CONFIG.bhRadiusRatio;
         const radiusFraction = CONFIG.bhRadiusRatio +
-            absorptionProgress * (CONFIG.bhFinalRadiusRatio - CONFIG.bhRadiusRatio);
-        this.currentRadius = baseScale * radiusFraction;
+            easedProgress * (CONFIG.bhFinalRadiusRatio - CONFIG.bhRadiusRatio);
+        this.targetRadius = baseScale * radiusFraction;
+
+        // Breathing oscillation - subtle when dormant, stronger when awake
+        const breathAmplitude = 0.01 + this.awakeningLevel * 0.02 + this.feedingPulse * 0.03;
+        const breathSpeed = 1.5 + this.awakeningLevel * 0.5;  // Faster when active
+        const breathOffset = Math.sin(this.breathPhase * breathSpeed) * breathAmplitude;
+
+        // Growth spurt overshoot effect (elastic rebound)
+        const spurtOffset = this.growthSpurt * (1 + Math.sin(this.breathPhase * 8) * 0.3);
+
+        // Combine all effects
+        this.currentRadius = this.targetRadius * (1 + breathOffset + spurtOffset);
 
         if (this.currentRadius <= 0) {
             this.currentRadius = this.baseRadius;
@@ -127,6 +165,9 @@ export class BlackHole extends GameObject {
     update(dt) {
         super.update(dt);
 
+        // Animate breathing phase
+        this.breathPhase += dt * Math.PI * 2;  // Full cycle per second
+
         // Spin the black hole - rotation speeds up when feeding
         const spinMultiplier = 1 + this.feedingPulse * 2 + this.awakeningLevel * 0.5;
         this.rotation += this.rotationSpeed * spinMultiplier * dt;
@@ -134,6 +175,13 @@ export class BlackHole extends GameObject {
         // Decay feeding pulse over time
         if (this.feedingPulse > 0) {
             this.feedingPulse = Math.max(0, this.feedingPulse - dt * 1.5);
+        }
+
+        // Decay growth spurt with elastic damping
+        if (this.growthSpurt > 0) {
+            // Fast initial decay, slows down (feels like elastic settling)
+            const decayRate = 3 + this.growthSpurt * 5;  // Faster when larger
+            this.growthSpurt = Math.max(0, this.growthSpurt - dt * decayRate);
         }
 
         // Decay awakening level when stabilizing (slow cool-down)

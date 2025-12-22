@@ -33,6 +33,8 @@ export class StarField extends GameObject {
    * @param {Game} game
    * @param {Object} options
    * @param {Camera3D} options.camera
+   * @param {number} [options.starCount] - Number of stars
+   * @param {number} [options.distanceScale=1.0] - Scale factor for star distances (lower = closer stars)
    */
   constructor(game, options = {}) {
     super(game, options);
@@ -40,6 +42,7 @@ export class StarField extends GameObject {
     this.zIndex = -1000;
 
     this.starCount = options.starCount || CONFIG.starCount;
+    this.distanceScale = options.distanceScale ?? 1.0;
     this.stars = [];
 
     // Cache for pre-rendered star sprites
@@ -100,11 +103,15 @@ export class StarField extends GameObject {
     // Create cumulative weights for random selection
     const totalWeight = SPECTRAL_TYPES.reduce((sum, t) => sum + t.weight, 0);
 
+    // Apply distance scale for different camera perspectives
+    const minDist = CONFIG.minDist * this.distanceScale;
+    const maxDist = CONFIG.maxDist * this.distanceScale;
+
     for (let i = 0; i < this.starCount; i++) {
       // distribute stars in a spherical shell
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
-      const r = CONFIG.minDist + Math.random() * (CONFIG.maxDist - CONFIG.minDist);
+      const r = minDist + Math.random() * (maxDist - minDist);
 
       const x = r * Math.sin(phi) * Math.cos(theta);
       const y = r * Math.sin(phi) * Math.sin(theta);

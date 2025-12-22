@@ -45,6 +45,9 @@ export class Star extends GameObject {
         this.tidalStretch = 0;      // 0 = spherical, 1 = max elongation
         this.pulsationPhase = 0;    // Oscillation phase
         this.stressLevel = 0;       // Surface chaos level
+        this.tidalProgress = 0;     // External tidal progress from FSM (0-1)
+        this.tidalFlare = 0;        // 0-1, sudden brightness burst at disruption start
+        this.tidalWobble = 0;       // 0-1, violent geometry wobble during trauma
     }
 
     init() {
@@ -65,6 +68,9 @@ export class Star extends GameObject {
         this.tidalStretch = 0;
         this.pulsationPhase = 0;
         this.stressLevel = 0;
+        this.tidalProgress = 0;
+        this.tidalFlare = 0;
+        this.tidalWobble = 0;
         this.angularVelocity = CONFIG.star.rotationSpeed ?? 0.5;
         this.rotation = 0;
 
@@ -102,15 +108,29 @@ export class Star extends GameObject {
         }
 
         // === TIDAL STRETCH (Spaghettification) ===
-        // Stretch increases with proximity to BH (at origin) and mass loss
+        // Create comet/teardrop shape pointed toward black hole
         const dist = Math.sqrt(this.x * this.x + (this.z || 0) * (this.z || 0)) || 1;
-        const proximityFactor = Math.max(0, 1 - dist / this.initialOrbitalRadius);
-        this.tidalStretch = proximityFactor * 0.8 + collapseProgress * 0.5;
-        this.tidalStretch = Math.min(1.5, this.tidalStretch);  // Cap at 1.5x stretch
-
-        // Direction toward BH (normalized) for shader
-        const dirX = -this.x / dist;
-        const dirZ = -(this.z || 0) / dist;
+        
+        // Direction toward black hole (unit vector)
+        let dirX = -this.x / dist;
+        let dirZ = -(this.z || 0) / dist;
+        
+        // Proximity factor: closer to BH = more stretch
+        let proximityFactor = Math.max(0, 1 - dist / this.initialOrbitalRadius);
+        
+        // Calculate stretch amount based on phase and proximity
+        if (collapseProgress > 0.8) {
+            // Very late stage - reduce stretch as star becomes tiny
+            this.tidalStretch = (1 - collapseProgress) * 2;
+        } else {
+            // Main deformation: builds with tidalProgress and proximity
+            // tidalProgress is driven by FSM state (0 in approach, ramps in stretch/disrupt)
+            const baseStretch = this.tidalProgress * 1.2;  // Up to 1.2 stretch
+            const proximityBoost = proximityFactor * 0.5;  // Extra stretch when close
+            
+            this.tidalStretch = baseStretch + proximityBoost;
+            this.tidalStretch = Math.min(1.8, this.tidalStretch);  // Cap at 1.8
+        }
 
         // === BREATHING (Slow, ominous expansion/contraction) ===
         // Very slow rhythm - like a dying star's final gasps
@@ -173,6 +193,9 @@ export class Star extends GameObject {
 
         const stressColor = [r, g, b];
 
+        // Expose current color for particle emission
+        this.currentColor = stressColor;
+
         if (!this.visual) {
             this.visual = new Sphere3D(this.currentRadius, {
                 color: CONFIG.star.color,
@@ -188,6 +211,8 @@ export class Star extends GameObject {
                     uStretchDirX: dirX,
                     uStretchDirZ: dirZ,
                     uStressLevel: this.stressLevel,
+                    uTidalFlare: this.tidalFlare,
+                    uTidalWobble: this.tidalWobble,
                 },
             });
         } else {
@@ -202,6 +227,8 @@ export class Star extends GameObject {
                     uStretchDirX: dirX,
                     uStretchDirZ: dirZ,
                     uStressLevel: this.stressLevel,
+                    uTidalFlare: this.tidalFlare,
+                    uTidalWobble: this.tidalWobble,
                 });
             }
             this.visual._generateGeometry();
@@ -243,17 +270,28 @@ export class Star extends GameObject {
         const radiusRatio = this.currentRadius / this.baseRadius;
 
         if (radiusRatio > 0.1) {
-            // Smooth angular acceleration: dω/dt proportional to mass loss rate
-            // This gives continuous speedup instead of discrete jumps
-            const massRatio = (this.mass || 1) / (this.initialMass || 1);
-            const targetVelocity = (CONFIG.star.rotationSpeed ?? 0.5) / Math.max(0.15, radiusRatio);
+            // Base rotation speed from config
+            const baseSpeed = CONFIG.star.rotationSpeed ?? 0.5;
 
-            // Smoothly approach target velocity (avoids sudden jumps)
-            const accelRate = 2.0; // How fast to reach target velocity
+            // Spin-up factor based on tidal progress (FSM-driven, smooth)
+            // Only significant spin-up during actual disruption (mass loss)
+            const massRatio = (this.mass || 1) / (this.initialMass || 1);
+            const massLoss = 1 - massRatio;  // 0 = no loss, 1 = fully consumed
+
+            // Gentle spin-up from tidal stress, moderate spin-up from mass loss
+            // tidalProgress: 0-1 during stretch, 1 during disrupt
+            // massLoss: 0 during stretch, 0-1 during disrupt
+            const tidalSpinUp = 1 + this.tidalProgress * 0.3;  // Up to 1.3x from tidal
+            const collapseSpinUp = 1 + massLoss * 1.5;  // Up to 2.5x from collapse
+
+            const targetVelocity = baseSpeed * tidalSpinUp * collapseSpinUp;
+
+            // Very slow approach to target - no sudden jumps
+            const accelRate = 0.001;
             this.angularVelocity += (targetVelocity - this.angularVelocity) * accelRate * dt;
 
-            // Hard cap on max spin (10 rad/s)
-            this.angularVelocity = Math.min(10, this.angularVelocity);
+            // Hard cap on max spin (2.5 rad/s - calm, cosmic feel)
+            this.angularVelocity = Math.min(2.5, this.angularVelocity);
         }
         // else: keep current velocity, don't accelerate tiny remnant
 

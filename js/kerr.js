@@ -22,13 +22,17 @@ import {
 } from "/gcanvas.es.min.js";
 import { verticalLayout, applyLayout } from "/gcanvas.es.min.js";
 import { Tooltip } from "/gcanvas.es.min.js";
+import { Button } from "/gcanvas.es.min.js";
 
 // Configuration
 const CONFIG = {
-  // Grid parameters
+  // Grid parameters - FULLSCREEN
   gridSize: 20,
-  gridResolution: 80, // Increased to 80 for much finer grid
+  gridResolution: 100, // Dense grid for full coverage
   baseGridScale: 12,
+
+  // Mobile breakpoint
+  mobileWidth: 600,
 
   // Physics (geometrized units: G = c = 1)
   defaultMass: 1.0,
@@ -36,14 +40,13 @@ const CONFIG = {
   massRange: [1.0, 3.0],
   spinRange: [0.1, 0.95], // As fraction of M
 
-  // Embedding diagram - INTENTIONALLY EXAGGERATED for visualization
-  // Real curvature would be subtle; we amplify it so users can see the effect
-  embeddingScale: 200, // Increased from 75 for deeper dip
+  // Embedding diagram - visible funnel depth (matches Schwarzschild)
+  embeddingScale: 180, // Consistent with Schwarzschild
 
-  // 3D view
-  rotationX: 0.6,
-  rotationY: 0.3,
-  perspective: 1000,
+  // 3D view - tilted to see frame dragging twist
+  rotationX: 0.5, // Slightly less tilt to see more of the surface
+  rotationY: 0.4,
+  perspective: 900, // Bit more perspective for drama
 
   // Orbit parameters
   orbitSemiMajor: 10,
@@ -65,8 +68,8 @@ const CONFIG = {
   // These values are NOT physically accurate - intentionally amplified
   frameDraggingReach: 3.0, // How far frame dragging visually extends (multiplier)
   frameDraggingStrength: 40, // INCREASED from 25 for stronger twist
-  blackHoleSizeBase: 8, // Base visual size of black hole
-  blackHoleSizeMassScale: 8, // How much mass affects visual size
+  blackHoleSizeBase: 12, // Base visual size of black hole
+  blackHoleSizeMassScale: 10, // How much mass affects visual size (more dramatic)
 
   // Colors
   gridColor: "rgba(0, 180, 255, 0.3)",
@@ -84,13 +87,16 @@ const CONFIG = {
 /**
  * KerrMetricPanelGO - Displays the Kerr metric tensor components
  * Highlights the off-diagonal g_tφ frame dragging term
+ * Responsive for mobile screens
  */
 class KerrMetricPanelGO extends GameObject {
   constructor(game, options = {}) {
-    const panelWidth = 340;
-    const panelHeight = 320;
-    const lineHeight = 14;
-    const valueOffset = 180;
+    // Responsive sizing
+    const isMobile = game.width < CONFIG.mobileWidth;
+    const panelWidth = isMobile ? 260 : 260;
+    const panelHeight = isMobile ? 300 : 280;
+    const lineHeight = isMobile ? 12 : 14;
+    const valueOffset = isMobile ? 140 : 180;
 
     super(game, {
       ...options,
@@ -342,7 +348,8 @@ class KerrMetricPanelGO extends GameObject {
 class KerrDemo extends Game {
   constructor(canvas) {
     super(canvas);
-    this.backgroundColor = "#000008";
+    // Black background - it's space!
+    this.backgroundColor = "#000";
     this.enableFluidSize();
   }
 
@@ -357,16 +364,19 @@ class KerrDemo extends Game {
     // Grid scale
     this.gridScale = CONFIG.baseGridScale;
 
-    // Camera
+    // Camera with inertia for smooth drag
     this.camera = new Camera3D({
       rotationX: CONFIG.rotationX,
       rotationY: CONFIG.rotationY,
       perspective: CONFIG.perspective,
-      minRotationX: 0.2,
-      maxRotationX: 1.3,
+      minRotationX: -0.5,
+      maxRotationX: 1.5,
       autoRotate: true,
       autoRotateSpeed: CONFIG.autoRotateSpeed,
       autoRotateAxis: "y",
+      inertia: true,
+      friction: 0.95,
+      velocityScale: 2.0,
     });
     this.camera.enableMouseControl(this.canvas);
 
@@ -391,11 +401,13 @@ class KerrDemo extends Game {
     this.metricPanel = new KerrMetricPanelGO(this, { name: "metricPanel" });
     this.pipeline.add(this.metricPanel);
 
-    // Tooltip
+    // Tooltip (responsive)
+    const isMobileTooltip = this.width < CONFIG.mobileWidth;
     this.tooltip = new Tooltip(this, {
-      maxWidth: 300,
-      font: "11px monospace",
-      padding: 10,
+      maxWidth: isMobileTooltip ? 200 : 300,
+      font: `${isMobileTooltip ? 9 : 11}px monospace`,
+      padding: isMobileTooltip ? 6 : 10,
+      bgColor: "rgba(20, 20, 30, 0.95)",
     });
     this.pipeline.add(this.tooltip);
 
@@ -405,13 +417,41 @@ class KerrDemo extends Game {
     this.canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e));
     this.canvas.addEventListener("mouseleave", () => this.tooltip.hide());
     this.initControls();
-    this.canvas.addEventListener("click", (e) => this.handleClick(e));
+
+    // Button to form new black hole (positioned below the chart, same width)
+    const isMobile = this.width < CONFIG.mobileWidth;
+    const graphW = isMobile ? 120 : 160;
+    const graphH = isMobile ? 70 : 100;
+    const graphX = this.width - graphW - (isMobile ? 15 : 20);
+    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
+
+    this.newBlackHoleBtn = new Button(this, {
+      anchor: Position.TOP_LEFT,
+      anchorRelative: this.metricPanel,
+      anchorOffsetX: -10,
+      anchorOffsetY: -60,
+      width: graphW,
+      height: isMobile ? 30 : 36,
+      text: "New Black Hole",
+      font: `${isMobile ? 10 : 12}px monospace`,
+      colorDefaultBg: "rgba(20, 20, 40, 0.8)",
+      colorDefaultStroke: "#f80",
+      colorDefaultText: "#fa8",
+      colorHoverBg: "rgba(40, 30, 60, 0.9)",
+      colorHoverStroke: "#ff0",
+      colorHoverText: "#ff0",
+      colorPressedBg: "rgba(60, 40, 80, 1)",
+      colorPressedStroke: "#fff",
+      colorPressedText: "#fff",
+      onClick: () => this.shuffleParameters(),
+    });
+    this.pipeline.add(this.newBlackHoleBtn);
   }
 
   initControls() {
-    // Instructions (click/drag)
+    // Instructions (drag to rotate)
     this.controlsText = new TextShape(
-      "click to form new black hole  |  drag to rotate",
+      "drag to rotate",
       {
         font: "10px monospace",
         color: "#aaa",
@@ -452,11 +492,12 @@ class KerrDemo extends Game {
       return;
     }
 
-    // Check effective potential graph
-    const graphX = this.width - 180;
-    const graphY = 180;
-    const graphW = 160;
-    const graphH = 100;
+    // Check effective potential graph (responsive)
+    const isMobile = this.width < CONFIG.mobileWidth;
+    const graphW = isMobile ? 120 : 160;
+    const graphH = isMobile ? 70 : 100;
+    const graphX = this.width - graphW - (isMobile ? 15 : 20);
+    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
 
     if (
       mouseX >= graphX - 10 &&
@@ -510,13 +551,9 @@ class KerrDemo extends Game {
   }
 
   updateGridScale() {
+    // Scale grid to show edges - user can see the fabric boundaries for frame dragging effect
     const minDim = Math.min(this.width, this.height);
-    this.gridScale = CONFIG.baseGridScale * (minDim / 800);
-  }
-
-  handleClick(e) {
-    if (this.camera.isDragging()) return;
-    this.shuffleParameters();
+    this.gridScale = (minDim / (CONFIG.gridSize * 2)) * 1.5;
   }
 
   shuffleParameters() {
@@ -708,8 +745,9 @@ class KerrDemo extends Game {
         }
 
         // Embedding depth also scales with λ (flat → curved)
+        // Function already clamps at horizon, no need for extra clamp here
         const r = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
-        vertex.y = this.getEmbeddingHeight(Math.max(r, rPlus + 0.1)) * lambda;
+        vertex.y = this.getEmbeddingHeight(r) * lambda;
       }
     }
 
@@ -751,7 +789,7 @@ class KerrDemo extends Game {
     const w = this.width;
     const h = this.height;
     const cx = w / 2;
-    const cy = h / 2 + 30;
+    const cy = h / 2; // Centered to see fabric edges from outside
 
     super.render();
 
@@ -783,29 +821,29 @@ class KerrDemo extends Game {
   renderControls() {
     const w = this.width;
     const h = this.height;
+    const isMobile = w < CONFIG.mobileWidth;
+    const margin = isMobile ? 10 : 15;
+    const lineSpacing = isMobile ? 12 : 15;
+
+    // On mobile, use shorter text
+    if (isMobile) {
+      this.controlsText.text = "tap to form | drag to rotate";
+      this.controlsText.font = "8px monospace";
+    }
 
     // Position and render main controls text
-    this.controlsText.x = w - 15;
-    this.controlsText.y = h - 30 - (this.explanationShapes.length * 15); // Above explanation
+    this.controlsText.x = w - margin;
+    this.controlsText.y = h - 25 - (isMobile ? 1 : this.explanationShapes.length) * lineSpacing;
     this.controlsText.render();
 
-    // Position and render explanation lines
-    // Stacked from bottom up
+    // Position and render explanation lines (hide most on mobile)
     this.explanationShapes.forEach((shape, i) => {
-      // Last line at h - 15
-      // Previous lines 15px above
-      // i=0 (Top line) should be highest?
-      // Let's render them top-down for logical reading, but anchored bottom-right.
+      if (isMobile && i < this.explanationShapes.length - 1) return; // Only show last line on mobile
 
-      // Let's position from bottom:
-      // Line N (last): h - 15
-      // Line N-1: h - 30
-      // ...
-      // So index 0 (Top) should be at h - 15 - (N-1-i)*15 ?
-
+      shape.font = isMobile ? "8px monospace" : "10px monospace";
       const lineIndexFromBottom = this.explanationShapes.length - 1 - i;
-      shape.x = w - 15;
-      shape.y = h - 15 - (lineIndexFromBottom * 15);
+      shape.x = w - margin;
+      shape.y = h - 10 - (lineIndexFromBottom * lineSpacing);
       shape.render();
     });
   }
@@ -813,10 +851,17 @@ class KerrDemo extends Game {
   drawFormationProgress(w, h) {
     const progress = this.formationProgress;
     const lambda = 1 - Math.pow(1 - progress, 3); // Eased progress
-    const barWidth = 120;
+
+    // Position above the chart (same x alignment as chart)
+    const isMobile = w < CONFIG.mobileWidth;
+    const graphW = isMobile ? 120 : 160;
+    const graphX = w - graphW - (isMobile ? 15 : 20);
+    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
+
+    const barWidth = graphW; // Same width as chart
     const barHeight = 6;
-    const barX = 10;
-    const barY = h - 25;
+    const barX = graphX;
+    const barY = graphY - 35; // Above the chart
 
     Painter.useCtx((ctx) => {
       // Phase-aware label
@@ -858,7 +903,7 @@ class KerrDemo extends Game {
       // λ indicator
       ctx.fillStyle = "#888";
       ctx.font = "9px monospace";
-      ctx.fillText(`\u03BB = ${progress.toFixed(2)}`, barX, barY + 16);
+      ctx.fillText(`λ = ${progress.toFixed(2)}`, barX, barY + 16);
     });
   }
 
@@ -1401,10 +1446,12 @@ class KerrDemo extends Game {
   }
 
   drawEffectivePotential() {
-    const graphX = this.width - 180;
-    const graphY = 180;
-    const graphW = 160;
-    const graphH = 100;
+    // Responsive graph sizing
+    const isMobile = this.width < CONFIG.mobileWidth;
+    const graphW = isMobile ? 120 : 160;
+    const graphH = isMobile ? 70 : 100;
+    const graphX = this.width - graphW - (isMobile ? 15 : 20);
+    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
     const M = this.mass;
     const a = this.spin;
 

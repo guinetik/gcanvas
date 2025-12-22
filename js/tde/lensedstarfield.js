@@ -12,7 +12,7 @@ import { StarField } from "../blackhole/starfield.obj.js";
 
 const LENSING_CONFIG = {
     // How far the lensing effect reaches in screen pixels
-    effectRadiusPixels: 500,
+    effectRadiusPixels: 600,
 
     // Base strength (multiplied by lensingStrength property)
     baseStrength: 200,
@@ -22,6 +22,9 @@ const LENSING_CONFIG = {
 
     // Minimum screen distance to apply lensing (avoid division issues)
     minDistance: 5,
+
+    // Occlusion radius multiplier (stars within BH radius * this are hidden)
+    occlusionMultiplier: 1.15,
 };
 
 export class LensedStarfield extends StarField {
@@ -100,6 +103,14 @@ export class LensedStarfield extends StarField {
                     );
                     screenX = lensed.x;
                     screenY = lensed.y;
+                }
+
+                // === OCCLUSION CHECK ===
+                // Hide stars that fall within the black hole's occlusion radius
+                if (this.blackHole) {
+                    const bhScreenRadius = this.blackHole.currentRadius * LENSING_CONFIG.occlusionMultiplier;
+                    const distFromCenter = Math.sqrt(screenX * screenX + screenY * screenY);
+                    if (distFromCenter < bhScreenRadius) continue;
                 }
 
                 // Final screen position

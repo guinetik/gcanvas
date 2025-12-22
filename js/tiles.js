@@ -10,7 +10,18 @@ import {
   Painter,
   Tween,
   Easing,
+  Position,
 } from "/gcanvas.es.min.js";
+
+// Configuration
+const CONFIG = {
+  tileSize: 50,
+  tileSpacing: 12,
+  tilePadding: 20,
+  initialTiles: 50,
+  maxColumns: 10,
+  uiHeight: 100, // Space reserved for UI at bottom
+};
 
 export class TileDemo extends Scene {
   constructor(game, options = {}) {
@@ -18,91 +29,153 @@ export class TileDemo extends Scene {
     this.elapsedTime = this.lastChangeTime = 0;
   }
 
+  isMobile() {
+    return this.game.width < 600;
+  }
+
+  getResponsiveColumns() {
+    const availableWidth = this.game.width - CONFIG.tilePadding * 2;
+    const tileWithSpacing = CONFIG.tileSize + CONFIG.tileSpacing;
+    const columns = Math.floor(availableWidth / tileWithSpacing);
+    return Math.max(2, Math.min(CONFIG.maxColumns, columns));
+  }
+
+  getViewportDimensions() {
+    const margin = this.isMobile() ? 20 : 40;
+    return {
+      width: this.game.width - margin * 2,
+      height: this.game.height - CONFIG.uiHeight - margin,
+    };
+  }
+
   init() {
     const game = this.game;
-    // 1) Create a tile grid anchored at center
+    const viewport = this.getViewportDimensions();
+    const columns = this.getResponsiveColumns();
+
+    // 1) Create a scrollable tile grid anchored at center
     this.grid = new TileLayout(game, {
-      anchor: "center",
-      columns: 10,
-      spacing: 12,
-      padding: 20,
+      anchor: Position.CENTER,
+      anchorOffsetY: -CONFIG.uiHeight / 2 + 20,
+      columns: columns,
+      spacing: CONFIG.tileSpacing,
+      padding: CONFIG.tilePadding,
       autoSize: true,
       debug: true,
+      // Enable scrolling
+      scrollable: true,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
     });
-    // Add 50 squares, each 50x50
-    for (let i = 0; i < 50; i++) {
-      const rect = new Rectangle({
-        width: 50,
-        height: 50,
-        color: Painter.colors.randomColorHSL(),
-        strokeColor: "white",
-      });
-      const go = ShapeGOFactory.create(game, rect);
-      this.grid.add(go);
+
+    // Add initial tiles
+    for (let i = 0; i < CONFIG.initialTiles; i++) {
+      this.addTile();
     }
     this.add(this.grid);
 
     // 2) Create a HorizontalLayout at bottom-center for UI buttons
-    const bottomUI = new HorizontalLayout(game, {
-      anchor: "bottom-center",
-      anchorMargin: 10,
-      spacing: 10,
-      padding: 15,
+    this.createUI();
+  }
+
+  createUI() {
+    const game = this.game;
+    const isMobile = this.isMobile();
+    const buttonWidth = isMobile ? 70 : 90;
+
+    this.bottomUI = new HorizontalLayout(game, {
+      anchor: Position.BOTTOM_CENTER,
+      anchorOffsetY: -15,
+      spacing: isMobile ? 5 : 10,
+      padding: 10,
       debug: false,
       align: "center",
     });
-    bottomUI.height = 40;
-    bottomUI.width = 40 + 40 + 40 + 40 + 15;
-    this.add(bottomUI);
+    this.add(this.bottomUI);
 
-    // 3) "Add Tile" button
-    const addTileBtn = new Button(game, {
-      text: "Add Tile",
-      onClick: () => {
-        const rect = new Rectangle({
-          width: 50,
-          height: 50,
-          color: Painter.colors.randomColorHSL(),
-        });
-        const tileGO = ShapeGOFactory.create(game, rect);
-        this.grid.add(tileGO);
-      },
-    });
-    bottomUI.add(addTileBtn);
+    // "Add Tile" button
+    this.bottomUI.add(new Button(game, {
+      text: isMobile ? "+" : "Add",
+      width: isMobile ? 40 : buttonWidth,
+      onClick: () => this.addTile(),
+    }));
 
-    // 4) "Remove Tile" button
-    const removeTileBtn = new Button(game, {
-      text: "Remove Tile",
+    // "Remove Tile" button
+    this.bottomUI.add(new Button(game, {
+      text: isMobile ? "-" : "Remove",
+      width: isMobile ? 40 : buttonWidth,
+      onClick: () => this.removeTile(),
+    }));
+
+    // "Add Column" button
+    this.bottomUI.add(new Button(game, {
+      text: isMobile ? "+Col" : "+ Column",
+      width: isMobile ? 50 : buttonWidth,
       onClick: () => {
-        // Only remove if the grid has children
-        if (this.grid.children.length > 0) {
-          const last = this.grid.children[this.grid.children.length - 1];
-          this.grid.remove(last);
+        const maxColumns = this.getResponsiveColumns();
+        if (this.grid.columns < maxColumns) {
+          this.grid.columns++;
+          this.grid.markBoundsDirty();
         }
       },
-    });
-    bottomUI.add(removeTileBtn);
-    //
-    // 5) "Add Column" button
-    const addColumn = new Button(game, {
-      text: "+ Column",
-      width: 100,
-      onClick: () => {
-        this.grid.columns++;
-        this.grid.markBoundsDirty();
-      },
-    });
-    bottomUI.add(addColumn);
-    // 6) "Remove Column" button
-    const removeColumn = new Button(game, {
-      text: "- Column",
-      width: 100,
+    }));
+
+    // "Remove Column" button
+    this.bottomUI.add(new Button(game, {
+      text: isMobile ? "-Col" : "- Column",
+      width: isMobile ? 50 : buttonWidth,
       onClick: () => {
         this.grid.columns = Math.max(1, this.grid.columns - 1);
         this.grid.markBoundsDirty();
       },
+    }));
+
+    // Add 10 tiles button (for quickly testing scroll)
+    this.bottomUI.add(new Button(game, {
+      text: isMobile ? "+10" : "Add 10",
+      width: isMobile ? 45 : buttonWidth,
+      onClick: () => {
+        for (let i = 0; i < 10; i++) this.addTile();
+      },
+    }));
+  }
+
+  addTile() {
+    const rect = new Rectangle({
+      width: CONFIG.tileSize,
+      height: CONFIG.tileSize,
+      color: Painter.colors.randomColorHSL(),
+      strokeColor: "white",
     });
-    bottomUI.add(removeColumn);
+    const tileGO = ShapeGOFactory.create(this.game, rect);
+    this.grid.add(tileGO);
+  }
+
+  removeTile() {
+    if (this.grid.children.length > 0) {
+      const last = this.grid.children[this.grid.children.length - 1];
+      this.grid.remove(last);
+    }
+  }
+
+  onResize() {
+    if (!this.grid) return;
+
+    // Update columns based on new width
+    const newColumns = this.getResponsiveColumns();
+    if (this.grid.columns !== newColumns) {
+      this.grid.columns = newColumns;
+    }
+
+    // Update viewport for scrolling
+    const viewport = this.getViewportDimensions();
+    this.grid._viewportWidth = viewport.width;
+    this.grid._viewportHeight = viewport.height;
+
+    this.grid.markBoundsDirty();
+    if (this.bottomUI) {
+      this.bottomUI.markBoundsDirty();
+    }
   }
 
   update(dt) {
@@ -222,11 +295,18 @@ export class MyGame extends Game {
 
   init() {
     super.init();
-    this.pipeline.add(new TileDemo(this));
+    this.tileDemo = new TileDemo(this);
+    this.pipeline.add(this.tileDemo);
     this.pipeline.add(
       new FPSCounter(this, {
         anchor: "bottom-right",
       })
     );
+  }
+
+  onResize() {
+    if (this.tileDemo) {
+      this.tileDemo.onResize();
+    }
   }
 }

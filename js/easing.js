@@ -11,6 +11,7 @@ import {
   Tweenetik,
   ToggleButton,
   Tooltip,
+  Position,
 } from "/gcanvas.es.min.js";
 
 // Formulas for each easing function
@@ -284,6 +285,8 @@ class EasingDemo extends TileLayout {
   constructor(game, tooltip, options = {}) {
     super(game, options);
     this.tooltip = tooltip;
+    this.cellSize = 120;
+    this.maxColumns = 6;
 
     // All easing functions organized by type (In, Out, InOut for each)
     this.easingDefinitions = [
@@ -356,6 +359,25 @@ class EasingDemo extends TileLayout {
     });
   }
 
+  onResize() {
+    const margin = 40;
+    const availableWidth = this.game.width - margin;
+    const columns = Math.min(
+      this.maxColumns,
+      Math.max(1, Math.floor(availableWidth / this.cellSize))
+    );
+
+    if (this.columns !== columns) {
+      this.columns = columns;
+      this.markBoundsDirty();
+    }
+
+    // Center the layout
+    this.transform.position(
+      Math.round(this.game.width / 2),
+      Math.round(this.game.height / 2)
+    );
+  }
 }
 
 /**
@@ -383,9 +405,21 @@ export class MyGame extends Game {
     // Toggle button to play all animations
     this.toggleBtn = new ToggleButton(this, {
       text: "Play All",
+      anchor: Position.BOTTOM_LEFT,
       width: 100,
       height: 32,
-      anchor: "bottom-left",
+      colorDefaultBg: "rgba(0, 0, 0, 0.9)",
+      colorDefaultStroke: "rgba(0, 255, 0, 0.5)",
+      colorDefaultText: "#0f0",
+      colorActiveBg: "rgba(0, 255, 0, 1)",
+      colorActiveStroke: "orange",
+      colorActiveText: "#FFFFFF",
+      colorHoverBg: "rgba(0, 255, 0, 0.5)",
+      colorHoverStroke: "rgba(0, 255, 0, 0.5)",
+      colorHoverText: "#0f0",
+      colorPressedBg: "rgba(0, 255, 0, 0.5)",
+      colorPressedStroke: "rgba(0, 255, 0, 0.5)",
+      colorPressedText: "#0f0",
       startToggled: false,
       onToggle: (isOn) => {
         this.setPlayAll(isOn);
@@ -393,11 +427,20 @@ export class MyGame extends Game {
     });
     this.pipeline.add(this.toggleBtn);
 
+    // Calculate initial columns based on screen width
+    const cellSize = 120;
+    const maxColumns = 6;
+    const margin = 40;
+    const initialColumns = Math.min(
+      maxColumns,
+      Math.max(1, Math.floor((this.width - margin) / cellSize))
+    );
+
     this.easingDemo = new EasingDemo(this, this.tooltip, {
       debug: false,
       anchor: "center",
       spacing: 20,
-      columns: 6,
+      columns: initialColumns,
       padding: 30,
       align: "center",
     });
@@ -411,6 +454,8 @@ export class MyGame extends Game {
 
     // Add tooltip last so it renders on top
     this.pipeline.add(this.tooltip);
+
+    this.easingDemo.onResize();
   }
 
   /**
@@ -425,9 +470,8 @@ export class MyGame extends Game {
   }
 
   onResize() {
-    // Trigger layout recalculation on resize
     if (this.easingDemo) {
-      this.easingDemo.markBoundsDirty();
+      this.easingDemo.onResize();
     }
   }
 }
