@@ -4,12 +4,18 @@
  * Fullscreen metaball lava lamp with realistic heat physics.
  */
 
-import { Game, ImageGo, Painter } from "../../src/index.js";
+import { Game, ImageGo, Painter, ToggleButton, applyAnchor, Position } from "../../src/index.js";
+import {
+  zoneTemperature,
+  thermalBuoyancy,
+  thermalGravity,
+  heatTransfer,
+} from "../../src/math/heat.js";
 
 // Configuration constants
 const CONFIG = {
   // Rendering
-  scaleFactor: 3,
+  scaleFactor: 2,
   blendMode: "screen",
 
   // Physics
@@ -20,14 +26,15 @@ const CONFIG = {
   dampingY: 0.998,
 
   // Temperature
-  tempRate: 0.0055,
-  heatZoneY: 0.92,
-  coolZoneY: 0.2,
-  heatZoneMultiplier: 1.5,
-  coolZoneMultiplier: 1.5,
-  middleZoneMultiplier: 0.05,
-  heatTransferRate: 0.0022,
-  heatTransferRange: 1.5,
+  tempRate: 0.008,            // base rate for temperature changes
+  heatZoneY: 0.85,            // heat zone at bottom
+  coolZoneY: 0.15,            // cool zone at top
+  heatZoneMultiplier: 2.0,    // fast heating at bottom
+  coolZoneMultiplier: 0.8,    // gentle cooling - blobs linger at top
+  middleZoneMultiplier: 0.03, // slow transition in middle
+  transitionWidth: 0.25,      // wide smooth transition between zones
+  heatTransferRate: 0.005,    // faster blob-to-blob transfer (was 0.0022)
+  heatTransferRange: 1.8,     // slightly larger transfer range
 
   // Spawning
   initialSpawnMin: 1,
@@ -83,6 +90,11 @@ const CONFIG = {
   glowR: 50,
   glowG: 35,
   glowB: 25,
+
+  // Lamp on/off
+  heatTransitionSpeed: 0.4,   // How fast heat level changes
+  coolDownRate: 0.015,        // How fast blobs cool when lamp is off
+  poolCoolRate: 0.008,        // How fast the pool cools
 };
 
 class LavaLampDemo extends Game {
@@ -174,9 +186,35 @@ class LavaLampDemo extends Game {
     this.spawnInterval =
       CONFIG.initialSpawnMin + Math.random() * CONFIG.initialSpawnRange;
 
-    // Re-shuffle colors on click/touch
-    this.canvas.addEventListener("click", () => this.shuffleColors());
-    this.canvas.addEventListener("touchstart", () => this.shuffleColors());
+    // Lamp on/off state
+    this.lampOn = true;
+    this.heatLevel = 1.0;  // Smooth transition 0-1
+    this.poolTemp = 1.0;   // Pool temperature (cools when off)
+
+    // Create on/off toggle button
+    const btnWidth = 60;
+    const btnHeight = 36;
+    this.powerButton = new ToggleButton(this, {
+      text: "ON",
+      width: btnWidth,
+      height: btnHeight,
+      startToggled: true,
+      colorDefaultBg: "#000",
+      colorStroke: "#444",
+      colorText: "#888",
+      colorActiveBg: "#331100",
+      colorActiveStroke: "#ff6600",
+      colorActiveText: "#ff8833",
+      onToggle: (isOn) => {
+        this.lampOn = isOn;
+        this.powerButton.label.text = isOn ? "ON" : "OFF";
+      },
+    });
+    applyAnchor(this.powerButton, {
+      anchor: Position.CENTER_LEFT,
+      anchorOffsetX: 20,
+    });
+    this.pipeline.add(this.powerButton);
   }
 
   shuffleColors() {
@@ -215,9 +253,22 @@ class LavaLampDemo extends Game {
     super.update(dt);
     this.time += dt;
 
-    // Spawn new blobs from pool periodically
+    // Smooth heat level transition
+    const targetHeat = this.lampOn ? 1.0 : 0.0;
+    this.heatLevel += (targetHeat - this.heatLevel) * CONFIG.heatTransitionSpeed * dt * 60;
+    this.heatLevel = Math.max(0, Math.min(1, this.heatLevel));
+
+    // Pool temperature follows heat level (slower transition)
+    if (this.lampOn) {
+      this.poolTemp += (1.0 - this.poolTemp) * CONFIG.poolCoolRate * 2 * dt * 60;
+    } else {
+      this.poolTemp += (0.0 - this.poolTemp) * CONFIG.poolCoolRate * dt * 60;
+    }
+    this.poolTemp = Math.max(0, Math.min(1, this.poolTemp));
+
+    // Spawn new blobs from pool periodically (only when lamp is on and pool is hot)
     // But only if no blobs are near the pool (to avoid immediate merging)
-    if (this.time - this.lastSpawnTime > this.spawnInterval) {
+    if (this.lampOn && this.poolTemp > 0.7 && this.time - this.lastSpawnTime > this.spawnInterval) {
       const poolClear = !this.blobs.some(
         (b) => b.y > CONFIG.poolClearThreshold && !b.growing,
       );
@@ -277,32 +328,33 @@ class LavaLampDemo extends Game {
   }
 
   updateBlobs(dt) {
-    for (const blob of this.blobs) {
-      // Temperature changes based on position
-      const targetTemp = blob.y;
+    // Thermal zone configuration - modified by lamp state
+    const thermalConfig = {
+      heatZone: CONFIG.heatZoneY,
+      coolZone: CONFIG.coolZoneY,
+      rate: CONFIG.tempRate,
+      transitionWidth: CONFIG.transitionWidth,  // smooth zone boundaries
+      // When lamp is off, heat zone becomes weak/disabled, cool zone stronger
+      heatMultiplier: CONFIG.heatZoneMultiplier * this.heatLevel,
+      coolMultiplier: CONFIG.coolZoneMultiplier + (1 - this.heatLevel) * 2,
+      middleMultiplier: CONFIG.middleZoneMultiplier + (1 - this.heatLevel) * 0.3,
+    };
 
-      // Slowly adjust temperature toward target
-      if (blob.y > CONFIG.heatZoneY) {
-        blob.temp +=
-          (1.0 - blob.temp) * CONFIG.tempRate * CONFIG.heatZoneMultiplier;
-      } else if (blob.y < CONFIG.coolZoneY) {
-        blob.temp +=
-          (0.0 - blob.temp) * CONFIG.tempRate * CONFIG.coolZoneMultiplier;
-      } else {
-        blob.temp +=
-          (targetTemp - blob.temp) *
-          CONFIG.tempRate *
-          CONFIG.middleZoneMultiplier;
+    for (const blob of this.blobs) {
+      // Temperature changes based on position (smooth zone transitions)
+      blob.temp = zoneTemperature(blob.y, blob.temp, thermalConfig);
+
+      // When lamp is off, all blobs cool down faster
+      if (!this.lampOn) {
+        blob.temp -= CONFIG.coolDownRate * dt * 60;
+        blob.temp = Math.max(0, blob.temp);
       }
-      blob.temp = Math.max(0, Math.min(1, blob.temp));
 
       // Buoyancy based on temperature
-      const buoyancy = (blob.temp - 0.5) * CONFIG.buoyancyStrength;
-      blob.vy -= buoyancy;
+      blob.vy -= thermalBuoyancy(blob.temp, 0.5, CONFIG.buoyancyStrength);
 
       // Gravity pulls everything down - heavier blobs sink faster
-      const weight = blob.r / CONFIG.targetRadiusMin; // Larger blobs = more weight
-      blob.vy += CONFIG.gravity * weight;
+      blob.vy += thermalGravity(blob.r, CONFIG.targetRadiusMin, CONFIG.gravity);
 
       // Gradually grow to target size (smooth spawn)
       if (blob.targetR && blob.r < blob.targetR) {
@@ -319,14 +371,11 @@ class LavaLampDemo extends Game {
         const dx = other.x - blob.x;
         const dy = other.y - blob.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const touchDist = blob.r + other.r;
+        const maxDist = (blob.r + other.r) * CONFIG.heatTransferRange;
 
-        if (dist < touchDist * CONFIG.heatTransferRange) {
-          const heatDiff = other.temp - blob.temp;
-          const transfer = heatDiff * CONFIG.heatTransferRate;
-          blob.temp += transfer;
-        }
+        blob.temp += heatTransfer(blob.temp, other.temp, dist, maxDist, CONFIG.heatTransferRate);
       }
+      blob.temp = Math.max(0, Math.min(1, blob.temp));
 
       // Damping
       blob.vx *= CONFIG.dampingX;
@@ -390,28 +439,38 @@ class LavaLampDemo extends Game {
     const w = this.renderWidth;
     const h = this.renderHeight;
 
+    // Desaturation factor when lamp is off (colors become duller)
+    const saturation = 0.4 + this.heatLevel * 0.6;
+    // Darkness multiplier - scene gets much darker when off
+    const darkness = 0.15 + this.heatLevel * 0.85;
+
     for (let py = 0; py < h; py++) {
       const ny = py / h;
 
       // Background gradient with extra glow near pool at bottom
+      // Glow fades when lamp is off
       const poolGlow =
         ny > CONFIG.poolGlowStart
           ? (ny - CONFIG.poolGlowStart) / (1 - CONFIG.poolGlowStart)
           : 0;
-      const glowBoost = poolGlow * poolGlow * CONFIG.poolGlowBoost;
+      const glowBoost = poolGlow * poolGlow * CONFIG.poolGlowBoost * this.heatLevel;
 
-      const bgR =
+      // Background darkens when lamp is off
+      const bgR = (
         this.colors.bgTop[0] +
         (this.colors.bgBottom[0] - this.colors.bgTop[0]) * ny +
-        this.colors.blob1[0] * glowBoost;
-      const bgG =
+        this.colors.blob1[0] * glowBoost
+      ) * darkness;
+      const bgG = (
         this.colors.bgTop[1] +
         (this.colors.bgBottom[1] - this.colors.bgTop[1]) * ny +
-        this.colors.blob1[1] * glowBoost * 0.6;
-      const bgB =
+        this.colors.blob1[1] * glowBoost * 0.6
+      ) * darkness;
+      const bgB = (
         this.colors.bgTop[2] +
         (this.colors.bgBottom[2] - this.colors.bgTop[2]) * ny +
-        this.colors.blob1[2] * glowBoost * 0.3;
+        this.colors.blob1[2] * glowBoost * 0.3
+      ) * darkness;
 
       for (let px = 0; px < w; px++) {
         const nx = px / w;
@@ -421,14 +480,14 @@ class LavaLampDemo extends Game {
         let sum = 0;
         let avgTemp = 0;
 
-        // Pool blobs (always hot, temp = 1)
+        // Pool blobs (temperature based on lamp state)
         for (const blob of this.poolBlobs) {
           const dx = blob.x - nx;
           const dy = blob.y - ny;
           const distSq = dx * dx + dy * dy;
           const influence = (blob.r * blob.r) / (distSq + 0.0001);
           sum += influence;
-          avgTemp += influence * 1.0; // Pool is always hot
+          avgTemp += influence * this.poolTemp;  // Pool cools when lamp is off
         }
 
         // Moving blobs - with temperature and time-based deformation
@@ -437,15 +496,17 @@ class LavaLampDemo extends Game {
           const dy = blob.y - ny;
 
           // Organic wobble - each blob pulses uniquely over time
+          // Hot blobs wobble more (fluid), cold blobs wobble less (solidifying)
           const phase = blob.driftPhase || 0;
+          const tempWobble = 0.3 + blob.temp * 0.7;  // 30% wobble when cold, 100% when hot
           const wobble1 =
             Math.sin(this.time * CONFIG.wobble1Speed + phase) *
-            CONFIG.wobble1Amount;
+            CONFIG.wobble1Amount * tempWobble;
           const wobble2 =
             Math.sin(
               this.time * CONFIG.wobble2Speed +
                 phase * CONFIG.wobble2PhaseFactor,
-            ) * CONFIG.wobble2Amount;
+            ) * CONFIG.wobble2Amount * tempWobble;
 
           // Hot blobs stretch vertically, cold blobs squish horizontally
           const stretch =
@@ -459,18 +520,24 @@ class LavaLampDemo extends Game {
         }
         if (sum > 0) avgTemp /= sum;
 
-        // Blob color based on y position (bottom = hot/bright, top = cool/dim)
+        // Blob color based on y position and temperature
+        // When lamp is off, colors shift cooler/duller and darker
         const t = ny; // ny=1 at bottom (hot), ny=0 at top (cool)
+        const tempInfluence = avgTemp * this.heatLevel;  // Temperature affects brightness
         const brightness =
-          CONFIG.brightnessBase + t * CONFIG.brightnessTempFactor;
+          (CONFIG.brightnessBase + t * CONFIG.brightnessTempFactor) *
+          (0.5 + tempInfluence * 0.5) * darkness;  // Dimmer when cool and when off
+
+        // Mix colors - shift toward blob1 (cooler) when lamp is off
+        const colorMix = t * saturation;
         const blobR =
-          (this.colors.blob1[0] * (1 - t) + this.colors.blob2[0] * t) *
+          (this.colors.blob1[0] * (1 - colorMix) + this.colors.blob2[0] * colorMix) *
           brightness;
         const blobG =
-          (this.colors.blob1[1] * (1 - t) + this.colors.blob2[1] * t) *
+          (this.colors.blob1[1] * (1 - colorMix) + this.colors.blob2[1] * colorMix) *
           brightness;
         const blobB =
-          (this.colors.blob1[2] * (1 - t) + this.colors.blob2[2] * t) *
+          (this.colors.blob1[2] * (1 - colorMix) + this.colors.blob2[2] * colorMix) *
           brightness;
 
         // Anti-aliasing: smooth blend at edges
@@ -478,10 +545,10 @@ class LavaLampDemo extends Game {
         const outerThreshold = this.threshold - CONFIG.edgeWidth;
 
         if (sum >= innerThreshold) {
-          // Fully inside blob
+          // Fully inside blob - glow reduced when lamp is off
           const glow = Math.min(
-            (sum - innerThreshold) * CONFIG.glowFactor,
-            CONFIG.glowMax,
+            (sum - innerThreshold) * CONFIG.glowFactor * this.heatLevel,
+            CONFIG.glowMax * this.heatLevel,
           );
           data[idx] = Math.min(255, blobR + glow * CONFIG.glowR);
           data[idx + 1] = Math.min(255, blobG + glow * CONFIG.glowG);

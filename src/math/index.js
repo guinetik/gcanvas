@@ -9,3 +9,4 @@ export {Tensor} from "./tensor.js";
 export * from "./gr.js";
 export * from "./orbital.js";
 export * from "./quantum.js";
+export * from "./heat.js";
