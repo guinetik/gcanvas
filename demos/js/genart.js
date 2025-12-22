@@ -6,13 +6,15 @@
  * - Concentric rings of shapes rotating at different speeds
  * - HSL color cycling based on time and position
  * - Pulsing and breathing effects
- * - Lissajous-inspired motion patterns
+ * - Responsive scaling for mobile
  */
 
 import { gcanvas } from '../../src/index.js';
 
-// Configuration
+// Configuration - base values at 800px reference size
 const CONFIG = {
+  referenceSize: 800,      // Design reference size
+  minScale: 0.4,           // Minimum scale on small screens
   rings: 6,
   shapesPerRing: [8, 12, 16, 20, 24, 32],
   baseRadius: 50,
@@ -21,6 +23,13 @@ const CONFIG = {
   pulseAmplitudes: [0.12, 0.1, 0.08, 0.06, 0.05, 0.04],
   colorOffsets: [0, 60, 120, 180, 240, 300],
 };
+
+// Calculate scale factor based on screen size
+function getScaleFactor(width, height) {
+  const minDimension = Math.min(width, height);
+  const scale = minDimension / CONFIG.referenceSize;
+  return Math.max(CONFIG.minScale, Math.min(1.2, scale));
+}
 
 // Shape factory functions
 const shapeTypes = ['circle', 'star', 'triangle', 'hexagon', 'diamond', 'ring'];
@@ -117,19 +126,29 @@ window.addEventListener('load', () => {
   // Animation update loop
   let time = 0;
 
+  // Get reference to underlying game for live dimensions
+  const gameInstance = game.game;
+
+  // Override clear for trail effect (like particles.js)
+  gameInstance.clear = function() {
+    this.ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+    this.ctx.fillRect(0, 0, this.width, this.height);
+  };
+
   game.on('update', (dt, ctx) => {
     time += dt;
 
-    // Get dynamic center based on current canvas size
-    const cx = ctx.width / 2;
-    const cy = ctx.height / 2;
+    // Get dynamic center and scale based on LIVE canvas size
+    const cx = gameInstance.width / 2;
+    const cy = gameInstance.height / 2;
+    const scaleFactor = getScaleFactor(gameInstance.width, gameInstance.height);
 
     // Animate core
     const core = ctx.refs.core;
     if (core) {
       core.x = cx;
       core.y = cy;
-      const coreScale = 1 + Math.sin(time * 4) * 0.25;
+      const coreScale = (1 + Math.sin(time * 4) * 0.25) * scaleFactor;
       core.scaleX = coreScale;
       core.scaleY = coreScale;
       core.rotation = time * 1.5;
@@ -152,10 +171,15 @@ window.addEventListener('load', () => {
         // Particle animation - orbit and twinkle
         const particleSpeed = 0.15;
         const newAngle = shape.baseAngle + time * particleSpeed;
-        const wobble = Math.sin(time * 2 + shape.index * 0.3) * 8;
+        const wobble = Math.sin(time * 2 + shape.index * 0.3) * 8 * scaleFactor;
+        const scaledRadius = shape.ringRadius * scaleFactor;
 
-        go.x = cx + Math.cos(newAngle) * (shape.ringRadius + wobble);
-        go.y = cy + Math.sin(newAngle) * (shape.ringRadius + wobble);
+        go.x = cx + Math.cos(newAngle) * (scaledRadius + wobble);
+        go.y = cy + Math.sin(newAngle) * (scaledRadius + wobble);
+
+        // Scale particle size
+        go.scaleX = scaleFactor;
+        go.scaleY = scaleFactor;
 
         // Twinkle effect
         const alpha = 0.4 + Math.abs(Math.sin(time * 8 + shape.index * 0.3)) * 0.6;
@@ -171,17 +195,18 @@ window.addEventListener('load', () => {
         // Rotate around center - smooth continuous rotation
         const newAngle = shape.baseAngle + time * rotationSpeed;
 
-        // Gentle breathing effect on radius
+        // Gentle breathing effect on radius (scaled)
         const breathPhase = time * 0.8 + ringIndex * 0.5;
-        const breathRadius = shape.ringRadius + Math.sin(breathPhase) * 8;
+        const scaledRadius = shape.ringRadius * scaleFactor;
+        const breathRadius = scaledRadius + Math.sin(breathPhase) * 8 * scaleFactor;
 
         // Smooth position update
         go.x = cx + Math.cos(newAngle) * breathRadius;
         go.y = cy + Math.sin(newAngle) * breathRadius;
 
-        // Smooth pulse scale
+        // Smooth pulse scale (includes responsive scaling)
         const pulsePhase = time * 2 + ringIndex * 0.3;
-        const scale = 1 + Math.sin(pulsePhase) * pulseAmp;
+        const scale = (1 + Math.sin(pulsePhase) * pulseAmp) * scaleFactor;
         go.scaleX = scale;
         go.scaleY = scale;
 
