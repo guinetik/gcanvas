@@ -13,9 +13,11 @@
  * - BlackHole: Event horizon and Hawking radiation
  */
 
-import { Game, Painter, Camera3D, StateMachine } from "../../../src/index.js";
+import { Game, Painter, Camera3D, StateMachine, Button } from "../../../src/index.js";
+import { applyAnchor } from "../../../src/mixins/anchor.js";
+import { Position } from "../../../src/util/position.js";
 
-import { StarField } from "./starfield.obj.js";
+import { LensedStarfield } from "../tde/lensedstarfield.js";
 import { AccretionDisk } from "./accretiondisk.obj.js";
 import { BlackHole } from "./blackhole.obj.js";
 
@@ -66,20 +68,31 @@ class BlackHoleDemo extends Game {
     // Calculate scaled sizes
     this.updateScaledSizes();
 
-    // Setup Camera3D
+    // Setup Camera3D with inertia
     this.camera = new Camera3D({
       rotationX: 0.1,
       rotationY: 0,
       perspective: this.baseScale * 0.6,
       autoRotate: true,
       autoRotateSpeed: 0.2,
+      // Inertia for smooth camera drag
+      inertia: true,
+      friction: 0.94,
+      velocityScale: 1.2,
     });
     this.camera.enableMouseControl(this.canvas);
 
-    // Create StarField
-    this.starField = new StarField(this, {
+    // Black hole reference for lensed starfield occlusion
+    this.bhRef = { currentRadius: 0 };
+
+    // Lensed starfield with gravitational lensing
+    // Use smaller distanceScale (0.33) because camera perspective is 0.6x vs TDE's 1.8x
+    this.starField = new LensedStarfield(this, {
       camera: this.camera,
+      blackHole: this.bhRef,
       starCount: CONFIG.starCount,
+      distanceScale: 0.33,
+      lensingStrength: 1.0,
     });
     this.starField.init();
     this.pipeline.add(this.starField);
@@ -114,12 +127,31 @@ class BlackHoleDemo extends Game {
     this.accretionDisk.formationFSM = this.formationFSM;
     this.blackHole.formationFSM = this.formationFSM;
 
-    // Click to form new black hole
-    this.canvas.addEventListener("click", () => {
-      if (this.formationFSM.is("stable")) {
-        this.formNewBlackHole();
-      }
+    // Replay button (bottom left)
+    this.replayButton = new Button(this, {
+      width: 120,
+      height: 32,
+      text: "▶ Replay",
+      font: "14px monospace",
+      colorDefaultBg: "rgba(0, 0, 0, 0.6)",
+      colorDefaultStroke: "#666",
+      colorDefaultText: "#888",
+      colorHoverBg: "rgba(40, 40, 40, 0.8)",
+      colorHoverStroke: "#aaa",
+      colorHoverText: "#fff",
+      colorPressedBg: "rgba(60, 40, 20, 0.8)",
+      colorPressedStroke: "#ffaa66",
+      colorPressedText: "#ffaa66",
+      onClick: () => this.formNewBlackHole(),
     });
+    applyAnchor(this.replayButton, {
+      anchor: Position.BOTTOM_LEFT,
+      anchorMargin: 20,
+      anchorOffsetY: -30,
+    });
+    this.replayButton.zIndex = 100;
+    this.replayButton.visible = false; // Hidden until stable
+    this.pipeline.add(this.replayButton);
   }
 
   initFormationStateMachine() {
@@ -143,6 +175,10 @@ class BlackHoleDemo extends Game {
         {
           name: "stable",
           duration: Infinity,
+          enter: () => {
+            // Show replay button when stable
+            if (this.replayButton) this.replayButton.visible = true;
+          },
         },
       ],
       { context: this },
@@ -150,6 +186,9 @@ class BlackHoleDemo extends Game {
   }
 
   formNewBlackHole() {
+    // Hide replay button
+    if (this.replayButton) this.replayButton.visible = false;
+
     this.blackHole.reset();
     this.formationFSM.setState("infall");
   }
@@ -208,6 +247,24 @@ class BlackHoleDemo extends Game {
       this.accretionDisk.particlesConsumed,
       this.accretionDisk.totalParticleMass,
     );
+
+    // Update black hole reference for lensed starfield occlusion
+    this.bhRef.currentRadius = this.bhRadius * lambda;
+
+    // Adjust starfield lensing strength based on formation phase
+    if (this.starField) {
+      const state = this.formationFSM.state;
+      if (state === "stable") {
+        this.starField.lensingStrength = 1.0;
+      } else if (state === "circularize") {
+        this.starField.lensingStrength = 0.4 + this.formationFSM.progress * 0.6;
+      } else if (state === "collapse") {
+        this.starField.lensingStrength = this.formationFSM.progress * 0.4;
+      } else {
+        // infall - subtle lensing as BH forms
+        this.starField.lensingStrength = lambda * 0.3;
+      }
+    }
 
     // Clear and draw starfield (via pipeline)
     super.render();
@@ -340,7 +397,7 @@ class BlackHoleDemo extends Game {
 
       ctx.textAlign = "right";
       ctx.fillStyle = "#444";
-      ctx.fillText("click to form  |  drag to orbit", w - 15, h - 15);
+      ctx.fillText("drag to orbit", w - 15, h - 15);
     });
   }
 }

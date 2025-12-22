@@ -40,6 +40,10 @@ export class TDEDemo extends Game {
       perspective: this.baseScale * 1.8, // Zoomed out for wider view
       autoRotate: true,
       autoRotateSpeed: 0.08,
+      // Inertia for smooth camera drag
+      inertia: true,
+      friction: 0.94,        // 0.9 = fast stop, 0.98 = slow drift
+      velocityScale: 1.2,    // Throw strength multiplier
     });
     this.camera.enableMouseControl(this.canvas);
 

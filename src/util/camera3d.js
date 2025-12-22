@@ -4,12 +4,16 @@
  * Provides 3D to 2D projection with perspective, rotation controls,
  * and interactive mouse/touch rotation for 2D canvas applications.
  *
+ * Supports inertia for smooth, physics-based camera movement.
+ *
  * @example
  * // Create camera with initial settings
  * const camera = new Camera3D({
  *   rotationX: 0.3,
  *   rotationY: -0.4,
- *   perspective: 800
+ *   perspective: 800,
+ *   inertia: true,        // Enable inertia
+ *   friction: 0.92        // Velocity decay (0.9 = fast stop, 0.98 = slow drift)
  * });
  *
  * // Enable mouse drag rotation
@@ -35,6 +39,9 @@ export class Camera3D {
    * @param {boolean} [options.clampX=true] - Whether to clamp X rotation
    * @param {boolean} [options.autoRotate=false] - Enable auto-rotation
    * @param {number} [options.autoRotateSpeed=0.5] - Auto-rotation speed (radians per second)
+   * @param {boolean} [options.inertia=false] - Enable inertia (momentum after release)
+   * @param {number} [options.friction=0.92] - Velocity decay per frame (0.9 = fast stop, 0.98 = slow drift)
+   * @param {number} [options.velocityScale=1.0] - Multiplier for initial throw velocity
    */
   constructor(options = {}) {
     // Rotation state
@@ -60,6 +67,18 @@ export class Camera3D {
     this.autoRotate = options.autoRotate ?? false;
     this.autoRotateSpeed = options.autoRotateSpeed ?? 0.5;
     this.autoRotateAxis = options.autoRotateAxis ?? 'y'; // 'x', 'y', or 'z'
+
+    // Inertia settings
+    this.inertia = options.inertia ?? false;
+    this.friction = options.friction ?? 0.92;
+    this.velocityScale = options.velocityScale ?? 1.0;
+
+    // Velocity state for inertia
+    this._velocityX = 0;
+    this._velocityY = 0;
+    this._lastDeltaX = 0;
+    this._lastDeltaY = 0;
+    this._lastMoveTime = 0;
 
     // Internal state for mouse control
     this._isDragging = false;
@@ -122,22 +141,48 @@ export class Camera3D {
   }
 
   /**
-   * Update camera for auto-rotation (call in update loop)
+   * Update camera for auto-rotation and inertia (call in update loop)
    * @param {number} dt - Delta time in seconds
    */
   update(dt) {
+    // Apply inertia when not dragging
+    if (this.inertia && !this._isDragging) {
+      // Apply velocity to rotation
+      if (Math.abs(this._velocityX) > 0.0001 || Math.abs(this._velocityY) > 0.0001) {
+        this.rotationY += this._velocityY;
+        this.rotationX += this._velocityX;
+
+        // Clamp X rotation
+        if (this.clampX) {
+          this.rotationX = Math.max(this.minRotationX, Math.min(this.maxRotationX, this.rotationX));
+        }
+
+        // Apply friction (exponential decay)
+        this._velocityX *= this.friction;
+        this._velocityY *= this.friction;
+
+        // Stop if velocity is negligible
+        if (Math.abs(this._velocityX) < 0.0001) this._velocityX = 0;
+        if (Math.abs(this._velocityY) < 0.0001) this._velocityY = 0;
+      }
+    }
+
+    // Auto-rotate when not dragging and no significant velocity
     if (this.autoRotate && !this._isDragging) {
-      const delta = this.autoRotateSpeed * dt;
-      switch (this.autoRotateAxis) {
-        case 'x':
-          this.rotationX += delta;
-          break;
-        case 'y':
-          this.rotationY += delta;
-          break;
-        case 'z':
-          this.rotationZ += delta;
-          break;
+      const hasVelocity = Math.abs(this._velocityX) > 0.001 || Math.abs(this._velocityY) > 0.001;
+      if (!hasVelocity) {
+        const delta = this.autoRotateSpeed * dt;
+        switch (this.autoRotateAxis) {
+          case 'x':
+            this.rotationX += delta;
+            break;
+          case 'y':
+            this.rotationY += delta;
+            break;
+          case 'z':
+            this.rotationZ += delta;
+            break;
+        }
       }
     }
   }
@@ -165,6 +210,10 @@ export class Camera3D {
         this._isDragging = true;
         this._lastMouseX = e.clientX;
         this._lastMouseY = e.clientY;
+        this._lastMoveTime = performance.now();
+        // Stop any existing inertia
+        this._velocityX = 0;
+        this._velocityY = 0;
       },
 
       mousemove: (e) => {
@@ -173,11 +222,21 @@ export class Camera3D {
         const deltaX = e.clientX - this._lastMouseX;
         const deltaY = e.clientY - this._lastMouseY;
 
-        this.rotationY += deltaX * this.sensitivity * invertX;
-        this.rotationX += deltaY * this.sensitivity * invertY;
+        const scaledDeltaX = deltaX * this.sensitivity * invertX;
+        const scaledDeltaY = deltaY * this.sensitivity * invertY;
+
+        this.rotationY += scaledDeltaX;
+        this.rotationX += scaledDeltaY;
 
         if (this.clampX) {
           this.rotationX = Math.max(this.minRotationX, Math.min(this.maxRotationX, this.rotationX));
+        }
+
+        // Track velocity for inertia (store last delta)
+        if (this.inertia) {
+          this._lastDeltaX = scaledDeltaY;  // X rotation from Y mouse movement
+          this._lastDeltaY = scaledDeltaX;  // Y rotation from X mouse movement
+          this._lastMoveTime = performance.now();
         }
 
         this._lastMouseX = e.clientX;
@@ -185,10 +244,27 @@ export class Camera3D {
       },
 
       mouseup: () => {
+        // Transfer last delta to velocity for inertia throw
+        if (this.inertia && this._isDragging) {
+          const timeSinceMove = performance.now() - this._lastMoveTime;
+          // Only apply inertia if the release was quick (within 50ms of last move)
+          if (timeSinceMove < 50) {
+            this._velocityX = this._lastDeltaX * this.velocityScale;
+            this._velocityY = this._lastDeltaY * this.velocityScale;
+          }
+        }
         this._isDragging = false;
       },
 
       mouseleave: () => {
+        // Apply inertia on mouseleave too
+        if (this.inertia && this._isDragging) {
+          const timeSinceMove = performance.now() - this._lastMoveTime;
+          if (timeSinceMove < 50) {
+            this._velocityX = this._lastDeltaX * this.velocityScale;
+            this._velocityY = this._lastDeltaY * this.velocityScale;
+          }
+        }
         this._isDragging = false;
       },
 
@@ -197,6 +273,10 @@ export class Camera3D {
           this._isDragging = true;
           this._lastMouseX = e.touches[0].clientX;
           this._lastMouseY = e.touches[0].clientY;
+          this._lastMoveTime = performance.now();
+          // Stop any existing inertia
+          this._velocityX = 0;
+          this._velocityY = 0;
         }
       },
 
@@ -207,11 +287,21 @@ export class Camera3D {
         const deltaX = e.touches[0].clientX - this._lastMouseX;
         const deltaY = e.touches[0].clientY - this._lastMouseY;
 
-        this.rotationY += deltaX * this.sensitivity * invertX;
-        this.rotationX += deltaY * this.sensitivity * invertY;
+        const scaledDeltaX = deltaX * this.sensitivity * invertX;
+        const scaledDeltaY = deltaY * this.sensitivity * invertY;
+
+        this.rotationY += scaledDeltaX;
+        this.rotationX += scaledDeltaY;
 
         if (this.clampX) {
           this.rotationX = Math.max(this.minRotationX, Math.min(this.maxRotationX, this.rotationX));
+        }
+
+        // Track velocity for inertia
+        if (this.inertia) {
+          this._lastDeltaX = scaledDeltaY;
+          this._lastDeltaY = scaledDeltaX;
+          this._lastMoveTime = performance.now();
         }
 
         this._lastMouseX = e.touches[0].clientX;
@@ -219,6 +309,14 @@ export class Camera3D {
       },
 
       touchend: () => {
+        // Transfer last delta to velocity for inertia throw
+        if (this.inertia && this._isDragging) {
+          const timeSinceMove = performance.now() - this._lastMoveTime;
+          if (timeSinceMove < 50) {
+            this._velocityX = this._lastDeltaX * this.velocityScale;
+            this._velocityY = this._lastDeltaY * this.velocityScale;
+          }
+        }
         this._isDragging = false;
       },
 
@@ -262,13 +360,25 @@ export class Camera3D {
   }
 
   /**
-   * Reset rotation to initial values
+   * Reset rotation to initial values and stop inertia
    * @returns {Camera3D} Returns this for chaining
    */
   reset() {
     this.rotationX = this._initialRotationX;
     this.rotationY = this._initialRotationY;
     this.rotationZ = this._initialRotationZ;
+    this._velocityX = 0;
+    this._velocityY = 0;
+    return this;
+  }
+
+  /**
+   * Stop any inertia motion immediately
+   * @returns {Camera3D} Returns this for chaining
+   */
+  stopInertia() {
+    this._velocityX = 0;
+    this._velocityY = 0;
     return this;
   }
 
