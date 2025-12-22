@@ -37,10 +37,10 @@ const CONFIG = {
   heatTransferRange: 1.8,     // slightly larger transfer range
 
   // Spawning
-  initialSpawnMin: 1,
-  initialSpawnRange: 1.5,
-  spawnMin: 1.5,
-  spawnRange: 2,
+  initialSpawnMin: 2,
+  initialSpawnRange: 2,
+  spawnMin: 3,
+  spawnRange: 3,
   spawnOffsetY: 0.01,
   spawnOffsetYRange: 0.01,
   spawnOffsetX: 0.02,
@@ -50,10 +50,10 @@ const CONFIG = {
   growthRate: 0.0165,
   growthThreshold: 0.7,
   initialRiseVelocity: -0.00022,
-  maxBlobs: 10,
+  maxBlobs: 5,
   poolClearThreshold: 0.75,
 
-  // Drift
+  // Drift & Chaos
   driftSpeedMin: 0.165,
   driftSpeedRange: 0.165,
   driftAmountMin: 0.0000055,
@@ -61,6 +61,11 @@ const CONFIG = {
   wobbleForce: 0.000011,
   wobbleZoneTop: 0.2,
   wobbleZoneBottom: 0.7,
+  // Repulsion to prevent clustering
+  repulsionStrength: 0.00004,   // How hard blobs push each other apart
+  repulsionRange: 2.5,          // Multiplier of combined radii for repulsion
+  chaosStrength: 0.000008,      // Random perturbation strength
+  chaosTempFactor: 1.5,         // Hot blobs are more chaotic
 
   // Boundaries
   boundaryLeft: 0.1,
@@ -150,33 +155,15 @@ class LavaLampDemo extends Game {
     // Rising/falling blobs - these move around
     this.blobs = [];
 
-    // Start with a few blobs at different stages
+    // Start with one blob rising
     this.blobs.push({
-      x: 0.45,
-      y: 0.5,
-      vx: 0,
-      vy: -0.0003,
-      r: 0.055,
-      targetR: 0.055,
-      temp: 0.75,
-    });
-    this.blobs.push({
-      x: 0.55,
-      y: 0.25,
+      x: 0.5,
+      y: 0.6,
       vx: 0,
       vy: -0.0002,
       r: 0.05,
       targetR: 0.05,
-      temp: 0.5, // Cooling, about to turn around
-    });
-    this.blobs.push({
-      x: 0.5,
-      y: 0.4,
-      vx: 0,
-      vy: 0.00025,
-      r: 0.045,
-      targetR: 0.045,
-      temp: 0.3, // Cold, sinking
+      temp: 0.8,
     });
 
     // Metaball threshold
@@ -365,17 +352,36 @@ class LavaLampDemo extends Game {
         }
       }
 
-      // Heat transfer between nearby blobs
+      // Heat transfer and repulsion between nearby blobs
       for (const other of this.blobs) {
         if (other === blob) continue;
         const dx = other.x - blob.x;
         const dy = other.y - blob.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const maxDist = (blob.r + other.r) * CONFIG.heatTransferRange;
+        const combinedR = blob.r + other.r;
+        const maxDist = combinedR * CONFIG.heatTransferRange;
 
+        // Heat transfer
         blob.temp += heatTransfer(blob.temp, other.temp, dist, maxDist, CONFIG.heatTransferRate);
+
+        // Repulsion force - push blobs apart horizontally to prevent clustering
+        const repulsionDist = combinedR * CONFIG.repulsionRange;
+        if (dist < repulsionDist && dist > 0.001) {
+          // Stronger repulsion when closer, falls off with distance
+          const repulsionFactor = 1 - (dist / repulsionDist);
+          const repulsion = repulsionFactor * repulsionFactor * CONFIG.repulsionStrength;
+          // Normalize direction and apply (mostly horizontal to spread out)
+          const invDist = 1 / dist;
+          blob.vx -= dx * invDist * repulsion * 1.5;  // Stronger horizontal
+          blob.vy -= dy * invDist * repulsion * 0.3;  // Weaker vertical
+        }
       }
       blob.temp = Math.max(0, Math.min(1, blob.temp));
+
+      // Chaos - random perturbation, stronger when hot (more fluid)
+      const chaosFactor = CONFIG.chaosStrength * (0.3 + blob.temp * CONFIG.chaosTempFactor);
+      blob.vx += (Math.random() - 0.5) * chaosFactor;
+      blob.vy += (Math.random() - 0.5) * chaosFactor * 0.5;
 
       // Damping
       blob.vx *= CONFIG.dampingX;
@@ -438,114 +444,124 @@ class LavaLampDemo extends Game {
     const data = this.imageData.data;
     const w = this.renderWidth;
     const h = this.renderHeight;
+    const invW = 1 / w;
+    const invH = 1 / h;
 
     // Desaturation factor when lamp is off (colors become duller)
     const saturation = 0.4 + this.heatLevel * 0.6;
     // Darkness multiplier - scene gets much darker when off
     const darkness = 0.15 + this.heatLevel * 0.85;
 
+    // Pre-compute pool blob data (r² and weighted temp)
+    const poolTemp = this.poolTemp;
+    const poolData = this.poolBlobs.map(b => ({
+      x: b.x,
+      y: b.y,
+      rSq: b.r * b.r,
+    }));
+
+    // Pre-compute moving blob data once per frame (not per pixel!)
+    const blobData = this.blobs.map(blob => {
+      const phase = blob.driftPhase || 0;
+      const tempWobble = 0.3 + blob.temp * 0.7;
+      const wobble1 = Math.sin(this.time * CONFIG.wobble1Speed + phase) *
+        CONFIG.wobble1Amount * tempWobble;
+      const wobble2 = Math.sin(this.time * CONFIG.wobble2Speed + phase * CONFIG.wobble2PhaseFactor) *
+        CONFIG.wobble2Amount * tempWobble;
+      const stretch = CONFIG.stretchBase + blob.temp * CONFIG.stretchTempFactor + wobble1;
+      const skew = 1.0 + wobble2;
+      return {
+        x: blob.x,
+        y: blob.y,
+        rSq: blob.r * blob.r,
+        temp: blob.temp,
+        stretch,
+        skew,
+        invStretch: 1 / stretch,
+        stretchSkew: stretch * skew,
+      };
+    });
+
+    // Pre-compute color deltas and thresholds
+    const bgDeltaR = this.colors.bgBottom[0] - this.colors.bgTop[0];
+    const bgDeltaG = this.colors.bgBottom[1] - this.colors.bgTop[1];
+    const bgDeltaB = this.colors.bgBottom[2] - this.colors.bgTop[2];
+    const blob1 = this.colors.blob1;
+    const blob2 = this.colors.blob2;
+    const bgTop = this.colors.bgTop;
+    const innerThreshold = this.threshold;
+    const outerThreshold = innerThreshold - CONFIG.edgeWidth;
+    const invEdgeWidth = 1 / CONFIG.edgeWidth;
+
     for (let py = 0; py < h; py++) {
-      const ny = py / h;
+      const ny = py * invH;
 
       // Background gradient with extra glow near pool at bottom
-      // Glow fades when lamp is off
-      const poolGlow =
-        ny > CONFIG.poolGlowStart
-          ? (ny - CONFIG.poolGlowStart) / (1 - CONFIG.poolGlowStart)
-          : 0;
+      const poolGlow = ny > CONFIG.poolGlowStart
+        ? (ny - CONFIG.poolGlowStart) / (1 - CONFIG.poolGlowStart)
+        : 0;
       const glowBoost = poolGlow * poolGlow * CONFIG.poolGlowBoost * this.heatLevel;
 
       // Background darkens when lamp is off
-      const bgR = (
-        this.colors.bgTop[0] +
-        (this.colors.bgBottom[0] - this.colors.bgTop[0]) * ny +
-        this.colors.blob1[0] * glowBoost
-      ) * darkness;
-      const bgG = (
-        this.colors.bgTop[1] +
-        (this.colors.bgBottom[1] - this.colors.bgTop[1]) * ny +
-        this.colors.blob1[1] * glowBoost * 0.6
-      ) * darkness;
-      const bgB = (
-        this.colors.bgTop[2] +
-        (this.colors.bgBottom[2] - this.colors.bgTop[2]) * ny +
-        this.colors.blob1[2] * glowBoost * 0.3
-      ) * darkness;
+      const bgR = (bgTop[0] + bgDeltaR * ny + blob1[0] * glowBoost) * darkness;
+      const bgG = (bgTop[1] + bgDeltaG * ny + blob1[1] * glowBoost * 0.6) * darkness;
+      const bgB = (bgTop[2] + bgDeltaB * ny + blob1[2] * glowBoost * 0.3) * darkness;
 
       for (let px = 0; px < w; px++) {
-        const nx = px / w;
-        const idx = (py * w + px) * 4;
+        const nx = px * invW;
+        const idx = (py * w + px) << 2;  // Bitshift instead of * 4
 
         // Calculate metaball field from pool + moving blobs
         let sum = 0;
         let avgTemp = 0;
 
-        // Pool blobs (temperature based on lamp state)
-        for (const blob of this.poolBlobs) {
-          const dx = blob.x - nx;
-          const dy = blob.y - ny;
-          const distSq = dx * dx + dy * dy;
-          const influence = (blob.r * blob.r) / (distSq + 0.0001);
+        // Pool blobs
+        for (let i = 0; i < poolData.length; i++) {
+          const p = poolData[i];
+          const dx = p.x - nx;
+          const dy = p.y - ny;
+          const distSq = dx * dx + dy * dy + 0.0001;
+          const influence = p.rSq / distSq;
           sum += influence;
-          avgTemp += influence * this.poolTemp;  // Pool cools when lamp is off
+          avgTemp += influence * poolTemp;
         }
 
-        // Moving blobs - with temperature and time-based deformation
-        for (const blob of this.blobs) {
-          const dx = blob.x - nx;
-          const dy = blob.y - ny;
-
-          // Organic wobble - each blob pulses uniquely over time
-          // Hot blobs wobble more (fluid), cold blobs wobble less (solidifying)
-          const phase = blob.driftPhase || 0;
-          const tempWobble = 0.3 + blob.temp * 0.7;  // 30% wobble when cold, 100% when hot
-          const wobble1 =
-            Math.sin(this.time * CONFIG.wobble1Speed + phase) *
-            CONFIG.wobble1Amount * tempWobble;
-          const wobble2 =
-            Math.sin(
-              this.time * CONFIG.wobble2Speed +
-                phase * CONFIG.wobble2PhaseFactor,
-            ) * CONFIG.wobble2Amount * tempWobble;
-
-          // Hot blobs stretch vertically, cold blobs squish horizontally
-          const stretch =
-            CONFIG.stretchBase + blob.temp * CONFIG.stretchTempFactor + wobble1;
-          const skew = 1.0 + wobble2;
-
-          const distSq = dx * dx * stretch * skew + (dy * dy) / stretch;
-          const influence = (blob.r * blob.r) / (distSq + 0.0001);
+        // Moving blobs - using pre-computed stretch/skew
+        for (let i = 0; i < blobData.length; i++) {
+          const b = blobData[i];
+          const dx = b.x - nx;
+          const dy = b.y - ny;
+          const distSq = dx * dx * b.stretchSkew + dy * dy * b.invStretch + 0.0001;
+          const influence = b.rSq / distSq;
           sum += influence;
-          avgTemp += influence * blob.temp;
+          avgTemp += influence * b.temp;
         }
+        // Early exit for pure background pixels (biggest optimization)
+        if (sum < outerThreshold) {
+          data[idx] = bgR;
+          data[idx + 1] = bgG;
+          data[idx + 2] = bgB;
+          data[idx + 3] = 255;
+          continue;
+        }
+
         if (sum > 0) avgTemp /= sum;
 
-        // Blob color based on y position and temperature
-        // When lamp is off, colors shift cooler/duller and darker
-        const t = ny; // ny=1 at bottom (hot), ny=0 at top (cool)
-        const tempInfluence = avgTemp * this.heatLevel;  // Temperature affects brightness
+        // Blob color - only calculate when needed
+        const t = ny;
+        const tempInfluence = avgTemp * this.heatLevel;
         const brightness =
           (CONFIG.brightnessBase + t * CONFIG.brightnessTempFactor) *
-          (0.5 + tempInfluence * 0.5) * darkness;  // Dimmer when cool and when off
+          (0.5 + tempInfluence * 0.5) * darkness;
 
-        // Mix colors - shift toward blob1 (cooler) when lamp is off
         const colorMix = t * saturation;
-        const blobR =
-          (this.colors.blob1[0] * (1 - colorMix) + this.colors.blob2[0] * colorMix) *
-          brightness;
-        const blobG =
-          (this.colors.blob1[1] * (1 - colorMix) + this.colors.blob2[1] * colorMix) *
-          brightness;
-        const blobB =
-          (this.colors.blob1[2] * (1 - colorMix) + this.colors.blob2[2] * colorMix) *
-          brightness;
-
-        // Anti-aliasing: smooth blend at edges
-        const innerThreshold = this.threshold;
-        const outerThreshold = this.threshold - CONFIG.edgeWidth;
+        const invColorMix = 1 - colorMix;
+        const blobR = (blob1[0] * invColorMix + blob2[0] * colorMix) * brightness;
+        const blobG = (blob1[1] * invColorMix + blob2[1] * colorMix) * brightness;
+        const blobB = (blob1[2] * invColorMix + blob2[2] * colorMix) * brightness;
 
         if (sum >= innerThreshold) {
-          // Fully inside blob - glow reduced when lamp is off
+          // Fully inside blob
           const glow = Math.min(
             (sum - innerThreshold) * CONFIG.glowFactor * this.heatLevel,
             CONFIG.glowMax * this.heatLevel,
@@ -553,18 +569,13 @@ class LavaLampDemo extends Game {
           data[idx] = Math.min(255, blobR + glow * CONFIG.glowR);
           data[idx + 1] = Math.min(255, blobG + glow * CONFIG.glowG);
           data[idx + 2] = Math.min(255, blobB + glow * CONFIG.glowB);
-        } else if (sum >= outerThreshold) {
+        } else {
           // Edge zone - blend between blob and background
-          const blend = (sum - outerThreshold) / CONFIG.edgeWidth;
+          const blend = (sum - outerThreshold) * invEdgeWidth;
           const smoothBlend = blend * blend * (3 - 2 * blend);
           data[idx] = bgR + (blobR - bgR) * smoothBlend;
           data[idx + 1] = bgG + (blobG - bgG) * smoothBlend;
           data[idx + 2] = bgB + (blobB - bgB) * smoothBlend;
-        } else {
-          // Background
-          data[idx] = bgR;
-          data[idx + 1] = bgG;
-          data[idx + 2] = bgB;
         }
         data[idx + 3] = 255;
       }
