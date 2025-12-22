@@ -700,9 +700,9 @@ void main() {
     float spinAngle = angle + uTime * 4.0;  // Faster spin
 
     // === RADII (normalized to quad size) ===
-    float eventHorizon = 0.4;           // Event horizon visual size
-    float photonSphere = 0.6;           // 1.5x event horizon
-    float shadowEdge = 0.52;            // Shadow boundary (~1.3x Rs)
+    float eventHorizon = 0.42;          // Slightly larger core
+    float photonSphere = 0.54;          // Tighten ring closer to horizon
+    float shadowEdge = 0.5;             // Shadow boundary
 
     // === CIRCULAR MASK ===
     if (dist > 1.5) {
@@ -731,19 +731,19 @@ void main() {
         return;
     }
 
-    // === PHOTON SPHERE - Subtle ring with spin asymmetry ===
-    float photonRingWidth = 0.05;
+    // === PHOTON SPHERE - Subtle ring with gentler spin asymmetry ===
+    float photonRingWidth = 0.035;
     float photonDist = abs(dist - photonSphere);
     float photonRing = exp(-photonDist * photonDist / (photonRingWidth * photonRingWidth));
 
-    // Doppler asymmetry - approaching side brighter (shows spin)
-    float doppler = 0.5 + 0.5 * cos(spinAngle);  // 0 to 1 range
-    photonRing *= 0.3 + doppler * 0.7;  // 30% to 100% brightness
+    // Softer Doppler asymmetry to avoid pointy highlights
+    float doppler = 0.78 + 0.22 * cos(spinAngle);  // narrower asymmetry
+    photonRing *= 0.18 + doppler * 0.38;           // 18%..56% brightness
 
-    // Hot spot - orbiting bright region
-    float hotSpot = pow(max(0.0, cos(spinAngle)), 4.0);
-    float hotSpotRing = exp(-pow(dist - photonSphere * 0.95, 2.0) * 20.0);
-    float hotSpotGlow = hotSpot * hotSpotRing * 0.5;
+    // Soft tip highlight to indicate spin without a spike
+    float tipAlign = max(0.0, cos(spinAngle));
+    float tipRadial = smoothstep(photonRingWidth * 1.2, 0.0, photonDist);
+    float hotSpotGlow = tipAlign * tipAlign * tipRadial * 0.25;
 
     // Scale with awakening - more visible when feeding
     photonRing *= 0.15 + awakeFactor * 0.35;
@@ -757,24 +757,24 @@ void main() {
         pulseRipple = ripple * pulseFactor * 0.15;  // Subtle
     }
 
-    // === EDGE GLOW - Very faint warm edge when feeding ===
+    // === EDGE GLOW - keep subtle; avoid wide smear
     float edgeGlow = 0.0;
-    if (dist > shadowEdge && dist < photonSphere + 0.1) {
+    if (dist > shadowEdge && dist < photonSphere + 0.08) {
         float edgeFactor = smoothstep(shadowEdge, photonSphere, dist);
-        edgeFactor *= smoothstep(photonSphere + 0.1, photonSphere, dist);
-        edgeGlow = edgeFactor * pulseFactor * 0.1;
+        edgeFactor *= smoothstep(photonSphere + 0.08, photonSphere, dist);
+        edgeGlow = edgeFactor * pulseFactor * 0.06;
     }
 
     // === COMBINE EFFECTS ===
     vec3 color = vec3(0.0);
 
     // Photon sphere ring (warm orange-yellow)
-    vec3 photonColor = vec3(1.0, 0.75, 0.4);
+    vec3 photonColor = vec3(1.0, 0.8, 0.45);
     color += photonColor * photonRing;
 
-    // Hot spot - brighter orbiting region
-    vec3 hotSpotColor = vec3(1.0, 0.9, 0.7);
-    color += hotSpotColor * hotSpotGlow * (0.3 + awakeFactor * 0.7);
+    // Soft tip highlight (spin indicator)
+    vec3 hotSpotColor = vec3(1.0, 0.9, 0.65);
+    color += hotSpotColor * hotSpotGlow;
 
     // Edge glow when feeding
     vec3 glowColor = vec3(1.0, 0.5, 0.2);
@@ -785,20 +785,20 @@ void main() {
     color += pulseColor * pulseRipple;
 
     // === OUTER FADE ===
-    float outerFade = 1.0 - smoothstep(1.0, 1.5, dist);
+    float outerFade = 1.0 - smoothstep(0.9, 1.25, dist);
     color *= outerFade;
 
     // === ALPHA ===
-    // Event horizon area is opaque black
-    // Outside fades based on content
+    // Event horizon and photon sphere are fully opaque to occlude background
     float alpha;
-    if (dist < shadowEdge) {
-        alpha = 1.0;  // Solid black shadow
+    if (dist < photonSphere) {
+        alpha = 1.0;
+        color = (dist < shadowEdge) ? vec3(0.0) : color; // keep core solid black
     } else {
         // Alpha based on visible content
         float contentBrightness = max(max(color.r, color.g), color.b);
-        alpha = smoothstep(0.005, 0.05, contentBrightness);
-        alpha = max(alpha, smoothstep(photonSphere + 0.2, shadowEdge, dist) * 0.3);
+        alpha = smoothstep(0.01, 0.06, contentBrightness);
+        alpha = max(alpha, smoothstep(photonSphere + 0.12, shadowEdge, dist) * 0.25);
         alpha *= outerFade;
     }
 

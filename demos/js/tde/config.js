@@ -1,6 +1,6 @@
 export const CONFIG = {
     // Sizing (as fraction of screen baseScale)
-    bhRadiusRatio: 0.05,        // Initial dormant black hole size (larger for visible lensing)
+    bhRadiusRatio: 0.01,        // Initial dormant black hole size (larger for visible lensing)
     bhFinalRadiusRatio: 0.12,   // Final size after consuming star
     starRadiusRatio: 0.08,
 
@@ -24,8 +24,8 @@ export const CONFIG = {
     star: {
         initialMass: 25,
         color: "#FF6030",  // Deep red-orange (cooler K/M type star)
-        initialOrbitRadius: 0.85, // Semi-major axis - wide orbit across screen
-        eccentricity: 0.3, // Orbital eccentricity (reduced for wider orbit)
+        initialOrbitRadius: 0.8, // Semi-major axis - wide orbit across screen
+        eccentricity: 0.5698, // Orbital eccentricity (reduced for wider orbit)
         orbitSpeed: 0.35,
         decayRate: 0.4, // Decay factor for exponential radius reduction
         massTransferStart: 0.1, // Start mass transfer at 50% of decay phase

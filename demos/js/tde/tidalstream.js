@@ -12,16 +12,16 @@ import { GameObject, Painter } from "../../../src/index.js";
 // Stream-specific config
 const STREAM_CONFIG = {
     gravity: 120000,        // Strong gravity (linear falloff G/r)
-    maxParticles: 3000,
+    maxParticles: 5000,
     particleLifetime: 1000,
 
     // Velocity inheritance - how much of star's velocity particles get
     // Lower = particles emit more "from" the star, not ahead of it
-    velocityInheritance: 0.30638684,  // 10% inheritance
+    velocityInheritance: 0.3,  // 30% inheritance
 
     // Inward velocity - particles should FALL toward BH, not orbit
     // This is the key to making particles flow INTO the black hole
-    inwardVelocity: 10,     // Base inward velocity toward BH (reduced for longer trails)
+    inwardVelocity: 5,     // Base inward velocity toward BH (reduced for longer trails)
     inwardSpread: 12,       // Random spread on inward velocity
 
     // Tangent spread for S-shape - higher = more spread along orbit direction
@@ -29,7 +29,7 @@ const STREAM_CONFIG = {
 
     // Emission offset: 1.0 = star's BH-facing edge (L1 Lagrange point)
     // Positive = toward BH, negative = away from BH
-    emissionOffset: - Math.PI,  // 80% toward the BH-facing edge of the star
+    emissionOffset: -1 * Math.PI,  // Larger numbers create bigger S-Shape. Negative PI works very well here for some reason makes the animation very cool.
 
     // Drag factor - removes angular momentum so orbits decay
     // 1.0 = no drag, 0.99 = slight drag, 0.95 = strong drag

@@ -26,10 +26,21 @@ export class BlackHole extends GameObject {
     }
 
     /**
-     * Add mass from consumed particles - triggers awakening
+     * Add mass from consumed particles - triggers awakening and pulse
+     *
+     * @param {number} amount - Amount of mass to add
+     *
+     * Note: Feeding pulse is only triggered before the stable phase.
+     * Once stabilizing, particles can still be consumed but won't
+     * cause the visual pulse effect.
      */
     addConsumedMass(amount) {
         this.totalConsumed += amount;
+
+        // Skip pulse effects if we're in the stable phase
+        if (this.isStabilizing) {
+            return;
+        }
 
         // Awakening increases as BH feeds (slow ramp up)
         const awakeningProgress = Math.min(1, this.totalConsumed * 0.1);

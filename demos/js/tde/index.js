@@ -297,26 +297,14 @@ export class TDEDemo extends Game {
     const vz = tangentZ * orbitalSpeed;
 
     for (let i = 0; i < rate; i++) {
-      // Perspective correction: camera rotation affects projection
-      // At 6 o'clock (z < 0, close to camera) particles appear larger/closer
-      // At 12 o'clock (z > 0, far from camera) particles appear smaller/farther
-      // Adjust position based on camera-space depth
-      const cosY = Math.cos(this.camera.rotationY);
-      const sinY = Math.sin(this.camera.rotationY);
-      const zCam = starX * sinY + starZ * cosY;  // z in camera space
-
-      // Perspective factor: closer to camera = scale down position slightly
-      // farther = scale up slightly (to compensate for projection shrinking)
-      const perspectiveFactor = 1 + (zCam / (orbitalSpeed)) * dt * 0.01;
-
-      const emitX = starX * perspectiveFactor;
-      const emitZ = starZ * perspectiveFactor;
+      const emitX = starX;
+      const emitZ = starZ;
 
       // Spaghetti spread: larger radius for more dispersed particles
-      const spreadRadius = bodyRadius * 1.8;
+      const spreadRadius = bodyRadius * 2;
 
       this.scene.stream.emit(
-        emitX, star.y || 0, emitZ,
+        emitX, star.y + spreadRadius/2 || 0, emitZ,
         vx, 0, vz,
         spreadRadius, star.rotation || 0
       );
@@ -585,6 +573,12 @@ export class TDEDemo extends Game {
       if (this.scene.jets && this.scene.jets.active) {
         this.scene.jets.deactivate();
       }
+    }
+
+    // Update star z-order AFTER position is set (must be last in update)
+    // This ensures correct depth sorting relative to black hole
+    if (this.scene) {
+      this.scene.updateStarZOrder();
     }
   }
 

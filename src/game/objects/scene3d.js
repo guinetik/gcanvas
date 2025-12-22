@@ -80,9 +80,15 @@ export class Scene3D extends Scene {
       });
     }
 
-    // Sort back-to-front if enabled
+    // Sort order: respect zIndex first, then depth for subtle overlap stability.
+    // Higher zIndex should render later (on top).
     if (this.depthSort) {
-      renderList.sort((a, b) => b.z - a.z);
+      renderList.sort((a, b) => {
+        const za = a.child.zIndex ?? 0;
+        const zb = b.child.zIndex ?? 0;
+        if (za !== zb) return za - zb;
+        return b.z - a.z; // back-to-front by depth as tie-breaker
+      });
     }
 
     // Render each child at projected position
