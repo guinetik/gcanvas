@@ -11,6 +11,7 @@ import {
   Tweenetik,
   ToggleButton,
   Tooltip,
+  Position,
 } from "../../src/index";
 
 // Formulas for each easing function
@@ -404,9 +405,21 @@ export class MyGame extends Game {
     // Toggle button to play all animations
     this.toggleBtn = new ToggleButton(this, {
       text: "Play All",
+      anchor: Position.BOTTOM_LEFT,
       width: 100,
       height: 32,
-      anchor: "bottom-left",
+      colorDefaultBg: "rgba(0, 0, 0, 0.9)",
+      colorDefaultStroke: "rgba(0, 255, 0, 0.5)",
+      colorDefaultText: "#0f0",
+      colorActiveBg: "rgba(0, 255, 0, 1)",
+      colorActiveStroke: "orange",
+      colorActiveText: "#FFFFFF",
+      colorHoverBg: "rgba(0, 255, 0, 0.5)",
+      colorHoverStroke: "rgba(0, 255, 0, 0.5)",
+      colorHoverText: "#0f0",
+      colorPressedBg: "rgba(0, 255, 0, 0.5)",
+      colorPressedStroke: "rgba(0, 255, 0, 0.5)",
+      colorPressedText: "#0f0",
       startToggled: false,
       onToggle: (isOn) => {
         this.setPlayAll(isOn);
