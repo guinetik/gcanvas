@@ -8,6 +8,9 @@ import {
   Game,
   GameObject,
   IsometricScene,
+  IsometricCamera,
+  Button,
+  TextShape,
   Painter,
   Keys
 } from "../../src/index";
@@ -141,55 +144,108 @@ class IsometricBox extends GameObject {
   }
 
   /**
-   * Renders the isometric box with 3 visible faces
+   * Renders the isometric box with all visible faces.
+   * Draws back faces first, front faces last, based on camera angle.
    */
   render() {
     const scene = this.isoScene;
-    const h = this.h * CONFIG.elevationScale;
     
-    // Get the 4 corners of the top face
+    // Get camera angle (direction camera is looking FROM)
+    const cameraAngle = scene.camera ? scene.camera.angle : 0;
+    
+    // Camera view direction (where camera is looking TOWARD)
+    // In isometric, default view looks toward +X +Y direction (angle π/4 from +X axis)
+    // Camera rotation rotates around Z axis
+    const viewDirection = Math.PI / 4 + cameraAngle;
+    
+    // Get all 8 corners of the box
     const topNW = scene.toIsometric(this.x, this.y, this.h);
     const topNE = scene.toIsometric(this.x + this.w, this.y, this.h);
     const topSE = scene.toIsometric(this.x + this.w, this.y + this.d, this.h);
     const topSW = scene.toIsometric(this.x, this.y + this.d, this.h);
     
-    // Get the 2 bottom corners we need
+    const botNW = scene.toIsometric(this.x, this.y, 0);
+    const botNE = scene.toIsometric(this.x + this.w, this.y, 0);
     const botSE = scene.toIsometric(this.x + this.w, this.y + this.d, 0);
     const botSW = scene.toIsometric(this.x, this.y + this.d, 0);
-    const botNE = scene.toIsometric(this.x + this.w, this.y, 0);
 
-    // Draw left face (front-left)
-    Painter.useCtx((ctx) => {
-      ctx.beginPath();
-      ctx.moveTo(topSW.x, topSW.y);
-      ctx.lineTo(topSE.x, topSE.y);
-      ctx.lineTo(botSE.x, botSE.y);
-      ctx.lineTo(botSW.x, botSW.y);
-      ctx.closePath();
-      ctx.fillStyle = this.leftColor;
-      ctx.fill();
-      ctx.strokeStyle = "#000";
-      ctx.lineWidth = 1;
-      ctx.stroke();
+    // Light direction (fixed in world space - from upper left)
+    const lightAngle = -Math.PI / 4;
+
+    // Define the 4 side faces with their world-space normal directions
+    const faces = [
+      { // North face (Y-): normal points toward -Y
+        verts: [topNW, topNE, botNE, botNW],
+        normalAngle: -Math.PI / 2,
+      },
+      { // East face (X+): normal points toward +X
+        verts: [topNE, topSE, botSE, botNE],
+        normalAngle: 0,
+      },
+      { // South face (Y+): normal points toward +Y
+        verts: [topSE, topSW, botSW, botSE],
+        normalAngle: Math.PI / 2,
+      },
+      { // West face (X-): normal points toward -X
+        verts: [topSW, topNW, botNW, botSW],
+        normalAngle: Math.PI,
+      }
+    ];
+
+    // Calculate shading and visibility for each face
+    for (const face of faces) {
+      // Rotate the face normal by camera angle
+      const rotatedNormal = face.normalAngle + cameraAngle;
+      
+      // Face visibility: a face is visible if its rotated normal
+      // has a component pointing toward the camera (away from view direction)
+      // In isometric, visible faces are those facing generally toward -Y screen direction
+      const normalToView = rotatedNormal - viewDirection;
+      face.facingCamera = Math.cos(normalToView) < 0;
+      
+      // For depth sorting: faces with normals pointing more toward +Y screen 
+      // (into the screen in isometric) should be drawn first
+      face.depth = Math.sin(rotatedNormal);
+      
+      // Lighting: based on angle between world-space normal and light
+      const lightDiff = face.normalAngle - lightAngle;
+      const lightFactor = (Math.cos(lightDiff) + 1) / 2; // 0 to 1
+      const shadeFactor = -50 + lightFactor * 60; // Range from -50 to +10
+      face.color = this.shadeColor(this.baseColor, shadeFactor);
+    }
+
+    // Sort faces: draw back-facing first, then front-facing
+    // Within each group, sort by depth
+    faces.sort((a, b) => {
+      // Back-facing faces drawn first
+      if (a.facingCamera !== b.facingCamera) {
+        return a.facingCamera ? 1 : -1;
+      }
+      // Then by depth (lower depth = further back = draw first)
+      return a.depth - b.depth;
     });
 
-    // Draw right face (front-right)
+    // Draw faces in order: back faces first (with strokes), then front faces (fill covers back strokes)
     Painter.useCtx((ctx) => {
-      ctx.beginPath();
-      ctx.moveTo(topNE.x, topNE.y);
-      ctx.lineTo(topSE.x, topSE.y);
-      ctx.lineTo(botSE.x, botSE.y);
-      ctx.lineTo(botNE.x, botNE.y);
-      ctx.closePath();
-      ctx.fillStyle = this.rightColor;
-      ctx.fill();
-      ctx.strokeStyle = "#000";
+      ctx.strokeStyle = "rgba(0,0,0,0.4)";
       ctx.lineWidth = 1;
-      ctx.stroke();
-    });
 
-    // Draw top face
-    Painter.useCtx((ctx) => {
+      // Draw each face with fill AND stroke, in depth order
+      // Back faces are drawn first - their strokes will show at the back edges
+      // Front faces are drawn last - their fills will cover internal strokes
+      for (const face of faces) {
+        ctx.beginPath();
+        ctx.moveTo(face.verts[0].x, face.verts[0].y);
+        ctx.lineTo(face.verts[1].x, face.verts[1].y);
+        ctx.lineTo(face.verts[2].x, face.verts[2].y);
+        ctx.lineTo(face.verts[3].x, face.verts[3].y);
+        ctx.closePath();
+        ctx.fillStyle = face.color;
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // Draw top face last (always on top)
       ctx.beginPath();
       ctx.moveTo(topNW.x, topNW.y);
       ctx.lineTo(topNE.x, topNE.y);
@@ -198,8 +254,6 @@ class IsometricBox extends GameObject {
       ctx.closePath();
       ctx.fillStyle = this.topColor;
       ctx.fill();
-      ctx.strokeStyle = "#000";
-      ctx.lineWidth = 1;
       ctx.stroke();
     });
   }
@@ -634,6 +688,14 @@ export class IsometricGame extends Game {
   init() {
     super.init();
 
+    // Create the isometric camera for view rotation
+    // Use 90° steps for proper isometric look (45° causes visual flattening)
+    this.isoCamera = new IsometricCamera({
+      rotationStep: Math.PI / 2, // 90 degrees
+      animationDuration: 0.5,
+      easing: 'easeOutCubic',
+    });
+
     // Create the isometric scene centered on the canvas
     this.isoScene = new IsometricScene(this, {
       x: this.width / 2,
@@ -643,6 +705,7 @@ export class IsometricGame extends Game {
       gridSize: CONFIG.gridSize,
       elevationScale: CONFIG.elevationScale,
       depthSort: true,
+      camera: this.isoCamera,
     });
 
     // Create and add the grid (renders behind everything)
@@ -670,16 +733,130 @@ export class IsometricGame extends Game {
 
     // Add the scene to the pipeline
     this.pipeline.add(this.isoScene);
+
+    // Create rotation buttons and keyboard controls
+    this.createRotationButtons();
+    this.setupKeyboardControls();
   }
 
   /**
-   * Handle window resize to keep scene centered
+   * Create arrow buttons for rotating the isometric view
+   */
+  createRotationButtons() {
+    const buttonSize = 50;
+    const margin = 20;
+
+    // Left rotation button (counter-clockwise)
+    this.rotateLeftBtn = new Button(this, {
+      x: margin + buttonSize / 2,
+      y: this.height - margin - buttonSize / 2,
+      width: buttonSize,
+      height: buttonSize,
+      text: "◀",
+      font: "24px sans-serif",
+      colorDefaultBg: "#2c3e50",
+      colorDefaultStroke: "#34495e",
+      colorDefaultText: "#ecf0f1",
+      colorHoverBg: "#34495e",
+      colorHoverStroke: "#3498db",
+      colorHoverText: "#3498db",
+      colorPressedBg: "#1a252f",
+      colorPressedStroke: "#2980b9",
+      colorPressedText: "#2980b9",
+      onClick: () => this.isoCamera.rotateLeft(),
+    });
+    this.pipeline.add(this.rotateLeftBtn);
+
+    // Right rotation button (clockwise)
+    this.rotateRightBtn = new Button(this, {
+      x: margin + buttonSize * 1.5 + 10,
+      y: this.height - margin - buttonSize / 2,
+      width: buttonSize,
+      height: buttonSize,
+      text: "▶",
+      font: "24px sans-serif",
+      colorDefaultBg: "#2c3e50",
+      colorDefaultStroke: "#34495e",
+      colorDefaultText: "#ecf0f1",
+      colorHoverBg: "#34495e",
+      colorHoverStroke: "#3498db",
+      colorHoverText: "#3498db",
+      colorPressedBg: "#1a252f",
+      colorPressedStroke: "#2980b9",
+      colorPressedText: "#2980b9",
+      onClick: () => this.isoCamera.rotateRight(),
+    });
+    this.pipeline.add(this.rotateRightBtn);
+
+    // Angle display text
+    this.angleText = new TextShape("0°", {
+      font: "bold 18px monospace",
+      color: "#2c3e50",
+      align: "left",
+      baseline: "middle",
+    });
+    this.angleTextX = margin + buttonSize * 2 + 25;
+    this.angleTextY = this.height - margin - buttonSize / 2;
+  }
+
+  /**
+   * Render the angle display (called after pipeline)
+   */
+  render() {
+    super.render();
+    
+    // Update and render angle text
+    if (this.angleText && this.isoCamera) {
+      const degrees = Math.round(this.isoCamera.getAngleDegrees());
+      this.angleText.text = `${degrees}°`;
+      
+      Painter.save();
+      Painter.translateTo(this.angleTextX, this.angleTextY);
+      this.angleText.render();
+      Painter.restore();
+    }
+  }
+
+  /**
+   * Set up keyboard event listeners for camera rotation
+   */
+  setupKeyboardControls() {
+    // Q to rotate left
+    this.events.on(Keys.Q, () => {
+      this.isoCamera.rotateLeft();
+    });
+    
+    // E to rotate right
+    this.events.on(Keys.E, () => {
+      this.isoCamera.rotateRight();
+    });
+  }
+
+  /**
+   * Handle window resize to keep scene centered and buttons positioned
    */
   onResize() {
     if (this.isoScene) {
       this.isoScene.x = this.width / 2;
       this.isoScene.y = this.height / 2;
     }
+
+    // Reposition buttons and angle text
+    const buttonSize = 50;
+    const margin = 20;
+    
+    if (this.rotateLeftBtn) {
+      this.rotateLeftBtn.x = margin + buttonSize / 2;
+      this.rotateLeftBtn.y = this.height - margin - buttonSize / 2;
+    }
+    if (this.rotateRightBtn) {
+      this.rotateRightBtn.x = margin + buttonSize * 1.5 + 10;
+      this.rotateRightBtn.y = this.height - margin - buttonSize / 2;
+    }
+    
+    // Reposition angle text
+    this.angleTextX = margin + buttonSize * 2 + 25;
+    this.angleTextY = this.height - margin - buttonSize / 2;
   }
 }
 

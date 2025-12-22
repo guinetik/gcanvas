@@ -11,7 +11,10 @@ import { Painter } from "../../painter/painter.js";
  * Children can have an optional `z` property for height above the ground plane.
  * The scene handles depth sorting automatically based on isometric depth (x + y).
  *
+ * Supports optional IsometricCamera for animated view rotation.
+ *
  * @example
+ * // Basic usage
  * const isoScene = new IsometricScene(this, {
  *   x: this.width / 2,
  *   y: this.height / 2,
@@ -19,6 +22,11 @@ import { Painter } from "../../painter/painter.js";
  *   tileHeight: 32,
  *   depthSort: true,
  * });
+ *
+ * // With camera for rotatable view
+ * const camera = new IsometricCamera({ rotationStep: Math.PI / 4 });
+ * isoScene.setCamera(camera);
+ * camera.rotateRight(); // Rotate view 45°
  *
  * const box = new IsometricBox(this, { x: 2, y: 3 });
  * box.z = 0; // ground level
@@ -38,6 +46,7 @@ export class IsometricScene extends Scene {
    * @param {boolean} [options.scaleByDepth=false] - Scale children by perspective distance
    * @param {number} [options.gridSize=10] - Size of the grid in tiles (used for scale calculations)
    * @param {number} [options.elevationScale=1] - Multiplier for z-axis visual offset
+   * @param {IsometricCamera} [options.camera=null] - Optional camera for view rotation
    */
   constructor(game, options = {}) {
     super(game, options);
@@ -59,14 +68,27 @@ export class IsometricScene extends Scene {
 
     /** @type {number} Multiplier for z-axis visual offset */
     this.elevationScale = options.elevationScale ?? 1;
+
+    /** @type {IsometricCamera|null} Camera for view rotation */
+    this.camera = options.camera ?? null;
+  }
+
+  /**
+   * Set or update the camera reference
+   * @param {IsometricCamera} camera - Camera instance
+   * @returns {IsometricScene} this for chaining
+   */
+  setCamera(camera) {
+    this.camera = camera;
+    return this;
   }
 
   /**
    * Convert 3D grid coordinates (x, y, z) to 2D isometric screen position.
    *
-   * Uses the standard "diamond" isometric projection:
-   * - isoX = (x - y) * (tileWidth / 2)
-   * - isoY = (x + y) * (tileHeight / 2) - z * elevationScale
+   * Uses the standard "diamond" isometric projection with camera rotation.
+   * Note: For best visual results, use 90° rotation steps (Math.PI/2).
+   * 45° rotations can cause visual flattening at certain angles.
    *
    * @param {number} x - Grid X coordinate
    * @param {number} y - Grid Y coordinate
@@ -74,12 +96,23 @@ export class IsometricScene extends Scene {
    * @returns {{x: number, y: number, depth: number}} Screen position and depth for sorting
    */
   toIsometric(x, y, z = 0) {
-    const isoX = (x - y) * (this.tileWidth / 2);
-    const isoY = (x + y) * (this.tileHeight / 2) - z * this.elevationScale;
+    // Apply camera rotation if present
+    let rotatedX = x;
+    let rotatedY = y;
 
-    // Depth for sorting: objects with higher (x + y) are further "back"
-    // z is used as a tie-breaker (higher z renders on top at same x,y)
-    const depth = x + y - z * 0.01;
+    if (this.camera) {
+      const angle = this.camera.angle;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      rotatedX = x * cos - y * sin;
+      rotatedY = x * sin + y * cos;
+    }
+
+    const isoX = (rotatedX - rotatedY) * (this.tileWidth / 2);
+    const isoY = (rotatedX + rotatedY) * (this.tileHeight / 2) - z * this.elevationScale;
+
+    // Depth for sorting
+    const depth = rotatedX + rotatedY - z * 0.01;
 
     return { x: isoX, y: isoY, depth };
   }
@@ -89,6 +122,7 @@ export class IsometricScene extends Scene {
    *
    * Useful for mouse picking and tile selection.
    * Note: This assumes z = 0 (ground plane).
+   * If a camera is attached, the inverse rotation is applied.
    *
    * @param {number} screenX - Screen X relative to scene center
    * @param {number} screenY - Screen Y relative to scene center
@@ -99,10 +133,34 @@ export class IsometricScene extends Scene {
     const halfTileW = this.tileWidth / 2;
     const halfTileH = this.tileHeight / 2;
 
-    const x = (screenX / halfTileW + screenY / halfTileH) / 2;
-    const y = (screenY / halfTileH - screenX / halfTileW) / 2;
+    // Get rotated grid coordinates
+    let rotatedX = (screenX / halfTileW + screenY / halfTileH) / 2;
+    let rotatedY = (screenY / halfTileH - screenX / halfTileW) / 2;
 
-    return { x, y };
+    // Apply inverse camera rotation if present
+    if (this.camera) {
+      const angle = -this.camera.angle; // Negative for inverse
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const x = rotatedX * cos - rotatedY * sin;
+      const y = rotatedX * sin + rotatedY * cos;
+      return { x, y };
+    }
+
+    return { x: rotatedX, y: rotatedY };
+  }
+
+  /**
+   * Update method - updates camera if attached
+   * @param {number} dt - Delta time in seconds
+   */
+  update(dt) {
+    super.update(dt);
+    
+    // Update camera animation
+    if (this.camera) {
+      this.camera.update(dt);
+    }
   }
 
   /**

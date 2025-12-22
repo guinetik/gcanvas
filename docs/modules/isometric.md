@@ -47,6 +47,7 @@ class MyGame extends Game {
 | `depthSort` | boolean | true | Sort children by depth (back-to-front) |
 | `scaleByDepth` | boolean | false | Scale children by perspective distance |
 | `elevationScale` | number | 1 | Multiplier for z-axis visual offset |
+| `camera` | IsometricCamera | null | Optional camera for animated view rotation |
 
 ## Coordinate System
 
