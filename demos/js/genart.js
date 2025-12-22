@@ -75,9 +75,7 @@ window.addEventListener('load', () => {
     friction: 0.96,          // Higher = more drift before stopping
     velocityScale: 2.5,      // More momentum on fast flicks
     autoRotate: false,       // No auto-rotation - stays where user leaves it
-    clampX: true,
-    minRotationX: -1.5,
-    maxRotationX: 1.5,
+    clampX: false,           // Free rotation in all directions
   });
 
   // Enable mouse/touch drag to rotate
