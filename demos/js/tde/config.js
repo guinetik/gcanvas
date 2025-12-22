@@ -8,7 +8,7 @@ export const CONFIG = {
     durations: {
         approach: 5.0,      // Stable wide orbit
         stretch: 10.0,       // Orbit begins to decay
-        disrupt: 15.0,      // Mass transfer (event-based exit)
+        disrupt: 20.0,      // Mass transfer (event-based exit)
         accrete: 1.0,       // Debris accretion
         flare: 5.0,         // Jets firing - spectacular cosmic event!
         stable: Infinity,   // Final stable state

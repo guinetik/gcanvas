@@ -12,8 +12,8 @@ import { GameObject, Painter } from "../../../src/index.js";
 // Stream-specific config
 const STREAM_CONFIG = {
     gravity: 120000,        // Strong gravity (linear falloff G/r)
-    maxParticles: 5000,
-    particleLifetime: 1000,
+    maxParticles: 6000,
+    particleLifetime: 1200,
 
     // Velocity inheritance - how much of star's velocity particles get
     // Lower = particles emit more "from" the star, not ahead of it
@@ -49,6 +49,7 @@ export class TidalStream extends GameObject {
         super(game, options);
 
         this.camera = options.camera;
+        this.scene = options.scene;  // Scene reference for screen center
         this.bhRadius = options.bhRadius ?? 50;
 
         // Callbacks for particle lifecycle
@@ -85,21 +86,15 @@ export class TidalStream extends GameObject {
 
         const dist = Math.sqrt(x * x + z * z) || 1;
 
-        // Direction toward BH in x-z plane
+        // Direction toward BH in x-z plane (unit vector)
         const radialX = -x / dist;
         const radialZ = -z / dist;
 
-        // Combine radial direction toward BH with star's internal rotation
-        // This adds a "tornado" or "spiral" effect at the base of the stream
-        const angleToBH = Math.atan2(radialZ, radialX);
-        const emissionAngle = angleToBH + starRotation;
-
-        const edgeOffset = starRadius * STREAM_CONFIG.emissionOffset;
-
-        // Emit position: offset along the ROTATED radial direction
-        const emitX = x + Math.cos(emissionAngle) * edgeOffset + (Math.random() - 0.5) * starRadius * 0.25;
-        const emitY = y + (Math.random() - 0.5) * starRadius * 0.3;
-        const emitZ = z + Math.sin(emissionAngle) * edgeOffset + (Math.random() - 0.5) * starRadius * 0.25;
+        // Emit from star center with spread for visible "bleeding" effect
+        // Larger spread = bigger emission hole on the star
+        const emitX = x + (Math.random() - 0.5) * starRadius * 0.8;
+        const emitY = y + (Math.random() - 0.5) * starRadius * 0.8;
+        const emitZ = z + (Math.random() - 0.5) * starRadius * 0.8;
 
         // Tangent is perpendicular to radial - gives the orbital direction
         const tangentX = -radialZ;
@@ -159,6 +154,12 @@ export class TidalStream extends GameObject {
             // Remove old or accreted particles
             if (p.age > STREAM_CONFIG.particleLifetime) {
                 this.particles.splice(i, 1);
+                continue;
+            }
+
+            // Skip physics on first frame - let particle appear at spawn point first
+            // This prevents the "jump" where particles move before being rendered
+            if (p.age < dt * 1.5) {
                 continue;
             }
 
@@ -224,18 +225,35 @@ export class TidalStream extends GameObject {
 
         if (!this.camera || this.particles.length === 0) return;
 
-        // Screen center - we'll reset transform and use absolute coords
-        const cx = this.game.width / 2;
-        const cy = this.game.height / 2;
+        // Get the actual canvas transform that Scene3D has set up
+        // This is the same approach Sphere3D uses to get screen position
+        const ctx = Painter.ctx;
+        const transform = ctx.getTransform();
+        
+        // TidalStream is at world (0,0,0), so Scene3D translated to:
+        // scene.x + project(0,0,0).x which is approximately scene.x
+        // We need to use this as our center, then add particle projections
+        const cx = transform.e;
+        const cy = transform.f;
 
         // Build render list with projection
         const renderList = [];
 
+        // Young particles stay invisible (appear to emerge from star)
+        const fadeInTime = 0.05;  // seconds before particles become visible
+        const fadeInDuration = 0.1;  // seconds to fade from invisible to full opacity
+
         for (const p of this.particles) {
+            // Skip very young particles - they're "inside" the star
+            if (p.age < fadeInTime) continue;
+
             const projected = this.camera.project(p.x, p.y, p.z);
 
             // Skip if behind camera
             if (projected.scale <= 0) continue;
+
+            // Fade in young particles (after fadeInTime threshold)
+            const fadeInProgress = Math.min(1, (p.age - fadeInTime) / fadeInDuration);
 
             // Distance from BH for color
             const dist = Math.sqrt(p.x * p.x + p.z * p.z);
@@ -248,8 +266,9 @@ export class TidalStream extends GameObject {
                 b: STREAM_CONFIG.colorCool.b + (STREAM_CONFIG.colorHot.b - STREAM_CONFIG.colorCool.b) * colorT,
             };
 
-            // Fade with age
-            const alpha = Math.max(0, 1 - p.age / STREAM_CONFIG.particleLifetime);
+            // Fade with age (fade out at end of life) and fade in at birth
+            const fadeOutAlpha = Math.max(0, 1 - p.age / STREAM_CONFIG.particleLifetime);
+            const alpha = fadeOutAlpha * fadeInProgress;  // Combine fade-in and fade-out
 
             // Screen position = center + projected offset
             renderList.push({

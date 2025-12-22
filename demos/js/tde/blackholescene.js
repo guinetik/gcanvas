@@ -10,17 +10,17 @@ import { CONFIG } from "./config.js";
  * BlackHoleScene - Main 3D scene containing the TDE visualization
  *
  * Z-Order Rendering Rules:
- * 1. TidalStream (particles) always on top of both Star and BlackHole
- * 2. Star position relative to BlackHole changes based on camera depth
- * 3. When star in front of BH: star > BH
- * 4. When star behind BH: BH > star
+ * 1. BlackHole renders at the back (dark shadow)
+ * 2. AccretionDisk renders over the black hole (particles curve around)
+ * 3. TidalStream always on top of star and black hole
+ * 4. Star position relative to BlackHole changes based on camera depth
  *
  * Z-Index Buckets (lower = renders first = behind):
- * - disk: 10 (accretion disk - always at back)
- * - starBack: 15 (star when behind BH)
- * - blackHole: 20 (center reference)
+ * - starBack: 10 (star when behind BH)
+ * - blackHole: 15 (dark shadow at back)
+ * - disk: 20 (accretion disk over BH)
  * - starFront: 25 (star when in front of BH)
- * - stream: 30 (particles - always on top of star and BH)
+ * - stream: 30 (particles - always on top)
  * - jets: 40 (always on top)
  *
  * @extends Scene3D
@@ -36,13 +36,15 @@ export class BlackHoleScene extends Scene3D {
          * then uses camera depth as tie-breaker
          *
          * Layering (simple):
-         * - Particles always on top of star and BH (no jarring transitions)
+         * - BlackHole at back (dark shadow)
+         * - Disk renders over BH (particles curve around it)
+         * - Stream always on top of star and BH
          * - Star moves in front of/behind BH based on camera view
          */
         this.Z = {
-            disk: 10,        // AccretionDisk: always at back
-            starBack: 15,    // Star when behind BH
-            blackHole: 20,   // BlackHole: center reference
+            starBack: 10,    // Star when behind BH
+            blackHole: 15,   // BlackHole: dark shadow at back
+            disk: 20,        // AccretionDisk: over the black hole
             starFront: 25,   // Star when in front of BH
             stream: 30,      // TidalStream: always on top of star and BH
             jets: 40,        // Jets: always on top
@@ -81,6 +83,7 @@ export class BlackHoleScene extends Scene3D {
         // When particles circularize, transfer to accretion disk
         this.stream = new TidalStream(this.game, {
             camera: this.game.camera,
+            scene: this,  // Pass scene reference for screen center
             bhRadius: this.game.baseScale * CONFIG.bhRadiusRatio,
             diskInnerRadius: this.disk.innerRadius,
             diskOuterRadius: this.disk.outerRadius,

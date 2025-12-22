@@ -37,7 +37,7 @@ export class TDEDemo extends Game {
       rotationX: 0.3,
       rotationY: 0,
       rotationZ: 0,
-      perspective: this.baseScale * 1.2, // Wider view to see full orbit
+      perspective: this.baseScale * 1.8, // Zoomed out for wider view
       autoRotate: true,
       autoRotateSpeed: 0.08,
     });
@@ -268,45 +268,58 @@ export class TDEDemo extends Game {
   }
 
   /**
-   * Centralized particle emission from star's current position
-   * Trail forms naturally from frame-to-frame star movement
+   * Emit particles from the star's center position
+   *
+   * The trailing effect happens NATURALLY because:
+   * - Each frame, particles are emitted at star's CURRENT position
+   * - As star moves, older particles stay at their emission positions
+   * - This creates a trail without needing artificial offsets
+   *
+   * No velocity-based offset is applied because that only looks correct
+   * from specific camera angles. Emitting at center works from any angle.
    */
   emitStreamParticles(dt, rate) {
     const star = this.scene.star;
     const stream = this.scene.stream;
-    const bh = this.scene.bh;
 
     if (!stream || star.mass <= 0) return;
 
-    // Use minimum of current or 50% of base radius to prevent emission collapse as star shrinks
-    const bodyRadius = star.currentRadius * 2;
+    // Use star's ACTUAL current radius (shrinks during disruption)
+    const currentRadius = star.currentRadius;
 
-    // Use star's actual position (set by update loop before this is called)
-    const starX = star.x;
-    const starZ = star.z;
-    const dist = Math.sqrt(starX * starX + starZ * starZ) || 1;
+    // Use star's ACTUAL tracked velocity for particle inheritance
+    const vx = star.velocityX || 0;
+    const vz = star.velocityZ || 0;
 
-    // Calculate orbital velocity analytically
-    // Tangent is perpendicular to radial direction (counter-clockwise orbit)
-    const tangentX = -starZ / dist;
-    const tangentZ = starX / dist;
-
-    // Use effective orbit speed from star (set per-phase) for consistent perspective
-    const orbitalSpeed = star.effectiveOrbitSpeed || (star.orbitalRadius * CONFIG.star.orbitSpeed);
-    const vx = tangentX * orbitalSpeed;
-    const vz = tangentZ * orbitalSpeed;
+    // Add radial offset to compensate for visual projection mismatch
+    // Calculate in full 3D space including Y
+    const starY = star.y || 0;
+    const dist = Math.sqrt(star.x * star.x + starY * starY + star.z * star.z) || 1;
+    const radialX = star.x / dist;  // Unit vector pointing away from BH (3D)
+    const radialY = starY / dist;
+    const radialZ = star.z / dist;
+    
+    // Make offset proportional to current orbital distance
+    // As orbit shrinks, offset shrinks proportionally
+    const orbitOffsetRatio = 0.8;  // 80% of current orbital radius as offset
+    const orbitOffset = dist * orbitOffsetRatio;
+    
+    // Also add tangential offset (along velocity direction) to compensate for arc lag
+    const speed = Math.sqrt(vx * vx + vz * vz) || 1;
+    const velDirX = vx / speed;
+    const velDirZ = vz / speed;
+    const tangentOffset = 15;  // pixels ahead along orbit path
+    
+    const emitX = star.x + radialX * orbitOffset + velDirX * tangentOffset;
+    const emitY = starY + radialY * orbitOffset;
+    const emitZ = star.z + radialZ * orbitOffset + velDirZ * tangentOffset;
 
     for (let i = 0; i < rate; i++) {
-      const emitX = starX;
-      const emitZ = starZ;
-
-      // Spaghetti spread: larger radius for more dispersed particles
-      const spreadRadius = bodyRadius * 2;
-
-      this.scene.stream.emit(
-        emitX, star.y + spreadRadius/2 || 0, emitZ,
+      stream.emit(
+        emitX, emitY, emitZ,
         vx, 0, vz,
-        spreadRadius, star.rotation || 0
+        currentRadius,
+        star.rotation || 0
       );
     }
   }
@@ -384,6 +397,10 @@ export class TDEDemo extends Game {
       }
     }
 
+    // Store star's position before updates for accurate velocity computation
+    const oldStarX = star.x;
+    const oldStarZ = star.z;
+
     // Approach phase: Elliptical orbit - star swings from apoapsis toward periapsis
     if (state === "approach") {
       star.tidalProgress = 0;  // No distortion yet
@@ -448,7 +465,12 @@ export class TDEDemo extends Game {
 
       // Start emitting particles during stretch (slowly at first)
       if (this.scene.stream && stretchProgress > 0.1) {
-        const emitRate = 2 + Math.floor(stretchProgress * 50);
+        // Compute current-frame velocity for accurate particle emission
+        if (dt > 0) {
+          star.velocityX = (star.x - oldStarX) / dt;
+          star.velocityZ = (star.z - oldStarZ) / dt;
+        }
+        const emitRate = 2 + Math.floor(stretchProgress * 100);
         this.emitStreamParticles(dt, emitRate);
       }
     }
@@ -526,7 +548,12 @@ export class TDEDemo extends Game {
 
       // Emit particles throughout disrupt phase (more than stretch)
       if (this.scene.stream && star.mass > 0) {
-        const emitRate = 10 + Math.floor(star.effectiveOrbitSpeed * disruptProgress);
+        // Compute current-frame velocity for accurate particle emission
+        if (dt > 0) {
+          star.velocityX = (star.x - oldStarX) / dt;
+          star.velocityZ = (star.z - oldStarZ) / dt;
+        }
+        const emitRate = 10 + Math.floor(star.effectiveOrbitSpeed * disruptProgress) * 100;
         this.emitStreamParticles(dt, emitRate);
       }
 
@@ -585,7 +612,7 @@ export class TDEDemo extends Game {
   onResize() {
     this.updateScaledSizes();
     if (this.camera) {
-      this.camera.perspective = this.baseScale * 0.5;
+      this.camera.perspective = this.baseScale * 1.8;
     }
     if (this.scene) {
       this.scene.x = this.width / 2;
