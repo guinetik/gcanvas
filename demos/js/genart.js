@@ -7,9 +7,10 @@
  * - HSL color cycling based on time and position
  * - Pulsing and breathing effects
  * - Responsive scaling for mobile
+ * - 3D rotation with inertia (drag to rotate!)
  */
 
-import { gcanvas } from '../../src/index.js';
+import { gcanvas, Camera3D } from '../../src/index.js';
 
 // Configuration - base values at 800px reference size
 const CONFIG = {
@@ -63,6 +64,24 @@ window.addEventListener('load', () => {
 
   const game = gcanvas({ canvas, bg: '#0a0a0f', fluid: true });
   const scene = game.scene('mandala');
+
+  // Create 3D camera with inertia for interactive rotation
+  const camera = new Camera3D({
+    rotationX: 0,            // Start flat
+    rotationY: 0,
+    perspective: 600,
+    sensitivity: 0.008,
+    inertia: true,
+    friction: 0.96,          // Higher = more drift before stopping
+    velocityScale: 2.5,      // More momentum on fast flicks
+    autoRotate: false,       // No auto-rotation - stays where user leaves it
+    clampX: true,
+    minRotationX: -1.5,
+    maxRotationX: 1.5,
+  });
+
+  // Enable mouse/touch drag to rotate
+  camera.enableMouseControl(canvas);
 
   // Store shape references for animation
   const allShapes = [];
@@ -138,17 +157,23 @@ window.addEventListener('load', () => {
   game.on('update', (dt, ctx) => {
     time += dt;
 
+    // Update camera (handles inertia and auto-rotation)
+    camera.update(dt);
+
     // Get dynamic center and scale based on LIVE canvas size
     const cx = gameInstance.width / 2;
     const cy = gameInstance.height / 2;
     const scaleFactor = getScaleFactor(gameInstance.width, gameInstance.height);
 
-    // Animate core
+    // Animate core - project through 3D camera
     const core = ctx.refs.core;
     if (core) {
-      core.x = cx;
-      core.y = cy;
-      const coreScale = (1 + Math.sin(time * 4) * 0.25) * scaleFactor;
+      // Core at the tip of the cone (closest), with breathing pulse
+      const coreZ = Math.sin(time * 2) * 40 - 150; // Oscillates at the front tip
+      const projected = camera.project(0, 0, coreZ);
+      core.x = cx + projected.x;
+      core.y = cy + projected.y;
+      const coreScale = (1 + Math.sin(time * 4) * 0.25) * scaleFactor * projected.scale;
       core.scaleX = coreScale;
       core.scaleY = coreScale;
       core.rotation = time * 1.5;
@@ -160,7 +185,7 @@ window.addEventListener('load', () => {
       }
     }
 
-    // Animate each ring
+    // Animate each ring with 3D projection
     for (const shape of allShapes) {
       if (shape.ring < 0) continue; // Skip core
 
@@ -174,12 +199,18 @@ window.addEventListener('load', () => {
         const wobble = Math.sin(time * 2 + shape.index * 0.3) * 8 * scaleFactor;
         const scaledRadius = shape.ringRadius * scaleFactor;
 
-        go.x = cx + Math.cos(newAngle) * (scaledRadius + wobble);
-        go.y = cy + Math.sin(newAngle) * (scaledRadius + wobble);
+        // Calculate 2D position on the mandala plane
+        const localX = Math.cos(newAngle) * (scaledRadius + wobble);
+        const localY = Math.sin(newAngle) * (scaledRadius + wobble);
 
-        // Scale particle size
-        go.scaleX = scaleFactor;
-        go.scaleY = scaleFactor;
+        // Project through 3D camera (particles at base of cone, furthest back)
+        const projected = camera.project(localX, localY, 300);
+        go.x = cx + projected.x;
+        go.y = cy + projected.y;
+
+        // Scale particle size with perspective
+        go.scaleX = scaleFactor * projected.scale;
+        go.scaleY = scaleFactor * projected.scale;
 
         // Twinkle effect
         const alpha = 0.4 + Math.abs(Math.sin(time * 8 + shape.index * 0.3)) * 0.6;
@@ -200,13 +231,19 @@ window.addEventListener('load', () => {
         const scaledRadius = shape.ringRadius * scaleFactor;
         const breathRadius = scaledRadius + Math.sin(breathPhase) * 8 * scaleFactor;
 
-        // Smooth position update
-        go.x = cx + Math.cos(newAngle) * breathRadius;
-        go.y = cy + Math.sin(newAngle) * breathRadius;
+        // Calculate 2D position on the mandala plane
+        const localX = Math.cos(newAngle) * breathRadius;
+        const localY = Math.sin(newAngle) * breathRadius;
 
-        // Smooth pulse scale (includes responsive scaling)
+        // Project through 3D camera - CONE shape: inner rings close, outer rings far
+        const ringDepth = ringIndex * 60 - 50; // Ring 0 at -50, Ring 5 at 250
+        const projected = camera.project(localX, localY, ringDepth);
+        go.x = cx + projected.x;
+        go.y = cy + projected.y;
+
+        // Smooth pulse scale with perspective
         const pulsePhase = time * 2 + ringIndex * 0.3;
-        const scale = (1 + Math.sin(pulsePhase) * pulseAmp) * scaleFactor;
+        const scale = (1 + Math.sin(pulsePhase) * pulseAmp) * scaleFactor * projected.scale;
         go.scaleX = scale;
         go.scaleY = scale;
 
