@@ -222,6 +222,9 @@ uniform float uTidalStretch;     // 0 = sphere, 1+ = elongated toward BH
 uniform float uStretchDirX;      // Direction to black hole (X component)
 uniform float uStretchDirZ;      // Direction to black hole (Z component)
 uniform float uStressLevel;      // 0-1, surface chaos from tidal forces
+uniform float uBaseRadius;       // Dynamic base radius for proper sizing
+uniform float uTidalFlare;       // 0-1, sudden brightness burst at disruption start
+uniform float uTidalWobble;      // 0-1, violent geometry wobble during trauma
 
 // =============================================================================
 // TIDAL DISTORTION - True Spaghettification via Ellipsoid Deformation
@@ -269,8 +272,9 @@ vec3 ellipsoidNormal(vec3 hitPoint, vec3 center, vec3 semiAxes) {
 /**
  * Build tidal stretch axes from BH direction
  * Returns semi-axes (stretchAxis, Y, perpAxis) for ellipsoid
+ * Includes violent wobble effect during trauma
  */
-vec3 tidalSemiAxes(float stretch, vec2 stretchDir, float baseRadius) {
+vec3 tidalSemiAxes(float stretch, vec2 stretchDir, float baseRadius, float wobble, float time) {
     // Stretch factor along BH direction (elongation toward/away from BH)
     float stretchFactor = 1.0 + stretch * 0.8;  // Up to 1.8x longer
 
@@ -279,6 +283,24 @@ vec3 tidalSemiAxes(float stretch, vec2 stretchDir, float baseRadius) {
 
     // Y axis gets slight compression too
     float yFactor = 1.0 - stretch * 0.15;
+
+    // === TRAUMA WOBBLE ===
+    // Violent, chaotic geometry distortion during tidal shock
+    if (wobble > 0.01) {
+        // Multiple frequency wobbles for organic chaos
+        float wobble1 = sin(time * 12.0) * cos(time * 7.3);
+        float wobble2 = sin(time * 19.0 + 1.5) * cos(time * 11.0);
+        float wobble3 = sin(time * 8.0 + 3.0);
+        
+        // Asymmetric wobble - more violent on stretch axis
+        float stretchWobble = wobble * (0.3 + wobble1 * 0.2 + wobble2 * 0.15);
+        float yWobble = wobble * (wobble2 * 0.25 + wobble3 * 0.15);
+        float perpWobble = wobble * (wobble3 * 0.2 + wobble1 * 0.1);
+        
+        stretchFactor *= (1.0 + stretchWobble);
+        yFactor *= (1.0 + yWobble);
+        compressFactor *= (1.0 + perpWobble);
+    }
 
     return vec3(
         baseRadius * stretchFactor,   // Stretch along BH radial
@@ -447,75 +469,18 @@ void main() {
     vec3 rotatedRayOrigin = stretchRotInv * rayOrigin;
 
     // Calculate ellipsoid semi-axes based on stretch
-    // Star body fills the visible area - minimal corona
-    float baseRadius = 0.95;  // Nearly fills the entire quad
-    vec3 semiAxes = tidalSemiAxes(stretch, stretchDir2D, baseRadius);
-
-    // Corona is paper-thin
-    vec3 coronaSemiAxes = tidalSemiAxes(stretch, stretchDir2D, 0.98);
-
-    // Ray-ellipsoid intersection for CORONA
-    float tCorona = rayEllipsoidIntersect(rotatedRayOrigin, rotatedRayDir, vec3(0.0), coronaSemiAxes);
+    // Use dynamic base radius passed from JS (scales with render texture size)
+    // Falls back to 0.4 if uniform not set
+    float baseRadius = uBaseRadius > 0.0 ? uBaseRadius : 0.4;
+    vec3 semiAxes = tidalSemiAxes(stretch, stretchDir2D, baseRadius, uTidalWobble, time);
 
     // Ray-ellipsoid intersection for SURFACE
     float t = rayEllipsoidIntersect(rotatedRayOrigin, rotatedRayDir, vec3(0.0), semiAxes);
 
-    // === CORONA / OUTER GLOW ===
-    // Only render corona in the thin rim outside the star body
+    // === NO CORONA - just render solid ellipsoid ===
+    // If ray doesn't hit the surface, render transparent
     if (t < 0.0) {
-        float dist = distFromCenter;
-        float angle = atan(center.y, center.x);
-
-        // Star edge is at ~1.9 in dist space (0.95 * 2)
-        // Corona is barely visible - just a whisper at the edge
-        float starEdge = 1.9;
-
-        // Quick exit if too far from star edge
-        float edgeFade = 1.0 - smoothstep(starEdge + 0.08, starEdge + 0.15, dist);
-        if (edgeFade <= 0.0) {
-            gl_FragColor = vec4(0.0);
-            return;
-        }
-
-        // How far outside the star edge (0 at edge, small positive outside)
-        float rimDist = max(0.0, dist - starEdge);
-        float rimFactor = smoothstep(0.0, 0.1, rimDist);
-
-        // Tight glow - exponential falloff from star edge
-        float glow = exp(-rimDist * rimDist * 200.0) * 0.5;  // Much tighter falloff
-
-        // Corona flames at the edge (subtle)
-        float flames = coronaFlames(angle + selfRotation, rimFactor, time, uActivityLevel);
-        flames *= 0.5;  // Reduce flame intensity
-
-        // Turbulent corona edges
-        float coronaTurb = noise3D(vec3(angle * 3.0 + selfRotation, dist * 2.0, time * 0.3));
-        coronaTurb = coronaTurb * 0.5 + 0.5;
-
-        // Corona intensity - very tight peak just outside star
-        float coronaIntensity = smoothstep(0.0, 0.02, rimDist) * smoothstep(0.12, 0.03, rimDist);
-        coronaIntensity *= (0.5 + coronaTurb * 0.3 + flames * 0.5);
-        coronaIntensity *= 0.4 + uActivityLevel * 0.4;
-
-        // Combined outer effect - reduced overall
-        float totalGlow = glow * 0.6 + coronaIntensity * 0.4;
-        totalGlow *= edgeFade;
-
-        // Corona color - warmer/redder than surface
-        vec3 coronaColor = uStarColor * vec3(1.3, 1.0, 0.7);
-        vec3 glowColor = mix(uStarColor, coronaColor, coronaIntensity);
-
-        float brightness = max(max(glowColor.r, glowColor.g), glowColor.b) * totalGlow;
-        float alpha = smoothstep(0.01, 0.15, brightness) * totalGlow;
-
-        if (alpha < 0.02) {
-            gl_FragColor = vec4(0.0);
-            return;
-        }
-
-        glowColor *= totalGlow;
-        alpha *= circularMask;
-        gl_FragColor = vec4(glowColor * alpha, alpha);
+        gl_FragColor = vec4(0.0);
         return;
     }
 
@@ -569,29 +534,45 @@ void main() {
     float edgeDist = 1.0 - viewAngle;
     float limbDarkening = pow(max(0.0, viewAngle), 0.4);
 
+    // === TIDAL FACE INTENSITY ===
+    // The side facing the black hole experiences more violent tidal forces
+    // Calculate how much this surface point faces the BH direction
+    vec3 bhDir3D = normalize(vec3(uStretchDirX, 0.0, uStretchDirZ));
+    float facingBH = dot(normal, bhDir3D);  // -1 to 1, positive = facing BH
+    float tidalFace = smoothstep(-0.2, 0.8, facingBH);  // Gradual transition
+    tidalFace = tidalFace * tidalFace;  // More concentrated on BH side
+    
+    // Tidal face boost - up to 3x more violent on the BH-facing side
+    float tidalFaceBoost = 1.0 + tidalFace * uStressLevel * 2.0;
+
     // === MULTI-LAYER EFFECTS (stress-enhanced) ===
     // Stress amplifies all turbulent effects - star is being torn apart!
     // Much more violent - up to 5x chaos at max stress
     float stressBoost = 1.0 + uStressLevel * 4.0;
+    
+    // Combined boost: general stress + extra violence on BH-facing side
+    float combinedBoost = stressBoost * tidalFaceBoost;
 
-    float turbIntensity = boilingTurbulence(rotatedNormal, time * stressBoost) * 0.6;
-    turbIntensity *= stressBoost;
+    float turbIntensity = boilingTurbulence(rotatedNormal, time * combinedBoost) * 0.6;
+    turbIntensity *= combinedBoost;
 
-    float bubbles = hotBubbles(rotatedNormal, time * stressBoost);
-    bubbles *= stressBoost * 1.5;  // More dramatic bubbles
+    float bubbles = hotBubbles(rotatedNormal, time * combinedBoost);
+    bubbles *= combinedBoost * 1.5;  // More dramatic bubbles on tidal face
 
     // Granulation becomes violent under stress - larger and faster
-    float gran = noise3D(rotatedNormal * 15.0 + time * 0.5 * stressBoost);
-    gran *= stressBoost * 1.2;
+    float gran = noise3D(rotatedNormal * 15.0 + time * 0.5 * combinedBoost);
+    gran *= combinedBoost * 1.2;
 
     // === TIDAL FRACTURING ===
-    // Stress causes visible cracks/tears - starts earlier and more intense
+    // Stress causes visible cracks/tears - concentrated on BH-facing side
     float fractures = 0.0;
     if (uStressLevel > 0.15) {  // Start fractures earlier (was 0.3)
-        float fractureNoise = noise3D(rotatedNormal * 6.0 + time * 0.8);  // Larger cracks, faster animation
-        float fractureThreshold = 1.0 - (uStressLevel - 0.15) * 1.2;
+        // Fractures are more intense on the tidal face
+        float fractureBoost = 1.0 + tidalFace * 2.0;  // Up to 3x on BH side
+        float fractureNoise = noise3D(rotatedNormal * 6.0 + time * 0.8 * fractureBoost);
+        float fractureThreshold = 1.0 - (uStressLevel - 0.15) * 1.2 * fractureBoost;
         fractures = smoothstep(fractureThreshold, fractureThreshold + 0.08, fractureNoise);
-        fractures *= uStressLevel * 1.2;  // More intense (was 0.8)
+        fractures *= uStressLevel * 1.2 * fractureBoost;  // More intense on BH side
     }
 
     // === PULSATION (amplified by stress) ===
@@ -600,10 +581,17 @@ void main() {
     float pulseAmp = uActivityLevel * (1.0 + uStressLevel);
     float pulse = (pulse1 + pulse2) * 0.3 * pulseAmp;
 
+    // === TIDAL HOTSPOT ===
+    // Bright glowing region on the BH-facing side - like matter being pulled off
+    float tidalHotspot = pow(tidalFace, 3.0) * uStressLevel;
+    // Add some flickering/chaos to the hotspot
+    tidalHotspot *= 0.7 + 0.3 * noise3D(rotatedNormal * 8.0 + time * 2.0);
+
     // === COMBINED INTENSITY ===
     float totalIntensity = plasma * 0.35 + turbIntensity * 0.25 + gran * 0.2;
     totalIntensity += bubbles * 0.4;
     totalIntensity += fractures * 0.5;  // Fractures glow hot
+    totalIntensity += tidalHotspot * 0.8;  // Bright tidal hotspot
     totalIntensity *= 1.0 + pulse;
 
     // === 4-TIER COLOR SYSTEM ===
@@ -659,7 +647,29 @@ void main() {
     float shimmer = sin(turbIntensity * 10.0 + time * 3.0) * 0.05 + 1.0;
     surfaceColor *= shimmer;
 
-    surfaceColor = clamp(surfaceColor, 0.0, 2.5);
+    // === TIDAL FLARE ===
+    // Sudden brightness burst when disruption begins
+    // Concentrated on the BH-facing side with violent flickering
+    if (uTidalFlare > 0.01) {
+        // Flare is brightest on the BH-facing side
+        float flareFace = 0.3 + tidalFace * 0.7;
+        
+        // Violent flickering during the flare
+        float flareFlicker = 0.7 + 0.3 * noise3D(rotatedNormal * 10.0 + time * 8.0);
+        
+        // White-hot flare color
+        vec3 flareColor = vec3(1.0, 0.95, 0.8);
+        
+        // Additive flare - makes entire star brighter
+        float flareIntensity = uTidalFlare * flareFace * flareFlicker * 2.0;
+        surfaceColor += flareColor * flareIntensity;
+        
+        // Extra bloom at the BH-facing tip
+        float tipFlare = pow(tidalFace, 4.0) * uTidalFlare * 1.5;
+        surfaceColor += vec3(1.0, 0.9, 0.7) * tipFlare;
+    }
+
+    surfaceColor = clamp(surfaceColor, 0.0, 3.5);  // Allow brighter for flare
 
     gl_FragColor = vec4(surfaceColor, 1.0);
 }

@@ -43,10 +43,14 @@ export class TDEDemo extends Game {
     });
     this.camera.enableMouseControl(this.canvas);
 
+    // Apply orbit center offset to shift the scene (and thus the orbit) on screen
+    const orbitOffsetX = (CONFIG.star.orbitCenterX || 0) * this.width;
+    const orbitOffsetY = (CONFIG.star.orbitCenterY || 0) * this.height;
+
     this.scene = new BlackHoleScene(this, {
       camera: this.camera,
-      x: this.width / 2,
-      y: this.height / 2,
+      x: this.width / 2 + orbitOffsetX,
+      y: this.height / 2 + orbitOffsetY,
     });
     this.pipeline.add(this.scene);
 
@@ -136,6 +140,40 @@ export class TDEDemo extends Game {
           // Orbit begins to decay, tidal forces start
           duration: CONFIG.durations.stretch,
           next: "disrupt",
+          enter: () => {
+            // TIDAL TRAUMA - dramatic visual feedback when disruption begins
+            const star = this.scene?.star;
+            if (star) {
+              // === VIOLENT BRIGHTNESS FLARE ===
+              star.tidalFlare = 2.0;
+              // Fade over 5 seconds
+              Tweenetik.to(star, { tidalFlare: 0 }, 5.0, Easing.easeOutQuad);
+              
+              // === GEOMETRY WOBBLE - comet-like trauma ===
+              // Spike the wobble high - violent shaking
+              star.tidalWobble = 1.2;
+              // Fade back to stable over 6 seconds (star tries to recover)
+              Tweenetik.to(star, { tidalWobble: 0.1 }, 6.0, Easing.easeOutElastic);
+              
+              // === SUDDEN STRETCH SPIKE - comet shape ===
+              // Force immediate elongation like panels 2-3 in reference
+              star.tidalStretch = 0.8;
+              // Ease back toward spherical (but not fully - it can't recover)
+              Tweenetik.to(star, { tidalStretch: 0.2 }, 4.0, Easing.easeOutQuad);
+              
+              // === STRESS SPIKE ===
+              star.stressLevel = 0.6;
+              // Slowly calm down but not fully
+              Tweenetik.to(star, { stressLevel: 0.25 }, 5.0, Easing.easeOutQuad);
+              
+              // === PARTICLE BURST ===
+              if (this.scene.stream) {
+                for (let i = 0; i < 80; i++) {
+                  this.emitStreamParticles(0.016, 1);
+                }
+              }
+            }
+          },
         },
         disrupt: {
           // No duration - transitions via trigger when star mass depletes
@@ -187,29 +225,35 @@ export class TDEDemo extends Game {
     const eccentricity = CONFIG.star.eccentricity || 0;
     this.scene.star.eccentricity = eccentricity;
 
-    // Calculate semi-major axis (average orbital distance)
-    let semiMajorAxis = this.baseScale * CONFIG.star.initialOrbitRadius;
+    // Calculate semi-major axis based on baseScale (smaller of width/height)
+    // This ensures the orbit fits on any aspect ratio screen
+    // initialOrbitRadius is a fraction of baseScale (e.g., 0.5 = half of smaller dimension)
+    let semiMajorAxis = (this.baseScale / 2) * CONFIG.star.initialOrbitRadius;
 
-    // Constrain orbit to keep star visible
-    // Use width for horizontal extent (orbit goes left-right)
-    const starRadius = this.baseScale * CONFIG.starRadiusRatio;
+    // Option to bypass constraints for full control over orbit size
+    if (!CONFIG.star.bypassConstraints) {
+      // Apply constraints to keep orbit somewhat on-screen
+      const starRadius = this.baseScale * CONFIG.starRadiusRatio;
+      const allowOffscreen = CONFIG.star.allowOffscreen ?? 0;
+      const effectiveMargin = starRadius * (1 - allowOffscreen);
 
-    // Horizontal constraint: apoapsis should fit within screen width
-    const horizontalMargin = starRadius;
-    const maxHorizontalExtent = (this.width / 2) - horizontalMargin;
-    const maxSafeApoapsisH = maxHorizontalExtent;
-    const maxSafeSemiMajorH = maxSafeApoapsisH / (1 + eccentricity);
+      const orbitOffsetX = (CONFIG.star.orbitCenterX || 0) * this.width;
+      const orbitOffsetY = (CONFIG.star.orbitCenterY || 0) * this.height;
 
-    // Vertical constraint: use practical tilt (initial * 2), not extreme max
-    const practicalTilt = Math.min(Math.abs(this.camera._initialRotationX || 0.3) * 2, 0.6);
-    const verticalMargin = starRadius * 0.5;
-    const maxVerticalDisplacement = (this.height / 2) - verticalMargin;
-    const tiltFactor = Math.abs(Math.sin(practicalTilt));
-    const maxSafeApoapsisV = tiltFactor > 0.01 ? maxVerticalDisplacement / tiltFactor : Infinity;
-    const maxSafeSemiMajorV = maxSafeApoapsisV / (1 + eccentricity);
+      const leftEdgeDist = (this.width / 2) + orbitOffsetX;
+      const rightEdgeDist = (this.width / 2) - orbitOffsetX;
+      const maxHorizontalExtent = Math.max(leftEdgeDist, rightEdgeDist) - effectiveMargin;
+      const maxSafeSemiMajorH = maxHorizontalExtent / (1 + eccentricity);
 
-    // Use the more restrictive of horizontal or vertical
-    semiMajorAxis = Math.min(semiMajorAxis, maxSafeSemiMajorH, maxSafeSemiMajorV);
+      const practicalTilt = Math.min(Math.abs(this.camera._initialRotationX || 0.3) * 2, 0.6);
+      const topEdgeDist = (this.height / 2) + orbitOffsetY;
+      const bottomEdgeDist = (this.height / 2) - orbitOffsetY;
+      const maxVerticalDisplacement = Math.max(topEdgeDist, bottomEdgeDist) - effectiveMargin;
+      const tiltFactor = Math.abs(Math.sin(practicalTilt));
+      const maxSafeSemiMajorV = tiltFactor > 0.01 ? maxVerticalDisplacement / tiltFactor : Infinity;
+
+      semiMajorAxis = Math.min(semiMajorAxis, maxSafeSemiMajorH, maxSafeSemiMajorV);
+    }
 
     this.scene.star.semiMajorAxis = semiMajorAxis;
     this.scene.star.initialSemiMajorAxis = semiMajorAxis;
@@ -217,12 +261,13 @@ export class TDEDemo extends Game {
     this.scene.star.orbitalRadius = semiMajorAxis;
     this.scene.star.initialOrbitalRadius = semiMajorAxis;
 
-    // Start at apoapsis (phi = π) - star swings in from far point
-    this.scene.star.phi = Math.PI;
+    // Start angle: 0 = periapsis (right side), π = apoapsis (left side)
+    const startAngle = CONFIG.star.startAngle ?? Math.PI;
+    this.scene.star.phi = startAngle;
 
-    // Reset position to apoapsis
-    const r = orbitalRadius(semiMajorAxis, eccentricity, Math.PI);
-    const pos = polarToCartesian(r, Math.PI);
+    // Reset position to starting angle
+    const r = orbitalRadius(semiMajorAxis, eccentricity, startAngle);
+    const pos = polarToCartesian(r, startAngle);
     this.scene.star.x = pos.x;
     this.scene.star.z = pos.z;
 
@@ -301,7 +346,7 @@ export class TDEDemo extends Game {
     
     // Make offset proportional to current orbital distance
     // As orbit shrinks, offset shrinks proportionally
-    const orbitOffsetRatio = 0.8;  // 80% of current orbital radius as offset
+    const orbitOffsetRatio = 1.09;  // 80% of current orbital radius as offset
     const orbitOffset = dist * orbitOffsetRatio;
     
     // Also add tangential offset (along velocity direction) to compensate for arc lag
@@ -319,7 +364,8 @@ export class TDEDemo extends Game {
         emitX, emitY, emitZ,
         vx, 0, vz,
         currentRadius,
-        star.rotation || 0
+        star.rotation || 0,
+        star.currentColor  // Pass star's current color for particle emission
       );
     }
   }
@@ -470,7 +516,7 @@ export class TDEDemo extends Game {
           star.velocityX = (star.x - oldStarX) / dt;
           star.velocityZ = (star.z - oldStarZ) / dt;
         }
-        const emitRate = 2 + Math.floor(stretchProgress * 100);
+        const emitRate = 2 + Math.floor(stretchProgress * 15);
         this.emitStreamParticles(dt, emitRate);
       }
     }
@@ -553,7 +599,7 @@ export class TDEDemo extends Game {
           star.velocityX = (star.x - oldStarX) / dt;
           star.velocityZ = (star.z - oldStarZ) / dt;
         }
-        const emitRate = 10 + Math.floor(star.effectiveOrbitSpeed * disruptProgress) * 100;
+        const emitRate = 3 + Math.floor(disruptProgress * 20);
         this.emitStreamParticles(dt, emitRate);
       }
 
@@ -615,8 +661,11 @@ export class TDEDemo extends Game {
       this.camera.perspective = this.baseScale * 1.8;
     }
     if (this.scene) {
-      this.scene.x = this.width / 2;
-      this.scene.y = this.height / 2;
+      // Apply orbit center offset
+      const orbitOffsetX = (CONFIG.star.orbitCenterX || 0) * this.width;
+      const orbitOffsetY = (CONFIG.star.orbitCenterY || 0) * this.height;
+      this.scene.x = this.width / 2 + orbitOffsetX;
+      this.scene.y = this.height / 2 + orbitOffsetY;
       this.scene.onResize();
     }
   }

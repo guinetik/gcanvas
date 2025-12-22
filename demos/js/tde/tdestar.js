@@ -46,6 +46,8 @@ export class Star extends GameObject {
         this.pulsationPhase = 0;    // Oscillation phase
         this.stressLevel = 0;       // Surface chaos level
         this.tidalProgress = 0;     // External tidal progress from FSM (0-1)
+        this.tidalFlare = 0;        // 0-1, sudden brightness burst at disruption start
+        this.tidalWobble = 0;       // 0-1, violent geometry wobble during trauma
     }
 
     init() {
@@ -67,6 +69,8 @@ export class Star extends GameObject {
         this.pulsationPhase = 0;
         this.stressLevel = 0;
         this.tidalProgress = 0;
+        this.tidalFlare = 0;
+        this.tidalWobble = 0;
         this.angularVelocity = CONFIG.star.rotationSpeed ?? 0.5;
         this.rotation = 0;
 
@@ -104,25 +108,28 @@ export class Star extends GameObject {
         }
 
         // === TIDAL STRETCH (Spaghettification) ===
-        // Disable deformation when star is small/fast - not visible, saves resources
+        // Create comet/teardrop shape pointed toward black hole
         const dist = Math.sqrt(this.x * this.x + (this.z || 0) * (this.z || 0)) || 1;
+        
+        // Direction toward black hole (unit vector)
         let dirX = -this.x / dist;
         let dirZ = -(this.z || 0) / dist;
-        let proximityFactor = 0;
-        this.tidalStretch = 0; //disabling for now
-        if (collapseProgress > 0.5 || this.angularVelocity > 1.88) {
-            // Star is collapsing fast or spinning - disable deformation
-            this.tidalStretch = 0;
+        
+        // Proximity factor: closer to BH = more stretch
+        let proximityFactor = Math.max(0, 1 - dist / this.initialOrbitalRadius);
+        
+        // Calculate stretch amount based on phase and proximity
+        if (collapseProgress > 0.8) {
+            // Very late stage - reduce stretch as star becomes tiny
+            this.tidalStretch = (1 - collapseProgress) * 2;
         } else {
-            // Normal deformation calculation
-             proximityFactor = Math.max(0, 1 - dist / this.initialOrbitalRadius);
-            const externalStretch = this.tidalProgress * 0.8;
-
-            this.tidalStretch = Math.max(
-                externalStretch,
-                proximityFactor * 0.8 + collapseProgress * 0.5
-            );
-            this.tidalStretch = Math.min(1.5, this.tidalStretch); 
+            // Main deformation: builds with tidalProgress and proximity
+            // tidalProgress is driven by FSM state (0 in approach, ramps in stretch/disrupt)
+            const baseStretch = this.tidalProgress * 1.2;  // Up to 1.2 stretch
+            const proximityBoost = proximityFactor * 0.5;  // Extra stretch when close
+            
+            this.tidalStretch = baseStretch + proximityBoost;
+            this.tidalStretch = Math.min(1.8, this.tidalStretch);  // Cap at 1.8
         }
 
         // === BREATHING (Slow, ominous expansion/contraction) ===
@@ -186,6 +193,9 @@ export class Star extends GameObject {
 
         const stressColor = [r, g, b];
 
+        // Expose current color for particle emission
+        this.currentColor = stressColor;
+
         if (!this.visual) {
             this.visual = new Sphere3D(this.currentRadius, {
                 color: CONFIG.star.color,
@@ -201,6 +211,8 @@ export class Star extends GameObject {
                     uStretchDirX: dirX,
                     uStretchDirZ: dirZ,
                     uStressLevel: this.stressLevel,
+                    uTidalFlare: this.tidalFlare,
+                    uTidalWobble: this.tidalWobble,
                 },
             });
         } else {
@@ -215,6 +227,8 @@ export class Star extends GameObject {
                     uStretchDirX: dirX,
                     uStretchDirZ: dirZ,
                     uStressLevel: this.stressLevel,
+                    uTidalFlare: this.tidalFlare,
+                    uTidalWobble: this.tidalWobble,
                 });
             }
             this.visual._generateGeometry();

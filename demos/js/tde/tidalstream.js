@@ -1,4 +1,5 @@
 import { GameObject, Painter } from "../../../src/index.js";
+import { applyGravitationalLensing } from "../../../src/math/gr.js";
 
 /**
  * TidalStream - Simple particle stream from star to black hole
@@ -6,26 +7,26 @@ import { GameObject, Painter } from "../../../src/index.js";
  * Physics:
  * - Particles emitted from star inherit star's velocity
  * - Gravity attracts particles toward black hole (0,0,0)
- * - That's it. The S-shape should emerge naturally.
+ * - Gravitational lensing bends particle paths near the BH
  */
 
 // Stream-specific config
 const STREAM_CONFIG = {
     gravity: 120000,        // Strong gravity (linear falloff G/r)
-    maxParticles: 6000,
-    particleLifetime: 1200,
+    maxParticles: 5000,
+    particleLifetime: 12,   // Seconds - long lifetime so particles can orbit the BH
 
     // Velocity inheritance - how much of star's velocity particles get
     // Lower = particles emit more "from" the star, not ahead of it
-    velocityInheritance: 0.3,  // 30% inheritance
+    velocityInheritance: 0.3,
 
     // Inward velocity - particles should FALL toward BH, not orbit
     // This is the key to making particles flow INTO the black hole
-    inwardVelocity: 5,     // Base inward velocity toward BH (reduced for longer trails)
-    inwardSpread: 12,       // Random spread on inward velocity
+    inwardVelocity: 8,      // Base inward velocity toward BH
+    inwardSpread: 15,       // Random spread on inward velocity
 
     // Tangent spread for S-shape - higher = more spread along orbit direction
-    tangentSpread: Math.PI * 120,      // Increased for visible S-shape
+    tangentSpread: Math.PI * 150,     // Spread for visible S-shape
 
     // Emission offset: 1.0 = star's BH-facing edge (L1 Lagrange point)
     // Positive = toward BH, negative = away from BH
@@ -33,7 +34,7 @@ const STREAM_CONFIG = {
 
     // Drag factor - removes angular momentum so orbits decay
     // 1.0 = no drag, 0.99 = slight drag, 0.95 = strong drag
-    drag: 0.995,
+    drag: 0.994,
 
     // Colors: match star shader at emission, cool as they approach BH
     colorHot: { r: 255, g: 95, b: 45 },     // Deep red-orange (matches star shader initial)
@@ -42,6 +43,16 @@ const STREAM_CONFIG = {
     // Particle size
     sizeMin: 1,
     sizeMax: 3,
+
+    // Gravitational lensing (visual effect)
+    // These are multipliers relative to the BH's current radius
+    lensing: {
+        enabled: true,
+        effectRadiusMult: 6.0,   // Effect extends to 6x BH radius
+        strengthMult: 2.5,       // Strength scales with BH radius
+        falloff: 0.008,          // Exponential falloff (higher = tighter effect)
+        minDistanceMult: 0.2,    // Min distance as fraction of BH radius
+    },
 };
 
 export class TidalStream extends GameObject {
@@ -80,8 +91,9 @@ export class TidalStream extends GameObject {
      * @param {number} vz - Star velocity z
      * @param {number} starRadius - Current star radius (for position spread)
      * @param {number} starRotation - Current star rotation (for angular offset)
+     * @param {Array<number>} starColor - Current star color as [r, g, b] normalized (0-1)
      */
-    emit(x, y, z, vx, vy, vz, starRadius, starRotation = 0) {
+    emit(x, y, z, vx, vy, vz, starRadius, starRotation = 0, starColor = null) {
         if (this.particles.length >= STREAM_CONFIG.maxParticles) return;
 
         const dist = Math.sqrt(x * x + z * z) || 1;
@@ -111,6 +123,11 @@ export class TidalStream extends GameObject {
         // Small tangential spread for the S-shape variation
         const tangent = (Math.random() - 0.5) * STREAM_CONFIG.tangentSpread;
 
+        // Store star color at emission time (convert from normalized 0-1 to 0-255)
+        const emitColor = starColor
+            ? { r: starColor[0] * 255, g: starColor[1] * 255, b: starColor[2] * 255 }
+            : STREAM_CONFIG.colorHot;
+
         this.particles.push({
             x: emitX,
             y: emitY,
@@ -126,6 +143,9 @@ export class TidalStream extends GameObject {
 
             // Track initial distance for color gradient
             initialDist: dist,
+
+            // Store the star's color at emission time
+            emitColor,
         });
     }
 
@@ -259,24 +279,52 @@ export class TidalStream extends GameObject {
             const dist = Math.sqrt(p.x * p.x + p.z * p.z);
             const colorT = Math.min(1, dist / (p.initialDist || 1));
 
-            // Lerp color: cool near BH, hot near initial position
+            // Use particle's emitted color (star color at emission time)
+            const hotColor = p.emitColor || STREAM_CONFIG.colorHot;
+
+            // Lerp color: cool near BH, hot (star color) near initial position
             const color = {
-                r: STREAM_CONFIG.colorCool.r + (STREAM_CONFIG.colorHot.r - STREAM_CONFIG.colorCool.r) * colorT,
-                g: STREAM_CONFIG.colorCool.g + (STREAM_CONFIG.colorHot.g - STREAM_CONFIG.colorCool.g) * colorT,
-                b: STREAM_CONFIG.colorCool.b + (STREAM_CONFIG.colorHot.b - STREAM_CONFIG.colorCool.b) * colorT,
+                r: STREAM_CONFIG.colorCool.r + (hotColor.r - STREAM_CONFIG.colorCool.r) * colorT,
+                g: STREAM_CONFIG.colorCool.g + (hotColor.g - STREAM_CONFIG.colorCool.g) * colorT,
+                b: STREAM_CONFIG.colorCool.b + (hotColor.b - STREAM_CONFIG.colorCool.b) * colorT,
             };
 
             // Fade with age (fade out at end of life) and fade in at birth
             const fadeOutAlpha = Math.max(0, 1 - p.age / STREAM_CONFIG.particleLifetime);
             const alpha = fadeOutAlpha * fadeInProgress;  // Combine fade-in and fade-out
 
-            // Screen position = center + projected offset
+            // Apply gravitational lensing to screen coordinates
+            // Scale lensing with BH's current (pulsing) radius
+            let screenX = projected.x;
+            let screenY = projected.y;
+
+            if (STREAM_CONFIG.lensing.enabled && this.bhRadius > 0) {
+                const effectRadius = this.bhRadius * STREAM_CONFIG.lensing.effectRadiusMult;
+                const strength = this.bhRadius * STREAM_CONFIG.lensing.strengthMult;
+                const minDist = this.bhRadius * STREAM_CONFIG.lensing.minDistanceMult;
+
+                const lensed = applyGravitationalLensing(
+                    screenX, screenY,
+                    effectRadius,
+                    strength,
+                    STREAM_CONFIG.lensing.falloff,
+                    minDist
+                );
+                screenX = lensed.x;
+                screenY = lensed.y;
+            }
+
+            // Check if particle is visually inside the black hole
+            const screenDist = Math.sqrt(screenX * screenX + screenY * screenY);
+            const insideBH = screenDist < this.bhRadius;
+
+            // Screen position = center + lensed offset
             renderList.push({
-                x: cx + projected.x,
-                y: cy + projected.y,
+                x: cx + screenX,
+                y: cy + screenY,
                 z: projected.z,
                 size: p.size * projected.scale,
-                color,
+                color: insideBH ? { r: 0, g: 0, b: 0 } : color,
                 alpha,
             });
         }

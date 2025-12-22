@@ -164,7 +164,10 @@ export class Sphere3D extends Shape {
      */
     _renderWithShader(ctx, screenX, screenY, screenRadius) {
         // Calculate render size (larger for glow effects and to prevent clipping)
-        const padding = screenRadius * 1.0;  // 100% padding for glow/halo
+        // Account for tidal stretch - stretched stars extend beyond normal radius
+        const tidalStretch = this.shaderUniforms?.uTidalStretch ?? 0;
+        const stretchMultiplier = 1 + tidalStretch;  // e.g., 1.8 stretch = 2.8x multiplier
+        const padding = screenRadius * stretchMultiplier;  // Dynamic padding based on stretch
         const renderSize = Math.ceil((screenRadius + padding) * 2);
 
         const gl = Sphere3D._getGLRenderer(renderSize, renderSize);
@@ -184,10 +187,18 @@ export class Sphere3D extends Shape {
         // Clear with transparency
         gl.clear(0, 0, 0, 0);
 
+        // Calculate the base radius for the shader
+        // The camera's visible half-width at z=0 is about 1.25 units (based on FOV)
+        // We want the unstretched star to appear at screenRadius size
+        // baseRadius = visible_half_width * screenRadius / (renderSize / 2)
+        const visibleHalfWidth = 1.25;
+        const uBaseRadius = visibleHalfWidth * screenRadius / (renderSize / 2);
+
         // Set common uniforms
         gl.setUniforms({
             uTime: performance.now() / 1000,
             uResolution: [renderSize, renderSize],
+            uBaseRadius: uBaseRadius,
             uCameraRotation: [
                 this.camera?.rotationX ?? 0,
                 this.camera?.rotationY ?? 0,
@@ -208,19 +219,13 @@ export class Sphere3D extends Shape {
         // Render
         gl.render();
 
-        // Composite onto 2D canvas with circular clip to prevent box artifacts
+        // Composite onto 2D canvas
+        // No clip needed - shader renders with proper alpha transparency
+        // This allows stretched/elliptical shapes and their glows to render fully
         const drawX = screenX - renderSize / 2;
         const drawY = screenY - renderSize / 2;
 
-        // Apply circular clip path
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, renderSize / 2, 0, Math.PI * 2);
-        ctx.clip();
-
         gl.compositeOnto(ctx, drawX, drawY, renderSize, renderSize);
-
-        ctx.restore();
 
         return true;
     }
