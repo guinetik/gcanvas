@@ -24,26 +24,29 @@ import {
 } from "../../src/math/orbital.js";
 import { verticalLayout, applyLayout } from "../../src/util/layout.js";
 import { Tooltip } from "../../src/game/ui/tooltip.js";
+import { Button } from "../../src/game/ui/button.js";
 
 // Configuration
 const CONFIG = {
-  // Grid parameters
+  // Grid parameters - FULLSCREEN
   gridSize: 20,
-  gridResolution: 40,
-  baseGridScale: 12, // Base scale, adjusted for screen size
+  gridResolution: 100, // Denser grid for better coverage
+  baseGridScale: 12, // Base scale, will be multiplied to fill screen
+
+  // Mobile breakpoint
+  mobileWidth: 600,
 
   // Physics (geometrized units: G = c = 1)
   schwarzschildRadius: 2.0, // rs = 2M in geometrized units
   massRange: [1.0, 4.0], // Mass range for shuffling
 
-  // Embedding diagram - INTENTIONALLY EXAGGERATED for visualization
-  // Real Flamm's paraboloid is subtle; we amplify for "rubber sheet" pedagogy
-  embeddingScale: 75, // Scale for Flamm's paraboloid (exaggerated)
+  // Embedding diagram - visible funnel depth
+  embeddingScale: 180, // Deeper funnel like Kerr
 
   // 3D view
-  rotationX: 0.6,
+  rotationX: 0.5,
   rotationY: 0.3,
-  perspective: 1000,
+  perspective: 900, // Match Kerr for similar depth perception
 
   // Orbit parameters
   orbitSemiMajor: 10, // Semi-major axis (in units of M)
@@ -73,13 +76,16 @@ const CONFIG = {
 /**
  * MetricPanelGO - Displays the Schwarzschild metric tensor components
  * Uses verticalLayout for automatic positioning
+ * Responsive for mobile screens
  */
 class MetricPanelGO extends GameObject {
   constructor(game, options = {}) {
-    const panelWidth = 320;
-    const panelHeight = 150;
-    const lineHeight = 16;
-    const valueOffset = 160;
+    // Responsive sizing
+    const isMobile = game.width < CONFIG.mobileWidth;
+    const panelWidth = isMobile ? 240 : 320;
+    const panelHeight = isMobile ? 130 : 150;
+    const lineHeight = isMobile ? 14 : 16;
+    const valueOffset = isMobile ? 125 : 160;
 
     super(game, {
       ...options,
@@ -295,7 +301,8 @@ class MetricPanelGO extends GameObject {
 class SchwarzschildDemo extends Game {
   constructor(canvas) {
     super(canvas);
-    this.backgroundColor = "#000008";
+    // Black background - it's space!
+    this.backgroundColor = "#000";
     this.enableFluidSize();
   }
 
@@ -310,16 +317,19 @@ class SchwarzschildDemo extends Game {
     // Initialize grid scale (will be updated for screen size)
     this.gridScale = CONFIG.baseGridScale;
 
-    // Camera
+    // Camera with inertia for smooth drag
     this.camera = new Camera3D({
       rotationX: CONFIG.rotationX,
       rotationY: CONFIG.rotationY,
       perspective: CONFIG.perspective,
-      minRotationX: 0.2,
-      maxRotationX: 1.3,
+      minRotationX: -0.5,
+      maxRotationX: 1.5,
       autoRotate: true,
       autoRotateSpeed: CONFIG.autoRotateSpeed,
       autoRotateAxis: "y",
+      inertia: true,
+      friction: 0.95,
+      velocityScale: 2.0,
     });
     this.camera.enableMouseControl(this.canvas);
 
@@ -343,11 +353,13 @@ class SchwarzschildDemo extends Game {
     this.metricPanel = new MetricPanelGO(this, { name: "metricPanel" });
     this.pipeline.add(this.metricPanel);
 
-    // Create tooltip for explanations
+    // Create tooltip for explanations (responsive)
+    const isMobileTooltip = this.width < CONFIG.mobileWidth;
     this.tooltip = new Tooltip(this, {
-      maxWidth: 280,
-      font: "11px monospace",
-      padding: 10,
+      maxWidth: isMobileTooltip ? 200 : 280,
+      font: `${isMobileTooltip ? 9 : 11}px monospace`,
+      padding: isMobileTooltip ? 6 : 10,
+      bgColor: "rgba(20, 20, 30, 0.95)",
     });
     this.pipeline.add(this.tooltip);
 
@@ -358,8 +370,34 @@ class SchwarzschildDemo extends Game {
     this.canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e));
     this.canvas.addEventListener("mouseleave", () => this.tooltip.hide());
 
-    // Click to shuffle
-    this.canvas.addEventListener("click", (e) => this.handleClick(e));
+    // Button to shuffle parameters (positioned below the chart, same width)
+    const isMobile = this.width < CONFIG.mobileWidth;
+    const graphW = isMobile ? 120 : 160;
+    const graphH = isMobile ? 70 : 100;
+    const graphX = this.width - graphW - (isMobile ? 15 : 20);
+    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
+
+    this.shuffleBtn = new Button(this, {
+      width: graphW,
+      height: isMobile ? 30 : 36,
+      anchor: Position.TOP_LEFT,
+      anchorRelative: this.metricPanel,
+      anchorOffsetX: -10,
+      anchorOffsetY: -60,
+      text: "Shuffle Mass",
+      font: `${isMobile ? 10 : 12}px monospace`,
+      colorDefaultBg: "rgba(20, 20, 40, 0.8)",
+      colorDefaultStroke: "#7af",
+      colorDefaultText: "#8af",
+      colorHoverBg: "rgba(40, 30, 60, 0.9)",
+      colorHoverStroke: "#aff",
+      colorHoverText: "#aff",
+      colorPressedBg: "rgba(60, 40, 80, 1)",
+      colorPressedStroke: "#fff",
+      colorPressedText: "#fff",
+      onClick: () => this.shuffleParameters(),
+    });
+    this.pipeline.add(this.shuffleBtn);
   }
 
   handleMouseMove(e) {
@@ -377,11 +415,12 @@ class SchwarzschildDemo extends Game {
       return;
     }
 
-    // Check if over effective potential graph
-    const graphX = this.width - 180;
-    const graphY = 180;
-    const graphW = 160;
-    const graphH = 100;
+    // Check if over effective potential graph (responsive)
+    const isMobile = this.width < CONFIG.mobileWidth;
+    const graphW = isMobile ? 120 : 160;
+    const graphH = isMobile ? 70 : 100;
+    const graphX = this.width - graphW - (isMobile ? 15 : 20);
+    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
 
     if (
       mouseX >= graphX - 10 &&
@@ -423,14 +462,9 @@ class SchwarzschildDemo extends Game {
   }
 
   updateGridScale() {
-    // Scale grid to fit screen while keeping physics unchanged
+    // Scale grid to show edges - same behavior as kerr.js
     const minDim = Math.min(this.width, this.height);
-    this.gridScale = CONFIG.baseGridScale * (minDim / 800);
-  }
-
-  handleClick(e) {
-    if (this.camera.isDragging()) return;
-    this.shuffleParameters();
+    this.gridScale = (minDim / (CONFIG.gridSize * 2)) * 1.5;
   }
 
   shuffleParameters() {
@@ -524,8 +558,9 @@ class SchwarzschildDemo extends Game {
     for (let i = 0; i <= gridResolution; i++) {
       for (let j = 0; j <= gridResolution; j++) {
         const vertex = this.gridVertices[i][j];
+        // Function already clamps at horizon, no need for extra clamp here
         const r = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
-        vertex.y = this.getEmbeddingHeight(Math.max(r, this.rs + 0.1));
+        vertex.y = this.getEmbeddingHeight(r);
       }
     }
 
@@ -540,7 +575,7 @@ class SchwarzschildDemo extends Game {
     const w = this.width;
     const h = this.height;
     const cx = w / 2;
-    const cy = h / 2 + 30;
+    const cy = h / 2; // Centered to see full well depth
 
     super.render();
 
@@ -862,10 +897,12 @@ class SchwarzschildDemo extends Game {
   }
 
   drawEffectivePotential() {
-    const graphX = this.width - 180;
-    const graphY = 180; // Offset down to clear title area
-    const graphW = 160;
-    const graphH = 100;
+    // Responsive graph sizing
+    const isMobile = this.width < CONFIG.mobileWidth;
+    const graphW = isMobile ? 120 : 160;
+    const graphH = isMobile ? 70 : 100;
+    const graphX = this.width - graphW - (isMobile ? 15 : 20);
+    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
 
     Painter.useCtx((ctx) => {
       // Background
@@ -948,22 +985,33 @@ class SchwarzschildDemo extends Game {
   }
 
   drawControls(w, h) {
+    const isMobile = w < CONFIG.mobileWidth;
+    const fontSize = isMobile ? 8 : 10;
+    const margin = isMobile ? 10 : 15;
+
     Painter.useCtx((ctx) => {
       ctx.fillStyle = "#445";
-      ctx.font = "10px monospace";
+      ctx.font = `${fontSize}px monospace`;
       ctx.textAlign = "right";
-      ctx.fillText("click to shuffle  |  drag to rotate", w - 15, h - 45);
-      ctx.fillText(
-        "Flamm's paraboloid embedding  |  Geodesic precession",
-        w - 15,
-        h - 30,
-      );
-      ctx.fillStyle = "#553";
-      ctx.fillText(
-        "Curvature exaggerated for visibility (rubber sheet analogy)",
-        w - 15,
-        h - 15,
-      );
+
+      if (isMobile) {
+        ctx.fillText("drag to rotate", w - margin, h - 25);
+        ctx.fillStyle = "#553";
+        ctx.fillText("Curvature exaggerated", w - margin, h - 10);
+      } else {
+        ctx.fillText("drag to rotate", w - margin, h - 45);
+        ctx.fillText(
+          "Flamm's paraboloid embedding  |  Geodesic precession",
+          w - margin,
+          h - 30,
+        );
+        ctx.fillStyle = "#553";
+        ctx.fillText(
+          "Curvature exaggerated for visibility (rubber sheet analogy)",
+          w - margin,
+          h - 15,
+        );
+      }
     });
   }
 }
