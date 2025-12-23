@@ -243,6 +243,7 @@ class BlobScene extends Scene {
     // Set initial blob size (smaller)
     this.blobPhysics.baseRadius = CONFIG.startRadius;
     this.blobPhysics.currentRadius = CONFIG.startRadius;
+    this.blobPhysics.healthyRadius = CONFIG.startRadius; // Track healthy size before hunger effects
 
     // Control points around the blob (in polar coordinates for easy animation)
     this.blobPoints = [];
@@ -1095,11 +1096,16 @@ class BlobScene extends Scene {
     this.gameState.lastEatTime = 0;
     this.gameState.isHungry = false;
 
-    // Grow the blob
+    // Grow the blob - restore to healthy radius plus growth
     const physics = this.blobPhysics;
-    const newRadius = Math.min(CONFIG.maxRadius, physics.baseRadius + CONFIG.growthPerCollect);
+    // Ensure healthyRadius is initialized
+    if (physics.healthyRadius === undefined) {
+      physics.healthyRadius = physics.baseRadius;
+    }
+    const newRadius = Math.min(CONFIG.maxRadius, physics.healthyRadius + CONFIG.growthPerCollect);
     physics.baseRadius = newRadius;
     physics.currentRadius = newRadius;
+    physics.healthyRadius = newRadius; // Update healthy radius to new size
 
     // Also give energy boost
     physics.energy = Math.min(1, physics.energy + 0.15);
@@ -1150,10 +1156,14 @@ class BlobScene extends Scene {
     const wasHungry = this.gameState.isHungry;
     this.gameState.isHungry = this.gameState.lastEatTime > hungerThreshold;
 
-    // If just became hungry, show warning
+    // If just became hungry, show warning and capture healthy radius
     if (this.gameState.isHungry && !wasHungry) {
       this.showFloatingText("HUNGRY!", this.game.width / 2, this.game.height / 2);
       this.playHungryWarning();
+      // Capture the current radius as the healthy radius when hunger starts
+      if (physics.healthyRadius === undefined || physics.healthyRadius < physics.baseRadius) {
+        physics.healthyRadius = physics.baseRadius;
+      }
     }
 
     // If hungry, shrink and lose points
@@ -1169,7 +1179,7 @@ class BlobScene extends Scene {
       const hungerMultiplier = 1 + Math.min(hungerDuration / 2, 1);
       const shrinkAmount = shrinkRate * hungerMultiplier * dt;
 
-      // Apply shrinking
+      // Apply shrinking from healthy radius (but don't modify healthyRadius)
       const newRadius = Math.max(CONFIG.minRadius, physics.baseRadius - shrinkAmount);
       if (newRadius < physics.baseRadius) {
         // Calculate score penalty
@@ -1177,7 +1187,7 @@ class BlobScene extends Scene {
         const scorePenalty = Math.ceil(radiusLost * CONFIG.shrinkScorePenalty);
         this.gameState.score = Math.max(0, this.gameState.score - scorePenalty);
 
-        // Apply size reduction
+        // Apply size reduction (healthyRadius stays unchanged)
         physics.baseRadius = newRadius;
         physics.currentRadius = newRadius;
       }
@@ -1288,6 +1298,7 @@ class BlobScene extends Scene {
     this.collectionParticles = [];
     this.blobPhysics.baseRadius = CONFIG.startRadius;
     this.blobPhysics.currentRadius = CONFIG.startRadius;
+    this.blobPhysics.healthyRadius = CONFIG.startRadius;
     // Reset color to normal
     this.blobPhysics.currentColor = [...this.blobPhysics.baseColor];
     // Reset pop sound scale
@@ -1357,6 +1368,7 @@ class BlobScene extends Scene {
     // Reset physics
     physics.baseRadius = CONFIG.startRadius;
     physics.currentRadius = CONFIG.startRadius;
+    physics.healthyRadius = CONFIG.startRadius;
     physics.currentX = this.game.width / 2;
     physics.currentY = this.game.height / 2;
     physics.vx = 0;
@@ -2190,6 +2202,7 @@ class BlobUIScene extends Scene {
     // Reset physics - use CONFIG for starting size
     physics.baseRadius = CONFIG.startRadius;
     physics.currentRadius = CONFIG.startRadius;
+    physics.healthyRadius = CONFIG.startRadius;
     physics.energy = 1.0;
     physics.baseColor = [64, 180, 255];
     physics.vx = 0;
