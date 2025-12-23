@@ -10,3 +10,4 @@ export * from "./gr.js";
 export * from "./orbital.js";
 export * from "./quantum.js";
 export * from "./heat.js";
+export * from "./fluid.js";

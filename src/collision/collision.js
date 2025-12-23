@@ -78,6 +78,81 @@ export class Collision {
   }
 
   /**
+   * Get circle-circle overlap info for collision response.
+   * Returns separation vector and overlap amount.
+   *
+   * @param {Object} a - First circle { x, y, radius }
+   * @param {Object} b - Second circle { x, y, radius }
+   * @returns {Object|null} { overlap, nx, ny, dist } or null if no collision
+   *   - overlap: penetration depth
+   *   - nx, ny: normalized direction from b to a
+   *   - dist: distance between centers
+   */
+  static getCircleOverlap(a, b) {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    const distSq = dx * dx + dy * dy;
+    const minDist = a.radius + b.radius;
+
+    if (distSq >= minDist * minDist || distSq < 0.0001) {
+      return null;
+    }
+
+    const dist = Math.sqrt(distSq);
+    const overlap = minDist - dist;
+    const invDist = 1 / dist;
+
+    return {
+      overlap,
+      nx: dx * invDist,  // Normal from b toward a
+      ny: dy * invDist,
+      dist,
+    };
+  }
+
+  /**
+   * Apply separation forces between overlapping circles.
+   * Mutates the provided force arrays.
+   *
+   * @param {Array<Object>} particles - Array of { x, y, size } particles
+   * @param {Array<Object>} forces - Array of { x, y } force accumulators
+   * @param {Object} [options={}] - Options
+   * @param {number} [options.strength=5000] - Repulsion force strength
+   * @param {boolean} [options.useSizeAsRadius=true] - Use particle.size as diameter
+   */
+  static applyCircleSeparation(particles, forces, options = {}) {
+    const strength = options.strength ?? 5000;
+    const useSizeAsRadius = options.useSizeAsRadius ?? true;
+    const n = particles.length;
+
+    for (let i = 0; i < n; i++) {
+      const pi = particles[i];
+      const ri = useSizeAsRadius ? pi.size * 0.5 : (pi.radius ?? 10);
+
+      for (let j = i + 1; j < n; j++) {
+        const pj = particles[j];
+        const rj = useSizeAsRadius ? pj.size * 0.5 : (pj.radius ?? 10);
+
+        const overlap = Collision.getCircleOverlap(
+          { x: pi.x, y: pi.y, radius: ri },
+          { x: pj.x, y: pj.y, radius: rj }
+        );
+
+        if (overlap) {
+          const force = strength * (overlap.overlap / (ri + rj));
+          const fx = overlap.nx * force;
+          const fy = overlap.ny * force;
+
+          forces[i].x += fx;
+          forces[i].y += fy;
+          forces[j].x -= fx;
+          forces[j].y -= fy;
+        }
+      }
+    }
+  }
+
+  /**
    * Test if a point is inside a circle
    *
    * @param {number} px - Point X coordinate
