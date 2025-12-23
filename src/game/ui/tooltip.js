@@ -1,11 +1,17 @@
 import { GameObject } from "../objects/go.js";
 import { Rectangle, TextShape, Group } from "../../shapes/index.js";
+import { UI_THEME } from "./theme.js";
 
 /**
  * Tooltip
  *
  * A GameObject that displays text near the cursor when shown.
  * Supports multiline text with automatic word wrapping.
+ * 
+ * Theme: Terminal × Vercel aesthetic
+ * - Dark translucent background
+ * - Subtle green border glow
+ * - Neon green monospace text
  *
  * Usage:
  *   const tooltip = new Tooltip(game, { ... });
@@ -34,10 +40,11 @@ export class Tooltip extends GameObject {
   constructor(game, options = {}) {
     super(game, { ...options, zIndex: 9999 }); // Always on top
 
-    this.font = options.font || "12px monospace";
-    this.textColor = options.textColor || "#fff";
-    this.bgColor = options.bgColor || "rgba(0,0,0,0.85)";
-    this.borderColor = options.borderColor || "rgba(255,255,255,0.3)";
+    // Terminal × Vercel theme defaults
+    this.font = options.font || UI_THEME.fonts.small;
+    this.textColor = options.textColor || UI_THEME.tooltip.text;
+    this.bgColor = options.bgColor || UI_THEME.tooltip.bg;
+    this.borderColor = options.borderColor || UI_THEME.tooltip.border;
     this.padding = options.padding ?? 8;
     this.offsetX = options.offsetX ?? 15;
     this.offsetY = options.offsetY ?? 15;
