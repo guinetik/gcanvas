@@ -231,11 +231,14 @@
       background-color: #050505;
       border-top: 1px solid #1a1a1a;
       position: relative;
+      overflow: hidden;
     }
 
     .canvas-demo canvas {
-      max-width: 100%;
-      height: auto;
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 1px solid #1a1a1a;
     }
 
     .canvas-label {
@@ -367,7 +370,7 @@ console.log(basicShape.width, basicShape.height); // 50, 30
 basicShape.width = 80; // Valid
 // basicShape.width = "invalid"; // Error: Invalid property value: width invalid</code></pre>
       <div class="canvas-demo">
-        <canvas id="euclidian-canvas" width="400" height="250"></canvas>
+        <canvas id="euclidian-canvas"></canvas>
         <div class="canvas-label">Euclidian visualization</div>
       </div>
     </div>
@@ -414,7 +417,7 @@ console.log(bounds); // { x: 50, y: 100, width: 50, height: 30 }
 const local = constrainedShape.getLocalPosition();
 console.log(local); // { x: 25, y: 85 }</code></pre>
       <div class="canvas-demo">
-        <canvas id="geometry2d-canvas" width="400" height="250"></canvas>
+        <canvas id="geometry2d-canvas"></canvas>
         <div class="canvas-label">Geometry2d constraints</div>
       </div>
     </div>
@@ -460,7 +463,7 @@ renderableShape.opacity = 0.5;   // 50% opacity
 // The render() method will apply these properties
 // and then call draw() to render the actual shape</code></pre>
       <div class="canvas-demo">
-        <canvas id="renderable-canvas" width="400" height="250"></canvas>
+        <canvas id="renderable-canvas"></canvas>
         <div class="canvas-label">Renderable with opacity and shadows</div>
       </div>
     </div>
@@ -500,7 +503,7 @@ transformableShape.scaleY = 2.0;
 // The applyTransforms() method applies these transformations
 // by modifying the canvas context state</code></pre>
       <div class="canvas-demo">
-        <canvas id="transformable-canvas" width="400" height="250"></canvas>
+        <canvas id="transformable-canvas"></canvas>
         <div class="canvas-label">Transformable with rotation and scaling</div>
       </div>
     </div>
@@ -556,7 +559,7 @@ ctx.fill();
 ctx.stroke();
 ctx.restore();</code></pre>
       <div class="canvas-demo">
-        <canvas id="shape-canvas" width="400" height="250"></canvas>
+        <canvas id="shape-canvas"></canvas>
         <div class="canvas-label">Shape implementations (Rectangle, Circle, Triangle)</div>
       </div>
     </div>
@@ -716,8 +719,8 @@ group.opacity = 0.7;
 // Draw the group and all its children
 group.draw();</code></pre>
       <div class="canvas-demo">
-        <canvas id="shape-canvas" width="400" height="250"></canvas>
-        <div class="canvas-label">Shape implementations (Rectangle, Circle, Triangle)</div>
+        <canvas id="group-canvas"></canvas>
+        <div class="canvas-label">Group composition with transformations</div>
       </div>
 
     </div>
@@ -726,6 +729,9 @@ group.draw();</code></pre>
   <!-- Prism.js scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+  <!-- Demo scripts -->
+  <script type="module" src="./js/pipeline.js"></script>
 </body>
 
 </html>

@@ -41,6 +41,12 @@ import {
   Position,
 } from "/gcanvas.es.min.js";
 
+const CONFIG = {
+  headerHeight: 80, // Space reserved for title + subtitle (30px title offset + 60px subtitle offset + spacing)
+  margin: 40, // Horizontal/vertical margins for viewport calculation
+  bottomMargin: 70, // Space reserved for FPS counter at bottom (with margin above it)
+};
+
 class ShapeGalleryGame extends Game {
   constructor(canvas) {
     super(canvas);
@@ -48,6 +54,20 @@ class ShapeGalleryGame extends Game {
     this.enableFluidSize();
     this.cellSize = 120;
     this.maxColumns = 5;
+  }
+
+  /**
+   * Get viewport dimensions for scrolling based on available space.
+   * Accounts for header (title + subtitle), bottom margin (FPS counter), and margins.
+   * @returns {{width: number, height: number}} Viewport dimensions
+   */
+  getViewportDimensions() {
+    const availableHeight = this.canvas.height - CONFIG.headerHeight - CONFIG.bottomMargin - CONFIG.margin;
+    const availableWidth = this.canvas.width - CONFIG.margin * 2;
+    return {
+      width: Math.max(200, availableWidth),
+      height: Math.max(200, availableHeight),
+    };
   }
 
   init() {
@@ -447,8 +467,7 @@ class ShapeGalleryGame extends Game {
   onResize() {
     if (this.gallery) {
       // Calculate responsive columns based on available width
-      const margin = 40; // Horizontal margin
-      const availableWidth = this.canvas.width - margin;
+      const availableWidth = this.canvas.width - CONFIG.margin;
       const columns = Math.min(this.maxColumns, Math.max(1, Math.floor(availableWidth / this.cellSize)));
 
       if (this.gallery.columns !== columns) {
@@ -457,24 +476,37 @@ class ShapeGalleryGame extends Game {
         this.gallery.markBoundsDirty();
       }
 
-      // Use Transform API for positioning (centered)
-      this.gallery.transform.position(
-        Math.round(this.canvas.width / 2),
-        Math.round(this.canvas.height / 2)
-      );
+      // Update viewport dimensions for scrolling
+      const viewport = this.getViewportDimensions();
+      this.gallery._viewportWidth = viewport.width;
+      this.gallery._viewportHeight = viewport.height;
+
+      // Update anchor offset to position gallery below header
+      this.gallery.anchorOffsetY = CONFIG.headerHeight / 2 + 20; // Position below header with spacing
+
+      // Mark bounds dirty to trigger layout recalculation
+      this.gallery.markBoundsDirty();
     }
   }
 
   createGallery() {
     const cellSize = this.cellSize;
-    const margin = 40;
-    const initialColumns = Math.min(this.maxColumns, Math.max(1, Math.floor((this.canvas.width - margin) / cellSize)));
+    const initialColumns = Math.min(this.maxColumns, Math.max(1, Math.floor((this.canvas.width - CONFIG.margin) / cellSize)));
+    const viewport = this.getViewportDimensions();
 
     const gallery = new TileLayout(this, {
       debug: true,
       debugColor: "grey",
       columns: initialColumns,
       spacing: 10,
+      // Enable scrolling with responsive viewport
+      scrollable: true,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
+      // Use anchor positioning instead of manual transform.position()
+      anchor: Position.CENTER,
+      anchorOffsetY: CONFIG.headerHeight / 2 + 20, // Position below header with spacing
+      autoSize: true,
     });
 
     this.shapeEntries.forEach((entry, index) => {
