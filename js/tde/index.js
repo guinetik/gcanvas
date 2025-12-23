@@ -150,25 +150,26 @@ export class TDEDemo extends Game {
             if (star) {
               // === VIOLENT BRIGHTNESS FLARE ===
               star.tidalFlare = 2.0;
-              // Fade over 5 seconds
-              Tweenetik.to(star, { tidalFlare: 0 }, 5.0, Easing.easeOutQuad);
+              // Fade slowly - easeInQuad keeps it bright longer before dropping
+              Tweenetik.to(star, { tidalFlare: 0 }, 8.0, Easing.easeInQuad);
               
               // === GEOMETRY WOBBLE - comet-like trauma ===
               // Spike the wobble high - violent shaking
               star.tidalWobble = 1.2;
-              // Fade back to stable over 6 seconds (star tries to recover)
-              Tweenetik.to(star, { tidalWobble: 0.1 }, 6.0, Easing.easeOutElastic);
+              // Fade back to stable over 8 seconds (star tries to recover)
+              Tweenetik.to(star, { tidalWobble: 0.1 }, 8.0, Easing.easeOutElastic);
               
               // === SUDDEN STRETCH SPIKE - comet shape ===
               // Force immediate elongation like panels 2-3 in reference
               star.tidalStretch = 0.8;
               // Ease back toward spherical (but not fully - it can't recover)
-              Tweenetik.to(star, { tidalStretch: 0.2 }, 4.0, Easing.easeOutQuad);
+              Tweenetik.to(star, { tidalStretch: 0.3 }, 6.0, Easing.easeInQuad);
               
-              // === STRESS SPIKE ===
-              star.stressLevel = 0.6;
-              // Slowly calm down but not fully
-              Tweenetik.to(star, { stressLevel: 0.25 }, 5.0, Easing.easeOutQuad);
+              // === STRESS SPIKE (controls white color) ===
+              star.stressLevel = 0.8;
+              // Stay stressed longer - easeInQuad keeps it white before fading
+              // End at 0.4 (still visibly stressed, not back to original)
+              Tweenetik.to(star, { stressLevel: 0.4 }, 10.0, Easing.easeInQuad);
               
               // === PARTICLE BURST ===
               if (this.scene.stream) {
@@ -277,6 +278,21 @@ export class TDEDemo extends Game {
 
     // Reset velocity tracking to avoid spike after position reset
     this.scene.star.resetVelocity();
+
+    // Kill any lingering tweens on the star (from previous run's stretch phase)
+    Tweenetik.killTarget(this.scene.star);
+
+    // Reset star's tidal state (color, stress, stretch, etc.)
+    this.scene.star.tidalStretch = 0;
+    this.scene.star.pulsationPhase = 0;
+    this.scene.star.stressLevel = 0;
+    this.scene.star.tidalProgress = 0;
+    this.scene.star.tidalFlare = 0;
+    this.scene.star.tidalWobble = 0;
+    this.scene.star.angularVelocity = CONFIG.star.rotationSpeed ?? 0.5;
+    this.scene.star.rotation = 0;
+    this.scene.star.currentColor = null; // Force recalc
+    this.scene.star.updateVisual(); // Apply reset immediately
 
     // Clear tidal stream particles
     if (this.scene.stream) {
