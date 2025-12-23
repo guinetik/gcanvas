@@ -52,7 +52,6 @@ export class Pipeline extends Loggable {
    * @private
    */
   _hoverObject(obj, e) {
-    //console.log("hoverObject", obj.constructor.name, obj.interactive, obj._hitTest != null);
     // Only applies to interactive objects with a shape and a _hitTest method.
     if (!obj.interactive || !obj._hitTest) return;
     const hit = obj._hitTest(e.x, e.y);
@@ -60,7 +59,6 @@ export class Pipeline extends Loggable {
       // Pointer entered this object
       obj._hovered = true;
       obj.events.emit("mouseover", e);
-      //this.logger.log("Mouseover", obj, e.x, e.y);
     } else if (!hit && obj._hovered) {
       // Pointer left this object
       obj._hovered = false;
@@ -75,6 +73,9 @@ export class Pipeline extends Loggable {
    * @private
    */
   _hoverScene(scene, e) {
+    if (!scene.children || scene.children.length === 0) {
+      return;
+    }
     for (let i = scene.children.length - 1; i >= 0; i--) {
       const child = scene.children[i];
       if (child instanceof Scene) {
@@ -130,7 +131,6 @@ export class Pipeline extends Loggable {
     // Check from topmost to bottommost for hover changes.
     for (let i = this.gameObjects.length - 1; i >= 0; i--) {
       const obj = this.gameObjects[i];
-      //this.logger.log("Hover test for", obj, e.x, e.y);
       if (obj instanceof Scene) {
         this._hoverScene(obj, e);
       } else {
