@@ -136,4 +136,20 @@ export class Tweenetik {
     // Remove finished tweens from the list
     Tweenetik._active = Tweenetik._active.filter((t) => !t._finished);
   }
+
+  /**
+   * Kill all active tweens targeting a specific object.
+   * Useful when resetting an object's state to avoid lingering tweens.
+   * @param {Object} target - The target object whose tweens should be stopped
+   */
+  static killTarget(target) {
+    Tweenetik._active = Tweenetik._active.filter((t) => t.target !== target);
+  }
+
+  /**
+   * Kill all active tweens.
+   */
+  static killAll() {
+    Tweenetik._active = [];
+  }
 }

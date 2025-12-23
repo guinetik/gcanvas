@@ -6,7 +6,7 @@ export const CONFIG = {
 
     // Phase durations (seconds)
     durations: {
-        approach: 10.0,      // Stable wide orbit
+        approach: 12.0,      // Stable wide orbit
         stretch: 10.0,       // Orbit begins to decay
         disrupt: 20.0,      // Mass transfer (event-based exit)
         accrete: 1.0,       // Debris accretion
