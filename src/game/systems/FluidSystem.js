@@ -33,6 +33,8 @@ import { ParticleEmitter } from "../../particle/index.js";
 import { Updaters } from "../../particle/index.js";
 import { Collision } from "../../collision/index.js";
 import { computeFluidForces, computeGasForces, blendForces } from "../../math/fluid.js";
+import { zoneTemperature } from "../../math/heat.js";
+import { Easing } from "../../motion/easing.js";
 
 /**
  * Default configuration for FluidSystem.
@@ -65,12 +67,30 @@ const DEFAULT_CONFIG = {
 
   // Gas parameters
   gas: {
-    interactionRadius: null, // Defaults to particleSize * 2
-    pressure: 8,
-    diffusion: 0.1,
-    drag: 0.05,
-    turbulence: 15,
-    buoyancy: 150,
+    interactionRadius: null, // Defaults to particleSize * 4
+    pressure: 150,           // Strong repulsion to spread out
+    diffusion: 0.15,
+    drag: 0.02,
+    turbulence: 50,
+    buoyancy: 300,           // Base buoyancy (used when heat disabled)
+    sinking: 200,            // Cold particle sinking force
+    repulsion: 300,          // Extra repulsion to prevent clumping
+  },
+
+  // Heat zone parameters (for thermal convection in gas mode)
+  heat: {
+    enabled: false,          // Opt-in, auto-enabled in gas mode
+    heatZone: 0.88,          // Bottom 12% is hot (thermal vent)
+    coolZone: 0.25,          // Top 25% is cold (ceiling)
+    rate: 0.03,              // Temperature change rate
+    heatMultiplier: 1.5,     // Heating strength
+    coolMultiplier: 2.0,     // Cooling strength
+    middleMultiplier: 0.005, // Almost no change in middle
+    transitionWidth: 0.08,   // Zone boundary sharpness
+    neutralTemp: 0.5,        // Neutral temperature
+    deadZone: 0.15,          // No thermal force within this range of neutral
+    buoyancy: 300,           // Thermal buoyancy force (hot rises)
+    sinking: 200,            // Thermal sinking force (cold falls)
   },
 
   // Collision settings
@@ -84,6 +104,14 @@ const DEFAULT_CONFIG = {
     enabled: true,
     strength: 4000,
     radius: null, // Defaults to particleSize * 0.8
+  },
+
+  // Window shake (bottle effect) settings
+  shake: {
+    enabled: true,           // Enable window motion detection
+    sensitivity: 2.0,        // Force multiplier (higher = more responsive)
+    maxForce: 2500,          // Cap on shake force
+    damping: 0.8,            // How quickly shake effect fades (lower = longer effect)
   },
 
   // Rendering
@@ -138,11 +166,27 @@ export class FluidSystem extends ParticleSystem {
     /** @type {boolean} Whether gravity is active */
     this.gravityEnabled = options.gravityEnabled ?? true;
 
-    /** @type {number} Blend factor for physics modes (0=liquid, 1=gas) */
-    this.physicsBlend = config.physics === "gas" ? 1.0 : 0.0;
+    /** @type {number} Current blend factor for physics modes (0=liquid, 1=gas) */
+    this.modeMix = config.physics === "gas" ? 1.0 : 0.0;
+
+    /** @type {number} Target mode for smooth lerping */
+    this._targetMode = this.modeMix;
+
+    /** @type {number} Mode transition speed */
+    this._modeLerpSpeed = 5;
 
     /** @type {Array<{x: number, y: number}>} Force accumulator */
     this._forces = [];
+
+    // Window shake tracking (bottle effect)
+    this._shake = {
+      lastX: window.screenX,
+      lastY: window.screenY,
+      velocityX: 0,
+      velocityY: 0,
+      forceX: 0,
+      forceY: 0,
+    };
 
     // Create default emitter for spawning
     this._createEmitter();
@@ -161,15 +205,17 @@ export class FluidSystem extends ParticleSystem {
     // Compute derived values
     config.fluid = { ...DEFAULT_CONFIG.fluid, ...options.fluid };
     config.gas = { ...DEFAULT_CONFIG.gas, ...options.gas };
+    config.heat = { ...DEFAULT_CONFIG.heat, ...options.heat };
     config.collision = { ...DEFAULT_CONFIG.collision, ...options.collision };
     config.boundary = { ...DEFAULT_CONFIG.boundary, ...options.boundary };
+    config.shake = { ...DEFAULT_CONFIG.shake, ...options.shake };
 
     // Set defaults based on particle size
     if (config.fluid.smoothingRadius === null) {
       config.fluid.smoothingRadius = size * 2;
     }
     if (config.gas.interactionRadius === null) {
-      config.gas.interactionRadius = size * 2;
+      config.gas.interactionRadius = size * 4;
     }
     if (config.boundary.radius === null) {
       config.boundary.radius = size * 0.8;
@@ -265,6 +311,16 @@ export class FluidSystem extends ParticleSystem {
    * @param {number} dt - Delta time in seconds
    */
   update(dt) {
+    // Clamp dt to prevent physics explosion on tab switch
+    dt = Math.min(dt, 0.033);
+
+    // Smooth mode transition (lerp toward target)
+    this.modeMix = Easing.lerp(
+      this.modeMix,
+      this._targetMode,
+      dt * this._modeLerpSpeed
+    );
+
     const particles = this.particles;
     if (particles.length === 0) {
       super.update(dt);
@@ -280,6 +336,20 @@ export class FluidSystem extends ParticleSystem {
     // Compute physics forces based on mode
     this._computePhysicsForces(particles);
 
+    // In gas mode, apply additional forces
+    if (this.modeMix > 0.5) {
+      // Update temperatures based on position in heat zones
+      if (this.config.heat.enabled || this.modeMix > 0.95) {
+        this._updateTemperatures(particles);
+        this._applyThermalForces(particles);
+      }
+
+      // Apply gas repulsion to prevent clumping
+      if (this.modeMix > 0.95) {
+        this._applyGasRepulsion(particles);
+      }
+    }
+
     // Apply collision separation
     if (this.config.collision.enabled) {
       Collision.applyCircleSeparation(particles, this._forces, {
@@ -291,6 +361,12 @@ export class FluidSystem extends ParticleSystem {
     // Apply boundary forces
     if (this.bounds && this.config.boundary.enabled) {
       this._applyBoundaryForces(particles);
+    }
+
+    // Apply window shake forces (bottle effect)
+    if (this.config.shake.enabled) {
+      this._updateShakeForces(dt);
+      this._applyShakeForces();
     }
 
     // Integrate forces into velocities
@@ -335,7 +411,7 @@ export class FluidSystem extends ParticleSystem {
   _computePhysicsForces(particles) {
     const { fluid, gas } = this.config;
 
-    if (this.physicsBlend < 0.01) {
+    if (this.modeMix < 0.01) {
       // Pure liquid mode
       const result = computeFluidForces(particles, {
         kernel: { smoothingRadius: fluid.smoothingRadius },
@@ -348,8 +424,8 @@ export class FluidSystem extends ParticleSystem {
         },
       });
       this._accumulateForces(result.forces);
-    } else if (this.physicsBlend > 0.99) {
-      // Pure gas mode
+    } else if (this.modeMix > 0.95) {
+      // Pure gas mode - skip fluid forces entirely
       const result = computeGasForces(particles, {
         gas: {
           interactionRadius: gas.interactionRadius,
@@ -362,7 +438,7 @@ export class FluidSystem extends ParticleSystem {
       });
       this._accumulateForces(result.forces);
     } else {
-      // Blended mode
+      // Blended mode (transition)
       const liquidResult = computeFluidForces(particles, {
         kernel: { smoothingRadius: fluid.smoothingRadius },
         fluid,
@@ -371,7 +447,7 @@ export class FluidSystem extends ParticleSystem {
       const blended = blendForces(
         liquidResult.forces,
         gasResult.forces,
-        this.physicsBlend
+        this.modeMix
       );
       this._accumulateForces(blended);
     }
@@ -436,27 +512,218 @@ export class FluidSystem extends ParticleSystem {
   }
 
   /**
+   * Update particle temperatures based on position in heat zones.
+   * Uses zoneTemperature from heat.js for smooth zone transitions.
+   * @private
+   * @param {Array} particles - Particle array
+   */
+  _updateTemperatures(particles) {
+    if (!this.bounds) return;
+
+    const { heat } = this.config;
+    const containerTop = this.bounds.y;
+    const containerHeight = this.bounds.h;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const tCurrent = p.custom.temperature ?? heat.neutralTemp;
+      
+      // Normalize position: 0 = top, 1 = bottom
+      const normalized = Math.min(1, Math.max(0, 
+        (p.y - containerTop) / containerHeight
+      ));
+      
+      // Calculate new temperature using zone-based heating/cooling
+      const tNext = zoneTemperature(normalized, tCurrent, heat);
+      p.custom.temperature = Math.min(1, Math.max(0, tNext));
+    }
+  }
+
+  /**
+   * Apply thermal convection forces based on particle temperature.
+   * Hot particles rise, cold particles sink, with a dead zone for stability.
+   * @private
+   * @param {Array} particles - Particle array
+   */
+  _applyThermalForces(particles) {
+    const { heat } = this.config;
+    const neutral = heat.neutralTemp;
+    const deadZone = heat.deadZone;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const temp = p.custom.temperature ?? neutral;
+      const tempDelta = temp - neutral;
+      
+      // Only apply force if outside dead zone
+      if (Math.abs(tempDelta) > deadZone) {
+        let thermalForce = 0;
+        
+        if (tempDelta > 0) {
+          // Buoyancy: hot rises (negative = up)
+          const excess = tempDelta - deadZone;
+          thermalForce = -excess * heat.buoyancy * 2;
+        } else {
+          // Sinking: cold falls (positive = down)
+          const excess = -tempDelta - deadZone;
+          thermalForce = excess * heat.sinking * 2;
+        }
+        
+        this._forces[i].y += thermalForce;
+      }
+    }
+  }
+
+  /**
+   * Apply extra repulsion between gas particles to prevent clumping.
+   * Uses cubic falloff for strong close-range repulsion.
+   * @private
+   * @param {Array} particles - Particle array
+   */
+  _applyGasRepulsion(particles) {
+    const { gas } = this.config;
+    const radius = gas.interactionRadius;
+    const r2 = radius * radius;
+    const strength = gas.repulsion || 200;
+    const n = particles.length;
+
+    for (let i = 0; i < n; i++) {
+      const pi = particles[i];
+      for (let j = i + 1; j < n; j++) {
+        const pj = particles[j];
+        const dx = pi.x - pj.x;
+        const dy = pi.y - pj.y;
+        const dist2 = dx * dx + dy * dy;
+
+        if (dist2 >= r2 || dist2 < 1) continue;
+
+        const dist = Math.sqrt(dist2);
+        const t = 1 - dist / radius;
+        const force = strength * t * t * t; // Cubic falloff
+
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+
+        this._forces[i].x += fx;
+        this._forces[i].y += fy;
+        this._forces[j].x -= fx;
+        this._forces[j].y -= fy;
+      }
+    }
+  }
+
+  /**
+   * Track window movement and calculate shake forces.
+   * Creates a "bottle shaking" effect when the browser window is moved rapidly.
+   * @private
+   * @param {number} dt - Delta time
+   */
+  _updateShakeForces(dt) {
+    const { shake } = this.config;
+    if (!shake.enabled) return;
+
+    const currentX = window.screenX;
+    const currentY = window.screenY;
+
+    // Calculate window velocity (pixels per second)
+    const dx = currentX - this._shake.lastX;
+    const dy = currentY - this._shake.lastY;
+    
+    // Only calculate velocity if dt is reasonable (avoid spikes on tab switch)
+    if (dt > 0 && dt < 0.1) {
+      this._shake.velocityX = dx / dt;
+      this._shake.velocityY = dy / dt;
+    }
+
+    // Store current position for next frame
+    this._shake.lastX = currentX;
+    this._shake.lastY = currentY;
+
+    // Apply inertia: particles resist window movement
+    // When window moves right, particles feel a force to the left (and vice versa)
+    const targetForceX = -this._shake.velocityX * shake.sensitivity;
+    const targetForceY = -this._shake.velocityY * shake.sensitivity;
+
+    // Smooth the force application with damping
+    this._shake.forceX = Easing.lerp(this._shake.forceX, targetForceX, 1 - shake.damping);
+    this._shake.forceY = Easing.lerp(this._shake.forceY, targetForceY, 1 - shake.damping);
+
+    // Clamp to max force
+    const forceMag = Math.sqrt(
+      this._shake.forceX * this._shake.forceX + 
+      this._shake.forceY * this._shake.forceY
+    );
+    if (forceMag > shake.maxForce) {
+      const scale = shake.maxForce / forceMag;
+      this._shake.forceX *= scale;
+      this._shake.forceY *= scale;
+    }
+  }
+
+  /**
+   * Apply shake forces to all particles.
+   * @private
+   */
+  _applyShakeForces() {
+    const fx = this._shake.forceX;
+    const fy = this._shake.forceY;
+
+    // Skip if force is negligible
+    if (Math.abs(fx) < 1 && Math.abs(fy) < 1) return;
+
+    for (let i = 0; i < this._forces.length; i++) {
+      this._forces[i].x += fx;
+      this._forces[i].y += fy;
+    }
+  }
+
+  /**
    * Integrate forces into particle velocities.
+   * In gas mode, temperature affects mass (hot=light, cold=heavy).
    * @private
    * @param {Array} particles - Particle array
    * @param {number} dt - Delta time
    */
   _integrateForces(particles, dt) {
-    const { gravity, damping, maxSpeed } = this.config;
+    const { gravity, damping, maxSpeed, heat } = this.config;
     const maxSpeed2 = maxSpeed * maxSpeed;
+    
+    // Gas mode uses less damping (floatier)
+    const gasDamping = 0.995;
+    const effectiveDamping = Easing.lerp(damping, gasDamping, this.modeMix);
 
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
       const f = this._forces[i];
-      const mass = p.custom.mass || 1;
+      const baseMass = p.custom.mass || 1;
+      
+      let mass, effectiveGravity;
+      
+      if (this.modeMix > 0.5) {
+        // GAS MODE: Temperature affects density/mass
+        // Hot gas is lighter, cold gas is heavier
+        const temp = p.custom.temperature ?? heat.neutralTemp;
+        
+        // Mass: 1.5x at cold (temp=0), 0.3x at hot (temp=1)
+        mass = baseMass * Easing.lerp(1.5, 0.3, temp);
+        
+        // Gravity affects cold particles more
+        effectiveGravity = this.gravityEnabled 
+          ? gravity * Easing.lerp(1.2, 0.6, temp) 
+          : 0;
+      } else {
+        // LIQUID MODE: Uniform density
+        mass = baseMass;
+        effectiveGravity = this.gravityEnabled ? gravity : 0;
+      }
 
       // Apply forces
       p.vx += (f.x / mass) * dt;
-      p.vy += (f.y / mass + (this.gravityEnabled ? gravity : 0)) * dt;
+      p.vy += (f.y / mass + effectiveGravity) * dt;
 
       // Apply damping
-      p.vx *= damping;
-      p.vy *= damping;
+      p.vx *= effectiveDamping;
+      p.vy *= effectiveDamping;
 
       // Clamp speed
       const speed2 = p.vx * p.vx + p.vy * p.vy;
@@ -524,17 +791,45 @@ export class FluidSystem extends ParticleSystem {
   }
 
   /**
-   * Set physics mode.
-   * @param {string} mode - 'liquid', 'gas', or a number 0-1 for blend
+   * Set physics mode with smooth transition.
+   * @param {string|number} mode - 'liquid', 'gas', or a number 0-1 for blend
+   * @param {boolean} [instant=false] - If true, snap immediately without lerping
    */
-  setPhysicsMode(mode) {
+  setPhysicsMode(mode, instant = false) {
+    let target;
     if (mode === "liquid") {
-      this.physicsBlend = 0;
+      target = 0;
     } else if (mode === "gas") {
-      this.physicsBlend = 1;
+      target = 1;
     } else if (typeof mode === "number") {
-      this.physicsBlend = Math.max(0, Math.min(1, mode));
+      target = Math.max(0, Math.min(1, mode));
+    } else {
+      return;
     }
+
+    this._targetMode = target;
+    
+    if (instant) {
+      this.modeMix = target;
+    }
+  }
+
+  /**
+   * Get the current physics mode as a string.
+   * @returns {string} 'liquid', 'gas', or 'blending'
+   */
+  getPhysicsMode() {
+    if (this.modeMix < 0.01) return "liquid";
+    if (this.modeMix > 0.99) return "gas";
+    return "blending";
+  }
+
+  /**
+   * Check if heat physics is currently active.
+   * @returns {boolean} True if heat physics is enabled
+   */
+  isHeatEnabled() {
+    return this.config.heat.enabled || this.modeMix > 0.5;
   }
 }
 

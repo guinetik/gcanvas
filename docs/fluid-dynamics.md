@@ -93,3 +93,4 @@ Assign `p.temperature` or `p.custom.temperature` each frame (e.g., via `heat.zon
 - For gases, favor lower `pressure` and higher `diffusion` to avoid jitter.
 - The math never allocates inside the hot path besides output arrays; reuse them between frames if you need fewer allocations (pass your own particles array). 
 
+
