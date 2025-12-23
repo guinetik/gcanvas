@@ -15,7 +15,7 @@ The particle module provides a flexible system for creating visual effects like 
 ## Quick Start
 
 ```js
-import { Game, ParticleSystem, ParticleEmitter, Updaters } from 'gcanvas';
+import { Game, ParticleSystem, ParticleEmitter, Updaters } from '@guinetik/gcanvas';
 
 class MyGame extends Game {
   init() {
@@ -234,7 +234,7 @@ Updaters are composable functions that define particle behavior. Each updater ha
 ### Built-in Updaters
 
 ```js
-import { Updaters } from 'gcanvas';
+import { Updaters } from '@guinetik/gcanvas';
 
 const particles = new ParticleSystem(game, {
   updaters: [
@@ -349,7 +349,7 @@ Each particle has these properties (accessible in updaters):
 For 3D particle effects, pass a Camera3D instance:
 
 ```js
-import { Camera3D, ParticleSystem, ParticleEmitter, Updaters } from 'gcanvas';
+import { Camera3D, ParticleSystem, ParticleEmitter, Updaters } from '@guinetik/gcanvas';
 
 class My3DParticles extends Game {
   init() {

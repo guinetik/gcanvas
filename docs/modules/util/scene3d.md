@@ -16,7 +16,7 @@ Scene3D bridges the GameObject/Scene system with Camera3D. It allows you to posi
 ## Quick Start
 
 ```js
-import { Game, Camera3D, Scene3D, GameObject, Rectangle } from 'gcanvas';
+import { Game, Camera3D, Scene3D, GameObject, Rectangle } from '@guinetik/gcanvas';
 
 class BoxObject extends GameObject {
   constructor(game) {

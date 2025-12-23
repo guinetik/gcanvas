@@ -15,7 +15,7 @@ Camera3D provides 3D to 2D projection for creating pseudo-3D effects on a 2D can
 ## Quick Start
 
 ```js
-import { Camera3D } from 'gcanvas';
+import { Camera3D } from '@guinetik/gcanvas';
 
 // Create camera with initial rotation
 const camera = new Camera3D({
@@ -224,7 +224,7 @@ camera.lookAt(100, 50, 200);  // Look toward point
 The most common usage - let Scene3D handle projection automatically:
 
 ```js
-import { Camera3D, Scene3D, GameObject } from 'gcanvas';
+import { Camera3D, Scene3D, GameObject } from '@guinetik/gcanvas';
 
 class MyDemo extends Game {
   init() {
@@ -262,7 +262,7 @@ class MyDemo extends Game {
 For 3D particle effects:
 
 ```js
-import { Camera3D, ParticleSystem, ParticleEmitter, Updaters } from 'gcanvas';
+import { Camera3D, ParticleSystem, ParticleEmitter, Updaters } from '@guinetik/gcanvas';
 
 const camera = new Camera3D({ rotationX: 0.3 });
 camera.enableMouseControl(canvas);

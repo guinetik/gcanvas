@@ -62,7 +62,7 @@ GCanvas provides two complementary ways to work:
 For static visuals and simple graphics. Use shapes directly without a game loop:
 
 ```js
-import { Circle, Rectangle, Painter } from 'gcanvas';
+import { Circle, Rectangle, Painter } from '@guinetik/gcanvas';
 
 Painter.init(ctx);
 
@@ -75,7 +75,7 @@ circle.draw();
 For games, simulations, and interactive applications:
 
 ```js
-import { Game, Scene, GameObject, Circle } from 'gcanvas';
+import { Game, Scene, GameObject, Circle } from '@guinetik/gcanvas';
 
 class Player extends GameObject {
   constructor(game) {
@@ -122,6 +122,14 @@ Shape              ─── Fill color, stroke, line styling
 
 ### Installation
 
+**NPM (Recommended):**
+
+```bash
+npm install @guinetik/gcanvas
+```
+
+**Or clone the repository:**
+
 ```bash
 git clone https://github.com/guinetik/gcanvas.git
 cd gcanvas
@@ -134,7 +142,7 @@ npm run dev
 ```html
 <canvas id="game"></canvas>
 <script type="module">
-  import { Game, Scene, Rectangle, TextShape, Group } from 'gcanvas';
+  import { Game, Scene, Rectangle, TextShape, Group } from '@guinetik/gcanvas';
 
   class HelloWorld extends Game {
     init() {

@@ -32,7 +32,7 @@ The Shape Layer is for drawing graphics without a game loop. Shapes are self-con
 ### Example
 
 ```js
-import { Circle, Rectangle, Group, Painter } from 'gcanvas';
+import { Circle, Rectangle, Group, Painter } from '@guinetik/gcanvas';
 
 // Initialize Painter with canvas context
 const canvas = document.getElementById('canvas');
@@ -80,7 +80,7 @@ The Game Layer provides a complete game loop with automatic updates, rendering, 
 ### Example
 
 ```js
-import { Game, Scene, GameObject, Circle } from 'gcanvas';
+import { Game, Scene, GameObject, Circle } from '@guinetik/gcanvas';
 
 class Player extends GameObject {
   constructor(game) {

@@ -9,7 +9,7 @@ This guide shows how to use the Game layer to create interactive applications. W
 ## Basic Game Setup
 
 ```js
-import { Game, Scene, GameObject, Circle, Group, Rectangle, TextShape } from 'gcanvas';
+import { Game, Scene, GameObject, Circle, Group, Rectangle, TextShape } from '@guinetik/gcanvas';
 
 class MyGame extends Game {
   constructor(canvas) {
@@ -153,7 +153,7 @@ import {
   Motion,
   Easing,
   FPSCounter
-} from 'gcanvas';
+} from '@guinetik/gcanvas';
 
 /**
  * HelloWorldBox - A simple animated text box

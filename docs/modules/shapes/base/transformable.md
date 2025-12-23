@@ -177,7 +177,7 @@ Original:           Rotated 45°:
 ## Example: Spinning Shape
 
 ```js
-import { Rectangle, Painter } from 'gcanvas';
+import { Rectangle, Painter } from '@guinetik/gcanvas';
 
 const canvas = document.getElementById('canvas');
 Painter.init(canvas.getContext('2d'));

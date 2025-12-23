@@ -37,16 +37,16 @@ Outputs to `dist/`:
 - `gcanvas.umd.js` - UMD bundle
 - `gcanvas.umd.min.js` - UMD bundle (minified)
 
-## Option 2: NPM (Coming Soon)
+## Option 2: NPM
 
 ```bash
-npm install gcanvas
+npm install @guinetik/gcanvas
 ```
 
 Then import in your project:
 
 ```js
-import { Game, Circle, Rectangle } from 'gcanvas';
+import { Game, Circle, Rectangle } from '@guinetik/gcanvas';
 ```
 
 ## Option 3: Direct Script Include

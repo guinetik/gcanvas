@@ -10,7 +10,7 @@ The Fluent module provides a builder-pattern API layer on top of GCanvas's objec
 
 **Traditional approach:**
 ```js
-import { Game, Scene, GameObject, Circle } from 'gcanvas';
+import { Game, Scene, GameObject, Circle } from '@guinetik/gcanvas';
 
 const canvas = document.getElementById('game');
 const game = new Game(canvas);
@@ -32,7 +32,7 @@ game.start();
 
 **Fluent approach:**
 ```js
-import { gcanvas } from 'gcanvas';
+import { gcanvas } from '@guinetik/gcanvas';
 
 gcanvas({ bg: 'black' })
   .scene('game')
@@ -53,7 +53,7 @@ gcanvas({ bg: 'black' })
 ## Quick Start
 
 ```js
-import { gcanvas } from 'gcanvas';
+import { gcanvas } from '@guinetik/gcanvas';
 
 // Create a game with a pulsing circle
 gcanvas({ bg: '#1a1a2e' })
@@ -73,7 +73,7 @@ gcanvas({ bg: '#1a1a2e' })
 The main entry point for the full fluent API.
 
 ```js
-import { gcanvas } from 'gcanvas';
+import { gcanvas } from '@guinetik/gcanvas';
 
 const game = gcanvas({
   canvas: document.getElementById('game'),  // Optional: use existing canvas
@@ -94,7 +94,7 @@ const game = gcanvas({
 Ultra-simple mode for quick creative coding prototypes.
 
 ```js
-import { sketch } from 'gcanvas';
+import { sketch } from '@guinetik/gcanvas';
 
 sketch(800, 600, '#1a1a1a')
   .circle(400, 300, 50, 'lime')
@@ -967,7 +967,7 @@ export const uiModule = (g) => g
       .text('SCORE: 0', { font: '20px monospace', fill: 'white' });
 
 // main.js
-import { gcanvas } from 'gcanvas';
+import { gcanvas } from '@guinetik/gcanvas';
 import { playerModule } from './scenes/player';
 import { enemiesModule } from './scenes/enemies';
 import { uiModule } from './scenes/ui';

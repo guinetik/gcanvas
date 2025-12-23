@@ -9,7 +9,7 @@ The game module provides the interactive layer of GCanvas. It manages the game l
 ## Quick Start
 
 ```js
-import { Game, Scene, GameObject, Circle } from 'gcanvas';
+import { Game, Scene, GameObject, Circle } from '@guinetik/gcanvas';
 
 class Player extends GameObject {
   constructor(game) {
@@ -220,7 +220,7 @@ Built on GameObject and Scene:
 | `FPSCounter` | FPS display |
 
 ```js
-import { Button, FPSCounter } from 'gcanvas';
+import { Button, FPSCounter } from '@guinetik/gcanvas';
 
 const button = new Button(game, 'Click Me', {
   x: 400,

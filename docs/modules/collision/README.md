@@ -9,7 +9,7 @@ The collision module provides both low-level collision detection algorithms and 
 ## Quick Start
 
 ```js
-import { Collision, CollisionSystem } from 'gcanvas';
+import { Collision, CollisionSystem } from '@guinetik/gcanvas';
 
 // Low-level: Direct collision checks
 const playerBounds = player.getBounds();
@@ -352,7 +352,7 @@ player.alive = false;     // Skipped
 A Space Invaders-style collision setup:
 
 ```js
-import { Game, CollisionSystem, Collision } from 'gcanvas';
+import { Game, CollisionSystem, Collision } from '@guinetik/gcanvas';
 
 class SpaceGame extends Game {
   init() {

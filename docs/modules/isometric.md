@@ -9,7 +9,7 @@
 ## Quick Start
 
 ```javascript
-import { Game, IsometricScene, GameObject } from "gcanvas";
+import { Game, IsometricScene, GameObject } from "@guinetik/gcanvas";
 
 class MyGame extends Game {
   init() {

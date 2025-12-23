@@ -67,7 +67,7 @@ The `(x, y)` point is the **center** of the object, not the top-left corner.
 ## Example
 
 ```js
-import { Euclidian } from 'gcanvas';
+import { Euclidian } from '@guinetik/gcanvas';
 
 // Euclidian is abstract, but shows the basic spatial contract
 const spatial = {

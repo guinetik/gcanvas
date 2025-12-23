@@ -188,7 +188,7 @@ export * from "./mixins";
 This allows importing any component from the main package:
 
 ```js
-import { Game, Circle, Painter, Motion } from 'gcanvas';
+import { Game, Circle, Painter, Motion } from '@guinetik/gcanvas';
 ```
 
 ## Related

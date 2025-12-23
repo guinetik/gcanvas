@@ -9,7 +9,7 @@ Painter is a static utility class that wraps the Canvas 2D API. It provides cent
 ## Quick Start
 
 ```js
-import { Painter } from 'gcanvas';
+import { Painter } from '@guinetik/gcanvas';
 
 // Initialize with canvas context
 const canvas = document.getElementById('canvas');

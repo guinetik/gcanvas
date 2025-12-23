@@ -9,7 +9,7 @@ The state module provides a `StateMachine` class for managing states with enter/
 ## Quick Start
 
 ```js
-import { StateMachine } from 'gcanvas';
+import { StateMachine } from '@guinetik/gcanvas';
 
 // Basic state machine
 const fsm = new StateMachine({
@@ -421,7 +421,7 @@ fsm.onStateChange = (newState, oldState, data) => {
 A complete entity with states, phases, and game integration:
 
 ```js
-import { GameObject, StateMachine } from 'gcanvas';
+import { GameObject, StateMachine } from '@guinetik/gcanvas';
 
 class Boss extends GameObject {
   constructor(game) {

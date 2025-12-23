@@ -246,7 +246,7 @@ The `(x, y)` point is the **center** of the shape, not the top-left corner.
 Extend `Shape` and implement `draw()`:
 
 ```js
-import { Shape, Painter } from 'gcanvas';
+import { Shape, Painter } from '@guinetik/gcanvas';
 
 class CustomShape extends Shape {
   constructor(options = {}) {

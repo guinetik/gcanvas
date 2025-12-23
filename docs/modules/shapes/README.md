@@ -9,7 +9,7 @@ The shapes module provides all visual primitives in GCanvas. Every shape inherit
 ## Quick Start
 
 ```js
-import { Circle, Rectangle, Star, Group } from 'gcanvas';
+import { Circle, Rectangle, Star, Group } from '@guinetik/gcanvas';
 
 // Create shapes
 const circle = new Circle(50, { x: 100, y: 100, color: 'red' });

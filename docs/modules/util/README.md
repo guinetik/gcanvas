@@ -52,7 +52,7 @@ GCanvas provides a pseudo-3D system that projects 3D coordinates to 2D canvas:
 ## Basic 3D Setup
 
 ```js
-import { Game, Camera3D, Scene3D, GameObject, Rectangle } from 'gcanvas';
+import { Game, Camera3D, Scene3D, GameObject, Rectangle } from '@guinetik/gcanvas';
 
 class My3DDemo extends Game {
   init() {

@@ -15,7 +15,7 @@ Unlike `Camera3D` which provides free 3D rotation, `IsometricCamera` is designed
 ## Basic Usage
 
 ```javascript
-import { IsometricCamera, IsometricScene } from 'gcanvas';
+import { IsometricCamera, IsometricScene } from '@guinetik/gcanvas';
 
 // Create camera with 90° rotation steps (recommended for isometric)
 const camera = new IsometricCamera({
@@ -168,7 +168,7 @@ isoY = (rotatedX + rotatedY) * (tileHeight / 2)
 Add rotation buttons to your game:
 
 ```javascript
-import { Button, Keys } from 'gcanvas';
+import { Button, Keys } from '@guinetik/gcanvas';
 
 // Arrow buttons
 const leftBtn = new Button(game, {

@@ -142,7 +142,7 @@ shape.miterLimit = 2;   // Shorter miters, more beveling
 Shape is abstract. Subclasses implement `draw()`:
 
 ```js
-import { Shape, Painter } from 'gcanvas';
+import { Shape, Painter } from '@guinetik/gcanvas';
 
 class CustomShape extends Shape {
   constructor(options = {}) {
@@ -187,7 +187,7 @@ These classes extend Shape:
 ## Example
 
 ```js
-import { Rectangle, Painter } from 'gcanvas';
+import { Rectangle, Painter } from '@guinetik/gcanvas';
 
 const rect = new Rectangle({
   x: 200,
