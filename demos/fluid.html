@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fluid & Gas Playground</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Fluid & Gas Playground</strong> — SPH-like liquid + lightweight gas using math-only helpers.<br />
+    <span style="color:#9ef">
+      <li>Move mouse to stir, hold click to push.</li>
+      <li>Press 1 for Liquid, 2 for Gas, Space toggles.</li>
+      <li>Colors show temperature (blue=cool, orange=hot).</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { FluidGasGame } from "./js/fluid.js";
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new FluidGasGame(canvas);
+      game.setFPS(60);
+      game.start();
+    });
+  </script>
+</body>
+
+</html>
+
