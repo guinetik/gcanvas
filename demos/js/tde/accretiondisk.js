@@ -17,7 +17,7 @@ const DISK_CONFIG = {
     outerRadiusMultiplier: 9.0,    // Wide disk with margin from screen edges
 
     // Particle properties
-    maxParticles: 6000,
+    maxParticles: 10000,
     particleLifetime: 1000,
     spawnRate: 500,
 
@@ -40,8 +40,8 @@ const DISK_CONFIG = {
     colorMid: { r: 255, g: 160, b: 50 },    // Mid (orange)
     colorCool: { r: 180, g: 40, b: 40 },    // Outer (deep red)
 
-    sizeMin: 1,
-    sizeMax: 2,
+    sizeMin: .8,
+    sizeMax: 1.2,
 };
 
 export class AccretionDisk extends GameObject {
