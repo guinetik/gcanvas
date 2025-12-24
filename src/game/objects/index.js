@@ -48,6 +48,7 @@ export { GameObjectShapeWrapper, ShapeGOFactory } from "./wrapper.js";
 export { Scene } from "./scene.js";
 export { Scene3D } from "./scene3d.js";
 export { IsometricScene } from "./isometric-scene.js";
+export { PlatformerScene } from "./platformer-scene.js";
 export * from "./layoutscene.js";
 // Specialized GameObjects
 export { Text } from "./text.js";
