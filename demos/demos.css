@@ -3,6 +3,7 @@ body {
   margin: 0;
   display: flex;
   height: 100vh; /* 100% viewport height */
+  height: 100dvh; /* fallback for mobile browsers */
   background: black; /* optional if you want a black background behind everything */
   overflow: hidden;
 }
@@ -252,6 +253,7 @@ path {
   /* Show mobile header */
   .mobile-header {
     display: flex;
+    position: relative; /* In flow so it pushes content down naturally */
   }
 
   /* Change body layout to column for mobile */
@@ -266,9 +268,11 @@ path {
     left: -280px;
     width: 280px;
     height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
     z-index: 100;
     transition: left 0.3s ease;
     padding-top: 1rem;
+    padding-bottom: 2rem; /* Ensure bottom content is accessible */
   }
 
   /* Nav open state */
@@ -283,7 +287,8 @@ path {
 
   /* Adjust iframe to account for mobile header */
   iframe {
-    margin-top: 56px;
-    height: calc(100vh - 56px);
+    margin-top: 0;
+    height: auto;
+    /* flex: 1 handles the remaining height */
   }
 }

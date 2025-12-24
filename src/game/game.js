@@ -211,12 +211,18 @@ export class Game {
   /**
    * Enables automatic resizing of the canvas to either the window or a given container.
    * @param {HTMLElement} [container=window] - Element to observe for resizing. Defaults to window.
+   * @param {Object} [padding={}] - Optional padding to subtract from the canvas size.
+   * @param {number} [padding.top=0] - Top padding.
+   * @param {number} [padding.right=0] - Right padding.
+   * @param {number} [padding.bottom=0] - Bottom padding.
+   * @param {number} [padding.left=0] - Left padding.
    */
-  enableFluidSize(container = window) {
+  enableFluidSize(container = window, padding = {}) {
+    const { top = 0, right = 0, bottom = 0, left = 0 } = padding;
     if (container === window) {
       const resizeCanvas = () => {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        this.canvas.width = window.innerWidth - left - right;
+        this.canvas.height = window.innerHeight - top - bottom;
         if (
           this.#prevWidth !== this.canvas.width ||
           this.#prevHeight !== this.canvas.height
@@ -240,8 +246,8 @@ export class Game {
       }
       const resizeCanvas = () => {
         const rect = container.getBoundingClientRect();
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
+        this.canvas.width = rect.width - left - right;
+        this.canvas.height = rect.height - top - bottom;
       };
       const observer = new ResizeObserver(() => {
         resizeCanvas();
