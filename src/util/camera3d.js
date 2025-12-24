@@ -32,6 +32,9 @@ export class Camera3D {
    * @param {number} [options.rotationX=0] - Initial X rotation (tilt up/down) in radians
    * @param {number} [options.rotationY=0] - Initial Y rotation (spin left/right) in radians
    * @param {number} [options.rotationZ=0] - Initial Z rotation (roll) in radians
+   * @param {number} [options.x=0] - Initial X position in world space
+   * @param {number} [options.y=0] - Initial Y position in world space
+   * @param {number} [options.z=0] - Initial Z position in world space
    * @param {number} [options.perspective=800] - Perspective distance (higher = less distortion)
    * @param {number} [options.sensitivity=0.005] - Mouse drag sensitivity
    * @param {number} [options.minRotationX=-1.5] - Minimum X rotation limit
@@ -49,10 +52,18 @@ export class Camera3D {
     this.rotationY = options.rotationY ?? 0;
     this.rotationZ = options.rotationZ ?? 0;
 
+    // Position state (camera location in world space)
+    this.x = options.x ?? 0;
+    this.y = options.y ?? 0;
+    this.z = options.z ?? 0;
+
     // Store initial values for reset
     this._initialRotationX = this.rotationX;
     this._initialRotationY = this.rotationY;
     this._initialRotationZ = this.rotationZ;
+    this._initialX = this.x;
+    this._initialY = this.y;
+    this._initialZ = this.z;
 
     // Perspective
     this.perspective = options.perspective ?? 800;
@@ -86,6 +97,20 @@ export class Camera3D {
     this._lastMouseY = 0;
     this._canvas = null;
     this._boundHandlers = null;
+
+    // Follow target state
+    this._followTarget = null;
+    this._followOffset = { x: 0, y: 0, z: 0 };
+    this._followLookAt = true;  // Auto-orient to look at target's forward direction
+    this._followLerp = 0.1;     // Interpolation speed (0-1, higher = snappier)
+
+    // Position animation state
+    this._targetX = null;
+    this._targetY = null;
+    this._targetZ = null;
+    this._targetRotationX = null;
+    this._targetRotationY = null;
+    this._positionLerp = 0.05;  // Default smooth movement speed
   }
 
   /**
@@ -96,6 +121,12 @@ export class Camera3D {
    * @returns {{x: number, y: number, z: number, scale: number}} Projected 2D coordinates and depth info
    */
   project(x, y, z) {
+    // Translate world relative to camera position
+    // (Moving camera right = moving world left)
+    x -= this.x;
+    y -= this.y;
+    z -= this.z;
+
     // Rotate around Z axis (roll)
     if (this.rotationZ !== 0) {
       const cosZ = Math.cos(this.rotationZ);
@@ -141,12 +172,78 @@ export class Camera3D {
   }
 
   /**
-   * Update camera for auto-rotation and inertia (call in update loop)
+   * Update camera for auto-rotation, inertia, and follow mode (call in update loop)
    * @param {number} dt - Delta time in seconds
    */
   update(dt) {
-    // Apply inertia when not dragging
-    if (this.inertia && !this._isDragging) {
+    // Follow target mode - position camera relative to target
+    if (this._followTarget) {
+      const target = this._followTarget;
+      const targetX = (target.x ?? 0) + this._followOffset.x;
+      const targetY = (target.y ?? 0) + this._followOffset.y;
+      const targetZ = (target.z ?? 0) + this._followOffset.z;
+
+      // Smooth interpolation to target position
+      this.x += (targetX - this.x) * this._followLerp;
+      this.y += (targetY - this.y) * this._followLerp;
+      this.z += (targetZ - this.z) * this._followLerp;
+
+      // Auto-orient to look toward origin (or specified look target)
+      if (this._followLookAt) {
+        const lookX = this._followLookAtTarget?.x ?? 0;
+        const lookY = this._followLookAtTarget?.y ?? 0;
+        const lookZ = this._followLookAtTarget?.z ?? 0;
+
+        // Calculate direction from camera to look target
+        const dx = lookX - this.x;
+        const dy = lookY - this.y;
+        const dz = lookZ - this.z;
+        const distXZ = Math.sqrt(dx * dx + dz * dz);
+
+        // Target rotation to face the look target
+        const targetRotY = Math.atan2(dx, dz);
+        const targetRotX = Math.atan2(-dy, distXZ);
+
+        // Smooth rotation interpolation
+        this.rotationY += this._angleDiff(this.rotationY, targetRotY) * this._followLerp;
+        this.rotationX += (targetRotX - this.rotationX) * this._followLerp;
+      }
+    }
+    // Animated position movement (moveTo)
+    else if (this._targetX !== null) {
+      const lerp = this._positionLerp;
+
+      // Interpolate position
+      this.x += (this._targetX - this.x) * lerp;
+      this.y += (this._targetY - this.y) * lerp;
+      this.z += (this._targetZ - this.z) * lerp;
+
+      // Interpolate rotation if targets set
+      if (this._targetRotationX !== null) {
+        this.rotationX += (this._targetRotationX - this.rotationX) * lerp;
+      }
+      if (this._targetRotationY !== null) {
+        this.rotationY += this._angleDiff(this.rotationY, this._targetRotationY) * lerp;
+      }
+
+      // Check if we've arrived (close enough)
+      const posDist = Math.abs(this._targetX - this.x) +
+                      Math.abs(this._targetY - this.y) +
+                      Math.abs(this._targetZ - this.z);
+      if (posDist < 0.1) {
+        this.x = this._targetX;
+        this.y = this._targetY;
+        this.z = this._targetZ;
+        this._targetX = null;
+        this._targetY = null;
+        this._targetZ = null;
+        this._targetRotationX = null;
+        this._targetRotationY = null;
+      }
+    }
+
+    // Apply inertia when not dragging and not following
+    if (this.inertia && !this._isDragging && !this._followTarget) {
       // Apply velocity to rotation
       if (Math.abs(this._velocityX) > 0.0001 || Math.abs(this._velocityY) > 0.0001) {
         this.rotationY += this._velocityY;
@@ -167,8 +264,8 @@ export class Camera3D {
       }
     }
 
-    // Auto-rotate when not dragging and no significant velocity
-    if (this.autoRotate && !this._isDragging) {
+    // Auto-rotate when not dragging, not following, and no significant velocity
+    if (this.autoRotate && !this._isDragging && !this._followTarget) {
       const hasVelocity = Math.abs(this._velocityX) > 0.001 || Math.abs(this._velocityY) > 0.001;
       if (!hasVelocity) {
         const delta = this.autoRotateSpeed * dt;
@@ -185,6 +282,17 @@ export class Camera3D {
         }
       }
     }
+  }
+
+  /**
+   * Calculate shortest angle difference (handles wraparound)
+   * @private
+   */
+  _angleDiff(from, to) {
+    let diff = to - from;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    return diff;
   }
 
   /**
@@ -360,15 +468,22 @@ export class Camera3D {
   }
 
   /**
-   * Reset rotation to initial values and stop inertia
+   * Reset rotation and position to initial values, stop inertia and following
    * @returns {Camera3D} Returns this for chaining
    */
   reset() {
     this.rotationX = this._initialRotationX;
     this.rotationY = this._initialRotationY;
     this.rotationZ = this._initialRotationZ;
+    this.x = this._initialX;
+    this.y = this._initialY;
+    this.z = this._initialZ;
     this._velocityX = 0;
     this._velocityY = 0;
+    this._followTarget = null;
+    this._targetX = null;
+    this._targetY = null;
+    this._targetZ = null;
     return this;
   }
 
@@ -380,6 +495,91 @@ export class Camera3D {
     this._velocityX = 0;
     this._velocityY = 0;
     return this;
+  }
+
+  /**
+   * Set camera position in world space
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} z - Z position
+   * @returns {Camera3D} Returns this for chaining
+   */
+  setPosition(x, y, z) {
+    this.x = x;
+    this.y = y;
+    this.z = z;
+    return this;
+  }
+
+  /**
+   * Animate camera to a new position (and optionally rotation)
+   * @param {number} x - Target X position
+   * @param {number} y - Target Y position
+   * @param {number} z - Target Z position
+   * @param {object} [options] - Animation options
+   * @param {number} [options.rotationX] - Target X rotation
+   * @param {number} [options.rotationY] - Target Y rotation
+   * @param {number} [options.lerp=0.05] - Interpolation speed (0-1)
+   * @returns {Camera3D} Returns this for chaining
+   */
+  moveTo(x, y, z, options = {}) {
+    this._targetX = x;
+    this._targetY = y;
+    this._targetZ = z;
+    this._targetRotationX = options.rotationX ?? null;
+    this._targetRotationY = options.rotationY ?? null;
+    this._positionLerp = options.lerp ?? 0.05;
+    return this;
+  }
+
+  /**
+   * Follow a target object (position camera relative to target)
+   * @param {object} target - Object with x, y, z properties to follow
+   * @param {object} [options] - Follow options
+   * @param {number} [options.offsetX=0] - X offset from target
+   * @param {number} [options.offsetY=0] - Y offset from target
+   * @param {number} [options.offsetZ=0] - Z offset from target
+   * @param {boolean} [options.lookAt=true] - Auto-orient to look at lookAtTarget
+   * @param {object} [options.lookAtTarget=null] - Point to look at (default: origin)
+   * @param {number} [options.lerp=0.1] - Interpolation speed (0-1, higher = snappier)
+   * @returns {Camera3D} Returns this for chaining
+   */
+  follow(target, options = {}) {
+    this._followTarget = target;
+    this._followOffset = {
+      x: options.offsetX ?? 0,
+      y: options.offsetY ?? 0,
+      z: options.offsetZ ?? 0,
+    };
+    this._followLookAt = options.lookAt ?? true;
+    this._followLookAtTarget = options.lookAtTarget ?? null;
+    this._followLerp = options.lerp ?? 0.1;
+    return this;
+  }
+
+  /**
+   * Stop following target and optionally reset to initial position
+   * @param {boolean} [resetPosition=false] - Whether to animate back to initial position
+   * @returns {Camera3D} Returns this for chaining
+   */
+  unfollow(resetPosition = false) {
+    this._followTarget = null;
+    if (resetPosition) {
+      this.moveTo(this._initialX, this._initialY, this._initialZ, {
+        rotationX: this._initialRotationX,
+        rotationY: this._initialRotationY,
+        lerp: 0.05,
+      });
+    }
+    return this;
+  }
+
+  /**
+   * Check if camera is currently following a target
+   * @returns {boolean} True if following a target
+   */
+  isFollowing() {
+    return this._followTarget !== null;
   }
 
   /**
@@ -424,15 +624,21 @@ export class Camera3D {
   }
 
   /**
-   * Look at a specific point (sets rotation to face that direction)
-   * @param {number} x - Target X
-   * @param {number} y - Target Y
-   * @param {number} z - Target Z
+   * Look at a specific point (sets rotation to face that direction from current position)
+   * @param {number} x - Target X in world space
+   * @param {number} y - Target Y in world space
+   * @param {number} z - Target Z in world space
    * @returns {Camera3D} Returns this for chaining
    */
   lookAt(x, y, z) {
-    this.rotationY = Math.atan2(x, z);
-    this.rotationX = Math.atan2(y, Math.sqrt(x * x + z * z));
+    // Calculate direction from camera position to target
+    const dx = x - this.x;
+    const dy = y - this.y;
+    const dz = z - this.z;
+    const distXZ = Math.sqrt(dx * dx + dz * dz);
+
+    this.rotationY = Math.atan2(dx, dz);
+    this.rotationX = Math.atan2(-dy, distXZ);
     return this;
   }
 }
