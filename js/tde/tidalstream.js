@@ -13,7 +13,7 @@ import { applyGravitationalLensing } from "/gcanvas.es.min.js";
 // Stream-specific config
 const STREAM_CONFIG = {
     gravity: 120000,        // Strong gravity (linear falloff G/r)
-    maxParticles: 6000,
+    maxParticles: 10000,
     particleLifetime: 20,   // Seconds - long lifetime so particles can orbit the BH
 
     // Velocity inheritance - how much of star's velocity particles get
@@ -42,7 +42,7 @@ const STREAM_CONFIG = {
 
     // Particle size
     sizeMin: 1,
-    sizeMax: 3,
+    sizeMax: 1.2,
 
     // Gravitational lensing (visual effect)
     // These are multipliers relative to the BH's current radius
