@@ -24,7 +24,8 @@ const LENSING_CONFIG = {
     minDistance: 5,
 
     // Occlusion radius multiplier (stars within BH radius * this are hidden)
-    occlusionMultiplier: 1.15,
+    // The dark shadow region extends to ~2.6x the event horizon (photon sphere)
+    occlusionMultiplier: 2.6,
 };
 
 export class LensedStarfield extends StarField {
@@ -68,49 +69,55 @@ export class LensedStarfield extends StarField {
         const lensingPower = LENSING_CONFIG.baseStrength * this.lensingStrength;
         const effectRadius = LENSING_CONFIG.effectRadiusPixels;
 
+        // Project black hole position once for all stars
+        // This is crucial when camera has moved (e.g., following the star)
+        const bhProjected = this.camera.project(0, 0, 0);
+        const bhScreenX = bhProjected.x;
+        const bhScreenY = bhProjected.y;
+
         Painter.useCtx((ctx) => {
             ctx.globalCompositeOperation = "source-over";
 
             for (const star of this.stars) {
-                // === CAMERA SPACE TRANSFORMATION ===
-                const cosY = Math.cos(this.camera.rotationY);
-                const sinY = Math.sin(this.camera.rotationY);
-                let xCam = star.x * cosY - star.z * sinY;
-                let zCam = star.x * sinY + star.z * cosY;
-
-                const cosX = Math.cos(this.camera.rotationX);
-                const sinX = Math.sin(this.camera.rotationX);
-                let yCam = star.y * cosX - zCam * sinX;
-                zCam = star.y * sinX + zCam * cosX;
+                // === USE CAMERA.PROJECT FOR PROPER POSITION HANDLING ===
+                // This accounts for camera position (translation) not just rotation
+                const projected = this.camera.project(star.x, star.y, star.z);
 
                 // Skip stars behind camera
-                if (zCam < -this.camera.perspective + 50) continue;
+                if (projected.scale <= 0) continue;
 
-                // === PERSPECTIVE PROJECTION ===
-                const perspectiveScale = this.camera.perspective / (this.camera.perspective + zCam);
-                let screenX = xCam * perspectiveScale;
-                let screenY = yCam * perspectiveScale;
+                let screenX = projected.x;
+                let screenY = projected.y;
+                const perspectiveScale = projected.scale;
 
-                // === GRAVITATIONAL LENSING (screen space) ===
-                // Only apply to stars "behind" the black hole (zCam > 0)
-                if (lensingPower > 0 && zCam > 0) {
+                // === GRAVITATIONAL LENSING (relative to BH screen position) ===
+                // Only apply to stars "behind" the black hole (positive z after projection)
+                if (lensingPower > 0 && projected.z > 0) {
+                    // Calculate position relative to BH's screen position
+                    const relX = screenX - bhScreenX;
+                    const relY = screenY - bhScreenY;
+
                     const lensed = applyGravitationalLensing(
-                        screenX, screenY,
+                        relX, relY,
                         effectRadius,
                         lensingPower,
                         LENSING_CONFIG.falloff,
                         LENSING_CONFIG.minDistance
                     );
-                    screenX = lensed.x;
-                    screenY = lensed.y;
+
+                    // Transform back to screen space
+                    screenX = lensed.x + bhScreenX;
+                    screenY = lensed.y + bhScreenY;
                 }
 
-                // === OCCLUSION CHECK ===
+                // === OCCLUSION CHECK (relative to BH screen position) ===
                 // Hide stars that fall within the black hole's occlusion radius
                 if (this.blackHole) {
                     const bhScreenRadius = this.blackHole.currentRadius * LENSING_CONFIG.occlusionMultiplier;
-                    const distFromCenter = Math.sqrt(screenX * screenX + screenY * screenY);
-                    if (distFromCenter < bhScreenRadius) continue;
+                    const dxBH = screenX - bhScreenX;
+                    const dyBH = screenY - bhScreenY;
+                    const distFromBH = Math.sqrt(dxBH * dxBH + dyBH * dyBH);
+                    if (distFromBH < bhScreenRadius) continue;
                 }
 
                 // Final screen position

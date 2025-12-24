@@ -17,9 +17,9 @@ const DISK_CONFIG = {
     outerRadiusMultiplier: 9.0,    // Wide disk with margin from screen edges
 
     // Particle properties
-    maxParticles: 4000,
-    particleLifetime: 80,
-    spawnRate: 50,
+    maxParticles: 6000,
+    particleLifetime: 1000,
+    spawnRate: 500,
 
     // Orbital physics
     baseOrbitalSpeed: 0.8,
@@ -41,7 +41,7 @@ const DISK_CONFIG = {
     colorCool: { r: 180, g: 40, b: 40 },    // Outer (deep red)
 
     sizeMin: 1,
-    sizeMax: 2.5,
+    sizeMax: 2,
 };
 
 export class AccretionDisk extends GameObject {
@@ -278,20 +278,73 @@ export class AccretionDisk extends GameObject {
             let yCam = y * cosX - zCam * sinX;
             zCam = y * sinX + zCam * cosX;
 
-            // === GRAVITATIONAL LENSING (from blackhole.js) ===
-            // Only affects particles behind the BH (zCam > 0)
-            if (lensingStrength > 0 && zCam > 0) {
-                const currentR = Math.sqrt(xCam * xCam + yCam * yCam);
+            // === GRAVITATIONAL LENSING ===
+            // Creates the Interstellar effect: disk curves around BH
+
+            // Camera tilt: 0 when edge-on, 1 when top-down
+            const cameraTilt = Math.abs(Math.sin(this.camera.rotationX));
+            const isBehind = zCam > 0;
+            const currentR = Math.sqrt(xCam * xCam + yCam * yCam);
+
+            if (lensingStrength > 0 && currentR < this.bhRadius * 6) {
                 const ringRadius = this.bhRadius * DISK_CONFIG.ringRadiusFactor;
                 const lensFactor = Math.exp(-currentR / (this.bhRadius * DISK_CONFIG.lensingFalloff));
                 const warp = lensFactor * 1.2 * lensingStrength;
 
+                // Determine upper/lower half for asymmetric effects
+                const angleRelativeToCamera = p.angle + this.camera.rotationY;
+                const isUpperHalf = Math.sin(angleRelativeToCamera) > 0;
+
+                // === RADIAL PUSH: Curves particles around BH silhouette ===
+                // Bottom ring should have TIGHTER radius (less expansion) at edge-on views
+                // But stay symmetric at top-down views
                 if (currentR > 0) {
-                    const ratio = (currentR + ringRadius * warp) / currentR;
+                    let radialWarp = warp;
+
+                    // Edge-on factor: 1 at edge-on, 0 at top-down
+                    const edgeOnFactor = 1 - cameraTilt;
+
+                    // Reduce radial expansion for bottom half, but only at edge-on angles
+                    // This creates the tighter bottom ring radius seen in Interstellar
+                    if (!isUpperHalf && isBehind) {
+                        // At edge-on: bottom gets 40% of radial push (tight ring)
+                        // At top-down: bottom gets 100% (symmetric circle)
+                        radialWarp *= 1.0 - edgeOnFactor * 0.6;
+                    }
+
+                    const ratio = (currentR + ringRadius * radialWarp) / currentR;
                     xCam *= ratio;
                     yCam *= ratio;
-                } else {
-                    yCam = ringRadius * lensingStrength;
+                }
+
+                // === VERTICAL CURVES: Only when camera is tilted ===
+                if (cameraTilt > 0.05) {
+                    // Arc shape - smooth curve
+                    const arcWidth = this.bhRadius * 5.0;
+                    const normalizedX = xCam / arcWidth;
+                    const arcCurve = Math.max(0, Math.cos(normalizedX * Math.PI * 0.5));
+
+                    // Depth factor - different for front vs back
+                    const depthFactor = isBehind
+                        ? Math.min(1.0, zCam / (this.bhRadius * 3))
+                        : Math.min(1.0, Math.abs(zCam) / (this.bhRadius * 3));
+
+                    // Ring height - scales with tilt
+                    const ringHeight = this.bhRadius * 2.0 * lensFactor * depthFactor * cameraTilt * lensingStrength;
+
+                    // Apply vertical displacement
+                    if (isBehind) {
+                        // Back particles: upper half UP, lower half DOWN
+                        if (isUpperHalf) {
+                            yCam -= ringHeight * arcCurve;
+                        } else {
+                            // Bottom ring: less vertical displacement too
+                            yCam += ringHeight * arcCurve * 0.5;
+                        }
+                    } else {
+                        // Front particles: curve DOWN slightly
+                        yCam += ringHeight * arcCurve * 0.4;
+                    }
                 }
             }
 
