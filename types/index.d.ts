@@ -2,7 +2,7 @@
  * GCanvas - TypeScript Definitions
  * A minimalist 2D canvas rendering library with shapes, game engine, and animations.
  *
- * @version 0.0.3-alpha
+ * @version 1.0.1
  * @see https://github.com/guinetik/gcanvas
  * @license ISC
  */
@@ -109,6 +109,8 @@ export {
   Cone,
   Prism,
   Sphere,
+  Sphere3D,
+  Sphere3DOptions,
 
   // Text shapes
   TextShape,
@@ -175,7 +177,22 @@ export {
   ToggleButton,
   Cursor,
   CursorOptions,
-  FPSCounter
+  FPSCounter,
+  Tooltip,
+  TooltipOptions,
+  Stepper,
+  StepperOptions,
+  UI_THEME,
+
+  // 3D and Isometric scenes
+  Scene3D,
+  Scene3DOptions,
+  IsometricScene,
+  IsometricSceneOptions,
+
+  // Fluid simulation
+  FluidSystem,
+  FluidSystemOptions
 } from './game';
 
 // ==========================================================================
@@ -220,7 +237,41 @@ export {
   Fractals,
   Patterns,
   Noise,
-  generatePenroseTilingPixels
+  generatePenroseTilingPixels,
+
+  // Tensor for GR calculations
+  Tensor,
+  TensorOptions,
+
+  // Physics modules (General Relativity)
+  gravitationalLensingAngle,
+  timeDilationFactor,
+  gravitationalRedshift,
+
+  // Orbital Mechanics
+  OrbitalState,
+  OrbitalElements,
+  orbitalVelocity,
+  orbitalPeriod,
+  elementsToState,
+  propagateOrbit,
+
+  // Quantum Mechanics
+  gaussianWavePacket,
+  probabilityDensity,
+  particleInBox,
+  harmonicOscillator,
+
+  // Heat Transfer
+  heatTransfer,
+  buoyancyForce,
+  temperatureDecay,
+
+  // Fluid Dynamics
+  viscosityDrag,
+  surfaceTension,
+  reynoldsNumber,
+  pressureGradient
 } from './math';
 
 // ==========================================================================
@@ -245,7 +296,19 @@ export {
   horizontalLayout,
   verticalLayout,
   tileLayout,
-  gridLayout
+  gridLayout,
+
+  // Camera3D
+  Camera3D,
+  Camera3DOptions,
+  ProjectedPoint,
+  MouseControlOptions,
+  FollowOptions,
+  MoveToOptions,
+
+  // IsometricCamera
+  IsometricCamera,
+  IsometricCameraOptions
 } from './util';
 
 // ==========================================================================
@@ -326,3 +389,60 @@ export {
   PhaseConfig,
   SequenceOptions
 } from './state';
+
+// ==========================================================================
+// Fluent API Module
+// ==========================================================================
+
+export {
+  // Entry points
+  gcanvas,
+  sketch,
+
+  // Builder classes
+  FluentGame,
+  FluentGameOptions,
+  FluentScene,
+  FluentSceneOptions,
+  FluentGO,
+  FluentLayer,
+
+  // Sketch API
+  SketchAPI,
+  SketchContext,
+
+  // Context
+  FluentContext,
+  TransitionOptions
+} from './fluent';
+
+// ==========================================================================
+// Particle System Module
+// ==========================================================================
+
+export {
+  // Core classes
+  Particle,
+  ParticleEmitter,
+  ParticleSystem,
+
+  // Types
+  ParticleColor,
+  ParticleShape,
+  ParticleEmitterOptions,
+  ParticleSystemOptions,
+  ParticleUpdater,
+
+  // Updaters namespace
+  Updaters
+} from './particle';
+
+// ==========================================================================
+// WebGL Module (Optional)
+// ==========================================================================
+
+export {
+  WebGLRenderer,
+  WebGLRendererOptions,
+  SPHERE_SHADERS
+} from './webgl';

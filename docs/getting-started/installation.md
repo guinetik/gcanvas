@@ -108,7 +108,25 @@ gcanvas/
 
 ## TypeScript Support
 
-TypeScript definitions are coming soon. For now, the library is written in JavaScript with JSDoc annotations.
+GCanvas includes full TypeScript definitions. After installing, you get complete type support:
+
+```typescript
+import { Game, Circle, Camera3D, ParticleSystem } from '@guinetik/gcanvas';
+
+// Full IntelliSense and type checking
+const game = new Game(document.getElementById('canvas') as HTMLCanvasElement);
+const circle = new Circle(50, { x: 100, y: 100, fill: 'red' });
+```
+
+The types require ES2015+ target in your `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "lib": ["es2015", "dom"]
+  }
+}
+```
 
 ## Browser Support
 
