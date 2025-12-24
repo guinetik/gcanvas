@@ -26,6 +26,15 @@ nav {
   overflow-x: hidden; /* usually don't want horizontal scroll in nav */
   font-family: monospace;
   border-right: 1px solid #1a1a1a;
+  flex-shrink: 0; /* Prevent nav from shrinking on desktop */
+}
+
+/* Ensure bottom of nav is reachable by adding a spacer */
+nav::after {
+  content: "";
+  display: block;
+  height: 6rem; /* Generous space to clear mobile UI bars */
+  width: 100%;
 }
 
 /* Links inside nav */
@@ -272,7 +281,7 @@ path {
     z-index: 100;
     transition: left 0.3s ease;
     padding-top: 1rem;
-    padding-bottom: 2rem; /* Ensure bottom content is accessible */
+    padding-bottom: 0; /* Handled by ::after spacer */
   }
 
   /* Nav open state */
