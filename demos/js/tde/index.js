@@ -34,9 +34,9 @@ export class TDEDemo extends Game {
     this.updateScaledSizes();
 
     this.camera = new Camera3D({
-      rotationX: 1.5,
+      rotationX: 0.2,
       rotationY: 0,
-      rotationZ: 0,
+      rotationZ: 0.0,
       perspective: this.baseScale * 1.8, // Zoomed out for wider view
       autoRotate: true,
       autoRotateSpeed: 0.08,
@@ -86,7 +86,32 @@ export class TDEDemo extends Game {
     this.infoLabel.zIndex = 100;
     this.pipeline.add(this.infoLabel);
 
-    // Replay button (above phase text)
+    // Star View toggle button (above phase text)
+    this.starViewButton = new Button(this, {
+      width: 120,
+      height: 32,
+      text: "★ Star View",
+      font: "14px monospace",
+      colorDefaultBg: "rgba(0, 0, 0, 0.6)",
+      colorDefaultStroke: "#666",
+      colorDefaultText: "#aaa",
+      colorHoverBg: "rgba(30, 30, 30, 0.8)",
+      colorHoverStroke: "#44aaff",
+      colorHoverText: "#44aaff",
+      colorPressedBg: "rgba(50, 50, 50, 0.9)",
+      colorPressedStroke: "#66ccff",
+      colorPressedText: "#66ccff",
+      onClick: () => this.toggleStarView(),
+    });
+    applyAnchor(this.starViewButton, {
+      anchor: Position.BOTTOM_LEFT,
+      anchorMargin: 20,
+      anchorOffsetY: -30, // Above the phase text
+    });
+    this.starViewButton.zIndex = 100;
+    this.pipeline.add(this.starViewButton);
+
+    // Replay button (above star view button)
     this.replayButton = new Button(this, {
       width: 120,
       height: 32,
@@ -106,7 +131,7 @@ export class TDEDemo extends Game {
     applyAnchor(this.replayButton, {
       anchor: Position.BOTTOM_LEFT,
       anchorMargin: 20,
-      anchorOffsetY: -30, // Above the phase text
+      anchorOffsetY: -70, // Above the star view button
     });
     this.replayButton.zIndex = 100;
     this.pipeline.add(this.replayButton);
@@ -226,6 +251,41 @@ export class TDEDemo extends Game {
     });
   }
 
+  /**
+   * Toggle between star-following camera view and default view
+   */
+  toggleStarView() {
+    const star = this.scene.star;
+
+    if (this.camera.isFollowing()) {
+      // Switch back to default view
+      this.camera.unfollow(true); // true = animate back to initial position
+      this.starViewButton.text = "★ Star View";
+
+      // Re-enable auto-rotate
+      this.camera.autoRotate = true;
+    } else {
+      // Follow the star, looking at the black hole
+      // Position camera just above the star's surface (north pole perspective)
+      // Very close offset = immersive "standing on the star" feel
+      const offsetHeight = star.currentRadius * 0.3; // Just above surface
+
+      this.camera.follow(star, {
+        offsetX: 0,
+        offsetY: offsetHeight,  // Barely above the star's "north pole"
+        offsetZ: 0,
+        lookAt: true,
+        lookAtTarget: this.scene.bh, // Look at black hole
+        lerp: 0.12,  // Slightly snappier follow for immersion
+      });
+
+      this.starViewButton.text = "◉ BH View";
+
+      // Disable auto-rotate while following
+      this.camera.autoRotate = false;
+    }
+  }
+
   restart() {
     // Reset masses
     this.scene.bh.mass = CONFIG.blackHole.initialMass;
@@ -330,6 +390,14 @@ export class TDEDemo extends Game {
     // Reset starfield lensing to subtle base level
     if (this.starField) {
       this.starField.lensingStrength = 0.15;
+    }
+
+    // Reset camera to default view if following
+    if (this.camera.isFollowing()) {
+      this.camera.unfollow(false); // Don't animate, just reset
+      this.camera.reset();
+      if (this.starViewButton) this.starViewButton.text = "★ Star View";
+      this.camera.autoRotate = true;
     }
 
     // Hide replay button
@@ -610,15 +678,42 @@ export class TDEDemo extends Game {
 
       const pos = polarToCartesian(star.orbitalRadius, star.phi);
 
-      // Vertical wobble - only after chaos builds
-      const verticalWobble = chaos > 0.01
-        ? Math.sin(time * 1.7) * chaos * baseRadius * 0.12
-        + Math.cos(time * 3.9) * chaos * baseRadius * 0.06
-        : 0;
+      // === ORBITAL PLANE TILT ===
+      // As chaos builds, the orbital plane itself starts wobbling
+      // This creates the effect of the orbit tilting dramatically
+      let tiltX = 0;  // Tilt around X-axis (makes orbit bob front-to-back)
+      let tiltZ = 0;  // Tilt around Z-axis (makes orbit bob left-to-right)
 
-      star.x = pos.x;
-      star.y = verticalWobble;
-      star.z = pos.z;
+      if (chaos > 0.005) {
+        // Max tilt in radians (~30 degrees = 0.52 rad) - very dramatic!
+        const maxTilt = 0.52 * (chaos / 0.6);  // Scale with chaos (0.6 is max chaos)
+
+        // Multiple frequencies for organic, unstable feel
+        // Slower base frequencies so the tilt is visible, faster harmonics for jitter
+        tiltX = Math.sin(time * 0.8) * maxTilt
+              + Math.sin(time * 2.1) * maxTilt * 0.5
+              + Math.sin(time * 4.5) * maxTilt * 0.15;  // High freq jitter
+        tiltZ = Math.cos(time * 0.6) * maxTilt * 0.8
+              + Math.sin(time * 1.9) * maxTilt * 0.4
+              + Math.cos(time * 5.2) * maxTilt * 0.1;   // High freq jitter
+      }
+
+      // Apply orbital plane tilt rotation
+      // Rotate around X-axis: affects Y and Z
+      const cosX = Math.cos(tiltX);
+      const sinX = Math.sin(tiltX);
+      let newY = -pos.z * sinX;
+      let newZ = pos.z * cosX;
+
+      // Rotate around Z-axis: affects X and Y
+      const cosZ = Math.cos(tiltZ);
+      const sinZ = Math.sin(tiltZ);
+      const finalX = pos.x * cosZ - newY * sinZ;
+      const finalY = pos.x * sinZ + newY * cosZ;
+
+      star.x = finalX;
+      star.y = finalY;
+      star.z = newZ;
 
       // Emit particles throughout disrupt phase (more than stretch)
       if (this.scene.stream && star.mass > 0) {
@@ -647,6 +742,12 @@ export class TDEDemo extends Game {
 
         // Trigger accrete state when star mass is depleted
         if (star.mass <= 0) {
+          // If camera was following the star, switch back to default view
+          if (this.camera.isFollowing()) {
+            this.camera.unfollow(true);
+            if (this.starViewButton) this.starViewButton.text = "★ Star View";
+            this.camera.autoRotate = true;
+          }
           this.fsm.trigger("starConsumed");
         }
       }

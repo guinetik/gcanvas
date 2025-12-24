@@ -13,8 +13,8 @@ import { applyGravitationalLensing } from "../../../src/math/gr.js";
 // Stream-specific config
 const STREAM_CONFIG = {
     gravity: 120000,        // Strong gravity (linear falloff G/r)
-    maxParticles: 5000,
-    particleLifetime: 12,   // Seconds - long lifetime so particles can orbit the BH
+    maxParticles: 6000,
+    particleLifetime: 20,   // Seconds - long lifetime so particles can orbit the BH
 
     // Velocity inheritance - how much of star's velocity particles get
     // Lower = particles emit more "from" the star, not ahead of it
@@ -259,6 +259,12 @@ export class TidalStream extends GameObject {
         // Build render list with projection
         const renderList = [];
 
+        // Project black hole position once for all particles
+        // This is crucial when camera has moved (e.g., following the star)
+        const bhProjected = this.camera.project(0, 0, 0);
+        const bhScreenX = bhProjected.x;
+        const bhScreenY = bhProjected.y;
+
         // Young particles stay invisible (appear to emerge from star)
         const fadeInTime = 0.05;  // seconds before particles become visible
         const fadeInDuration = 0.1;  // seconds to fade from invisible to full opacity
@@ -299,24 +305,34 @@ export class TidalStream extends GameObject {
             let screenY = projected.y;
 
             if (STREAM_CONFIG.lensing.enabled && this.bhRadius > 0) {
+                // Calculate particle position RELATIVE to black hole's screen position
+                const relX = screenX - bhScreenX;
+                const relY = screenY - bhScreenY;
+
                 const effectRadius = this.bhRadius * STREAM_CONFIG.lensing.effectRadiusMult;
                 const strength = this.bhRadius * STREAM_CONFIG.lensing.strengthMult;
                 const minDist = this.bhRadius * STREAM_CONFIG.lensing.minDistanceMult;
 
+                // Apply lensing in BH-relative space (lensing curves toward origin)
                 const lensed = applyGravitationalLensing(
-                    screenX, screenY,
+                    relX, relY,
                     effectRadius,
                     strength,
                     STREAM_CONFIG.lensing.falloff,
                     minDist
                 );
-                screenX = lensed.x;
-                screenY = lensed.y;
+
+                // Transform back to screen space
+                screenX = lensed.x + bhScreenX;
+                screenY = lensed.y + bhScreenY;
             }
 
             // Check if particle is visually inside the black hole
-            const screenDist = Math.sqrt(screenX * screenX + screenY * screenY);
-            const insideBH = screenDist < this.bhRadius;
+            // Use pre-calculated BH screen position
+            const dxBH = screenX - bhScreenX;
+            const dyBH = screenY - bhScreenY;
+            const screenDistFromBH = Math.sqrt(dxBH * dxBH + dyBH * dyBH);
+            const insideBH = screenDistFromBH < this.bhRadius;
 
             // Screen position = center + lensed offset
             renderList.push({

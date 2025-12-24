@@ -45,7 +45,7 @@ export const CONFIG = {
         startAngle: Math.PI * 1.85,  // Start lower-right, comes FROM right, swings up and around
     },
     sceneOptions: {
-        starCount: 3000,
+        starCount: 5000,
     },
 
     // Accretion disk settings

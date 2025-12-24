@@ -17,9 +17,9 @@ const DISK_CONFIG = {
     outerRadiusMultiplier: 9.0,    // Wide disk with margin from screen edges
 
     // Particle properties
-    maxParticles: 5000,
-    particleLifetime: 500,
-    spawnRate: 150,
+    maxParticles: 6000,
+    particleLifetime: 1000,
+    spawnRate: 500,
 
     // Orbital physics
     baseOrbitalSpeed: 0.8,
@@ -41,7 +41,7 @@ const DISK_CONFIG = {
     colorCool: { r: 180, g: 40, b: 40 },    // Outer (deep red)
 
     sizeMin: 1,
-    sizeMax: 2.5,
+    sizeMax: 2,
 };
 
 export class AccretionDisk extends GameObject {
@@ -291,18 +291,34 @@ export class AccretionDisk extends GameObject {
                 const lensFactor = Math.exp(-currentR / (this.bhRadius * DISK_CONFIG.lensingFalloff));
                 const warp = lensFactor * 1.2 * lensingStrength;
 
-                // === RADIAL PUSH: Always applies - curves particles around BH silhouette ===
+                // Determine upper/lower half for asymmetric effects
+                const angleRelativeToCamera = p.angle + this.camera.rotationY;
+                const isUpperHalf = Math.sin(angleRelativeToCamera) > 0;
+
+                // === RADIAL PUSH: Curves particles around BH silhouette ===
+                // Bottom ring should have TIGHTER radius (less expansion) at edge-on views
+                // But stay symmetric at top-down views
                 if (currentR > 0) {
-                    const ratio = (currentR + ringRadius * warp) / currentR;
+                    let radialWarp = warp;
+
+                    // Edge-on factor: 1 at edge-on, 0 at top-down
+                    const edgeOnFactor = 1 - cameraTilt;
+
+                    // Reduce radial expansion for bottom half, but only at edge-on angles
+                    // This creates the tighter bottom ring radius seen in Interstellar
+                    if (!isUpperHalf && isBehind) {
+                        // At edge-on: bottom gets 40% of radial push (tight ring)
+                        // At top-down: bottom gets 100% (symmetric circle)
+                        radialWarp *= 1.0 - edgeOnFactor * 0.6;
+                    }
+
+                    const ratio = (currentR + ringRadius * radialWarp) / currentR;
                     xCam *= ratio;
                     yCam *= ratio;
                 }
 
                 // === VERTICAL CURVES: Only when camera is tilted ===
-                if (cameraTilt > 0.08) {
-                    const angleRelativeToCamera = p.angle + this.camera.rotationY;
-                    const isUpperHalf = Math.sin(angleRelativeToCamera) > 0;
-
+                if (cameraTilt > 0.05) {
                     // Arc shape - smooth curve
                     const arcWidth = this.bhRadius * 5.0;
                     const normalizedX = xCam / arcWidth;
@@ -322,11 +338,12 @@ export class AccretionDisk extends GameObject {
                         if (isUpperHalf) {
                             yCam -= ringHeight * arcCurve;
                         } else {
-                            yCam += ringHeight * arcCurve;
+                            // Bottom ring: less vertical displacement too
+                            yCam += ringHeight * arcCurve * 0.5;
                         }
                     } else {
-                        // Front particles: curve DOWN to form middle ring
-                        yCam += ringHeight * arcCurve * 0.7;
+                        // Front particles: curve DOWN slightly
+                        yCam += ringHeight * arcCurve * 0.4;
                     }
                 }
             }
