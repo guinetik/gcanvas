@@ -713,21 +713,56 @@ export class PatternRectangle extends Rectangle {
 
 /** Options for ImageShape */
 export interface ImageShapeOptions extends ShapeOptions {
-  /** Image source URL */
-  src?: string;
-  /** Image element */
-  image?: HTMLImageElement;
+  /** Anchor point for positioning (e.g., "center", "top-left") */
+  anchor?: string;
+  /** Enable image smoothing (default: true) */
+  smoothing?: boolean;
 }
 
+/** Type for bitmap sources that ImageShape accepts */
+export type BitmapSource = HTMLImageElement | HTMLCanvasElement | ImageBitmap | HTMLVideoElement | ImageData;
+
 /**
- * Image shape.
+ * Image shape for rendering arbitrary pixel buffers.
+ * Supports HTMLImageElement, HTMLCanvasElement, ImageBitmap, HTMLVideoElement, and ImageData.
+ *
+ * @example
+ * const data = Painter.img.getImageData(0, 0, 320, 200);
+ * const shape = new ImageShape(data, { x: 100, y: 50, anchor: "center" });
+ * scene.add(shape);
  */
 export class ImageShape extends Shape {
-  constructor(options?: ImageShapeOptions);
+  /**
+   * Create an ImageShape.
+   * @param bitmap - Image source (HTMLImageElement, HTMLCanvasElement, ImageBitmap, HTMLVideoElement, or ImageData)
+   * @param options - Shape options including anchor and smoothing
+   */
+  constructor(bitmap: BitmapSource | null, options?: ImageShapeOptions);
 
-  /** The image element */
-  get image(): HTMLImageElement | null;
-  set image(v: HTMLImageElement | null);
+  /** The internal bitmap */
+  get bitmap(): BitmapSource | null;
+  set bitmap(v: BitmapSource | null);
+
+  /** Anchor position (e.g., "center", "top-left") */
+  anchor: string;
+
+  /** Whether image smoothing is enabled */
+  smoothing: boolean;
+
+  /**
+   * Update the canvas buffer for ImageData sources.
+   * @param bitmap - ImageData to buffer
+   */
+  buffer(bitmap: ImageData): void;
+
+  /** Reset the image to an empty state */
+  reset(): void;
+
+  /**
+   * Set the anchor point.
+   * @param anchor - Anchor position string
+   */
+  setAnchor(anchor: string): void;
 }
 
 // ==========================================================================

@@ -109,3 +109,4 @@ export { Hexagon } from "./hexagon.js";
 export { Heart } from "./heart.js";
 export { Cross } from "./cross.js";
 export * from "./text.js";
+export { ImageShape } from "./image.js";
