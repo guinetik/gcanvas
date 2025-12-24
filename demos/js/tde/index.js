@@ -34,7 +34,7 @@ export class TDEDemo extends Game {
     this.updateScaledSizes();
 
     this.camera = new Camera3D({
-      rotationX: 0.3,
+      rotationX: 1.5,
       rotationY: 0,
       rotationZ: 0,
       perspective: this.baseScale * 1.8, // Zoomed out for wider view
@@ -81,8 +81,7 @@ export class TDEDemo extends Game {
     });
     applyAnchor(this.infoLabel, {
       anchor: Position.BOTTOM_LEFT,
-      anchorOffsetX: -60,
-      anchorMargin: 20,
+      anchorOffsetX: -70,
     });
     this.infoLabel.zIndex = 100;
     this.pipeline.add(this.infoLabel);
@@ -115,14 +114,21 @@ export class TDEDemo extends Game {
     // FPS Counter (bottom right)
     this.fpsCounter = new FPSCounter(this, {
       font: "12px monospace",
-      color: "#666",
-    });
-    applyAnchor(this.fpsCounter, {
       anchor: Position.BOTTOM_RIGHT,
-      anchorMargin: 20,
+      anchorMargin: 0,
+      color: "#00FF00",
     });
     this.fpsCounter.zIndex = 100;
     this.pipeline.add(this.fpsCounter);
+
+    // Camera Rotation Text (bottom right)
+    this.cameraRotationText = new Text(this, `Camera Rotation: X:${this.camera.rotationX.toFixed(2)} Y:${this.camera.rotationY.toFixed(2)} Z:${this.camera.rotationZ.toFixed(2)}`, {
+      font: "12px monospace",
+      anchor: Position.BOTTOM_CENTER,
+      color: "#ACACAC",
+    });
+    this.cameraRotationText.zIndex = 100;
+    this.pipeline.add(this.cameraRotationText);
 
     this.initStateMachine();
 
@@ -396,6 +402,8 @@ export class TDEDemo extends Game {
     Tweenetik.updateAll(dt);
     if (!this.fsm) return;
     this.fsm.update(dt);
+
+    this.cameraRotationText.text = `Camera Rotation: X:${this.camera.rotationX.toFixed(2)} Y:${this.camera.rotationY.toFixed(2)}`;
 
     const state = this.fsm.state;
     const progress = this.fsm.progress;

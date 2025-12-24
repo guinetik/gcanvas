@@ -44,10 +44,10 @@ export class BlackHoleScene extends Scene3D {
         this.Z = {
             starBack: 10,    // Star when behind BH
             blackHole: 15,   // BlackHole: dark shadow at back
-            disk: 20,        // AccretionDisk: over the black hole
+            disk: 1,        // AccretionDisk: over the black hole
             starFront: 25,   // Star when in front of BH
             stream: 30,      // TidalStream: always on top of star and BH
-            jets: 40,        // Jets: always on top
+            jets: 1,        // Jets: always on top
         };
     }
 

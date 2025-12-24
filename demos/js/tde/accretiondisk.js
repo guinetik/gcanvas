@@ -17,9 +17,9 @@ const DISK_CONFIG = {
     outerRadiusMultiplier: 9.0,    // Wide disk with margin from screen edges
 
     // Particle properties
-    maxParticles: 4000,
-    particleLifetime: 80,
-    spawnRate: 50,
+    maxParticles: 5000,
+    particleLifetime: 500,
+    spawnRate: 150,
 
     // Orbital physics
     baseOrbitalSpeed: 0.8,
@@ -278,20 +278,56 @@ export class AccretionDisk extends GameObject {
             let yCam = y * cosX - zCam * sinX;
             zCam = y * sinX + zCam * cosX;
 
-            // === GRAVITATIONAL LENSING (from blackhole.js) ===
-            // Only affects particles behind the BH (zCam > 0)
-            if (lensingStrength > 0 && zCam > 0) {
-                const currentR = Math.sqrt(xCam * xCam + yCam * yCam);
+            // === GRAVITATIONAL LENSING ===
+            // Creates the Interstellar effect: disk curves around BH
+
+            // Camera tilt: 0 when edge-on, 1 when top-down
+            const cameraTilt = Math.abs(Math.sin(this.camera.rotationX));
+            const isBehind = zCam > 0;
+            const currentR = Math.sqrt(xCam * xCam + yCam * yCam);
+
+            if (lensingStrength > 0 && currentR < this.bhRadius * 6) {
                 const ringRadius = this.bhRadius * DISK_CONFIG.ringRadiusFactor;
                 const lensFactor = Math.exp(-currentR / (this.bhRadius * DISK_CONFIG.lensingFalloff));
                 const warp = lensFactor * 1.2 * lensingStrength;
 
+                // === RADIAL PUSH: Always applies - curves particles around BH silhouette ===
                 if (currentR > 0) {
                     const ratio = (currentR + ringRadius * warp) / currentR;
                     xCam *= ratio;
                     yCam *= ratio;
-                } else {
-                    yCam = ringRadius * lensingStrength;
+                }
+
+                // === VERTICAL CURVES: Only when camera is tilted ===
+                if (cameraTilt > 0.08) {
+                    const angleRelativeToCamera = p.angle + this.camera.rotationY;
+                    const isUpperHalf = Math.sin(angleRelativeToCamera) > 0;
+
+                    // Arc shape - smooth curve
+                    const arcWidth = this.bhRadius * 5.0;
+                    const normalizedX = xCam / arcWidth;
+                    const arcCurve = Math.max(0, Math.cos(normalizedX * Math.PI * 0.5));
+
+                    // Depth factor - different for front vs back
+                    const depthFactor = isBehind
+                        ? Math.min(1.0, zCam / (this.bhRadius * 3))
+                        : Math.min(1.0, Math.abs(zCam) / (this.bhRadius * 3));
+
+                    // Ring height - scales with tilt
+                    const ringHeight = this.bhRadius * 2.0 * lensFactor * depthFactor * cameraTilt * lensingStrength;
+
+                    // Apply vertical displacement
+                    if (isBehind) {
+                        // Back particles: upper half UP, lower half DOWN
+                        if (isUpperHalf) {
+                            yCam -= ringHeight * arcCurve;
+                        } else {
+                            yCam += ringHeight * arcCurve;
+                        }
+                    } else {
+                        // Front particles: curve DOWN to form middle ring
+                        yCam += ringHeight * arcCurve * 0.7;
+                    }
                 }
             }
 
