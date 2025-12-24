@@ -676,3 +676,274 @@ export class Motion {
     state?: MotionState | null
   ): MotionResult;
 }
+
+// ==========================================================================
+// Standalone Motion Functions (V1 API)
+// ==========================================================================
+
+/**
+ * Standalone bezier curve motion animation.
+ * @see Motion.bezier for class method equivalent
+ */
+export function bezierV1(
+  p0: [number, number],
+  p1: [number, number],
+  p2: [number, number],
+  p3: [number, number],
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  yoyo?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionPositionResult;
+
+/**
+ * Standalone bounce animation.
+ * @see Motion.bounce for class method equivalent
+ */
+export function bounceV1(
+  maxHeight: number,
+  groundY: number,
+  bounceCount: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionValueResult;
+
+/**
+ * Standalone floating motion animation.
+ * @see Motion.float for class method equivalent
+ */
+export function floatV1(
+  target: PositionTarget,
+  elapsedTime: number,
+  duration: number,
+  speed: number,
+  randomness: number,
+  radius: number,
+  loop?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionPositionResult;
+
+/**
+ * Standalone path following animation.
+ * @see Motion.follow for class method equivalent
+ */
+export function followPath(
+  points: [number, number][],
+  closed: boolean,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionPositionResult;
+
+/**
+ * Standalone orbital motion animation.
+ * @see Motion.orbit for class method equivalent
+ */
+export function orbitV1(
+  centerX: number,
+  centerY: number,
+  radiusX: number,
+  radiusY: number,
+  startAngle: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  clockwise?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionPositionResult;
+
+/**
+ * Standalone oscillation animation.
+ * @see Motion.oscillate for class method equivalent
+ */
+export function oscillateV1(
+  min: number,
+  max: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionValueResult;
+
+/**
+ * Standalone parabolic arc animation.
+ * @see Motion.parabolic for class method equivalent
+ */
+export function parabolicV1(
+  start: number,
+  peak: number,
+  end: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  yoyo?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionValueResult;
+
+/**
+ * Standalone patrol animation.
+ * @see Motion.patrol for class method equivalent
+ */
+export function patrolV1(
+  initialX: number,
+  initialY: number,
+  elapsedTime: number,
+  moveTime: number,
+  waitTime: number,
+  radius: number,
+  loop?: boolean,
+  state?: MotionState | null
+): MotionPositionResult;
+
+/**
+ * Standalone pendulum animation.
+ * @see Motion.pendulum for class method equivalent
+ */
+export function pendulumV1(
+  originAngle: number,
+  amplitude: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  damped?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionValueResult;
+
+/**
+ * Standalone pulse animation.
+ * @see Motion.pulse for class method equivalent
+ */
+export function pulseV1(
+  min: number,
+  max: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  yoyo?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks
+): MotionValueResult;
+
+/**
+ * Standalone hop/jump animation.
+ * @see Motion.hop for class method equivalent
+ */
+export function hopV1(
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  height: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionPositionResult;
+
+/**
+ * Standalone shake animation.
+ * @see Motion.shake for class method equivalent
+ */
+export function shakeV1(
+  centerX: number,
+  centerY: number,
+  maxOffsetX: number,
+  maxOffsetY: number,
+  frequency: number,
+  decay: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionPositionResult;
+
+/**
+ * Standalone spiral animation.
+ * @see Motion.spiral for class method equivalent
+ */
+export function spiralV1(
+  centerX: number,
+  centerY: number,
+  startRadius: number,
+  endRadius: number,
+  startAngle: number,
+  revolutions: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  yoyo?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionPositionResult;
+
+/**
+ * Standalone spring animation.
+ * @see Motion.spring for class method equivalent
+ */
+export function springV1(
+  initial: number,
+  target: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  yoyo?: boolean,
+  springParams?: SpringParams,
+  callbacks?: MotionCallbacks
+): SpringResult;
+
+/**
+ * Standalone swing animation.
+ * @see Motion.swing for class method equivalent
+ */
+export function swingV1(
+  centerX: number,
+  centerY: number,
+  maxAngle: number,
+  elapsedTime: number,
+  duration: number,
+  loop?: boolean,
+  yoyo?: boolean,
+  easingFn?: EasingFunction | null,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): MotionPositionResult;
+
+/**
+ * Standalone waypoint animation.
+ * @see Motion.waypoint for class method equivalent
+ */
+export function waypointV1(
+  target: PositionTarget,
+  elapsedTime: number,
+  waypoints: [number, number][],
+  speed: number,
+  waitTime: number,
+  loop?: boolean,
+  callbacks?: MotionCallbacks,
+  state?: MotionState | null
+): WaypointResult;
