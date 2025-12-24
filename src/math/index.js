@@ -3,3 +3,4 @@ export {Complex} from "./complex.js";
 export {Fractals} from "./fractal.js";
 export {Patterns} from "./patterns.js";
 export {Noise} from "./noise.js";
+export {generatePenroseTilingPixels} from "./penrose.js";

@@ -100,6 +100,7 @@ export {
   PatternRectangleOptions,
   ImageShape,
   ImageShapeOptions,
+  BitmapSource,
 
   // 2.5D shapes
   Cube,
@@ -188,7 +189,25 @@ export {
   TweenetikOptions,
   Motion,
   SpringParams,
-  PositionTarget
+  PositionTarget,
+
+  // Standalone motion functions (V1 API)
+  bezierV1,
+  bounceV1,
+  floatV1,
+  followPath,
+  orbitV1,
+  oscillateV1,
+  parabolicV1,
+  patrolV1,
+  pendulumV1,
+  pulseV1,
+  hopV1,
+  shakeV1,
+  spiralV1,
+  springV1,
+  swingV1,
+  waypointV1
 } from './motion';
 
 // ==========================================================================
