@@ -5,6 +5,7 @@
  * This module exports a collection of pre-built GameObject classes that provide
  * specific functionality commonly needed in games:
  * - {@link Scene}: A container for organizing hierarchies of GameObjects
+ * - {@link Sprite}: A MovieClip-style GameObject with frame-by-frame timeline animation
  * - {@link Text}: A GameObject for rendering text with various styling options
  *
  * All classes in this module extend the core {@link GameObject} class and inherit
@@ -48,5 +49,6 @@ export { GameObjectShapeWrapper, ShapeGOFactory } from "./wrapper.js";
 export { Scene } from "./scene.js";
 export * from "./layoutscene.js";
 // Specialized GameObjects
+export { Sprite } from "./sprite.js";
 export { Text } from "./text.js";
 export { ImageGo } from "./imagego.js";
