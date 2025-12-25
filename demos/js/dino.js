@@ -12,11 +12,12 @@ import {
   Position,
   Group,
   Synth,
+  Sprite,
 } from "../../src/index.js";
 
 // ==================== Configuration ====================
 const CONFIG = {
-  // Theme - Vercel meets Terminal
+  // Theme - Vercel meets Terminal (default)
   theme: {
     background: "#000000",
     primary: "#00ff00",      // Terminal green
@@ -30,6 +31,27 @@ const CONFIG = {
     dino: "#00ff00",
   },
 
+  // Theme - 80s Outrun (unlocks at 1000 points)
+  outrunTheme: {
+    background: "#1a1a2e",    // Deep purple-blue
+    primary: "#ff6b9d",       // Hot pink
+    secondary: "#c44569",
+    accent: "#f8b500",        // Orange/gold
+    text: "#ffffff",
+    textDim: "#9d65c9",       // Purple
+    ground: "#16213e",
+    groundLine: "#ff6b9d",
+    obstacle: "#f8b500",      // Orange palm trees
+    dino: "#00d9ff",          // Cyan dino
+    sun: "#ff6b9d",           // Sun gradient colors
+    sunGlow: "#f8b500",
+  },
+
+  // Level transition thresholds
+  outrunStartScore: 2000,     // Enter outrun at 2k
+  outrunDuration: 1000,       // Stay in outrun for 1k points
+  levelCycle: 3000,           // Full cycle length (2k + 1k)
+
   // Game settings
   gravity: 2800,
   jumpVelocity: -750,
@@ -40,7 +62,7 @@ const CONFIG = {
   // Ground - centered layout
   groundHeight: 2,
 
-  // Obstacles (Cacti)
+  // Obstacles (Cacti / Palm Trees)
   cactusWidth: 15,
   cactusMinHeight: 30,
   cactusMaxHeight: 50,
@@ -164,29 +186,71 @@ class SFX {
       volume: 0.2,
     });
   }
+
+  /**
+   * Theme transition sound - Synth flourish
+   */
+  static themeTransition(toOutrun = true) {
+    if (!this.initialized) return;
+
+    const now = Synth.now;
+
+    if (toOutrun) {
+      // Ascending arpeggio for entering outrun mode
+      const notes = [330, 440, 550, 660, 880];
+      notes.forEach((freq, i) => {
+        Synth.osc.tone(freq, 0.15, {
+          type: "sawtooth",
+          volume: 0.2,
+          attack: 0.01,
+          decay: 0.03,
+          sustain: 0.7,
+          release: 0.1,
+          startTime: now + i * 0.08,
+        });
+      });
+    } else {
+      // Descending for returning to normal
+      const notes = [660, 550, 440, 330];
+      notes.forEach((freq, i) => {
+        Synth.osc.tone(freq, 0.12, {
+          type: "square",
+          volume: 0.15,
+          attack: 0.01,
+          decay: 0.02,
+          sustain: 0.6,
+          release: 0.08,
+          startTime: now + i * 0.06,
+        });
+      });
+    }
+  }
 }
 
-// ==================== Dino Shape (T-Rex silhouette) ====================
+// ==================== Dino Shape Factory ====================
 /**
- * Creates a pixelated T-Rex dinosaur shape using rectangles
- * Inspired by Chrome's dino but rendered with terminal aesthetic
+ * Creates pixelated T-Rex dinosaur frames using rectangles
+ * Supports different leg positions for walking animation
  */
-class DinoShape {
-  constructor(options = {}) {
-    this.color = options.color || CONFIG.theme.dino;
-    this.scale = options.scale || 1;
-    this.group = new Group({});
-    this.buildDino();
-  }
+class DinoShapeFactory {
+  /**
+   * Creates a dino frame with specified leg position
+   * @param {Object} options
+   * @param {string} [options.color] - Dino color
+   * @param {number} [options.scale] - Scale factor
+   * @param {string} [options.legPose] - 'stand' | 'left' | 'right'
+   * @returns {Group} A Group containing the dino shape
+   */
+  static createFrame(options = {}) {
+    const color = options.color || CONFIG.theme.dino;
+    const scale = options.scale || 1;
+    const legPose = options.legPose || 'stand';
+    const px = 3 * scale;
 
-  buildDino() {
-    const s = this.scale;
-    const c = this.color;
-    const px = 3 * s; // pixel size
+    const group = new Group({});
 
-    // Build the dino pixel by pixel (simplified T-Rex silhouette)
-    // Each rectangle represents a "pixel" in the sprite
-    const pixels = [
+    // Body pixels (shared across all frames) - tail handled separately
+    const bodyPixels = [
       // Head (top)
       { x: 6, y: 0, w: 7, h: 1 },
       { x: 5, y: 1, w: 9, h: 1 },
@@ -203,73 +267,235 @@ class DinoShape {
       { x: 1, y: 8, w: 5, h: 1 },
       // Body
       { x: 0, y: 9, w: 6, h: 1 },
-      { x: 0, y: 10, w: 8, h: 1 },
-      { x: 0, y: 11, w: 9, h: 1 },
-      // Arms
-      { x: 5, y: 9, w: 3, h: 1 },
-      { x: 6, y: 10, w: 3, h: 1 },
-      // Tail & body
-      { x: -3, y: 10, w: 3, h: 1 },
-      { x: -4, y: 11, w: 4, h: 1 },
-      { x: -5, y: 12, w: 5, h: 1 },
-      { x: -5, y: 13, w: 6, h: 1 },
-      // Lower body
-      { x: 0, y: 12, w: 7, h: 1 },
+      { x: 0, y: 10, w: 6, h: 1 },
+      { x: 0, y: 11, w: 6, h: 1 },
+      // Tiny T-Rex arms (high on chest, classic style)
+      { x: 5, y: 7, w: 2, h: 1 },  // Upper arm
+      { x: 6, y: 8, w: 2, h: 1 },  // Forearm
+      // Lower body (connects to legs)
+      { x: 0, y: 12, w: 6, h: 1 },
       { x: 0, y: 13, w: 6, h: 1 },
-      // Legs
-      { x: 0, y: 14, w: 2, h: 1 },
-      { x: 4, y: 14, w: 2, h: 1 },
-      { x: 0, y: 15, w: 2, h: 1 },
-      { x: 4, y: 15, w: 2, h: 1 },
-      // Feet
-      { x: -1, y: 16, w: 3, h: 1 },
-      { x: 3, y: 16, w: 3, h: 1 },
     ];
+
+    // Tail pixels based on pose
+    let tailPixels = [];
+    if (legPose === 'jump') {
+      // Tail up during jump
+      tailPixels = [
+        { x: -3, y: 9, w: 3, h: 1 },
+        { x: -4, y: 8, w: 4, h: 1 },
+        { x: -5, y: 7, w: 4, h: 1 },
+        { x: -6, y: 6, w: 3, h: 1 },
+      ];
+    } else {
+      // Normal tail position
+      tailPixels = [
+        { x: -3, y: 10, w: 3, h: 1 },
+        { x: -4, y: 11, w: 4, h: 1 },
+        { x: -5, y: 12, w: 5, h: 1 },
+        { x: -5, y: 13, w: 6, h: 1 },
+      ];
+    }
+
+    // Leg pixels based on pose
+    let legPixels = [];
+
+    switch (legPose) {
+      case 'left':
+        // Left leg forward, right leg back
+        legPixels = [
+          // Left leg (forward, extended)
+          { x: 0, y: 14, w: 2, h: 1 },
+          { x: -1, y: 15, w: 2, h: 1 },
+          { x: -2, y: 16, w: 3, h: 1 },
+          // Right leg (back, lifted)
+          { x: 4, y: 14, w: 2, h: 1 },
+          { x: 5, y: 15, w: 2, h: 1 },
+        ];
+        break;
+
+      case 'right':
+        // Right leg forward, left leg back
+        legPixels = [
+          // Left leg (back, lifted)
+          { x: 0, y: 14, w: 2, h: 1 },
+          { x: -1, y: 15, w: 2, h: 1 },
+          // Right leg (forward, extended)
+          { x: 4, y: 14, w: 2, h: 1 },
+          { x: 5, y: 15, w: 2, h: 1 },
+          { x: 6, y: 16, w: 3, h: 1 },
+        ];
+        break;
+
+      case 'jump':
+        // Legs tucked together during jump
+        legPixels = [
+          { x: 1, y: 14, w: 4, h: 1 },
+          { x: 2, y: 15, w: 3, h: 1 },
+          { x: 3, y: 16, w: 2, h: 1 },
+        ];
+        break;
+
+      case 'stand':
+      default:
+        // Both legs down (standing/idle)
+        legPixels = [
+          { x: 0, y: 14, w: 2, h: 1 },
+          { x: 4, y: 14, w: 2, h: 1 },
+          { x: 0, y: 15, w: 2, h: 1 },
+          { x: 4, y: 15, w: 2, h: 1 },
+          { x: -1, y: 16, w: 3, h: 1 },
+          { x: 3, y: 16, w: 3, h: 1 },
+        ];
+        break;
+    }
+
+    const allPixels = [...bodyPixels, ...tailPixels, ...legPixels];
 
     // Center offset
     const offsetX = -3 * px;
     const offsetY = -8 * px;
 
-    pixels.forEach(p => {
+    allPixels.forEach(p => {
       const rect = new Rectangle({
         x: p.x * px + offsetX + (p.w * px) / 2,
         y: p.y * px + offsetY + (p.h * px) / 2,
         width: p.w * px,
         height: p.h * px,
-        color: c,
+        color: color,
       });
-      this.group.add(rect);
+      group.add(rect);
     });
+
+    return group;
   }
 
-  render() {
-    this.group.render();
+  /**
+   * Creates all walking animation frames
+   * @param {Object} options
+   * @returns {Group[]} Array of frame groups
+   */
+  static createWalkFrames(options = {}) {
+    return [
+      this.createFrame({ ...options, legPose: 'left' }),
+      this.createFrame({ ...options, legPose: 'stand' }),
+      this.createFrame({ ...options, legPose: 'right' }),
+      this.createFrame({ ...options, legPose: 'stand' }),
+    ];
+  }
+
+  /**
+   * Creates the idle frame
+   * @param {Object} options
+   * @returns {Group}
+   */
+  static createIdleFrame(options = {}) {
+    return this.createFrame({ ...options, legPose: 'stand' });
+  }
+
+  /**
+   * Creates the jump frame with tucked legs and raised tail
+   * @param {Object} options
+   * @returns {Group}
+   */
+  static createJumpFrame(options = {}) {
+    return this.createFrame({ ...options, legPose: 'jump' });
   }
 }
 
 // ==================== Dino (Player) ====================
 /**
- * Dino - The player character with pixel art T-Rex
+ * Dino - The player character as an animated Sprite
  */
-class Dino extends GameObject {
+class Dino extends Sprite {
   constructor(game, options = {}) {
-    super(game, options);
+    super(game, {
+      ...options,
+      frameRate: 10,
+      loop: true,
+    });
+
     this.width = 50;
     this.height = 55;
     this.vx = 0;
     this.vy = 0;
     this._grounded = true;
+    this._isRunning = false; // Track if game has started
+    this._currentTheme = CONFIG.theme;
+    this._targetRotation = 0;
+    this._rotationSpeed = 8; // How fast to lerp rotation
 
-    // Visual representation - pixel art dino
-    this.dinoShape = new DinoShape({
-      color: CONFIG.theme.dino,
+    this.buildAnimations(CONFIG.theme);
+
+    // Start with idle animation (legs don't move before game starts)
+    this.stopAnimation('idle');
+  }
+
+  buildAnimations(theme) {
+    // Clear existing animations
+    this._animations.clear();
+
+    const frameOptions = {
+      color: theme.dino,
       scale: CONFIG.dinoScale,
+    };
+
+    // Add animations
+    this.addAnimation('walk', DinoShapeFactory.createWalkFrames(frameOptions), {
+      frameRate: 12,
+    });
+    this.addAnimation('idle', [DinoShapeFactory.createIdleFrame(frameOptions)], {
+      loop: false,
+    });
+    this.addAnimation('jump', [DinoShapeFactory.createJumpFrame(frameOptions)], {
+      loop: false,
     });
   }
 
-  draw() {
-    super.draw();
-    this.dinoShape.render();
+  setTheme(theme) {
+    if (this._currentTheme === theme) return;
+    this._currentTheme = theme;
+    const currentAnim = this.currentAnimationName;
+    this.buildAnimations(theme);
+    if (currentAnim) {
+      this.playAnimation(currentAnim);
+    }
+  }
+
+  startRunning() {
+    this._isRunning = true;
+    this.playAnimation('walk');
+  }
+
+  stopRunning() {
+    this._isRunning = false;
+    this.stopAnimation('idle');
+  }
+
+  update(dt) {
+    super.update(dt);
+
+    // Don't animate if game hasn't started
+    if (!this._isRunning) return;
+
+    // Switch animations based on state
+    if (!this._grounded) {
+      if (this.currentAnimationName !== 'jump') {
+        this.playAnimation('jump');
+      }
+      // Target tilt when jumping (upward)
+      this._targetRotation = -0.3;
+    } else {
+      if (this.currentAnimationName !== 'walk') {
+        this.playAnimation('walk');
+      }
+      // Reset rotation when grounded
+      this._targetRotation = 0;
+    }
+
+    // Smoothly animate rotation towards target
+    const rotationDiff = this._targetRotation - this.rotation;
+    this.rotation += rotationDiff * this._rotationSpeed * dt;
   }
 
   getBounds() {
@@ -284,23 +510,35 @@ class Dino extends GameObject {
   }
 }
 
-// ==================== Cactus (Obstacle) ====================
+// ==================== Obstacle (Cactus / Palm Tree) ====================
 /**
- * Cactus - A pixel-art style obstacle
+ * Obstacle - A pixel-art style obstacle (cactus or palm tree)
  */
-class Cactus extends GameObject {
+class Obstacle extends GameObject {
   constructor(game, options = {}) {
     super(game, options);
     this.width = CONFIG.cactusWidth;
     this.height = options.height || CONFIG.cactusMinHeight +
       Math.random() * (CONFIG.cactusMaxHeight - CONFIG.cactusMinHeight);
+    this.isPalmTree = options.isPalmTree || false;
+    this.theme = options.theme || CONFIG.theme;
 
     this.group = new Group({});
-    this.buildCactus();
+    this.build();
+  }
+
+  build() {
+    this.group.clear();
+
+    if (this.isPalmTree) {
+      this.buildPalmTree();
+    } else {
+      this.buildCactus();
+    }
   }
 
   buildCactus() {
-    const c = CONFIG.theme.obstacle;
+    const c = this.theme.obstacle;
     const w = this.width;
     const h = this.height;
 
@@ -350,12 +588,96 @@ class Cactus extends GameObject {
     }
   }
 
+  buildPalmTree() {
+    const trunkColor = "#8B4513"; // Brown trunk
+    const leafColor = this.theme.obstacle; // Orange/gold leaves
+    const w = this.width;
+    const h = this.height * 1.5; // Palm trees are taller
+
+    // Trunk (slightly curved look with segments)
+    const trunkWidth = w * 0.4;
+    const segments = 4;
+    for (let i = 0; i < segments; i++) {
+      const segY = (i / segments) * h - h * 0.3;
+      const segH = h / segments + 2;
+      this.group.add(new Rectangle({
+        x: (i % 2 === 0 ? 1 : -1) * 1, // Slight wobble
+        y: segY,
+        width: trunkWidth,
+        height: segH,
+        color: trunkColor,
+      }));
+    }
+
+    // Palm fronds (leaves) - radiating from top
+    const leafLength = w * 2.5;
+    const leafWidth = w * 0.3;
+    const topY = -h * 0.5 - 5;
+
+    // Left fronds
+    this.group.add(new Rectangle({
+      x: -leafLength * 0.4,
+      y: topY - 5,
+      width: leafLength,
+      height: leafWidth,
+      color: leafColor,
+    }));
+    this.group.add(new Rectangle({
+      x: -leafLength * 0.3,
+      y: topY - 12,
+      width: leafLength * 0.8,
+      height: leafWidth,
+      color: leafColor,
+    }));
+
+    // Right fronds
+    this.group.add(new Rectangle({
+      x: leafLength * 0.4,
+      y: topY - 5,
+      width: leafLength,
+      height: leafWidth,
+      color: leafColor,
+    }));
+    this.group.add(new Rectangle({
+      x: leafLength * 0.3,
+      y: topY - 12,
+      width: leafLength * 0.8,
+      height: leafWidth,
+      color: leafColor,
+    }));
+
+    // Center/top fronds
+    this.group.add(new Rectangle({
+      x: 0,
+      y: topY - 18,
+      width: leafLength * 0.6,
+      height: leafWidth,
+      color: leafColor,
+    }));
+
+    // Coconuts (small circles near top)
+    const coconutColor = "#654321";
+    this.group.add(new Circle({
+      x: -3,
+      y: topY + 3,
+      radius: 4,
+      color: coconutColor,
+    }));
+    this.group.add(new Circle({
+      x: 4,
+      y: topY + 5,
+      radius: 4,
+      color: coconutColor,
+    }));
+  }
+
   draw() {
     super.draw();
     this.group.render();
   }
 
   getBounds() {
+    // Use consistent hitbox regardless of visual style
     return {
       x: this.x - this.width / 2,
       y: this.y - this.height / 2,
@@ -364,6 +686,9 @@ class Cactus extends GameObject {
     };
   }
 }
+
+// Alias for backwards compatibility
+const Cactus = Obstacle;
 
 // ==================== Ground ====================
 /**
@@ -374,12 +699,13 @@ class Ground extends GameObject {
     super(game, options);
     this.groundWidth = options.width || game.width * 3;
     this.scrollOffset = 0;
+    this._theme = CONFIG.theme;
 
     // Main ground line
     this.line = new Rectangle({
       width: this.groundWidth,
       height: CONFIG.groundHeight,
-      color: CONFIG.theme.groundLine,
+      color: this._theme.groundLine,
     });
 
     // Generate ground texture marks (will scroll)
@@ -424,6 +750,11 @@ class Ground extends GameObject {
     this.markCycleWidth = numMarks * markSpacing;
   }
 
+  setTheme(theme) {
+    this._theme = theme;
+    this.line.color = theme.groundLine;
+  }
+
   setScrollOffset(offset) {
     this.scrollOffset = offset % this.markCycleWidth;
   }
@@ -434,7 +765,7 @@ class Ground extends GameObject {
 
     // Draw scrolling ground texture
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = CONFIG.theme.textDim;
+      ctx.fillStyle = this._theme.textDim;
       const startX = -this.groundWidth / 2;
       this.marks.forEach(m => {
         // Calculate scrolled position
@@ -448,15 +779,17 @@ class Ground extends GameObject {
   }
 }
 
-// ==================== Tron Clouds ====================
+// ==================== Sky Layer ====================
 /**
- * TronClouds - Parallax cloud layer with Tron/grid aesthetic
+ * SkyLayer - Parallax sky with Tron clouds or Outrun sun
  */
-class TronClouds extends GameObject {
+class SkyLayer extends GameObject {
   constructor(game, options = {}) {
     super(game, options);
     this.cloudWidth = game.width * 2;
     this.scrollOffset = 0;
+    this._theme = CONFIG.theme;
+    this._isOutrunMode = false;
 
     // Generate cloud grid lines
     this.gridLines = [];
@@ -502,18 +835,84 @@ class TronClouds extends GameObject {
     }
   }
 
+  setTheme(theme, isOutrun = false) {
+    this._theme = theme;
+    this._isOutrunMode = isOutrun;
+  }
+
   setScrollOffset(offset) {
     this.scrollOffset = offset % this.cloudWidth;
+  }
+
+  drawOutrunSun(ctx) {
+    const sunX = 0;
+    const sunY = -120;
+    const sunRadius = 80;
+
+    // Sun glow
+    const gradient = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunRadius * 1.5);
+    gradient.addColorStop(0, this._theme.sunGlow || '#f8b500');
+    gradient.addColorStop(0.5, this._theme.sun || '#ff6b9d');
+    gradient.addColorStop(1, 'transparent');
+
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunRadius * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sun body with horizontal stripes (retrowave style)
+    ctx.globalAlpha = 1;
+    const stripeCount = 8;
+    for (let i = 0; i < stripeCount; i++) {
+      const stripeY = sunY - sunRadius + (i * 2 + 1) * (sunRadius / stripeCount);
+      const stripeHeight = sunRadius / stripeCount - 2;
+
+      // Calculate stripe width at this y position (circle intersection)
+      const dy = Math.abs(stripeY - sunY);
+      if (dy < sunRadius) {
+        const stripeHalfWidth = Math.sqrt(sunRadius * sunRadius - dy * dy);
+
+        // Gradient from orange to pink
+        const t = i / stripeCount;
+        const r = Math.floor(255 - t * 50);
+        const g = Math.floor(107 + t * 50);
+        const b = Math.floor(0 + t * 157);
+
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        ctx.fillRect(sunX - stripeHalfWidth, stripeY, stripeHalfWidth * 2, stripeHeight);
+      }
+    }
+
+    // Horizontal lines cutting through sun (retrowave effect)
+    ctx.strokeStyle = this._theme.background || '#1a1a2e';
+    ctx.lineWidth = 3;
+    for (let i = 1; i < 6; i++) {
+      const lineY = sunY + sunRadius * 0.2 + i * 12;
+      if (lineY < sunY + sunRadius) {
+        const dy = Math.abs(lineY - sunY);
+        const halfWidth = Math.sqrt(sunRadius * sunRadius - dy * dy);
+        ctx.beginPath();
+        ctx.moveTo(sunX - halfWidth, lineY);
+        ctx.lineTo(sunX + halfWidth, lineY);
+        ctx.stroke();
+      }
+    }
   }
 
   draw() {
     super.draw();
 
     Painter.useCtx((ctx) => {
+      // Draw outrun sun if in outrun mode
+      if (this._isOutrunMode) {
+        this.drawOutrunSun(ctx);
+      }
+
       const baseX = -this.scrollOffset;
 
       // Draw vertical grid lines
-      ctx.strokeStyle = CONFIG.theme.primary;
+      ctx.strokeStyle = this._theme.primary;
       this.glowLines.forEach(line => {
         let x = line.x + baseX;
         // Wrap
@@ -539,20 +938,20 @@ class TronClouds extends GameObject {
           // Glow effect
           if (seg.glow) {
             ctx.globalAlpha = seg.opacity * 0.3;
-            ctx.fillStyle = CONFIG.theme.primary;
+            ctx.fillStyle = this._theme.primary;
             ctx.fillRect(x - 2, line.y - 2, seg.width + 4, 5);
           }
 
           // Main line
           ctx.globalAlpha = seg.opacity;
-          ctx.fillStyle = CONFIG.theme.primary;
+          ctx.fillStyle = this._theme.primary;
           ctx.fillRect(x, line.y, seg.width, 1);
         });
       });
 
       // Add some "data" dots traveling along lines
       const time = Date.now() / 1000;
-      ctx.fillStyle = CONFIG.theme.primary;
+      ctx.fillStyle = this._theme.primary;
       for (let i = 0; i < 5; i++) {
         const lineIdx = i % this.gridLines.length;
         const line = this.gridLines[lineIdx];
@@ -572,6 +971,9 @@ class TronClouds extends GameObject {
     });
   }
 }
+
+// Alias for backwards compatibility
+const TronClouds = SkyLayer;
 
 // ==================== AutoScrollScene ====================
 /**
@@ -625,6 +1027,11 @@ class DinoGame extends Game {
     this.nextCactusSpawn = this.getRandomSpawnTime();
     this.cacti = [];
 
+    // Theme state
+    this.isOutrunMode = false;
+    this.currentTheme = CONFIG.theme;
+    this._lastThemeScore = 0; // Track last theme transition
+
     // Calculate ground Y - centered vertically, slightly below center
     this.groundY = this.height * 0.65;
 
@@ -672,9 +1079,7 @@ class DinoGame extends Game {
     this.pipeline.add(
       new FPSCounter(this, {
         color: CONFIG.theme.textDim,
-        anchor: Position.BOTTOM_RIGHT,
-        anchorOffsetX: 10,
-        anchorOffsetY: -10,
+        anchor: Position.BOTTOM_RIGHT
       })
     );
   }
@@ -687,7 +1092,6 @@ class DinoGame extends Game {
       align: "right",
       anchor: Position.BOTTOM_LEFT,
       anchorOffsetX: -30,
-      anchorOffsetY: 30,
     });
     this.pipeline.add(this.scoreText);
 
@@ -786,6 +1190,7 @@ class DinoGame extends Game {
     this.gameStarted = true;
     this.startText.visible = false;
     this.subtitleText.visible = false;
+    this.dino.startRunning(); // Start walking animation
     SFX.start();
   }
 
@@ -804,11 +1209,81 @@ class DinoGame extends Game {
     this.gameStarted = true;
     this.startText.visible = false;
     this.subtitleText.visible = false;
+    this.dino.startRunning(); // Start walking animation
   }
 
   getRandomSpawnTime() {
     return CONFIG.cactusSpawnMinInterval +
       Math.random() * (CONFIG.cactusSpawnMaxInterval - CONFIG.cactusSpawnMinInterval);
+  }
+
+  /**
+   * Transition to a new theme (normal or outrun)
+   * @param {boolean} toOutrun - True to switch to outrun mode
+   */
+  setTheme(toOutrun) {
+    if (this.isOutrunMode === toOutrun) return;
+
+    this.isOutrunMode = toOutrun;
+    this.currentTheme = toOutrun ? CONFIG.outrunTheme : CONFIG.theme;
+
+    // Update background
+    this.backgroundColor = this.currentTheme.background;
+
+    // Update dino
+    if (this.dino) {
+      this.dino.setTheme(this.currentTheme);
+    }
+
+    // Update ground
+    if (this.ground) {
+      this.ground.setTheme(this.currentTheme);
+    }
+
+    // Update clouds/sky
+    if (this.clouds) {
+      this.clouds.setTheme(this.currentTheme, toOutrun);
+    }
+
+    // Update UI colors
+    if (this.scoreText) {
+      this.scoreText.color = this.currentTheme.primary;
+    }
+    if (this.highScoreText) {
+      this.highScoreText.color = this.currentTheme.textDim;
+    }
+    if (this.startText) {
+      this.startText.color = this.currentTheme.primary;
+    }
+    if (this.gameOverText) {
+      this.gameOverText.color = this.currentTheme.primary;
+    }
+    if (this.restartText) {
+      this.restartText.color = this.currentTheme.textDim;
+    }
+    if (this.finalScoreText) {
+      this.finalScoreText.color = this.currentTheme.text;
+    }
+
+    // Play transition sound
+    SFX.themeTransition(toOutrun);
+  }
+
+  /**
+   * Check and handle theme transitions based on score
+   */
+  checkThemeTransition() {
+    // Calculate position in the level cycle
+    const cyclePosition = this.score % CONFIG.levelCycle;
+
+    // Within first 1000 points: normal theme
+    // From 1000 to 6000: outrun theme
+    const shouldBeOutrun = cyclePosition >= CONFIG.outrunStartScore;
+
+    // Only transition if state changed
+    if (shouldBeOutrun !== this.isOutrunMode) {
+      this.setTheme(shouldBeOutrun);
+    }
   }
 
   update(dt) {
@@ -827,6 +1302,9 @@ class DinoGame extends Game {
     this.score = Math.floor(this.distance / 10);
     this.scoreText.text = String(this.score).padStart(5, "0");
 
+    // Check for theme transitions (normal <-> outrun)
+    this.checkThemeTransition();
+
     // Update scroll offsets for ground and clouds
     if (this.ground) {
       this.ground.setScrollOffset(this.distance);
@@ -838,10 +1316,10 @@ class DinoGame extends Game {
     // Milestone flash effect (every 100 points)
     if (this.score > 0 && this.score % 100 === 0 && !this._lastMilestone) {
       this._lastMilestone = this.score;
-      this.scoreText.color = CONFIG.theme.text;
+      this.scoreText.color = this.currentTheme.text;
       SFX.milestone();
       setTimeout(() => {
-        if (this.scoreText) this.scoreText.color = CONFIG.theme.primary;
+        if (this.scoreText) this.scoreText.color = this.currentTheme.primary;
       }, 100);
     } else if (this.score % 100 !== 0) {
       this._lastMilestone = null;
@@ -886,18 +1364,22 @@ class DinoGame extends Game {
     const cactusHeight = CONFIG.cactusMinHeight +
       Math.random() * (CONFIG.cactusMaxHeight - CONFIG.cactusMinHeight);
 
-    const cactus = new Cactus(this, {
+    // In outrun mode, spawn palm trees instead of cacti
+    const obstacle = new Obstacle(this, {
       x: this.width + 50,
       y: this.groundY - cactusHeight / 2,
       height: cactusHeight,
+      isPalmTree: this.isOutrunMode,
+      theme: this.currentTheme,
     });
 
-    this.cacti.push(cactus);
-    this.level.add(cactus);
+    this.cacti.push(obstacle);
+    this.level.add(obstacle);
   }
 
   triggerGameOver() {
     this.gameOver = true;
+    this.dino.stopRunning();
     this.gameOverText.visible = true;
     this.restartText.visible = true;
     this.finalScoreText.visible = true;
