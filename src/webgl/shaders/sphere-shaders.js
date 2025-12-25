@@ -904,6 +904,7 @@ ${SPHERE_COMMON}
 uniform vec3 uBaseColor;
 uniform float uSeed;
 uniform float uStormIntensity;  // 0-1
+uniform float uRotationSpeed;   // rotation speed multiplier (default ~0.1)
 
 void main() {
     // Setup ray - camera looking at sphere from fixed position
@@ -930,8 +931,9 @@ void main() {
     float latitude = asin(rotatedNormal.y);  // -PI/2 to PI/2
     float longitude = atan(rotatedNormal.z, rotatedNormal.x);  // -PI to PI
 
-    // Animated rotation
-    float time = uTime * 0.1;
+    // Animated rotation (use uRotationSpeed, default to 0.1 if not set)
+    float rotSpeed = uRotationSpeed > 0.0 ? uRotationSpeed : 0.1;
+    float time = uTime * rotSpeed;
 
     // Create bands based on latitude
     float bands = sin(latitude * 15.0 + time) * 0.5 + 0.5;

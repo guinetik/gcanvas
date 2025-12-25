@@ -78,6 +78,9 @@ export class Sphere3D extends Shape {
      * @param {boolean} [options.useShader=false] - Use WebGL shader rendering
      * @param {string} [options.shaderType='star'] - Shader type: 'star', 'blackHole', 'rockyPlanet', 'gasGiant'
      * @param {Object} [options.shaderUniforms={}] - Custom shader uniforms
+     * @param {number} [options.selfRotationX=0] - Self-rotation around X axis (radians)
+     * @param {number} [options.selfRotationY=0] - Self-rotation around Y axis (radians)
+     * @param {number} [options.selfRotationZ=0] - Self-rotation around Z axis (radians)
      */
     constructor(radius, options = {}) {
         super(options);
@@ -92,6 +95,11 @@ export class Sphere3D extends Shape {
         this.shaderType = options.shaderType ?? "star";
         this.shaderUniforms = options.shaderUniforms ?? {};
         this._shaderInitialized = false;
+
+        // Self-rotation (for Canvas 2D mode - shader uses uRotationSpeed)
+        this.selfRotationX = options.selfRotationX ?? 0;
+        this.selfRotationY = options.selfRotationY ?? 0;
+        this.selfRotationZ = options.selfRotationZ ?? 0;
 
         // Generate sphere geometry (for Canvas 2D fallback)
         this._generateGeometry();
@@ -283,6 +291,48 @@ export class Sphere3D extends Shape {
     }
 
     /**
+     * Apply self-rotation to a point (vertex or normal)
+     * @param {number} x - X component
+     * @param {number} y - Y component
+     * @param {number} z - Z component
+     * @returns {{x: number, y: number, z: number}} Rotated point
+     * @private
+     */
+    _applySelfRotation(x, y, z) {
+        // Rotate around Y axis first (most common for spinning objects)
+        if (this.selfRotationY !== 0) {
+            const cosY = Math.cos(this.selfRotationY);
+            const sinY = Math.sin(this.selfRotationY);
+            const x1 = x * cosY - z * sinY;
+            const z1 = x * sinY + z * cosY;
+            x = x1;
+            z = z1;
+        }
+
+        // Rotate around X axis
+        if (this.selfRotationX !== 0) {
+            const cosX = Math.cos(this.selfRotationX);
+            const sinX = Math.sin(this.selfRotationX);
+            const y1 = y * cosX - z * sinX;
+            const z1 = y * sinX + z * cosX;
+            y = y1;
+            z = z1;
+        }
+
+        // Rotate around Z axis
+        if (this.selfRotationZ !== 0) {
+            const cosZ = Math.cos(this.selfRotationZ);
+            const sinZ = Math.sin(this.selfRotationZ);
+            const x1 = x * cosZ - y * sinZ;
+            const y1 = x * sinZ + y * cosZ;
+            x = x1;
+            y = y1;
+        }
+
+        return { x, y, z };
+    }
+
+    /**
      * Calculate lighting intensity based on surface normal
      * @param {number} nx - Normal x component
      * @param {number} ny - Normal y component
@@ -398,18 +448,37 @@ export class Sphere3D extends Shape {
 
         // Project all vertices and normals through the camera
         // Add position offset so sphere appears at correct world position
+        const hasSelfRotation = this.selfRotationX !== 0 || this.selfRotationY !== 0 || this.selfRotationZ !== 0;
+
         const projectedVertices = this.vertices.map((v) => {
+            // Apply self-rotation to vertex position
+            let vx = v.x;
+            let vy = v.y;
+            let vz = v.z;
+            let nx = v.nx;
+            let ny = v.ny;
+            let nz = v.nz;
+
+            if (hasSelfRotation) {
+                const rotatedPos = this._applySelfRotation(vx, vy, vz);
+                vx = rotatedPos.x;
+                vy = rotatedPos.y;
+                vz = rotatedPos.z;
+
+                const rotatedNormal = this._applySelfRotation(nx, ny, nz);
+                nx = rotatedNormal.x;
+                ny = rotatedNormal.y;
+                nz = rotatedNormal.z;
+            }
+
             const projected = this.camera.project(
-                v.x + (this.x || 0),
-                v.y + (this.y || 0),
-                v.z + (this.z || 0)
+                vx + (this.x || 0),
+                vy + (this.y || 0),
+                vz + (this.z || 0)
             );
 
             // Rotate normals using the same rotation sequence as Camera3D.project
             // (Z, then Y, then X)
-            let nx = v.nx;
-            let ny = v.ny;
-            let nz = v.nz;
 
             // Rotate around Z axis (roll)
             if (this.camera.rotationZ !== 0) {
