@@ -83,6 +83,15 @@ export class Cube3D extends Shape {
             right: options.faceColors?.right ?? "#0046AD",   // Blue
         };
 
+        // Edge stroke styling
+        this.stroke = options.stroke ?? null;
+        this.lineWidth = options.lineWidth ?? 1;
+
+        // Sticker mode - renders colored sticker inset from face edge
+        this.stickerMode = options.stickerMode ?? false;
+        this.stickerMargin = options.stickerMargin ?? 0.15; // Margin as fraction of face size
+        this.stickerBackgroundColor = options.stickerBackgroundColor ?? "#0A0A0A"; // Black plastic
+
         // Face configurations (relative position and orientation)
         // Each face is defined by:
         // - localPos: position relative to cube center
@@ -502,8 +511,33 @@ export class Cube3D extends Shape {
             ctx.strokeStyle = this.stroke || "#fff";
             ctx.lineWidth = this.lineWidth ?? 1;
             ctx.stroke();
+        } else if (this.stickerMode) {
+            // Sticker mode: black plastic background with inset colored sticker
+            const bgColor = this._applyLighting(this.stickerBackgroundColor, intensity);
+            ctx.fillStyle = bgColor;
+            ctx.fill();
+
+            // Draw sticker stroke (grid lines on the plastic)
+            if (this.stroke) {
+                ctx.strokeStyle = this.stroke;
+                ctx.lineWidth = this.lineWidth ?? 1;
+                ctx.stroke();
+            }
+
+            // Calculate inset sticker vertices
+            const stickerVerts = this._getInsetVertices(vertices, this.stickerMargin);
+
+            // Draw the colored sticker
+            ctx.beginPath();
+            ctx.moveTo(stickerVerts[0].x, stickerVerts[0].y);
+            for (let i = 1; i < stickerVerts.length; i++) {
+                ctx.lineTo(stickerVerts[i].x, stickerVerts[i].y);
+            }
+            ctx.closePath();
+            ctx.fillStyle = faceColor;
+            ctx.fill();
         } else {
-            // Filled mode
+            // Standard filled mode
             ctx.fillStyle = faceColor;
             ctx.fill();
 
@@ -514,6 +548,31 @@ export class Cube3D extends Shape {
                 ctx.stroke();
             }
         }
+    }
+
+    /**
+     * Calculate inset vertices for sticker rendering
+     * @param {Array} vertices - Original quad vertices
+     * @param {number} margin - Margin as fraction (0-0.5)
+     * @returns {Array} Inset vertices
+     * @private
+     */
+    _getInsetVertices(vertices, margin) {
+        // Calculate center of the quad
+        let cx = 0, cy = 0;
+        for (const v of vertices) {
+            cx += v.x;
+            cy += v.y;
+        }
+        cx /= vertices.length;
+        cy /= vertices.length;
+
+        // Inset each vertex towards the center
+        const insetFactor = 1 - margin * 2; // e.g., margin=0.15 -> factor=0.7
+        return vertices.map(v => ({
+            x: cx + (v.x - cx) * insetFactor,
+            y: cy + (v.y - cy) * insetFactor,
+        }));
     }
 
     /**
