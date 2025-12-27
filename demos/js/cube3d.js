@@ -17,7 +17,7 @@ import { Camera3D } from "../../src/util/camera3d.js";
  */
 const CONFIG = {
     // Base sizes (will be scaled)
-    baseCubeletSize: 0.06,  // fraction of min(width, height)
+    baseCubeletSize: 0.07,  // fraction of min(width, height)
     baseGap: 0.004,         // fraction of min(width, height)
 
     camera: {
