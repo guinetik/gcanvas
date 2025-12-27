@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GCanvas Coordinate System Documentation</title>
+  <!-- Prism.js - base theme then override -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.css">
+  <style>
+    /* Terminal-style Prism overrides */
+    code[class*="language-"],
+    pre[class*="language-"] {
+      color: #ccc;
+      background: #0a0a0a;
+      text-shadow: none;
+    }
+    pre[class*="language-"] {
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+    }
+    .token.comment,
+    .token.prolog,
+    .token.doctype,
+    .token.cdata { color: #555; }
+    .token.punctuation { color: #888; }
+    .token.property,
+    .token.tag,
+    .token.constant,
+    .token.symbol,
+    .token.deleted { color: #0f0; }
+    .token.boolean,
+    .token.number { color: #0ff; }
+    .token.selector,
+    .token.attr-name,
+    .token.string,
+    .token.char,
+    .token.builtin,
+    .token.inserted { color: #7fff7f; }
+    .token.operator,
+    .token.entity,
+    .token.url,
+    .language-css .token.string,
+    .style .token.string,
+    .token.variable { color: #ccc; }
+    .token.atrule,
+    .token.attr-value,
+    .token.function,
+    .token.class-name { color: #0f0; }
+    .token.keyword { color: #0f0; font-weight: bold; }
+    .token.regex,
+    .token.important { color: #fd8; }
+  </style>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      overflow-x: hidden;
+    }
+
+    body {
+      font-family: 'Courier New', 'Consolas', monospace;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #000;
+    }
+
+    header {
+      margin-bottom: 40px;
+      padding: 20px;
+      border-bottom: 2px solid #0f0;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+    }
+
+    h2 {
+      font-size: 1.8em;
+      margin-top: 40px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #0f0;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+    }
+
+    h3 {
+      font-size: 1.4em;
+      margin-top: 30px;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+    }
+
+    h4 {
+      font-size: 1.2em;
+      margin-top: 20px;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+    }
+
+    p {
+      margin-bottom: 15px;
+      color: #aaa;
+      font-family: 'Courier New', monospace;
+    }
+
+    pre {
+      background-color: #0a0a0a;
+      color: #ccc;
+      padding: 15px;
+      border: 1px solid #1a1a1a;
+      overflow-x: auto;
+      margin: 15px 0;
+      font-family: 'Courier New', monospace;
+      max-width: 100%;
+    }
+
+    code {
+      font-family: 'Courier New', monospace;
+      background-color: #111;
+      color: #0f0;
+      padding: 2px 6px;
+      border: none;
+    }
+
+    pre code {
+      background-color: transparent;
+      color: #ccc;
+      padding: 0;
+      border: none;
+    }
+
+    .feature-list {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    .feature-list li {
+      position: relative;
+      padding-left: 30px;
+      margin-bottom: 10px;
+      color: #aaa;
+      font-family: 'Courier New', monospace;
+    }
+
+    .feature-list li:before {
+      content: "> ";
+      color: #0f0;
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-weight: bold;
+    }
+
+    .note {
+      background-color: #0a1a0a;
+      padding: 15px;
+      border-left: 2px solid #0f0;
+      margin: 20px 0;
+      color: #7fff7f;
+    }
+
+    .example {
+      background-color: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      margin: 20px 0;
+    }
+
+    .example-title {
+      font-weight: bold;
+      color: #0f0;
+      background-color: #050505;
+      padding: 10px 15px;
+      margin: 0;
+      border-bottom: 1px solid #1a1a1a;
+      font-family: 'Courier New', monospace;
+    }
+
+    .example-code {
+      padding: 15px;
+      margin: 0;
+      border-radius: 0;
+    }
+
+    .canvas-demo {
+      width: 100%;
+      height: 250px;
+      background-color: #050505;
+      border-top: 1px solid #1a1a1a;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .canvas-demo canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 1px solid #1a1a1a;
+    }
+
+    .canvas-label {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: #0f0;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-family: 'Courier New', monospace;
+    }
+
+    th, td {
+      border: 1px solid #1a1a1a;
+      padding: 10px 15px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #0a1a0a;
+      color: #0f0;
+    }
+
+    td {
+      background-color: #0a0a0a;
+      color: #aaa;
+    }
+
+    td code {
+      background-color: #111;
+      padding: 2px 6px;
+    }
+
+    .tldr-box {
+      background-color: #0a1a0a;
+      border: 1px solid #0f0;
+      padding: 20px;
+      margin: 20px 0;
+    }
+
+    .tldr-box h3 {
+      margin-top: 0;
+      color: #0f0;
+    }
+
+    .ascii-diagram {
+      background-color: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      padding: 20px;
+      margin: 20px 0;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      color: #0f0;
+      line-height: 1.4;
+      white-space: pre;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
+      h1 {
+        font-size: 1.8em;
+      }
+
+      h2 {
+        font-size: 1.4em;
+      }
+
+      .canvas-demo {
+        height: 200px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>GCanvas Coordinate System</h1>
+    <p>Understanding how positioning works throughout the library</p>
+  </header>
+
+  <section>
+    <h2>Overview</h2>
+    <p>
+      GCanvas uses a <strong>center-based coordinate system</strong> where <code>x</code> and <code>y</code>
+      refer to an object's center point, not its top-left corner. This makes rotation and scaling more
+      intuitive since transforms happen around the object's center.
+    </p>
+
+    <div class="tldr-box">
+      <h3>TL;DR - Quick Reference</h3>
+      <table>
+        <tr>
+          <th>Situation</th>
+          <th>How It Works</th>
+        </tr>
+        <tr>
+          <td>Object at <code>(100, 100)</code></td>
+          <td>Center is at screen position (100, 100)</td>
+        </tr>
+        <tr>
+          <td>Child at <code>(10, 20)</code> in Scene at <code>(100, 100)</code></td>
+          <td>Child center is at screen (110, 120)</td>
+        </tr>
+        <tr>
+          <td>Camera3D <code>project()</code> returns <code>(0, 0)</code></td>
+          <td>Object is at the center of the 3D view</td>
+        </tr>
+        <tr>
+          <td>Scene3D at <code>(width/2, height/2)</code></td>
+          <td>3D origin appears at canvas center</td>
+        </tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>1. Center-Based Positioning</h2>
+    <p>
+      Unlike many graphics libraries that use top-left corners, GCanvas positions objects by their
+      <strong>center point</strong>. When you set <code>x: 100, y: 100</code>, the object's center
+      is at that position.
+    </p>
+
+    <h4>Why Center-Based?</h4>
+    <ul class="feature-list">
+      <li>Rotation happens around the center naturally</li>
+      <li>Scaling expands/contracts from the center</li>
+      <li>No need to manually adjust pivot points</li>
+      <li>More intuitive for game development</li>
+    </ul>
+
+    <div class="example">
+      <div class="example-title">Interactive Demo: Center vs Bounds</div>
+      <pre><code class="language-javascript">// This circle's CENTER is at (100, 100)
+const circle = new Circle(50, { x: 100, y: 100, color: "#0f0" });
+
+// The circle extends from:
+// - Left edge: 50 (100 - radius)
+// - Right edge: 150 (100 + radius)
+// - Top edge: 50 (100 - radius)
+// - Bottom edge: 150 (100 + radius)</code></pre>
+      <div class="canvas-demo">
+        <canvas id="center-based-canvas"></canvas>
+        <div class="canvas-label">Drag to move - watch center point</div>
+      </div>
+    </div>
+
+    <table>
+      <tr>
+        <th>System</th>
+        <th><code>x: 100, y: 100</code> means...</th>
+        <th>Rotation pivot</th>
+      </tr>
+      <tr>
+        <td><strong>GCanvas (center)</strong></td>
+        <td>Center at (100, 100)</td>
+        <td>Around center</td>
+      </tr>
+      <tr>
+        <td>Top-left systems</td>
+        <td>Top-left at (100, 100)</td>
+        <td>Around top-left corner</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>2. Basic Positioning</h2>
+    <p>
+      When you add an object directly to the pipeline, its coordinates are <strong>absolute screen
+      coordinates</strong>. Canvas origin <code>(0, 0)</code> is the top-left corner.
+    </p>
+
+    <div class="example">
+      <div class="example-title">Interactive Demo: Screen Coordinates</div>
+      <pre><code class="language-javascript">// Circle centered at screen position (200, 150)
+const circle = new Circle(30, { x: 200, y: 150, color: "#0ff" });
+this.pipeline.add(circle);
+
+// X increases going right
+// Y increases going down</code></pre>
+      <div class="canvas-demo">
+        <canvas id="basic-position-canvas"></canvas>
+        <div class="canvas-label">Click anywhere to place shapes</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Parent-Child Relationships</h2>
+    <p>
+      When you add objects to a <strong>Scene</strong>, their coordinates become
+      <strong>relative to the parent's center</strong>. This is the key to understanding
+      hierarchical positioning.
+    </p>
+
+    <div class="ascii-diagram">
+Canvas (0,0)────────────────────────────────►X
+    │
+    │      Scene at (200, 150)
+    │      ┌─────────────────────┐
+    │      │    Scene's local    │
+    │      │    origin (0, 0)    │
+    │      │         ●───────────┼──► Scene's X
+    │      │         │           │
+    │      │         │  Child at │
+    │      │         │  (50, 30) │
+    │      │         ▼     ◉     │
+    │      │    Scene's Y        │
+    │      └─────────────────────┘
+    │
+    ▼
+    Y
+
+Child screen position = Scene position + Child local position
+                      = (200, 150) + (50, 30)
+                      = (250, 180)</div>
+
+    <div class="example">
+      <div class="example-title">Interactive Demo: Parent-Child Coordinates</div>
+      <pre><code class="language-javascript">// Scene centered at (200, 150)
+const scene = new Scene(this, { x: 200, y: 150 });
+
+// Child at (50, 30) relative to scene
+const child = new Circle(20, { x: 50, y: 30, color: "#0f0" });
+scene.add(child);
+
+// Child's screen position: (200 + 50, 150 + 30) = (250, 180)</code></pre>
+      <div class="canvas-demo">
+        <canvas id="parent-child-canvas"></canvas>
+        <div class="canvas-label">Drag the scene (green box) - children follow</div>
+      </div>
+    </div>
+
+    <h3>Nested Scenes</h3>
+    <p>Coordinates stack through the hierarchy:</p>
+
+    <div class="example">
+      <div class="example-title">Interactive Demo: Nested Hierarchy</div>
+      <pre><code class="language-javascript">const outer = new Scene(this, { x: 100, y: 100 });
+const inner = new Scene(this, { x: 50, y: 50 });
+const shape = new Circle(10, { x: 25, y: 25, color: "#ff0" });
+
+inner.add(shape);
+outer.add(inner);
+this.pipeline.add(outer);
+
+// Screen position: 100 + 50 + 25 = 175 for both X and Y</code></pre>
+      <div class="canvas-demo">
+        <canvas id="nested-canvas"></canvas>
+        <div class="canvas-label">Drag any level - nested items follow</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Camera3D and Scene3D</h2>
+    <p>
+      When using 3D projection, an additional coordinate transformation layer is introduced.
+      <code>Camera3D.project()</code> transforms 3D world positions to 2D screen coordinates
+      <strong>centered at the origin</strong>.
+    </p>
+
+    <div class="note">
+      <strong>Key Insight:</strong> Camera3D returns coordinates centered at (0, 0). That's why
+      Scene3D must be positioned at canvas center - so the 3D origin appears in the middle of
+      the screen.
+    </div>
+
+    <div class="example">
+      <div class="example-title">Interactive Demo: 3D Projection</div>
+      <pre><code class="language-javascript">const camera = new Camera3D({ perspective: 800 });
+
+// Scene3D MUST be centered for 3D projection to work correctly
+const scene = new Scene3D(this, {
+  x: this.width / 2,
+  y: this.height / 2,
+  camera: camera
+});
+
+// Object at 3D origin (0, 0, 0) appears at screen center
+// Object at (100, 0, 0) appears right of center</code></pre>
+      <div class="canvas-demo" style="height: 300px;">
+        <canvas id="camera3d-canvas"></canvas>
+        <div class="canvas-label">Drag to rotate camera - watch projection</div>
+      </div>
+    </div>
+
+    <h3>The Projection Formula</h3>
+    <table>
+      <tr>
+        <th>Step</th>
+        <th>What Happens</th>
+      </tr>
+      <tr>
+        <td>1. World Position</td>
+        <td>Object at 3D coordinates (x, y, z)</td>
+      </tr>
+      <tr>
+        <td>2. Camera Transform</td>
+        <td>Subtract camera position, apply rotation</td>
+      </tr>
+      <tr>
+        <td>3. Perspective</td>
+        <td><code>scale = perspective / (perspective + z)</code></td>
+      </tr>
+      <tr>
+        <td>4. Screen Offset</td>
+        <td>Returns (screenX, screenY) relative to origin</td>
+      </tr>
+      <tr>
+        <td>5. Scene3D Centering</td>
+        <td>Adds (width/2, height/2) to get final position</td>
+      </tr>
+    </table>
+
+    <h3>Common Gotcha: Manual Centering</h3>
+    <p>
+      If you're rendering 3D-projected content <strong>outside</strong> of Scene3D, you must
+      manually center:
+    </p>
+
+    <div class="example">
+      <div class="example-title">Manual Centering Pattern</div>
+      <pre><code class="language-javascript">// When NOT inside a Scene3D, you must translate to center yourself
+Painter.useCtx((ctx) => {
+  ctx.save();
+  ctx.translate(this.game.width / 2, this.game.height / 2);
+
+  // Now draw at projected coordinates
+  const projected = camera.project(x, y, z);
+  ctx.fillRect(projected.x - 5, projected.y - 5, 10, 10);
+
+  ctx.restore();
+});</code></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Anchoring and Layouts</h2>
+    <p>
+      The <code>applyAnchor</code> mixin and layout utilities help position objects relative
+      to the canvas edges or other containers.
+    </p>
+
+    <div class="example">
+      <div class="example-title">Interactive Demo: Anchor Positions</div>
+      <pre><code class="language-javascript">import { applyAnchor, Position } from "gcanvas";
+
+// Anchor text to top-center of canvas
+const title = new Text(this, "Game Title", { font: "24px sans-serif" });
+applyAnchor(title, {
+  anchor: Position.TOP_CENTER,
+  anchorMargin: 20  // 20px from top edge
+});
+
+// Available positions:
+// TOP_LEFT, TOP_CENTER, TOP_RIGHT
+// CENTER_LEFT, CENTER, CENTER_RIGHT
+// BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT</code></pre>
+      <div class="canvas-demo">
+        <canvas id="anchor-canvas"></canvas>
+        <div class="canvas-label">Resize window to see anchors adjust</div>
+      </div>
+    </div>
+
+    <h3>Layouts</h3>
+    <p>Layouts automatically position multiple items:</p>
+
+    <div class="example">
+      <div class="example-title">Interactive Demo: Vertical Layout</div>
+      <pre><code class="language-javascript">import { verticalLayout, applyLayout } from "gcanvas";
+
+const items = [
+  new Text(this, "Option 1", {}),
+  new Text(this, "Option 2", {}),
+  new Text(this, "Option 3", {})
+];
+
+// Compute vertical layout
+const layout = verticalLayout(items, {
+  spacing: 15,
+  padding: 10,
+  align: "center"
+});
+
+// Apply positions to items
+applyLayout(items, layout.positions);</code></pre>
+      <div class="canvas-demo">
+        <canvas id="layout-canvas"></canvas>
+        <div class="canvas-label">Click buttons to add/remove items</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. Practical Tips</h2>
+
+    <h3>Quick Reference</h3>
+    <table>
+      <tr>
+        <th>I want to...</th>
+        <th>Do this</th>
+      </tr>
+      <tr>
+        <td>Place object at screen position</td>
+        <td>Set <code>x</code>, <code>y</code> directly, add to pipeline</td>
+      </tr>
+      <tr>
+        <td>Place object relative to parent</td>
+        <td>Add to Scene, set local <code>x</code>, <code>y</code></td>
+      </tr>
+      <tr>
+        <td>Center object on screen</td>
+        <td><code>x: game.width / 2, y: game.height / 2</code></td>
+      </tr>
+      <tr>
+        <td>Anchor to screen edge</td>
+        <td>Use <code>applyAnchor</code> with <code>Position</code> constant</td>
+      </tr>
+      <tr>
+        <td>Use 3D projection</td>
+        <td>Use <code>Scene3D</code> centered at canvas center</td>
+      </tr>
+    </table>
+
+    <h3>Common Mistakes</h3>
+
+    <div class="example">
+      <div class="example-title">Mistake 1: Forgetting to center Scene3D</div>
+      <pre><code class="language-javascript">// WRONG - 3D origin appears at top-left
+const scene = new Scene3D(this, { x: 0, y: 0, camera });
+
+// CORRECT - 3D origin appears at canvas center
+const scene = new Scene3D(this, {
+  x: this.width / 2,
+  y: this.height / 2,
+  camera
+});</code></pre>
+    </div>
+
+    <div class="example">
+      <div class="example-title">Mistake 2: Confusing local and screen coordinates</div>
+      <pre><code class="language-javascript">const scene = new Scene(this, { x: 100, y: 100 });
+const child = new Circle(20, { x: 50, y: 50 });
+scene.add(child);
+
+// WRONG assumption: child is at screen (50, 50)
+// CORRECT: child is at screen (150, 150)</code></pre>
+    </div>
+
+    <div class="example">
+      <div class="example-title">Mistake 3: Not updating Camera3D in game loop</div>
+      <pre><code class="language-javascript">update(dt) {
+  super.update(dt);
+  // If using auto-rotation or inertia, camera needs update
+  this.camera.update(dt);
+}</code></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>See Also</h2>
+    <ul class="feature-list">
+      <li><a href="pipeline.html" style="color: #0f0;">Rendering Pipeline</a> - How objects are rendered each frame</li>
+      <li><a href="gameobjects.html" style="color: #0f0;">Game Objects</a> - Understanding the object hierarchy</li>
+      <li><a href="scene.html" style="color: #0f0;">Scene Demo</a> - Interactive scene examples</li>
+      <li><a href="layouts.html" style="color: #0f0;">Layout Demo</a> - Layout system in action</li>
+    </ul>
+  </section>
+
+  <!-- Prism.js scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+
+  <!-- Demo scripts -->
+  <script type="module" src="./js/coordinates.js"></script>
+</body>
+
+</html>

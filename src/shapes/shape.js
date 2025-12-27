@@ -62,6 +62,7 @@ export class Shape extends Transformable {
 
   set color(v) {
     this._color = v;
+    this.invalidateCache();
   }
 
   /** @type {string|null} Stroke style for canvas stroke operations */
@@ -71,6 +72,7 @@ export class Shape extends Transformable {
 
   set stroke(v) {
     this._stroke = v;
+    this.invalidateCache();
   }
 
   /** @type {number} Width of the stroke in pixels */
@@ -80,6 +82,7 @@ export class Shape extends Transformable {
 
   set lineWidth(v) {
     this._lineWidth = Math.max(0, v);
+    this.invalidateCache();
   }
 
   /** @type {"miter"|"round"|"bevel"} Style of line joins */
@@ -89,6 +92,7 @@ export class Shape extends Transformable {
 
   set lineJoin(v) {
     this._lineJoin = v;
+    this.invalidateCache();
   }
 
   /** @type {"butt"|"round"|"square"} Style of line caps */
@@ -98,6 +102,7 @@ export class Shape extends Transformable {
 
   set lineCap(v) {
     this._lineCap = v;
+    this.invalidateCache();
   }
 
   /** @type {number} Maximum miter length before switching to bevel */
@@ -107,5 +112,6 @@ export class Shape extends Transformable {
 
   set miterLimit(v) {
     this._miterLimit = v;
+    this.invalidateCache();
   }
 }

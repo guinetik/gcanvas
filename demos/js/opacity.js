@@ -125,7 +125,7 @@ export class OpacityDemo extends Scene {
   constructor(game, options = {}) {
     super(game, options);
     // Define the margin to keep squares within
-    this.MARGIN = 50;
+    this.MARGIN = 0;
     // Store all squares
     this.squares = [];
     // Initialize opacity animation timer
@@ -198,13 +198,13 @@ export class OpacityDemo extends Scene {
    * @param {number} dt - Delta time in seconds
    */
   update(dt) {
-    // Update scene dimensions based on margin
-    if(this.width !== this.game.width - this.MARGIN * 2) {  
-      this.width = this.game.width - this.MARGIN * 2;
+    // Update scene dimensions based on game dimensions (full screen)
+    if (this.width !== this.game.width) {
+      this.width = this.game.width;
       this.x = this.game.width / 2;
     }
-    if(this.height !== this.game.height - this.MARGIN * 2) {
-      this.height = this.game.height - this.MARGIN * 2;
+    if (this.height !== this.game.height) {
+      this.height = this.game.height;
       this.y = this.game.height / 2;
     }
 

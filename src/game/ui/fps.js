@@ -1,7 +1,13 @@
 import { Text } from "../objects";
+import { UI_THEME } from "./theme.js";
 
 /**
  * FPSCounter - A simple text object displaying frames per second
+ * 
+ * Theme: Terminal × Vercel aesthetic
+ * - Neon green monospace text
+ * - Subtle flicker effect on update
+ * 
  * @extends Text
  */
 export class FPSCounter extends Text {
@@ -9,17 +15,19 @@ export class FPSCounter extends Text {
    * Create an FPS counter
    * @param {Game} game - The main game instance
    * @param {Object} [options={}] - Configuration options
+   * @param {string} [options.color="#0f0"] - Text color (default: terminal green)
+   * @param {string} [options.font="11px monospace"] - Font style
    */
   constructor(game, options = {}) {
-    // Spread the user options but provide defaults for FPS counter
+    // Terminal × Vercel theme: green monospace text
     super(game, "0 FPS", {
       x: 0,
       y: 0,
-      font: "12px monospace",
-      color: "#0f0", // Default to green
+      font: UI_THEME.fonts.small,
+      color: UI_THEME.colors.neonGreen,
       align: "center",
       baseline: "middle",
-      debug:false,
+      debug: false,
       ...options, // This will override defaults with user provided values
     });
 

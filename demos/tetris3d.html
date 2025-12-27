@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Tetris - GCanvas Demo</title>
+    <link rel="stylesheet" href="demos.css" />
+    <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+    <div id="info">
+        <strong>3D Tetris</strong> — A 3D falling block puzzle game.<br/>
+        <span style="color:#CCC">
+            <li>WASD / Arrow Keys: Move piece</li>
+            <li>Q/E: Rotate piece</li>
+            <li>SPACE: Hard drop (instant)</li>
+            <li>Mouse drag: Rotate camera view</li>
+            <li>View Button: Cycle preset camera angles</li>
+            <li>ENTER: Start/Restart | ESC: Pause</li>
+        </span>
+    </div>
+    <canvas id="game"></canvas>
+    <script type="module" src="./js/tetris/index.js"></script>
+</body>
+</html>

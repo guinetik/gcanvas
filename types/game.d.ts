@@ -495,3 +495,306 @@ export class Cursor extends GameObject {
 export class FPSCounter extends GameObject {
   constructor(game: Game, options?: GameObjectOptions);
 }
+
+// ==========================================================================
+// Advanced UI Components
+// ==========================================================================
+
+/** Options for Tooltip */
+export interface TooltipOptions extends GameObjectOptions {
+  /** Tooltip text */
+  text?: string;
+  /** Background color */
+  backgroundColor?: string;
+  /** Text color */
+  textColor?: string;
+  /** CSS font string */
+  font?: string;
+  /** Padding around text */
+  padding?: number;
+  /** Corner radius */
+  cornerRadius?: number;
+  /** Show delay in milliseconds */
+  delay?: number;
+}
+
+/**
+ * Tooltip component that shows on hover.
+ */
+export class Tooltip extends GameObject {
+  /** Tooltip text */
+  text: string;
+  /** Whether tooltip is visible */
+  isVisible: boolean;
+
+  constructor(game: Game, options?: TooltipOptions);
+
+  /**
+   * Show tooltip at position.
+   * @param x - X position
+   * @param y - Y position
+   */
+  show(x: number, y: number): void;
+
+  /** Hide tooltip */
+  hide(): void;
+}
+
+/** Options for Stepper */
+export interface StepperOptions extends GameObjectOptions {
+  /** Minimum value */
+  min?: number;
+  /** Maximum value */
+  max?: number;
+  /** Current value */
+  value?: number;
+  /** Step increment */
+  step?: number;
+  /** Label text */
+  label?: string;
+  /** CSS font string */
+  font?: string;
+  /** Width of the stepper */
+  width?: number;
+  /** Height of the stepper */
+  height?: number;
+}
+
+/**
+ * Numeric stepper component with +/- buttons.
+ *
+ * @example
+ * const stepper = new Stepper(game, {
+ *   x: 100, y: 100,
+ *   min: 0, max: 100,
+ *   value: 50,
+ *   step: 5,
+ *   label: 'Speed'
+ * });
+ * stepper.on('change', (value) => console.log('New value:', value));
+ */
+export class Stepper extends GameObject {
+  /** Current value */
+  value: number;
+  /** Minimum value */
+  min: number;
+  /** Maximum value */
+  max: number;
+  /** Step increment */
+  step: number;
+
+  constructor(game: Game, options?: StepperOptions);
+
+  /** Increment value by step */
+  increment(): void;
+  /** Decrement value by step */
+  decrement(): void;
+  /** Set value directly */
+  setValue(value: number): void;
+}
+
+/**
+ * UI theme constants for consistent styling.
+ * Terminal × Vercel aesthetic.
+ */
+export namespace UI_THEME {
+  /** Primary accent color (terminal green) */
+  const PRIMARY: string;
+  /** Background color (dark) */
+  const BACKGROUND: string;
+  /** Surface color (slightly lighter) */
+  const SURFACE: string;
+  /** Text color */
+  const TEXT: string;
+  /** Muted text color */
+  const TEXT_MUTED: string;
+  /** Border color */
+  const BORDER: string;
+  /** Success color */
+  const SUCCESS: string;
+  /** Warning color */
+  const WARNING: string;
+  /** Error color */
+  const ERROR: string;
+  /** Font family */
+  const FONT: string;
+  /** Default corner radius */
+  const RADIUS: number;
+}
+
+// ==========================================================================
+// Scene3D
+// ==========================================================================
+
+/** Options for Scene3D */
+export interface Scene3DOptions extends SceneOptions {
+  /** Camera3D instance for projection */
+  camera?: any; // Camera3D from util
+  /** Enable depth sorting */
+  depthSort?: boolean;
+}
+
+/**
+ * 3D scene with Camera3D projection support.
+ * Children with x, y, z positions are projected through the camera.
+ *
+ * @example
+ * const camera = new Camera3D({ rotationX: 0.3, perspective: 800 });
+ * const scene3d = new Scene3D(game, { camera });
+ * scene3d.add(myObject);
+ */
+export class Scene3D extends Scene {
+  /** Camera3D instance */
+  camera: any;
+  /** Whether to depth sort children */
+  depthSort: boolean;
+
+  constructor(game: Game, options?: Scene3DOptions);
+
+  /**
+   * Project a 3D point through the camera.
+   * @param x - X coordinate
+   * @param y - Y coordinate
+   * @param z - Z coordinate
+   */
+  project(x: number, y: number, z: number): { x: number; y: number; z: number; scale: number };
+}
+
+// ==========================================================================
+// IsometricScene
+// ==========================================================================
+
+/** Options for IsometricScene */
+export interface IsometricSceneOptions extends SceneOptions {
+  /** Isometric camera instance */
+  camera?: any; // IsometricCamera from util
+  /** Tile width */
+  tileWidth?: number;
+  /** Tile height */
+  tileHeight?: number;
+  /** Grid columns */
+  cols?: number;
+  /** Grid rows */
+  rows?: number;
+}
+
+/**
+ * Isometric scene with 2.5D grid projection.
+ * Converts grid coordinates to isometric screen positions.
+ *
+ * @example
+ * const isoScene = new IsometricScene(game, {
+ *   tileWidth: 64,
+ *   tileHeight: 32,
+ *   cols: 10,
+ *   rows: 10
+ * });
+ */
+export class IsometricScene extends Scene {
+  /** Tile width */
+  tileWidth: number;
+  /** Tile height */
+  tileHeight: number;
+  /** Grid columns */
+  cols: number;
+  /** Grid rows */
+  rows: number;
+  /** Isometric camera */
+  camera: any;
+
+  constructor(game: Game, options?: IsometricSceneOptions);
+
+  /**
+   * Convert grid coordinates to screen position.
+   * @param gridX - Grid X coordinate
+   * @param gridY - Grid Y coordinate
+   * @param height - Optional height offset
+   */
+  gridToScreen(gridX: number, gridY: number, height?: number): { x: number; y: number };
+
+  /**
+   * Convert screen position to grid coordinates.
+   * @param screenX - Screen X coordinate
+   * @param screenY - Screen Y coordinate
+   */
+  screenToGrid(screenX: number, screenY: number): { x: number; y: number };
+}
+
+// ==========================================================================
+// FluidSystem
+// ==========================================================================
+
+/** Options for FluidSystem */
+export interface FluidSystemOptions extends GameObjectOptions {
+  /** Maximum number of particles */
+  maxParticles?: number;
+  /** Particle radius */
+  particleRadius?: number;
+  /** Gravity strength */
+  gravity?: number;
+  /** Fluid viscosity */
+  viscosity?: number;
+  /** Pressure multiplier */
+  pressure?: number;
+  /** Surface tension */
+  surfaceTension?: number;
+  /** Boundary bounds */
+  bounds?: { x: number; y: number; width: number; height: number };
+  /** Particle color */
+  color?: string | ((particle: any) => string);
+  /** Canvas blend mode */
+  blendMode?: GlobalCompositeOperation;
+}
+
+/**
+ * Fluid simulation system using SPH (Smoothed Particle Hydrodynamics).
+ *
+ * @example
+ * const fluid = new FluidSystem(game, {
+ *   maxParticles: 500,
+ *   gravity: 200,
+ *   viscosity: 0.1,
+ *   bounds: { x: 0, y: 0, width: 800, height: 600 }
+ * });
+ * game.pipeline.add(fluid);
+ */
+export class FluidSystem extends GameObject {
+  /** All fluid particles */
+  particles: any[];
+  /** Maximum particles */
+  maxParticles: number;
+  /** Particle radius */
+  particleRadius: number;
+  /** Gravity strength */
+  gravity: number;
+  /** Fluid viscosity */
+  viscosity: number;
+  /** Pressure multiplier */
+  pressure: number;
+
+  /** Current particle count */
+  readonly particleCount: number;
+
+  constructor(game: Game, options?: FluidSystemOptions);
+
+  /**
+   * Spawn particles at position.
+   * @param x - X position
+   * @param y - Y position
+   * @param count - Number of particles
+   * @param spread - Position spread
+   */
+  spawn(x: number, y: number, count: number, spread?: number): void;
+
+  /**
+   * Apply force to particles in radius.
+   * @param x - Force center X
+   * @param y - Force center Y
+   * @param radius - Effect radius
+   * @param force - Force strength
+   */
+  applyForce(x: number, y: number, radius: number, force: number): void;
+
+  /** Clear all particles */
+  clear(): void;
+}

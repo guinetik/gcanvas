@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generative Art - Hypnotic Mandala</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Hypnotic Mandala</strong> — Generative art using the <code>gcanvas</code> fluent API.<br/>
+    <span style="color:#CCC">
+      <li><strong>Drag to rotate</strong> — 3D rotation with inertia (double-click to reset)</li>
+      <li><code>Radial patterns</code> — Shapes in concentric rings at different depths</li>
+      <li><code>HSL color cycling</code> — Colors shift based on time and position</li>
+      <li><code>Trail effect</code> — Semi-transparent clear creates motion blur</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/genart.js"></script>
+</body>
+
+</html>

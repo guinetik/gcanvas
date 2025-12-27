@@ -6,6 +6,20 @@ import { GameObject } from "../objects/go.js";
  * A GameObject that replaces the native mouse pointer with a custom shape.
  * - Provide a normal shape (e.g. small Circle or custom icon).
  * - Optionally provide a pressed shape to show while the mouse/touch is down.
+ * 
+ * Theme: Terminal × Vercel aesthetic
+ * For best results, use shapes with terminal green (#0f0) outlines:
+ * 
+ * ```js
+ * const normalCursor = new Circle(0, 0, 8, {
+ *   stroke: "#0f0",
+ *   lineWidth: 2
+ * });
+ * const pressedCursor = new Circle(0, 0, 6, {
+ *   fill: "#0f0"
+ * });
+ * const cursor = new Cursor(game, normalCursor, pressedCursor);
+ * ```
  *
  * Usage:
  *   const cursor = new Cursor(game, normalShape, pressedShape);

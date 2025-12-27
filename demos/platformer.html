@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tron Platformer - GCanvas Demo</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+  <style>
+    /* Override for full immersion */
+    body {
+      background: #000;
+    }
+
+    canvas#game {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #info {
+      background: rgba(0, 0, 0, 0.9);
+      border-bottom: 1px solid #00ff00;
+    }
+
+    #info strong {
+      color: #00ff00;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">
+    <strong>NETRUNNER.exe</strong> — platformer demo<br/>
+    <span style="color:#666">
+      <li>ARROWS / WASD: move left/right</li>
+      <li>SPACE / UP / W: jump</li>
+      <li>stomp enemies • collect data orbs</li>
+      <li>reach the portal to complete the level</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/platformer.js"></script>
+</body>
+</html>

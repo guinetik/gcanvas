@@ -12,25 +12,56 @@ import {
   Patterns,
   Group,
   TextShape,
+  Text,
+  applyAnchor,
+  Position,
 } from "../../src/index";
 
 export class PatternDemo extends Scene {
   constructor(game, options = {}) {
     super(game, options);
     this.elapsedTime = this.lastChangeTime = 0;
+    this.cellSize = 120;
+    this.maxColumns = 6;
   }
 
   init() {
     const game = this.game;
-    // 1) Create a tile grid anchored at center
+    // 1) Create a tile grid
+    const margin = 40;
+    const initialColumns = Math.min(
+      this.maxColumns,
+      Math.max(1, Math.floor((game.width - margin) / this.cellSize))
+    );
+
     this.grid = new TileLayout(game, {
-      anchor: "center",
-      columns: 6,
+      columns: initialColumns,
       spacing: 12,
       padding: 20,
       autoSize: true,
       debug: true,
     });
+
+    // Add Title & Subtitle
+    this.add(
+      applyAnchor(
+        new Text(game, "GCanvas Pattern Gallery", {
+          font: "bold 24px monospace",
+          color: "white",
+        }),
+        { anchor: Position.TOP_CENTER, anchorOffsetY: 30 }
+      )
+    );
+
+    this.add(
+      applyAnchor(
+        new Text(game, "Procedural pixel patterns and noise algorithms", {
+          font: "16px monospace",
+          color: "#999",
+        }),
+        { anchor: Position.TOP_CENTER, anchorOffsetY: 60 }
+      )
+    );
 
     const size = 10;
     // Define pattern types
@@ -79,7 +110,7 @@ export class PatternDemo extends Scene {
         name: "mesh",
         size: size * 2,
         raw: Patterns.mesh(size * 2, size * 2, {
-          spacing: size*2,         // Keep the same spacing (20)
+          spacing: size * 2,         // Keep the same spacing (20)
           lineWidth: 1,
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
@@ -89,7 +120,7 @@ export class PatternDemo extends Scene {
         name: "isometric",
         size: size * 4,
         raw: Patterns.isometric(size * 4, size * 4, {
-          cellSize: size*4,
+          cellSize: size * 4,
           lineWidth: 2,
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
@@ -109,7 +140,7 @@ export class PatternDemo extends Scene {
         size: size * 2,
         raw: Patterns.harlequin(size * 2, size * 2, {
           size: size,
-          lineWidth: size/2,
+          lineWidth: size / 2,
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
         }),
@@ -118,7 +149,7 @@ export class PatternDemo extends Scene {
         name: "diamonds",
         size: size * 3,
         raw: Patterns.diamonds(size * 3, size * 3, {
-          size: size*3,
+          size: size * 3,
           spacing: 3,
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
@@ -127,7 +158,7 @@ export class PatternDemo extends Scene {
       {
         name: "cubes",
         size: size * 2,
-        raw: Patterns.cubes(size *2, size * 2, {
+        raw: Patterns.cubes(size * 2, size * 2, {
           size: size,
           spacing: 1,
           background: [0, 0, 0, 0],
@@ -148,7 +179,7 @@ export class PatternDemo extends Scene {
       {
         name: "TBA",
         size: size * 2,
-        raw: Patterns.void(size *2, size * 2, {
+        raw: Patterns.void(size * 2, size * 2, {
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
         }),
@@ -157,7 +188,7 @@ export class PatternDemo extends Scene {
         name: "honeycomb",
         size: size * 4,
         raw: Patterns.honeycomb(size * 4, size * 4, {
-          radius: size*2,
+          radius: size * 2,
           lineWidth: 1,
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
@@ -167,7 +198,7 @@ export class PatternDemo extends Scene {
         name: "honeycomb (fill)",
         size: size * 4,
         raw: Patterns.honeycomb(size * 4, size * 4, {
-          radius: size*2,
+          radius: size * 2,
           lineWidth: 5,
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
@@ -175,9 +206,9 @@ export class PatternDemo extends Scene {
       },
       {
         name: "circles",
-        size: size*4,
+        size: size * 4,
         raw: Patterns.circles(size * 4, size * 4, {
-          radius: size*2,
+          radius: size * 2,
           lineWidth: 1,
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
@@ -185,9 +216,9 @@ export class PatternDemo extends Scene {
       },
       {
         name: "circles (fill)",
-        size: size*4,
+        size: size * 4,
         raw: Patterns.circles(size * 4, size * 4, {
-          radius: size*2,
+          radius: size * 2,
           lineWidth: 7,
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
@@ -195,8 +226,8 @@ export class PatternDemo extends Scene {
       },
       {
         name: "voronoi",
-        size: size*10,
-        raw: Patterns.voronoi(size*10, size*10, {
+        size: size * 10,
+        raw: Patterns.voronoi(size * 10, size * 10, {
           cellCount: size,
           edgeColor: [0, 0, 0, 255],
           edgeThickness: 1.5,
@@ -206,8 +237,8 @@ export class PatternDemo extends Scene {
       },
       {
         name: "voronoi-themed",
-        size: size*10,
-        raw: Patterns.voronoi(size*10, size*10, {
+        size: size * 10,
+        raw: Patterns.voronoi(size * 10, size * 10, {
           cellCount: size,
           baseColor: [10, 255, 10, 255],
           colorVariation: 0.5,
@@ -220,7 +251,7 @@ export class PatternDemo extends Scene {
       {
         name: "TBA",
         size: size * 2,
-        raw: Patterns.void(size *2, size * 2, {
+        raw: Patterns.void(size * 2, size * 2, {
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
         }),
@@ -228,7 +259,7 @@ export class PatternDemo extends Scene {
       {
         name: "TBA",
         size: size * 2,
-        raw: Patterns.void(size *2, size * 2, {
+        raw: Patterns.void(size * 2, size * 2, {
           background: [0, 0, 0, 0],
           foreground: Painter.colors.randomColorRGBA()
         }),
@@ -242,7 +273,7 @@ export class PatternDemo extends Scene {
           fadeExponent: 2.0
         }),
       },
-      
+
       {
         name: "perlin-noise",
         size: size * 2,
@@ -287,7 +318,7 @@ export class PatternDemo extends Scene {
     for (let i = 0; i < patternSources.length; i++) {
       const pattern = patternSources[i % patternSources.length];
 
-      const group = new Group({width:100, height:130});
+      const group = new Group({ width: 100, height: 130 });
       const rect = new PatternRectangle(null, "repeat", {
         width: 100,
         height: 100,
@@ -313,6 +344,29 @@ export class PatternDemo extends Scene {
     }
 
     this.add(this.grid);
+    this.onResize();
+  }
+
+  onResize() {
+    if (this.grid) {
+      const margin = 40;
+      const availableWidth = this.game.width - margin;
+      const columns = Math.min(
+        this.maxColumns,
+        Math.max(1, Math.floor(availableWidth / this.cellSize))
+      );
+
+      if (this.grid.columns !== columns) {
+        this.grid.columns = columns;
+        this.grid.markBoundsDirty();
+      }
+
+      // Center the grid
+      this.grid.transform.position(
+        Math.round(this.game.width / 2),
+        Math.round(this.game.height / 2)
+      );
+    }
   }
 }
 
@@ -326,11 +380,18 @@ export class MyGame extends Game {
 
   init() {
     super.init();
-    this.pipeline.add(new PatternDemo(this));
+    this.demo = new PatternDemo(this);
+    this.pipeline.add(this.demo);
     this.pipeline.add(
       new FPSCounter(this, {
         anchor: "bottom-right",
       })
     );
+  }
+
+  onResize() {
+    if (this.demo) {
+      this.demo.onResize();
+    }
   }
 }

@@ -37,13 +37,37 @@ import {
   Heart,
   Group,
   TextShape,
+  applyAnchor,
+  Position,
 } from "../../src/index";
+
+const CONFIG = {
+  headerHeight: 80, // Space reserved for title + subtitle (30px title offset + 60px subtitle offset + spacing)
+  margin: 40, // Horizontal/vertical margins for viewport calculation
+  bottomMargin: 70, // Space reserved for FPS counter at bottom (with margin above it)
+};
 
 class ShapeGalleryGame extends Game {
   constructor(canvas) {
     super(canvas);
     this.backgroundColor = "#fff";
     this.enableFluidSize();
+    this.cellSize = 120;
+    this.maxColumns = 5;
+  }
+
+  /**
+   * Get viewport dimensions for scrolling based on available space.
+   * Accounts for header (title + subtitle), bottom margin (FPS counter), and margins.
+   * @returns {{width: number, height: number}} Viewport dimensions
+   */
+  getViewportDimensions() {
+    const availableHeight = this.canvas.height - CONFIG.headerHeight - CONFIG.bottomMargin - CONFIG.margin;
+    const availableWidth = this.canvas.width - CONFIG.margin * 2;
+    return {
+      width: Math.max(200, availableWidth),
+      height: Math.max(200, availableHeight),
+    };
   }
 
   init() {
@@ -142,7 +166,7 @@ class ShapeGalleryGame extends Game {
         name: "Line",
         class: Line,
         args: [40],
-        options: { stroke: "black", lineWidth: 3},
+        options: { stroke: "black", lineWidth: 3 },
       },
       {
         name: "Bezier",
@@ -393,25 +417,18 @@ class ShapeGalleryGame extends Game {
     );
     // Title
     this.pipeline.add(
-      new Text(this, "GCanvas Shape Gallery", {
-        x: this.canvas.width / 2,
-        y: 30,
+      applyAnchor(new Text(this, "GCanvas Shape Gallery", {
         font: "bold 24px monospace",
         color: "#222",
-        align: "center",
-        baseline: "top",
-      })
+      }), { anchor: Position.TOP_CENTER, anchorOffsetY: 30 })
     );
+
     // Subtitle
     this.pipeline.add(
-      new Text(this, "Mouse over any shape to rotate or animate it", {
-        x: this.canvas.width / 2,
-        y: 60,
+      applyAnchor(new Text(this, "Mouse over any shape to rotate or animate it", {
         font: "16px monospace",
         color: "#666",
-        align: "center",
-        baseline: "top",
-      })
+      }), { anchor: Position.TOP_CENTER, anchorOffsetY: 60 })
     );
     this.events.on("click", (e) => {
       this.gallery.children.forEach((go) => {
@@ -446,26 +463,50 @@ class ShapeGalleryGame extends Game {
     this.createGallery();
     this.onResize();
   }
-  
+
   onResize() {
-    if(this.gallery) {
-      // Use Transform API for positioning
-      this.gallery.transform.position(
-        Math.round(this.canvas.width / 2),
-        Math.round(this.canvas.height / 2)
-      );
+    if (this.gallery) {
+      // Calculate responsive columns based on available width
+      const availableWidth = this.canvas.width - CONFIG.margin;
+      const columns = Math.min(this.maxColumns, Math.max(1, Math.floor(availableWidth / this.cellSize)));
+
+      if (this.gallery.columns !== columns) {
+        this.gallery.columns = columns;
+        // Trigger layout update
+        this.gallery.markBoundsDirty();
+      }
+
+      // Update viewport dimensions for scrolling
+      const viewport = this.getViewportDimensions();
+      this.gallery._viewportWidth = viewport.width;
+      this.gallery._viewportHeight = viewport.height;
+
+      // Update anchor offset to position gallery below header
+      this.gallery.anchorOffsetY = CONFIG.headerHeight / 2 + 20; // Position below header with spacing
+
+      // Mark bounds dirty to trigger layout recalculation
+      this.gallery.markBoundsDirty();
     }
   }
 
   createGallery() {
-    const cellSize = 120;
+    const cellSize = this.cellSize;
+    const initialColumns = Math.min(this.maxColumns, Math.max(1, Math.floor((this.canvas.width - CONFIG.margin) / cellSize)));
+    const viewport = this.getViewportDimensions();
+
     const gallery = new TileLayout(this, {
       debug: true,
       debugColor: "grey",
-      columns: 5,
-      debug: true,
-      width: cellSize * 5,
-      height: cellSize * 5,
+      columns: initialColumns,
+      spacing: 10,
+      // Enable scrolling with responsive viewport
+      scrollable: true,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
+      // Use anchor positioning instead of manual transform.position()
+      anchor: Position.CENTER,
+      anchorOffsetY: CONFIG.headerHeight / 2 + 20, // Position below header with spacing
+      autoSize: true,
     });
 
     this.shapeEntries.forEach((entry, index) => {
@@ -521,7 +562,7 @@ class ShapeGalleryGame extends Game {
         game.canvas.style.cursor = "pointer";
         Tweenetik.to(
           group,
-          { scaleX: 1.3, scaleY: 1.3},
+          { scaleX: 1.3, scaleY: 1.3 },
           1, // duration
           Easing.easeOutElastic,
           { onComplete: () => (go.tweening = false) }
@@ -532,7 +573,7 @@ class ShapeGalleryGame extends Game {
         game.canvas.style.cursor = "default";
         Tweenetik.to(
           group, // the shape to scale
-          { scaleX: 1, scaleY: 1},
+          { scaleX: 1, scaleY: 1 },
           1, // duration
           Easing.easeOutElastic
         );

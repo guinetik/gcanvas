@@ -1,7 +1,12 @@
 import { Button } from "./button.js";
+import { UI_THEME } from "./theme.js";
 
 /**
  * ToggleButton - A variant of Button with a persistent "toggled" (active) state.
+ * 
+ * Theme: Terminal × Vercel aesthetic
+ * - When toggled ON: glowing green border with subtle green tint
+ * - When toggled OFF: inherits default button styling
  *
  * Usage:
  *   const myToggle = new ToggleButton(game, {
@@ -41,9 +46,10 @@ export class ToggleButton extends Button {
         this.refreshToggleVisual();
       },
     });
-    this.colorActiveBg = options.colorActiveBg || "#444";
-    this.colorActiveStroke = options.colorActiveStroke || "#0f0";
-    this.colorActiveText = options.colorActiveText || "#0f0";
+    // Terminal × Vercel theme for toggled state
+    this.colorActiveBg = options.colorActiveBg || UI_THEME.button.active.bg;
+    this.colorActiveStroke = options.colorActiveStroke || UI_THEME.button.active.stroke;
+    this.colorActiveText = options.colorActiveText || UI_THEME.button.active.text;
     // Track toggled state. Default is false unless 'startToggled' is set
     this.toggled = !!options.startToggled;
 

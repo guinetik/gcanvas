@@ -1,7 +1,7 @@
 {
-  "name": "gcanvas",
-  "version": "0.0.3-alpha",
-  "description": "Canvas Utilities and 2d Primitives",
+  "name": "@guinetik/gcanvas",
+  "version": "1.0.2",
+  "description": "A batteries-included 2D canvas framework for games and generative art",
   "main": "index.js",
   "types": "types/index.d.ts",
   "type": "module",
@@ -27,7 +27,19 @@
   "keywords": [
     "canvas",
     "html5",
-    "no-dependencies"
+    "game-framework",
+    "2d-graphics",
+    "generative-art",
+    "creative-coding",
+    "genuary",
+    "game-development",
+    "animation",
+    "sprites",
+    "particles",
+    "tweening",
+    "fluent-api",
+    "ui-components",
+    "zero-dependencies"
   ],
   "author": "guinetik",
   "license": "ISC",
@@ -40,7 +52,7 @@
   "bugs": {
     "url": "https://github.com/guinetik/gcanvas/issues"
   },
-  "homepage": "https://github.com/guinetik/gcanvas#readme",
+  "homepage": "https://gcanvas.guinetik.com",
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
     "better-docs": "^2.7.3",

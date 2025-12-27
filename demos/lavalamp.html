@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generative Art - Lava Lamp</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Lava Lamp</strong> — Metaball lava lamp with heat dynamics.<br/>
+    <span style="color:#CCC">
+      <li><code>ON/OFF</code> — Toggle power. Watch the wax cool and rise!</li>
+      <li><code>Heat zones</code> — Smooth thermal transitions between hot/cold.</li>
+      <li><code>Buoyancy</code> — Hot blobs rise, cold blobs sink.</li>
+      <li><code>Heat transfer</code> — Nearby blobs exchange temperature.</li>
+      <li><code>Metaballs</code> — Blobs merge and split organically.</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/lavalamp.js"></script>
+</body>
+
+</html>

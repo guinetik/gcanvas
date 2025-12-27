@@ -4,10 +4,16 @@
  * A basic UI Button GameObject that combines a Rectangle shape
  * and a Text label using a Group. It supports hover and press
  * states, and fires an optional onClick callback when clicked.
+ * 
+ * Theme: Terminal × Vercel aesthetic
+ * - Dark transparent backgrounds
+ * - Neon green accents (#0f0)
+ * - Inverted colors on hover
  ***************************************************************/
 
 import { Group, Rectangle, TextShape, Shape } from "../../shapes";
 import { GameObject } from "../objects/go";
+import { UI_THEME } from "./theme.js";
 
 /**
  * Button - A clickable UI element as a GameObject.
@@ -56,15 +62,15 @@ export class Button extends GameObject {
    * @param {Function} [options.onRelease=null] - Callback to invoke upon button release.
    * @param {string} [options.anchor] - Optional anchor for positioning (e.g. "top-left").
    * @param {number} [options.padding] - Extra padding if using anchor.
-   * @param {string} [options.colorDefaultBg="#eee"] - Background color in default state.
-   * @param {string} [options.colorDefaultStroke="#999"] - Stroke color in default state.
-   * @param {string} [options.colorDefaultText="#333"] - Text color in default state.
-   * @param {string} [options.colorHoverBg="#222"] - Background color in hover state.
-   * @param {string} [options.colorHoverStroke="#16F529"] - Stroke color in hover state.
-   * @param {string} [options.colorHoverText="#16F529"] - Text color in hover state.
-   * @param {string} [options.colorPressedBg="#111"] - Background color in pressed state.
-   * @param {string} [options.colorPressedStroke="#00aaff"] - Stroke color in pressed state.
-   * @param {string} [options.colorPressedText="#00aaff"] - Text color in pressed state.
+   * @param {string} [options.colorDefaultBg="rgba(0,0,0,0.85)"] - Background color in default state.
+   * @param {string} [options.colorDefaultStroke="rgba(0,255,0,0.4)"] - Stroke color in default state.
+   * @param {string} [options.colorDefaultText="#0f0"] - Text color in default state.
+   * @param {string} [options.colorHoverBg="#0f0"] - Background color in hover state (inverted).
+   * @param {string} [options.colorHoverStroke="#0f0"] - Stroke color in hover state.
+   * @param {string} [options.colorHoverText="#000"] - Text color in hover state (inverted).
+   * @param {string} [options.colorPressedBg="#0c0"] - Background color in pressed state.
+   * @param {string} [options.colorPressedStroke="#0f0"] - Stroke color in pressed state.
+   * @param {string} [options.colorPressedText="#000"] - Text color in pressed state.
    * @param {...any} rest - Additional properties passed to the superclass.
    */
   constructor(game, options = {}) {
@@ -89,15 +95,16 @@ export class Button extends GameObject {
       onPressed = null,
       onRelease = null,
       padding = 10,
-      colorDefaultBg = "#eee",
-      colorDefaultStroke = "#999",
-      colorDefaultText = "#333",
-      colorHoverBg = "#222",
-      colorHoverStroke = "#16F529",
-      colorHoverText = "#16F529",
-      colorPressedBg = "#111",
-      colorPressedStroke = "#00aaff",
-      colorPressedText = "#00aaff",
+      // Terminal × Vercel theme: dark bg, green accents, inverted hover
+      colorDefaultBg = UI_THEME.button.default.bg,
+      colorDefaultStroke = UI_THEME.button.default.stroke,
+      colorDefaultText = UI_THEME.button.default.text,
+      colorHoverBg = UI_THEME.button.hover.bg,
+      colorHoverStroke = UI_THEME.button.hover.stroke,
+      colorHoverText = UI_THEME.button.hover.text,
+      colorPressedBg = UI_THEME.button.pressed.bg,
+      colorPressedStroke = UI_THEME.button.pressed.stroke,
+      colorPressedText = UI_THEME.button.pressed.text,
     } = options;
 
     // Basic position and sizing
@@ -384,6 +391,20 @@ export class Button extends GameObject {
     
     // Reposition the label
     this._boundsDirty = true;
+  }
+
+  /**
+   * Get the bounding box of this Button for hit testing.
+   * Required for the event system to work properly.
+   * @returns {{x: number, y: number, width: number, height: number}} Bounds object
+   */
+  getBounds() {
+    return {
+      x: this.x,
+      y: this.y,
+      width: this.width,
+      height: this.height,
+    };
   }
 
   /**

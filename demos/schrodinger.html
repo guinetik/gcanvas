@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Math & Physics - Schrodinger Wave</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Gaussian Wave Packet</strong> — Quantum wave function visualization.<br/>
+    <span style="color:#CCC">
+      <li><code>3D Helix</code> — Complex wave shown as spiral (Re + Im).</li>
+      <li><code>Envelope</code> — Gaussian bell curve (red) shows |Ψ|².</li>
+      <li><code>Projection</code> — Blue wave on grid shows Re(Ψ).</li>
+      <li><code>Drag</code> — Rotate the 3D view with mouse.</li>
+      <li><code>Double-click</code> — Reset view and animation.</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/schrodinger.js"></script>
+</body>
+
+</html>

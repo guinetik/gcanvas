@@ -836,6 +836,69 @@ export class Sphere extends Shape {
   constructor(radius: number, options?: ShapeOptions);
 }
 
+/** Options for Sphere3D */
+export interface Sphere3DOptions extends ShapeOptions {
+  /** Sphere radius */
+  radius?: number;
+  /** Number of latitude segments */
+  latSegments?: number;
+  /** Number of longitude segments */
+  lonSegments?: number;
+  /** Base color */
+  color?: string;
+  /** Light direction [x, y, z] */
+  lightDirection?: [number, number, number];
+  /** Ambient light intensity (0-1) */
+  ambientLight?: number;
+  /** Whether to use glow effect */
+  glow?: boolean;
+  /** Glow color */
+  glowColor?: string;
+  /** Glow intensity */
+  glowIntensity?: number;
+  /** Whether to use wireframe */
+  wireframe?: boolean;
+  /** Wireframe color */
+  wireframeColor?: string;
+}
+
+/**
+ * 3D sphere with Camera3D projection support.
+ * Renders a proper 3D sphere with lighting and optional effects.
+ *
+ * @example
+ * const sphere = new Sphere3D({
+ *   x: 0, y: 0, z: 0,
+ *   radius: 100,
+ *   color: '#ff6600',
+ *   glow: true
+ * });
+ */
+export class Sphere3D extends Shape {
+  /** Sphere radius */
+  radius: number;
+  /** Z position in 3D space */
+  z: number;
+  /** Camera3D instance for projection */
+  camera: any;
+
+  constructor(options?: Sphere3DOptions);
+
+  /**
+   * Set the camera for 3D projection.
+   * @param camera - Camera3D instance
+   */
+  setCamera(camera: any): Sphere3D;
+
+  /**
+   * Set position in 3D space.
+   * @param x - X position
+   * @param y - Y position
+   * @param z - Z position
+   */
+  setPosition(x: number, y: number, z: number): Sphere3D;
+}
+
 // ==========================================================================
 // Text Shapes
 // ==========================================================================

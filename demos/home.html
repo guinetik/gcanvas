@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Primary Meta Tags -->
+  <title>GCanvas - 2D Canvas Rendering & Game Framework</title>
+  <meta name="title" content="GCanvas - 2D Canvas Rendering & Game Framework">
+  <meta name="description" content="A modular 2D canvas rendering and game framework for JavaScript. Build games, visualizations, and creative coding projects with a clean API, 40+ shapes, physics simulations, and more.">
+  <meta name="keywords" content="canvas, 2d, game framework, javascript, html5 canvas, game development, creative coding, particle system, animation, physics, 3d shapes, isometric">
+  <meta name="author" content="GCanvas">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://gcanvas.guinetik.com/#/home">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://gcanvas.guinetik.com/#/home">
+  <meta property="og:title" content="GCanvas - 2D Canvas Rendering & Game Framework">
+  <meta property="og:description" content="A modular 2D canvas rendering and game framework for JavaScript. Build games, visualizations, and creative coding projects with a clean API, 40+ shapes, physics simulations, and more.">
+  <meta property="og:image" content="https://gcanvas.guinetik.com/og_image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="GCanvas demo screenshot showing various shapes and visualizations">
+  <meta property="og:site_name" content="GCanvas">
+  <meta property="og:locale" content="en_US">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://gcanvas.guinetik.com/#/home">
+  <meta name="twitter:title" content="GCanvas - 2D Canvas Rendering & Game Framework">
+  <meta name="twitter:description" content="A modular 2D canvas rendering and game framework for JavaScript. Build games, visualizations, and creative coding projects with a clean API, 40+ shapes, physics simulations, and more.">
+  <meta name="twitter:image" content="https://gcanvas.guinetik.com/og_image.png">
+  <meta name="twitter:image:alt" content="GCanvas demo screenshot showing various shapes and visualizations">
+  <meta name="twitter:creator" content="@guinetik">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="./logo.svg">
+  <link rel="apple-touch-icon" href="./logo.svg">
+  <meta name="theme-color" content="#000000">
+  
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "GCanvas",
+    "applicationCategory": "GameFramework",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "A modular 2D canvas rendering and game framework for JavaScript. Build games, visualizations, and creative coding projects with a clean API, 40+ shapes, physics simulations, and more.",
+    "url": "https://gcanvas.guinetik.com",
+    "author": {
+      "@type": "Organization",
+      "name": "GCanvas",
+      "url": "https://github.com/guinetik/gcanvas"
+    },
+    "codeRepository": "https://github.com/guinetik/gcanvas",
+    "programmingLanguage": "JavaScript",
+    "license": "https://github.com/guinetik/gcanvas/blob/main/LICENSE"
+  }
+  </script>
+  
+  <!-- Prism.js for code highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.css">
+  <style>
+    /* Terminal-style Prism overrides */
+    code[class*="language-"],
+    pre[class*="language-"] {
+      color: #ccc;
+      background: #0a0a0a;
+      text-shadow: none;
+    }
+    pre[class*="language-"] {
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+    }
+    .token.comment,
+    .token.prolog,
+    .token.doctype,
+    .token.cdata { color: #555; }
+    .token.punctuation { color: #888; }
+    .token.property,
+    .token.tag,
+    .token.constant,
+    .token.symbol,
+    .token.deleted { color: #0f0; }
+    .token.boolean,
+    .token.number { color: #0ff; }
+    .token.selector,
+    .token.attr-name,
+    .token.string,
+    .token.char,
+    .token.builtin,
+    .token.inserted { color: #7fff7f; }
+    .token.operator,
+    .token.entity,
+    .token.url,
+    .language-css .token.string,
+    .style .token.string,
+    .token.variable { color: #ccc; }
+    .token.atrule,
+    .token.attr-value,
+    .token.function,
+    .token.class-name { color: #0f0; }
+    .token.keyword { color: #0f0; font-weight: bold; }
+    .token.regex,
+    .token.important { color: #fd8; }
+  </style>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Courier New', 'Consolas', monospace;
+      line-height: 1.6;
+      color: #ccc;
+      background-color: #000;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 60px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    h1 {
+      font-size: 3em;
+      margin-bottom: 10px;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 4px;
+    }
+
+    .tagline {
+      font-size: 1.2em;
+      color: #888;
+      margin-bottom: 20px;
+    }
+
+    .github-link {
+      display: inline-block;
+      color: #0f0;
+      text-decoration: none;
+      border: 1px solid #0f0;
+      padding: 8px 16px;
+      transition: all 0.2s;
+    }
+
+    .github-link:hover {
+      background-color: #0f0;
+      color: #000;
+    }
+
+    h2 {
+      font-size: 2em;
+      margin-top: 60px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #1a1a1a;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+    }
+
+    h3 {
+      font-size: 1.4em;
+      margin-top: 40px;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+    }
+
+    p {
+      margin-bottom: 20px;
+      color: #aaa;
+      font-family: 'Courier New', monospace;
+    }
+
+    pre {
+      background-color: #0a0a0a;
+      color: #ccc;
+      padding: 20px;
+      border: 1px solid #1a1a1a;
+      overflow-x: auto;
+      margin: 20px 0;
+      font-family: 'Courier New', monospace;
+    }
+
+    code {
+      font-family: 'Courier New', monospace;
+      background-color: #111;
+      color: #0f0;
+      padding: 2px 6px;
+    }
+
+    pre code {
+      background-color: transparent;
+      color: #ccc;
+      padding: 0;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin: 30px 0;
+    }
+
+    .feature-card {
+      background-color: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      padding: 20px;
+      transition: all 0.2s;
+      color: #aaa;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+    }
+
+    .feature-card:hover {
+      border-color: #0f0;
+      background-color: #0f0;
+    }
+
+    .feature-card h4 {
+      color: #0f0;
+      margin-top: 0;
+      font-size: 1.2em;
+      transition: color 0.2s;
+      text-decoration: none;
+    }
+
+    .feature-card:hover h4 {
+      color: #fff;
+    }
+
+    .feature-card p {
+      color: #aaa;
+      transition: color 0.2s;
+    }
+
+    .feature-card:hover p {
+      color: #000;
+    }
+
+    .feature-card code {
+      background-color: #111;
+      color: #0f0;
+      transition: all 0.2s;
+    }
+
+    .feature-card:hover code {
+      background-color: #000;
+      color: #fff;
+    }
+
+    .demo-links {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin: 30px 0;
+    }
+
+    .demo-link {
+      display: block;
+      background-color: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      padding: 15px;
+      color: #ccc;
+      text-decoration: none;
+      transition: all 0.2s;
+      font-family: 'Courier New', monospace;
+    }
+
+    .demo-link:hover {
+      border-color: #0f0;
+      color: #0f0;
+      background-color: #0f0;
+      color: #000;
+    }
+
+    .demo-link strong {
+      display: block;
+      color: #0f0;
+      margin-bottom: 5px;
+    }
+
+    .demo-link:hover strong {
+      color: #000;
+    }
+
+    .highlight {
+      color: #0f0;
+      font-weight: bold;
+    }
+
+    .section {
+      margin-bottom: 60px;
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2em;
+      }
+
+      .feature-grid,
+      .demo-links {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>GCANVAS</h1>
+      <p class="tagline">A modular 2D canvas rendering and game framework</p>
+      <a href="https://github.com/guinetik/gcanvas" target="_blank" class="github-link">
+        View on GitHub →
+      </a>
+    </header>
+
+    <section class="section">
+      <h2>Quick Start</h2>
+      <p>
+        GCanvas provides a clean, object-oriented API for building canvas-based games and visualizations.
+        Get started in minutes with a simple example:
+      </p>
+
+      <pre><code class="language-javascript">import { Game, Rectangle, Circle } from '@guinetik/gcanvas';
+
+const canvas = document.getElementById('my-canvas');
+const game = new Game(canvas);
+game.backgroundColor = '#000';
+game.enableFluidSize();
+
+game.init();
+
+// Create shapes
+const rect = new Rectangle({
+  x: 200,
+  y: 150,
+  width: 100,
+  height: 50,
+  color: '#1a1a1a',
+  stroke: '#0f0',
+  lineWidth: 1
+});
+
+const circle = new Circle(30, {
+  x: 300,
+  y: 150,
+  color: '#2a2a2a',
+  stroke: '#0f0',
+  lineWidth: 1
+});
+
+// Add to pipeline
+game.pipeline.add(rect);
+game.pipeline.add(circle);
+
+game.start();</code></pre>
+    </section>
+
+    <section class="section">
+      <h2>Key Features</h2>
+      <div class="feature-grid">
+        <a href="shapes.html" target="demo-frame" class="feature-card">
+          <h4>🎨 Shape Library</h4>
+          <p>Rich collection of shapes: circles, rectangles, stars, polygons, 3D primitives, and more. All with consistent styling and transformation APIs.</p>
+        </a>
+
+        <a href="pipeline.html" target="demo-frame" class="feature-card">
+          <h4>🔄 Rendering Pipeline</h4>
+          <p>Layered architecture from basic positioning (Euclidian) to full rendering (Shape) with transformations, opacity, and shadows.</p>
+        </a>
+
+        <a href="fluent.html" target="demo-frame" class="feature-card">
+          <h4>⚡ Fluent API</h4>
+          <p>Chainable builder pattern for rapid prototyping. Create games declaratively with <code>gcanvas()</code> or creative sketches with <code>sketch()</code>.</p>
+        </a>
+
+        <a href="basic.html" target="demo-frame" class="feature-card">
+          <h4>🎮 Game Objects</h4>
+          <p>Full game loop with update/render cycles, event handling, collision detection, and scene management.</p>
+        </a>
+
+        <a href="animations.html" target="demo-frame" class="feature-card">
+          <h4>🎭 Motion & Animation</h4>
+          <p>Built-in motion presets (pulse, orbit, oscillate) plus powerful tweening system with 30+ easing functions.</p>
+        </a>
+
+        <a href="easing.html" target="demo-frame" class="feature-card">
+          <h4>📈 Easing Functions</h4>
+          <p>30+ easing functions for smooth animations. From linear to elastic, bounce to back - all with interactive visualizations.</p>
+        </a>
+
+        <a href="lavalamp.html" target="demo-frame" class="feature-card">
+          <h4>🔥 Heat Dynamics</h4>
+          <p>Particle-based heat physics: thermal zones, buoyancy forces, and heat transfer. Perfect for fluid simulations and lava lamps.</p>
+        </a>
+
+        <a href="tde.html" target="demo-frame" class="feature-card">
+          <h4>🎲 3D & Physics</h4>
+          <p>3D shapes, particle systems, and physics simulations. Tidal disruption events, black holes, and advanced visualizations.</p>
+        </a>
+
+        <a href="layouts.html" target="demo-frame" class="feature-card">
+          <h4>📐 Layout Management</h4>
+          <p>Automatic layout systems for organizing game objects. Horizontal, vertical, and tile layouts with spacing and alignment.</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Two Ways to Use</h2>
+
+      <h3>1. Object-Oriented API</h3>
+      <p>
+        Full control with classes and explicit game loop management. Perfect for complex games and applications.
+      </p>
+      <pre><code class="language-javascript">import { Game, Scene, GameObject } from '@guinetik/gcanvas';
+
+class MyGame extends Game {
+  init() {
+    const scene = new Scene(this);
+    // Add your game objects
+    this.pipeline.add(scene);
+  }
+}</code></pre>
+
+      <h3>2. Fluent API</h3>
+      <p>
+        Declarative, chainable API for rapid development. Great for prototypes, creative coding, and simple games.
+      </p>
+      <pre><code class="language-javascript">import { gcanvas } from '@guinetik/gcanvas';
+
+gcanvas({ bg: '#000' })
+  .scene('game')
+    .go({ x: 200, y: 150 })
+      .circle({ radius: 30, fill: '#1a1a1a', stroke: '#0f0' })
+      .pulse({ min: 0.8, max: 1.2, duration: 1 })
+  .start();</code></pre>
+    </section>
+
+    <section class="section">
+      <h2>Explore the Demos</h2>
+      <p>
+        Check out these examples to see GCanvas in action. Each demo showcases different aspects of the framework.
+      </p>
+
+      <div class="demo-links">
+        <!-- Row 1: Canvas Abstractions -->
+        <a href="shapes.html" class="demo-link">
+          <strong>Shape Gallery</strong>
+          Browse all available shapes including 3D primitives
+        </a>
+
+        <a href="painter.html" class="demo-link">
+          <strong>Painter API</strong>
+          Low-level canvas drawing abstraction
+        </a>
+
+        <a href="scene.html" class="demo-link">
+          <strong>Scene System</strong>
+          Layer and organize game objects with scenes
+        </a>
+
+        <!-- Row 2: Motion Elements -->
+        <a href="easing.html" class="demo-link">
+          <strong>Easing Functions</strong>
+          Interactive visualization of 30+ easing curves
+        </a>
+
+        <a href="animations.html" class="demo-link">
+          <strong>Animations</strong>
+          Motion presets and tweening
+        </a>
+
+        <a href="particles.html" class="demo-link">
+          <strong>Particle System</strong>
+          GameObject-based particle physics
+        </a>
+
+        <!-- Row 3: Physics and Math -->
+        <a href="spacetime.html" class="demo-link">
+          <strong>Spacetime Curvature</strong>
+          General relativity visualization
+        </a>
+
+        <a href="blackhole.html" class="demo-link">
+          <strong>Black Hole</strong>
+          Cinematic accretion disk with lensing
+        </a>
+
+        <a href="lavalamp.html" class="demo-link">
+          <strong>Lava Lamp</strong>
+          Heat dynamics and fluid simulation
+        </a>
+
+        <!-- Row 4: Games -->
+        <a href="space.html" class="demo-link">
+          <strong>Space Invaders</strong>
+          Classic arcade game clone
+        </a>
+
+        <a href="blob.html" class="demo-link">
+          <strong>Blob Feeder</strong>
+          Tamagotchi-style micro-game
+        </a>
+
+        <a href="penrose-game.html" class="demo-link">
+          <strong>Penrose Diagram</strong>
+          Navigate spacetime game
+        </a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Installation</h2>
+      <pre><code class="language-bash">npm install @guinetik/gcanvas</code></pre>
+
+      <h3>ES Modules</h3>
+      <pre><code class="language-javascript">import { Game, Circle, Rectangle } from '@guinetik/gcanvas';</code></pre>
+
+      <h3>CDN</h3>
+      <pre><code class="language-html">&lt;script type="module"&gt;
+  import { Game } from 'https://cdn.jsdelivr.net/npm/gcanvas/dist/gcanvas.es.min.js';
+&lt;/script&gt;</code></pre>
+    </section>
+
+    <section class="section">
+      <h2>Documentation</h2>
+      <p>
+        For complete API documentation, visit the documentation pages in the navigation menu. Each demo includes 
+        source code and explanations.
+      </p>
+    </section>
+  </div>
+
+  <!-- Prism.js scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+
+  <!-- Navigation script for iframe links -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Handle links that should navigate the parent window
+      const links = document.querySelectorAll('a[target="demo-frame"]');
+      links.forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const href = link.getAttribute('href');
+          const routeName = href.replace('.html', '');
+          
+          // Navigate parent window if in iframe, otherwise navigate normally
+          if (window.parent !== window) {
+            window.parent.location.hash = '/' + routeName;
+          } else {
+            window.location.hash = '/' + routeName;
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
+

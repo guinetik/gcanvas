@@ -57,9 +57,13 @@ GCanvas includes TypeScript definitions (`gcanvas.d.ts`) for full IDE intellisen
 
 ## 🧑‍💻 Installation
 
-️⚠️Coming soon to NPM.
+**NPM (Recommended):**
 
-For now, clone this repo:
+```bash
+npm install @guinetik/gcanvas
+```
+
+**Or clone this repo:**
 
 ```bash
 git clone https://github.com/guinetik/gcanvas.git
@@ -89,13 +93,23 @@ npm run build:debug
 
 ## 🚀 Quick Start
 
-### Using via ESM:
+### Using via NPM:
+
+```js
+import { Circle, Painter } from '@guinetik/gcanvas';
+
+Painter.init(ctx);
+const circle = new Circle(50, { x: 100, y: 100, color: 'red' });
+circle.draw();
+```
+
+### Using via ESM (standalone):
 
 ```js
 import { Circle } from './dist/gcanvas.es.min.js';
 
-const circle = new Circle(100, 100, 50, { fillColor: 'red' });
-circle.draw(); // uses static Painter.ctx internally
+const circle = new Circle(50, { x: 100, y: 100, color: 'red' });
+circle.draw();
 ```
 
 ### Using via inline script:

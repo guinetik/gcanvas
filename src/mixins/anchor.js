@@ -83,23 +83,33 @@ export function applyAnchor(go, options = {}) {
           go._anchor.offsetY
         );
       }
-      // Apply the calculated position
+      // Apply the calculated position using Transform API
+      let newX, newY;
+      
       if (go.parent && !isPipelineRoot(go)) {
         // If object has a parent AND is not directly in the pipeline
         if (relativeObj === go.parent) {
           // If anchored relative to parent, use local coordinates
           // (parent position is already accounted for in rendering)
-          go.x = position.x - relativeObj.x;
-          go.y = position.y - relativeObj.y;
+          newX = position.x - relativeObj.x;
+          newY = position.y - relativeObj.y;
         } else {
           // If anchored to something else or absolutely, convert to local coordinates
-          go.x = position.x - go.parent.x;
-          go.y = position.y - go.parent.y;
+          newX = position.x - go.parent.x;
+          newY = position.y - go.parent.y;
         }
       } else {
         // No parent or directly in pipeline - use absolute coordinates
-        go.x = position.x;
-        go.y = position.y;
+        newX = position.x;
+        newY = position.y;
+      }
+      
+      // Use Transform API if available, otherwise fall back to direct assignment
+      if (go.transform && typeof go.transform.position === "function") {
+        go.transform.position(newX, newY);
+      } else {
+        go.x = newX;
+        go.y = newY;
       }
 
       // Set text alignment if applicable and enabled

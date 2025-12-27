@@ -8,6 +8,8 @@ import { Painter } from '../../painter/painter.js';
  * Each frame displays a different Shape, creating frame-by-frame animation
  * similar to Adobe Flash MovieClip.
  *
+ * Supports named animations for complex sprite sheets:
+ *
  * @example
  * const sprite = new Sprite(game, {
  *   frameRate: 12,
@@ -23,6 +25,15 @@ import { Painter } from '../../painter/painter.js';
  * sprite.play();
  * sprite.gotoAndStop(0);
  * sprite.gotoAndPlay(1);
+ *
+ * @example
+ * // Named animations
+ * sprite.addAnimation('idle', [idleShape]);
+ * sprite.addAnimation('walk', [walkFrame1, walkFrame2, walkFrame3]);
+ * sprite.addAnimation('jump', [jumpShape]);
+ *
+ * sprite.playAnimation('walk');  // Plays walk animation
+ * sprite.playAnimation('idle');  // Switch to idle
  */
 export class Sprite extends GameObject {
   /**
@@ -46,10 +57,154 @@ export class Sprite extends GameObject {
     this._frameRate = options.frameRate || 12; // frames per second
     this._frameDuration = 1 / this._frameRate; // seconds per frame
 
+    // Named animations support
+    this._animations = new Map(); // name -> { frames: Shape[], loop: boolean, frameRate: number }
+    this._currentAnimation = null; // current animation name
+
     // Add initial frames if provided
     if (options.frames && Array.isArray(options.frames)) {
       options.frames.forEach(frame => this.addFrame(frame));
     }
+  }
+
+  // ==================== Named Animations ====================
+
+  /**
+   * Adds a named animation
+   * @param {string} name - Animation name (e.g., 'walk', 'idle', 'jump')
+   * @param {Array<Shape>} frames - Array of shapes for this animation
+   * @param {Object} [options] - Animation options
+   * @param {boolean} [options.loop=true] - Whether this animation loops
+   * @param {number} [options.frameRate] - Frame rate for this animation (uses sprite's default if not set)
+   * @returns {Sprite} This sprite for chaining
+   */
+  addAnimation(name, frames, options = {}) {
+    if (!name || typeof name !== 'string') {
+      throw new Error('Sprite.addAnimation: name is required');
+    }
+    if (!frames || !Array.isArray(frames) || frames.length === 0) {
+      throw new Error('Sprite.addAnimation: frames array is required');
+    }
+
+    // Set parent reference for all frames
+    frames.forEach(frame => {
+      frame.parent = this;
+    });
+
+    this._animations.set(name, {
+      frames,
+      loop: options.loop !== undefined ? options.loop : true,
+      frameRate: options.frameRate || null, // null means use sprite's default
+    });
+
+    return this;
+  }
+
+  /**
+   * Removes a named animation
+   * @param {string} name - Animation name to remove
+   * @returns {boolean} True if animation was found and removed
+   */
+  removeAnimation(name) {
+    const anim = this._animations.get(name);
+    if (anim) {
+      anim.frames.forEach(frame => {
+        frame.parent = null;
+      });
+      this._animations.delete(name);
+
+      // If this was the current animation, clear it
+      if (this._currentAnimation === name) {
+        this._currentAnimation = null;
+        this._frames = [];
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Plays a named animation
+   * @param {string} name - Animation name to play
+   * @param {boolean} [restart=false] - If true, restarts animation even if already playing
+   * @returns {Sprite} This sprite for chaining
+   */
+  playAnimation(name, restart = false) {
+    const anim = this._animations.get(name);
+    if (!anim) {
+      console.warn(`Sprite.playAnimation: animation '${name}' not found`);
+      return this;
+    }
+
+    // If already playing this animation and not forcing restart, do nothing
+    if (this._currentAnimation === name && this._isPlaying && !restart) {
+      return this;
+    }
+
+    // Switch to this animation's frames
+    this._currentAnimation = name;
+    this._frames = anim.frames;
+    this._loop = anim.loop;
+
+    // Use animation-specific frame rate if set
+    if (anim.frameRate !== null) {
+      this._frameRate = anim.frameRate;
+      this._frameDuration = 1 / this._frameRate;
+    }
+
+    // Reset and play
+    this._currentFrame = 0;
+    this._frameAccumulator = 0;
+    this._isPlaying = true;
+
+    return this;
+  }
+
+  /**
+   * Stops and switches to a named animation at frame 0
+   * @param {string} name - Animation name
+   * @returns {Sprite} This sprite for chaining
+   */
+  stopAnimation(name) {
+    const anim = this._animations.get(name);
+    if (!anim) {
+      console.warn(`Sprite.stopAnimation: animation '${name}' not found`);
+      return this;
+    }
+
+    this._currentAnimation = name;
+    this._frames = anim.frames;
+    this._loop = anim.loop;
+    this._currentFrame = 0;
+    this._frameAccumulator = 0;
+    this._isPlaying = false;
+
+    return this;
+  }
+
+  /**
+   * Gets the current animation name
+   * @returns {string|null}
+   */
+  get currentAnimationName() {
+    return this._currentAnimation;
+  }
+
+  /**
+   * Gets all animation names
+   * @returns {string[]}
+   */
+  get animationNames() {
+    return Array.from(this._animations.keys());
+  }
+
+  /**
+   * Checks if an animation exists
+   * @param {string} name - Animation name
+   * @returns {boolean}
+   */
+  hasAnimation(name) {
+    return this._animations.has(name);
   }
 
   /**

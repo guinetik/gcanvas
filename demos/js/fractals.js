@@ -6,6 +6,7 @@
  */
 import {
   Button,
+  Easing,
   FPSCounter,
   Fractals,
   Game,
@@ -34,6 +35,22 @@ export class FractalDemo extends Game {
       animating: false,
       typeIndex: 0,
     };
+    // Target values for smooth interpolation
+    this.target = {
+      zoom: 1,
+      offsetX: 0,
+      offsetY: 0
+    };
+    // Pan velocity for momentum
+    this.panVelocity = { x: 0, y: 0 };
+    this.panDamping = 0.92;
+    // Easing speed (higher = faster convergence)
+    this.easeSpeed = 8;
+    this.baseIterations = 32;
+    // Render throttling
+    this.lastRenderTime = 0;
+    this.minRenderInterval = 50; // ms between renders during interaction
+    this.isInteracting = false;
   }
 
   init() {
@@ -81,9 +98,9 @@ export class FractalDemo extends Game {
 
   onResize() {
     if (this.mainScene) {
-      // Check for window resize
-      const newWidth = this.width - 20;
-      const newHeight = this.height - 20;
+      // Full width/height for mobile-friendly display
+      const newWidth = this.width;
+      const newHeight = this.height;
 
       if (
         this.mainScene.width !== newWidth ||
@@ -96,7 +113,10 @@ export class FractalDemo extends Game {
         // Resize fractal renderer with a small delay to prevent multiple resizes
         if (!this.resizeTimeout) {
           this.resizeTimeout = setTimeout(() => {
-            this.fractal.resize(800, 600);
+            // Use actual dimensions, capped for performance on large screens
+            const renderWidth = Math.min(newWidth, 1200);
+            const renderHeight = Math.min(newHeight, 900);
+            this.fractal.resize(renderWidth, renderHeight);
             this.resizeTimeout = null;
           }, 100);
         }
@@ -106,22 +126,65 @@ export class FractalDemo extends Game {
 
   update(dt) {
     super.update(dt);
+
+    let needsRender = false;
+    const wasAnimating = this.wasAnimating || false;
+
+    // Apply pan momentum when not dragging
+    if (!this.settings.isDragging && (Math.abs(this.panVelocity.x) > 0.0001 || Math.abs(this.panVelocity.y) > 0.0001)) {
+      const scaleFactor = 0.005 / this.settings.zoom;
+      this.target.offsetX -= this.panVelocity.x * scaleFactor;
+      this.target.offsetY -= this.panVelocity.y * scaleFactor;
+      this.panVelocity.x *= this.panDamping;
+      this.panVelocity.y *= this.panDamping;
+      needsRender = true;
+    }
+
+    // Smooth interpolation toward target values using Easing.lerp
+    const lerpFactor = 1 - Math.exp(-this.easeSpeed * dt);
+    const zoomDiff = Math.abs(this.settings.zoom - this.target.zoom);
+    const offsetXDiff = Math.abs(this.settings.offsetX - this.target.offsetX);
+    const offsetYDiff = Math.abs(this.settings.offsetY - this.target.offsetY);
+
+    if (zoomDiff > 0.001 || offsetXDiff > 0.00001 || offsetYDiff > 0.00001) {
+      this.settings.zoom = Easing.lerp(this.settings.zoom, this.target.zoom, lerpFactor);
+      this.settings.offsetX = Easing.lerp(this.settings.offsetX, this.target.offsetX, lerpFactor);
+      this.settings.offsetY = Easing.lerp(this.settings.offsetY, this.target.offsetY, lerpFactor);
+      needsRender = true;
+    }
+
     // Handle animation if enabled
     if (this.settings.animating) {
-      // Shift hue and slowly zoom/rotate for animation effect
       this.settings.hueShift = (this.settings.hueShift + dt * 30) % 360;
-      // zooms up to a limit then returns to 1
-      this.settings.zoom = this.settings.zoom * (1 + dt * 0.08);
-      // Apply animated settings
-      this.updateFractalSettings();
+      this.target.zoom = this.target.zoom * (1 + dt * 0.08);
+      needsRender = true;
+    }
+
+    this.wasAnimating = needsRender;
+
+    // Throttle renders during animation, but always render when settled
+    if (needsRender) {
+      const now = performance.now();
+      if (now - this.lastRenderTime > this.minRenderInterval) {
+        this.lastRenderTime = now;
+        this.updateFractalSettings(true); // Preview mode
+      }
+    } else if (wasAnimating) {
+      // Animation just settled - final full-quality render
+      this.updateFractalSettings(false);
     }
   }
 
-  updateFractalSettings() {
+  updateFractalSettings(preview = false) {
+    // Use lower iterations for preview during interaction
+    const iterations = preview
+      ? Math.max(16, Math.floor(this.baseIterations * 0.4))
+      : this.baseIterations;
+
     // Update renderer settings - it will render asynchronously
     this.fractal.updateSettings({
       type: this.settings.type,
-      iterations: this.settings.iterations,
+      iterations: iterations,
       colorScheme: this.settings.colorScheme,
       hueShift: this.settings.hueShift,
       zoom: this.settings.zoom,
@@ -131,68 +194,76 @@ export class FractalDemo extends Game {
   }
 
   setupUI() {
+    // Responsive sizing based on screen width
+    const isMobile = this.width < 600;
+    const btnHeight = isMobile ? 28 : 30;
+    const btnSpacing = isMobile ? 4 : 10;
+    const fontSize = isMobile ? "11px" : "13px";
+
     // Create UI layout
     const controlsLayout = new HorizontalLayout(this, {
       anchor: Position.BOTTOM_LEFT,
-      anchorRelative: this.ui,
-      spacing: 10,
-      padding: 10,
-      height: 40,
-      width: 120 * 4,
-      debug: true,
-      debugColor: "yellow",
+      spacing: btnSpacing,
+      padding: isMobile ? 4 : 10,
+      height: btnHeight + 10,
+      width: this.width,
+      debug: false,
     });
-    controlsLayout.height = 40;
-    controlsLayout.width = 120 * 4;
 
     // Fractal type selector
     const typeBtn = new Button(this, {
-      text: `Type: ${this.settings.type.toUpperCase()}`,
-      width: 180,
-      height: 30,
+      text: isMobile ? this.settings.type.toUpperCase() : `Type: ${this.settings.type.toUpperCase()}`,
+      width: isMobile ? 90 : 180,
+      height: btnHeight,
+      fontSize,
       onClick: () => this.cycleFractalType(),
     });
 
     // Iteration controller
     const iterBtn = new Button(this, {
-      text: `Iterations: ${this.settings.iterations}`,
-      width: 120,
-      height: 30,
+      text: isMobile ? `${this.settings.iterations}` : `Iter: ${this.settings.iterations}`,
+      width: isMobile ? 45 : 100,
+      height: btnHeight,
+      fontSize,
       onClick: () => this.cycleIterations(),
     });
 
     // Color mode selector
     const colorBtn = new Button(this, {
-      text: `Color: ${this.settings.colorScheme}`,
-      width: 150,
-      height: 30,
+      text: isMobile ? "Color" : `Color: ${this.settings.colorScheme}`,
+      width: isMobile ? 50 : 150,
+      height: btnHeight,
+      fontSize,
       onClick: () => this.cycleColorScheme(),
     });
 
     // Animate button
     const animateBtn = new Button(this, {
-      text: "Animate",
-      width: 80,
-      height: 30,
+      text: isMobile ? "Anim" : "Animate",
+      width: isMobile ? 45 : 80,
+      height: btnHeight,
+      fontSize,
       onClick: () => {
         this.settings.animating = !this.settings.animating;
-        animateBtn.text = this.settings.animating ? "Stop" : "Animate";
+        animateBtn.text = this.settings.animating ? "Stop" : (isMobile ? "Anim" : "Animate");
       },
     });
 
     // Zoom in button
     const zoomInBtn = new Button(this, {
-      text: "Zoom In",
-      width: 80,
-      height: 30,
+      text: "+",
+      width: isMobile ? 32 : 50,
+      height: btnHeight,
+      fontSize,
       onClick: () => this.zoomIn(),
     });
 
     // Zoom out button
     const zoomOutBtn = new Button(this, {
-      text: "Zoom Out",
-      width: 80,
-      height: 30,
+      text: "-",
+      width: isMobile ? 32 : 50,
+      height: btnHeight,
+      fontSize,
       onClick: () => this.zoomOut(),
     });
 
@@ -211,6 +282,7 @@ export class FractalDemo extends Game {
       colorBtn,
       animateBtn,
       layout: controlsLayout,
+      isMobile,
     };
 
     this.controls.typeBtn.type = 0;
@@ -218,27 +290,29 @@ export class FractalDemo extends Game {
     // Add layout to UI
     this.ui.add(controlsLayout);
 
-    // Add title
-    const title = new Text(this, "GCanvas Fractal Explorer", {
-      font: "bold 24px Arial",
-      color: "#fff",
-      align: "center",
-      baseline: "middle",
-      width: 10,
-      anchor: Position.BOTTOM_RIGHT,
-      anchorRelative: this.ui,
-    });
-    this.ui.add(title);
+    // Add title (hide on mobile)
+    if (!isMobile) {
+      const title = new Text(this, "GCanvas Fractal Explorer", {
+        font: "bold 24px Arial",
+        color: "#fff",
+        align: "center",
+        baseline: "middle",
+        width: 10,
+        anchor: Position.BOTTOM_RIGHT,
+        anchorRelative: this.ui,
+      });
+      this.ui.add(title);
+    }
     this.ui.update(); //force update to the anchor
   }
 
   resetView() {
-    this.settings.zoom = 1;
-    this.settings.offsetX = 0;
-    this.settings.offsetY = 0;
-
-    // Re-render with reset view
-    this.updateFractalSettings();
+    // Set targets - smooth interpolation happens in update()
+    this.target.zoom = 1;
+    this.target.offsetX = 0;
+    this.target.offsetY = 0;
+    this.panVelocity.x = 0;
+    this.panVelocity.y = 0;
   }
 
   setupInteraction() {
@@ -261,9 +335,11 @@ export class FractalDemo extends Game {
       this.settings.isDragging = true;
       this.settings.lastX = e.offsetX;
       this.settings.lastY = e.offsetY;
+      this.panVelocity.x = 0;
+      this.panVelocity.y = 0;
     });
 
-    // Mouse move for panning - throttled to prevent too many updates
+    // Mouse move for panning - visual transform only (no re-render)
     this.canvas.addEventListener(
       "mousemove",
       throttle((e) => {
@@ -271,33 +347,51 @@ export class FractalDemo extends Game {
           const dx = e.offsetX - this.settings.lastX;
           const dy = e.offsetY - this.settings.lastY;
 
-          // Adjust pan amount based on zoom level
+          // Track velocity for momentum
+          this.panVelocity.x = dx * 0.8 + this.panVelocity.x * 0.2;
+          this.panVelocity.y = dy * 0.8 + this.panVelocity.y * 0.2;
+
+          // Update offset values
           const scaleFactor = 0.005 / this.settings.zoom;
-          this.settings.offsetX -= dx * scaleFactor;
-          this.settings.offsetY -= dy * scaleFactor;
+          const deltaX = dx * scaleFactor;
+          const deltaY = dy * scaleFactor;
+          this.settings.offsetX -= deltaX;
+          this.settings.offsetY -= deltaY;
+          this.target.offsetX -= deltaX;
+          this.target.offsetY -= deltaY;
 
           this.settings.lastX = e.offsetX;
           this.settings.lastY = e.offsetY;
 
-          // Update with new offset
-          this.updateFractalSettings();
+          // Throttled preview render during drag
+          const now = performance.now();
+          if (now - this.lastRenderTime > this.minRenderInterval) {
+            this.lastRenderTime = now;
+            this.updateFractalSettings(true);
+          }
         }
-      }, 20)
-    ); // Throttle to 20ms intervals
+      }, 16)
+    );
 
-    // Mouse up to end panning
+    // Mouse up to end panning - full quality render
     this.canvas.addEventListener("mouseup", () => {
       this.settings.isDragging = false;
+      // If no significant momentum, re-render immediately at full quality
+      if (Math.abs(this.panVelocity.x) < 0.5 && Math.abs(this.panVelocity.y) < 0.5) {
+        this.panVelocity.x = 0;
+        this.panVelocity.y = 0;
+        this.updateFractalSettings(false);
+      }
     });
 
-    // Mouse wheel for zooming - throttled for better performance
+    // Mouse wheel for zooming - target-based smooth easing
     this.canvas.addEventListener(
       "wheel",
-      throttle((e) => {
+      (e) => {
         e.preventDefault();
 
         // Calculate zoom factor
-        const zoomFactor = e.deltaY < 0 ? 1.2 : 0.8;
+        const zoomFactor = e.deltaY < 0 ? 1.25 : 0.8;
 
         // Get mouse position in canvas
         const mouseX = e.offsetX;
@@ -307,39 +401,119 @@ export class FractalDemo extends Game {
         const normalizedX = mouseX / this.width;
         const normalizedY = mouseY / this.height;
 
-        // Map to complex plane coordinates
-        const planeWidth = 3.5 / this.settings.zoom;
-        const planeHeight = 3.0 / this.settings.zoom;
-        const planeX = -2.5 / this.settings.zoom + this.settings.offsetX;
-        const planeY = -1.5 / this.settings.zoom + this.settings.offsetY;
+        // Map to complex plane coordinates using TARGET values for accumulation
+        const planeWidth = 3.5 / this.target.zoom;
+        const planeHeight = 3.0 / this.target.zoom;
+        const planeX = -2.5 / this.target.zoom + this.target.offsetX;
+        const planeY = -1.5 / this.target.zoom + this.target.offsetY;
 
         // Find the point we're zooming in on
-        const targetX = planeX + normalizedX * planeWidth;
-        const targetY = planeY + normalizedY * planeHeight;
+        const pointX = planeX + normalizedX * planeWidth;
+        const pointY = planeY + normalizedY * planeHeight;
 
-        // Apply zoom
-        this.settings.zoom *= zoomFactor;
+        // Calculate new target zoom and offset
+        const newZoom = this.target.zoom * zoomFactor;
+        const newPlaneWidth = 3.5 / newZoom;
+        const newPlaneHeight = 3.0 / newZoom;
+        const newPlaneX = pointX - normalizedX * newPlaneWidth;
+        const newPlaneY = pointY - normalizedY * newPlaneHeight;
 
-        // Adjust offset to keep the mouse position fixed
-        const newPlaneWidth = 3.5 / this.settings.zoom;
-        const newPlaneHeight = 3.0 / this.settings.zoom;
-        const newPlaneX = targetX - normalizedX * newPlaneWidth;
-        const newPlaneY = targetY - normalizedY * newPlaneHeight;
+        // Update target values - smooth interpolation happens in update()
+        this.target.zoom = newZoom;
+        this.target.offsetX = newPlaneX + 2.5 / newZoom;
+        this.target.offsetY = newPlaneY + 1.5 / newZoom;
+      },
+      { passive: false }
+    );
 
-        this.settings.offsetX = newPlaneX + 2.5 / this.settings.zoom;
-        this.settings.offsetY = newPlaneY + 1.5 / this.settings.zoom;
+    // Touch support for mobile
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+    let lastPinchDist = 0;
 
-        // Update with new zoom and offset
-        this.updateFractalSettings();
-      }, 50)
-    ); // Throttle to 50ms intervals for wheel events
+    this.canvas.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) {
+        lastTouchX = e.touches[0].clientX;
+        lastTouchY = e.touches[0].clientY;
+        this.settings.isDragging = true;
+        this.panVelocity.x = 0;
+        this.panVelocity.y = 0;
+      } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+        this.settings.isDragging = false;
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    this.canvas.addEventListener("touchmove", throttle((e) => {
+      if (e.touches.length === 1 && this.settings.isDragging) {
+        const dx = e.touches[0].clientX - lastTouchX;
+        const dy = e.touches[0].clientY - lastTouchY;
+
+        this.panVelocity.x = dx * 0.8 + this.panVelocity.x * 0.2;
+        this.panVelocity.y = dy * 0.8 + this.panVelocity.y * 0.2;
+
+        const scaleFactor = 0.005 / this.settings.zoom;
+        const deltaX = dx * scaleFactor;
+        const deltaY = dy * scaleFactor;
+        this.settings.offsetX -= deltaX;
+        this.settings.offsetY -= deltaY;
+        this.target.offsetX -= deltaX;
+        this.target.offsetY -= deltaY;
+
+        lastTouchX = e.touches[0].clientX;
+        lastTouchY = e.touches[0].clientY;
+
+        // Throttled preview render during drag
+        const now = performance.now();
+        if (now - this.lastRenderTime > this.minRenderInterval) {
+          this.lastRenderTime = now;
+          this.updateFractalSettings(true);
+        }
+      } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const pinchDist = Math.sqrt(dx * dx + dy * dy);
+
+        if (lastPinchDist > 0) {
+          const zoomFactor = pinchDist / lastPinchDist;
+          // Direct zoom for responsive feel during pinch
+          this.settings.zoom *= zoomFactor;
+          this.target.zoom *= zoomFactor;
+          // Throttled preview render during pinch
+          const now = performance.now();
+          if (now - this.lastRenderTime > this.minRenderInterval) {
+            this.lastRenderTime = now;
+            this.updateFractalSettings(true);
+          }
+        }
+
+        lastPinchDist = pinchDist;
+      }
+      e.preventDefault();
+    }, 16), { passive: false });
+
+    this.canvas.addEventListener("touchend", () => {
+      this.settings.isDragging = false;
+      lastPinchDist = 0;
+      // If no significant momentum, re-render immediately at full quality
+      if (Math.abs(this.panVelocity.x) < 0.5 && Math.abs(this.panVelocity.y) < 0.5) {
+        this.panVelocity.x = 0;
+        this.panVelocity.y = 0;
+        this.updateFractalSettings(false);
+      }
+    });
   }
 
   cycleFractalType() {
     const types = Object.values(Fractals.types);
     this.settings.typeIndex = (this.settings.typeIndex + 1) % types.length;
     this.settings.type = types[this.settings.typeIndex];
-    this.controls.typeBtn.text = `Type: ${this.settings.type.toUpperCase()}`;
+    this.controls.typeBtn.text = this.controls.isMobile
+      ? this.settings.type.toUpperCase()
+      : `Type: ${this.settings.type.toUpperCase()}`;
     // Tweaking default params for selected type
     if (this.settings.type === Fractals.types.KOCH) {
       this.settings.iterations = 3;
@@ -367,8 +541,13 @@ export class FractalDemo extends Game {
       this.settings.colorScheme = Fractals.colors.ELECTRIC;
       this.settings.iterations = 4;
     }
-    this.controls.iterBtn.text = `Iterations: ${this.settings.iterations}`;
-    this.controls.colorBtn.text = `Color: ${this.settings.colorScheme}`;
+    this.baseIterations = this.settings.iterations;
+    this.controls.iterBtn.text = this.controls.isMobile
+      ? `${this.settings.iterations}`
+      : `Iter: ${this.settings.iterations}`;
+    this.controls.colorBtn.text = this.controls.isMobile
+      ? "Color"
+      : `Color: ${this.settings.colorScheme}`;
     this.resetView();
   }
 
@@ -396,7 +575,10 @@ export class FractalDemo extends Game {
     const nextIndex = (currentIndex + 1) % iterationPresets.length;
 
     this.settings.iterations = iterationPresets[nextIndex];
-    this.controls.iterBtn.text = `Iterations: ${this.settings.iterations}`;
+    this.baseIterations = this.settings.iterations;
+    this.controls.iterBtn.text = this.controls.isMobile
+      ? `${this.settings.iterations}`
+      : `Iter: ${this.settings.iterations}`;
 
     // Update with new iterations
     this.updateFractalSettings();
@@ -444,20 +626,20 @@ export class FractalDemo extends Game {
     const currentIndex = schemes.indexOf(this.settings.colorScheme);
     const nextIndex = (currentIndex + 1) % schemes.length;
     this.settings.colorScheme = schemes[nextIndex];
-    this.controls.colorBtn.text = `Color: ${this.settings.colorScheme}`;
+    this.controls.colorBtn.text = this.controls.isMobile
+      ? "Color"
+      : `Color: ${this.settings.colorScheme}`;
 
     // Update with new color scheme
     this.updateFractalSettings();
   }
 
   zoomIn() {
-    this.settings.zoom *= 1.2;
-    this.updateFractalSettings();
+    this.target.zoom = this.target.zoom * 1.5;
   }
 
   zoomOut() {
-    this.settings.zoom /= 1.2;
-    this.updateFractalSettings();
+    this.target.zoom = this.target.zoom / 1.5;
   }
 
   render() {

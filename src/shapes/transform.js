@@ -125,6 +125,7 @@ export class Transform {
   width(value) {
     this._owner._width = Math.max(0, value);
     this._owner.markBoundsDirty();
+    this._owner.invalidateCache?.();
     return this;
   }
 
@@ -136,6 +137,7 @@ export class Transform {
   height(value) {
     this._owner._height = Math.max(0, value);
     this._owner.markBoundsDirty();
+    this._owner.invalidateCache?.();
     return this;
   }
 
@@ -149,6 +151,7 @@ export class Transform {
     this._owner._width = Math.max(0, width);
     this._owner._height = Math.max(0, height);
     this._owner.markBoundsDirty();
+    this._owner.invalidateCache?.();
     return this;
   }
 
@@ -256,15 +259,17 @@ export class Transform {
    * @returns {Transform} this for chaining
    */
   set(props) {
+    let visualChange = false;
     if (props.x !== undefined) this._owner._x = props.x;
     if (props.y !== undefined) this._owner._y = props.y;
-    if (props.width !== undefined) this._owner._width = Math.max(0, props.width);
-    if (props.height !== undefined) this._owner._height = Math.max(0, props.height);
-    if (props.rotation !== undefined) this._owner._rotation = props.rotation * Math.PI / 180;
-    if (props.scaleX !== undefined) this._owner._scaleX = props.scaleX;
-    if (props.scaleY !== undefined) this._owner._scaleY = props.scaleY;
+    if (props.width !== undefined) { this._owner._width = Math.max(0, props.width); visualChange = true; }
+    if (props.height !== undefined) { this._owner._height = Math.max(0, props.height); visualChange = true; }
+    if (props.rotation !== undefined) { this._owner._rotation = props.rotation * Math.PI / 180; }
+    if (props.scaleX !== undefined) { this._owner._scaleX = props.scaleX; }
+    if (props.scaleY !== undefined) { this._owner._scaleY = props.scaleY; }
 
     this._owner.markBoundsDirty();
+    if (visualChange) this._owner.invalidateCache?.();
     return this;
   }
 
@@ -294,6 +299,7 @@ export class Transform {
     this._owner._scaleX = 1;
     this._owner._scaleY = 1;
     this._owner.markBoundsDirty();
+    this._owner.invalidateCache?.(); // Only for width/height reset
     return this;
   }
 

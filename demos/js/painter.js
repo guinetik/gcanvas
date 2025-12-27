@@ -21,7 +21,7 @@ import {
 class PaintScene extends GameObject {
   constructor(game, options = {}) {
     super(game, options);
-    this.MARGIN = 50;
+    this.MARGIN = 0;
     this.currentTool = "pencil"; // 'line', 'pencil', or 'eraser'
     this.lineStart = null; // used for line tool
     this.activeStroke = null; // stroke being drawn right now
@@ -431,8 +431,8 @@ class DemoGame extends Game {
     this.pipeline.add(
       new FPSCounter(this, {
         anchor: "bottom-right",
-        width: 80,
-        height: 32,
+        width: 20,
+        height: 20,
       })
     );
   }

@@ -18,6 +18,11 @@ export class ZOrderedCollection {
    * @param {Object} child - Child object to add
    * @returns {Object} The added child
    */
+  /**
+   * Add a child object to the collection
+   * @param {Object} child - Child object to add
+   * @returns {Object} The added child
+   */
   add(child) {
     if (this.children.includes(child)) {
       console.warn("Object is already in this collection");
@@ -28,7 +33,11 @@ export class ZOrderedCollection {
     // Mark z-order as dirty if using z-index sorting
     if (this.sortByZIndex) {
       this._zOrderDirty = true;
-      child.zIndex = this.children.length - 1;
+      // Only set default zIndex if not already defined
+      // This allows users to set zIndex before or after add()
+      if (child.zIndex === undefined || child.zIndex === null) {
+        child.zIndex = this.children.length - 1;
+      }
     }
     return child;
   }

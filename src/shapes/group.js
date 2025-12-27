@@ -29,7 +29,7 @@ export class Group extends Transformable {
    * @param {boolean} [options.inheritScale=false] - Whether scale should cascade to children
    */
   constructor(options = {}) {
-    // Call parent constructor with all options 
+    // Call parent constructor with all options
     super(options);
 
     // Create the z-ordered collection
@@ -38,7 +38,7 @@ export class Group extends Transformable {
     });
     this._collection._owner = this; // Give collection a reference to its owner
 
-    // Initialize state tracking 
+    // Initialize state tracking
     this._childrenVersion = 0;
     this._cachedBounds = null;
 
@@ -48,11 +48,12 @@ export class Group extends Transformable {
     // Track if dimensions were explicitly set in constructor
     this.userDefinedWidth = options.width;
     this.userDefinedHeight = options.height;
-    
+
     // Only consider dimensions as user-defined if they were explicitly provided in options
-    this.userDefinedDimensions = options.width !== undefined && options.height !== undefined && 
-                               (options.width > 0 || options.height > 0);
+    this.userDefinedDimensions = options.width !== undefined && options.height !== undefined &&
+      (options.width > 0 || options.height > 0);
   }
+
 
   /**
    * Add object to group with type checking
@@ -70,6 +71,7 @@ export class Group extends Transformable {
     this._collection.add(object);
     this._childrenVersion++;
     this.markBoundsDirty();
+    this.invalidateCache();
     return object;
   }
 
@@ -84,6 +86,7 @@ export class Group extends Transformable {
       object.parent = null;
       this._childrenVersion++;
       this.markBoundsDirty();
+      this.invalidateCache();
     }
     return result;
   }
@@ -95,6 +98,7 @@ export class Group extends Transformable {
     this._collection.clear();
     this._childrenVersion++;
     this.markBoundsDirty();
+    this.invalidateCache();
   }
 
   // Z-ordering methods
@@ -115,16 +119,21 @@ export class Group extends Transformable {
   }
 
   /**
-   * Render group and all children with transformations
+   * Render group and all children.
+   * Transformations are already applied by super.draw().
    */
   draw() {
     super.draw();
-    this.logger.log("Group.draw chilren:", this.children.length);
-    
-    // Get sorted children
-    const sortedChildren = this._collection.getSortedChildren();
+    this.logger.log("Group.draw children:", this.children.length);
+    this._renderChildren();
+  }
 
-    // For each child, completely isolate its rendering context
+  /**
+   * Render children normally (non-cached path)
+   * @private
+   */
+  _renderChildren() {
+    const sortedChildren = this._collection.getSortedChildren();
     for (let i = 0; i < sortedChildren.length; i++) {
       const child = sortedChildren[i];
       if (child.visible) {
@@ -134,6 +143,7 @@ export class Group extends Transformable {
       }
     }
   }
+
 
   /**
    * Update all children with active update methods
@@ -181,8 +191,8 @@ export class Group extends Transformable {
     const max = Math.max(0, v);
     this._width = max;
     this.userDefinedWidth = max;
-    this.userDefinedDimensions = (this.userDefinedWidth > 0 || this.userDefinedHeight > 0) && 
-                               this.userDefinedWidth !== undefined && this.userDefinedHeight !== undefined;
+    this.userDefinedDimensions = (this.userDefinedWidth > 0 || this.userDefinedHeight > 0) &&
+      this.userDefinedWidth !== undefined && this.userDefinedHeight !== undefined;
     this.markBoundsDirty();
   }
 
@@ -205,10 +215,11 @@ export class Group extends Transformable {
     const max = Math.max(0, v);
     this._height = max;
     this.userDefinedHeight = max;
-    this.userDefinedDimensions = (this.userDefinedWidth > 0 || this.userDefinedHeight > 0) && 
-                               this.userDefinedWidth !== undefined && this.userDefinedHeight !== undefined;
+    this.userDefinedDimensions = (this.userDefinedWidth > 0 || this.userDefinedHeight > 0) &&
+      this.userDefinedWidth !== undefined && this.userDefinedHeight !== undefined;
     this.markBoundsDirty();
   }
+
 
   /**
    * Override calculateBounds to compute from children
@@ -229,7 +240,7 @@ export class Group extends Transformable {
     if (!this.children?.length) {
       return {
         x: this.x,
-        y: this.y, 
+        y: this.y,
         width: 0,
         height: 0
       };
@@ -239,7 +250,7 @@ export class Group extends Transformable {
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
-    
+
     // Calculate bounds from all children
     for (const child of this.children) {
       // Get the child's position and dimensions
@@ -247,13 +258,13 @@ export class Group extends Transformable {
       const childY = child.y;
       const childWidth = child.width;
       const childHeight = child.height;
-      
+
       // Calculate the child's bounding box edges
       const childLeft = childX - childWidth / 2;
       const childRight = childX + childWidth / 2;
       const childTop = childY - childHeight / 2;
       const childBottom = childY + childHeight / 2;
-      
+
       // Update min/max coordinates
       minX = Math.min(minX, childLeft);
       maxX = Math.max(maxX, childRight);

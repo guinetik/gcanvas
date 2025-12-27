@@ -147,6 +147,20 @@ export class Scene extends GameObject {
     };
   }
 
+  /**
+   * Returns the scene's bounding box.
+   * Required for hit testing when the scene is interactive.
+   * @returns {{x: number, y: number, width: number, height: number}}
+   */
+  getBounds() {
+    return {
+      x: this.x,
+      y: this.y,
+      width: this._width || 0,
+      height: this._height || 0,
+    };
+  }
+
   bringToFront(go) {
     return this._collection.bringToFront(go);
   }
