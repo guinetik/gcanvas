@@ -400,19 +400,12 @@ export class BlockRenderer {
             return;
         }
 
-        // Calculate ghost positions
-        const ghostPositions = [];
-        for (let z = 0; z < piece.matrix.length; z++) {
-            for (let x = 0; x < piece.matrix[z].length; x++) {
-                if (piece.matrix[z][x]) {
-                    ghostPositions.push({
-                        x: piece.x + x,
-                        y: landingY,
-                        z: piece.z + z,
-                    });
-                }
-            }
-        }
+        // Calculate ghost positions using voxels
+        const ghostPositions = piece.voxels.map((v) => ({
+            x: piece.x + v.x,
+            y: landingY + v.y,
+            z: piece.z + v.z,
+        }));
 
         this.ghostData = {
             positions: ghostPositions,

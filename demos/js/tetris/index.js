@@ -135,9 +135,17 @@ class Tetris3DGame extends Game {
         this.events.on(Keys.W, () => this._handleMove(0, -1));  // Forward
         this.events.on(Keys.S, () => this._handleMove(0, 1));   // Back
 
-        // Rotation - Q/E only
-        this.events.on(Keys.Q, () => this._handleRotate(-1));   // CCW
-        this.events.on(Keys.E, () => this._handleRotate(1));    // CW
+        // Y-axis rotation - Q/E (horizontal)
+        this.events.on(Keys.Q, () => this._handleRotate("y", -1));   // CCW
+        this.events.on(Keys.E, () => this._handleRotate("y", 1));    // CW
+
+        // X-axis rotation - R/F (pitch forward/back)
+        this.events.on(Keys.R, () => this._handleRotate("x", 1));
+        this.events.on(Keys.F, () => this._handleRotate("x", -1));
+
+        // Z-axis rotation - Z/C (roll left/right)
+        this.events.on(Keys.Z, () => this._handleRotate("z", 1));
+        this.events.on(Keys.C, () => this._handleRotate("z", -1));
 
         // Hard drop
         this.events.on(Keys.SPACE, () => this._handleHardDrop());
@@ -222,7 +230,7 @@ class Tetris3DGame extends Game {
         // Controls help
         this.controlsText = new Text(
             this,
-            "WASD/Arrows: Move | Q/E: Rotate | SPACE: Drop | ENTER: Start",
+            "WASD: Move | Q/E: RotY | R/F: RotX | Z/C: RotZ | SPACE: Drop",
             {
                 font: "12px monospace",
                 color: "#666",
@@ -307,10 +315,11 @@ class Tetris3DGame extends Game {
             // Calculate hint positions (where the piece would go)
             const tempPiece = this.currentPiece.clone();
 
-            // Apply rotations to temp piece
-            for (let i = 0; i < bestMove.rotations; i++) {
-                tempPiece.rotate(1);
-            }
+            // Apply rotations to temp piece (Y, X, Z order)
+            for (let i = 0; i < bestMove.rotY; i++) tempPiece.rotate("y", 1);
+            for (let i = 0; i < bestMove.rotX; i++) tempPiece.rotate("x", 1);
+            for (let i = 0; i < bestMove.rotZ; i++) tempPiece.rotate("z", 1);
+
             tempPiece.x = bestMove.x;
             tempPiece.z = bestMove.z;
 
@@ -320,7 +329,6 @@ class Tetris3DGame extends Game {
 
             // Store hint positions for rendering
             this.hintPositions = tempPiece.getWorldPositions();
-            this.hintRotations = bestMove.rotations;
 
             // Update renderers to show hint
             this._updateRenderers();
@@ -362,10 +370,10 @@ class Tetris3DGame extends Game {
 
         const bestMove = this._findBestMove();
         if (bestMove) {
-            // Apply rotations
-            for (let i = 0; i < bestMove.rotations; i++) {
-                this.currentPiece.rotate(1);
-            }
+            // Apply rotations (Y, X, Z order)
+            for (let i = 0; i < bestMove.rotY; i++) this.currentPiece.rotate("y", 1);
+            for (let i = 0; i < bestMove.rotX; i++) this.currentPiece.rotate("x", 1);
+            for (let i = 0; i < bestMove.rotZ; i++) this.currentPiece.rotate("z", 1);
 
             // Move to best position
             this.currentPiece.x = bestMove.x;
@@ -382,7 +390,7 @@ class Tetris3DGame extends Game {
 
     /**
      * Find the best position for the current piece
-     * @returns {{x: number, z: number, rotations: number, score: number}|null}
+     * @returns {{x: number, z: number, rotY: number, rotX: number, rotZ: number, score: number}|null}
      * @private
      */
     _findBestMove() {
@@ -395,34 +403,41 @@ class Tetris3DGame extends Game {
         // Save original state
         const originalX = this.currentPiece.x;
         const originalZ = this.currentPiece.z;
-        const originalMatrix = this.currentPiece.matrix.map(row => [...row]);
+        const originalVoxels = this.currentPiece.voxels.map((v) => ({ ...v }));
 
-        // Try all 4 rotations
-        for (let rot = 0; rot < 4; rot++) {
-            if (rot > 0) {
-                this.currentPiece.rotate(1);
-            }
+        // Try rotation combinations (Y: 4, X: 2, Z: 2 = 16 combos for efficiency)
+        for (let rotY = 0; rotY < 4; rotY++) {
+            for (let rotX = 0; rotX < 2; rotX++) {
+                for (let rotZ = 0; rotZ < 2; rotZ++) {
+                    // Reset to original voxels
+                    this.currentPiece.voxels = originalVoxels.map((v) => ({ ...v }));
 
-            const pieceWidth = this.currentPiece.matrix[0].length;
-            const pieceDepth = this.currentPiece.matrix.length;
+                    // Apply rotations
+                    for (let i = 0; i < rotY; i++) this.currentPiece.rotate("y", 1);
+                    for (let i = 0; i < rotX; i++) this.currentPiece.rotate("x", 1);
+                    for (let i = 0; i < rotZ; i++) this.currentPiece.rotate("z", 1);
 
-            // Try all positions
-            for (let x = 0; x <= width - pieceWidth; x++) {
-                for (let z = 0; z <= depth - pieceDepth; z++) {
-                    this.currentPiece.x = x;
-                    this.currentPiece.z = z;
+                    const bounds = this.currentPiece.getBounds();
 
-                    // Check if position is valid
-                    const positions = this.currentPiece.getWorldPositions();
-                    if (!this.grid.canPlace(positions)) continue;
+                    // Try all positions
+                    for (let x = 0; x <= width - bounds.width; x++) {
+                        for (let z = 0; z <= depth - bounds.depth; z++) {
+                            this.currentPiece.x = x;
+                            this.currentPiece.z = z;
 
-                    // Calculate landing Y and score
-                    const landingY = this.grid.calculateLandingY(this.currentPiece);
-                    const score = this._evaluatePosition(x, z, landingY, positions);
+                            // Check if position is valid
+                            const positions = this.currentPiece.getWorldPositions();
+                            if (!this.grid.canPlace(positions)) continue;
 
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMove = { x, z, rotations: rot, score };
+                            // Calculate landing Y and score
+                            const landingY = this.grid.calculateLandingY(this.currentPiece);
+                            const score = this._evaluatePosition(x, z, landingY, positions);
+
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestMove = { x, z, rotY, rotX, rotZ, score };
+                            }
+                        }
                     }
                 }
             }
@@ -431,7 +446,7 @@ class Tetris3DGame extends Game {
         // Restore original state
         this.currentPiece.x = originalX;
         this.currentPiece.z = originalZ;
-        this.currentPiece.matrix = originalMatrix;
+        this.currentPiece.voxels = originalVoxels;
 
         return bestMove;
     }
@@ -768,21 +783,14 @@ class Tetris3DGame extends Game {
     _tryMove(dx, dy, dz) {
         if (!this.currentPiece) return false;
 
-        // Calculate new positions
         const piece = this.currentPiece;
-        const newPositions = [];
 
-        for (let z = 0; z < piece.matrix.length; z++) {
-            for (let x = 0; x < piece.matrix[z].length; x++) {
-                if (piece.matrix[z][x]) {
-                    newPositions.push({
-                        x: piece.x + x + dx,
-                        y: piece.y + dy,
-                        z: piece.z + z + dz,
-                    });
-                }
-            }
-        }
+        // Calculate new positions by offsetting current world positions
+        const newPositions = piece.voxels.map((v) => ({
+            x: piece.x + v.x + dx,
+            y: piece.y + v.y + dy,
+            z: piece.z + v.z + dz,
+        }));
 
         // Check collision
         if (this.grid.canPlace(newPositions)) {
@@ -802,29 +810,34 @@ class Tetris3DGame extends Game {
 
     /**
      * Handle rotation input
+     * @param {string} axis - 'x', 'y', or 'z'
      * @param {number} direction - 1 for CW, -1 for CCW
      * @private
      */
-    _handleRotate(direction) {
+    _handleRotate(axis, direction) {
         if (this.gameState !== GameState.PLAYING || !this.currentPiece) return;
 
         this._clearHint(); // Clear hint when player rotates
-        this._tryRotate(direction);
+        this._tryRotate(axis, direction);
     }
 
     /**
      * Try to rotate the current piece with wall kicks
+     * @param {string} axis - 'x', 'y', or 'z'
      * @param {number} direction
      * @returns {boolean} Success
      * @private
      */
-    _tryRotate(direction) {
+    _tryRotate(axis, direction) {
         if (!this.currentPiece) return false;
 
         const piece = this.currentPiece;
 
+        // Save original voxels for rollback
+        const originalVoxels = piece.voxels.map((v) => ({ ...v }));
+
         // Try rotation
-        piece.rotate(direction);
+        piece.rotate(axis, direction);
 
         // Check if rotation is valid
         const positions = piece.getWorldPositions();
@@ -839,18 +852,12 @@ class Tetris3DGame extends Game {
             return true;
         }
 
-        // Try wall kicks
-        const kicks = [
-            { x: 1, z: 0 },
-            { x: -1, z: 0 },
-            { x: 0, z: 1 },
-            { x: 0, z: -1 },
-            { x: 2, z: 0 },
-            { x: -2, z: 0 },
-        ];
+        // Try wall kicks based on axis
+        const kicks = this._getWallKicks(axis);
 
         for (const kick of kicks) {
             piece.x += kick.x;
+            piece.y += kick.y || 0;
             piece.z += kick.z;
 
             const kickPositions = piece.getWorldPositions();
@@ -866,12 +873,45 @@ class Tetris3DGame extends Game {
 
             // Undo kick
             piece.x -= kick.x;
+            piece.y -= kick.y || 0;
             piece.z -= kick.z;
         }
 
-        // Rotation failed, undo
-        piece.undoRotate(direction);
+        // Rotation failed, restore original voxels
+        piece.voxels = originalVoxels;
         return false;
+    }
+
+    /**
+     * Get wall kicks for a specific rotation axis
+     * @param {string} axis - 'x', 'y', or 'z'
+     * @returns {Array<{x: number, y: number, z: number}>}
+     * @private
+     */
+    _getWallKicks(axis) {
+        if (axis === "y") {
+            // Horizontal rotation - only X/Z kicks
+            return [
+                { x: 1, z: 0, y: 0 },
+                { x: -1, z: 0, y: 0 },
+                { x: 0, z: 1, y: 0 },
+                { x: 0, z: -1, y: 0 },
+                { x: 2, z: 0, y: 0 },
+                { x: -2, z: 0, y: 0 },
+            ];
+        } else {
+            // X and Z rotations may need vertical kicks
+            return [
+                { x: 1, z: 0, y: 0 },
+                { x: -1, z: 0, y: 0 },
+                { x: 0, z: 1, y: 0 },
+                { x: 0, z: -1, y: 0 },
+                { x: 0, z: 0, y: -1 }, // Kick up
+                { x: 0, z: 0, y: -2 }, // Kick up more
+                { x: 1, z: 0, y: -1 },
+                { x: -1, z: 0, y: -1 },
+            ];
+        }
     }
 
     /**
@@ -1094,18 +1134,11 @@ class Tetris3DGame extends Game {
                 // Reset locking if we're moving
                 if (this.isLocking) {
                     // Check if there's still ground below
-                    const checkPositions = [];
-                    for (let z = 0; z < this.currentPiece.matrix.length; z++) {
-                        for (let x = 0; x < this.currentPiece.matrix[z].length; x++) {
-                            if (this.currentPiece.matrix[z][x]) {
-                                checkPositions.push({
-                                    x: this.currentPiece.x + x,
-                                    y: this.currentPiece.y + 1,
-                                    z: this.currentPiece.z + z,
-                                });
-                            }
-                        }
-                    }
+                    const checkPositions = this.currentPiece.voxels.map((v) => ({
+                        x: this.currentPiece.x + v.x,
+                        y: this.currentPiece.y + v.y + 1,
+                        z: this.currentPiece.z + v.z,
+                    }));
 
                     if (this.grid.canPlace(checkPositions)) {
                         this.isLocking = false;
