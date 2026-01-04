@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shapes vs GameObjects - GCanvas Guide</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.css">
+  <style>
+    /* Terminal-style Prism overrides */
+    code[class*="language-"],
+    pre[class*="language-"] {
+      color: #ccc;
+      background: #0a0a0a;
+      text-shadow: none;
+    }
+    pre[class*="language-"] {
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+    }
+    .token.comment,
+    .token.prolog,
+    .token.doctype,
+    .token.cdata { color: #555; }
+    .token.punctuation { color: #888; }
+    .token.property,
+    .token.tag,
+    .token.constant,
+    .token.symbol,
+    .token.deleted { color: #0f0; }
+    .token.boolean,
+    .token.number { color: #0ff; }
+    .token.selector,
+    .token.attr-name,
+    .token.string,
+    .token.char,
+    .token.builtin,
+    .token.inserted { color: #7fff7f; }
+    .token.operator,
+    .token.entity,
+    .token.url,
+    .language-css .token.string,
+    .style .token.string,
+    .token.variable { color: #ccc; }
+    .token.atrule,
+    .token.attr-value,
+    .token.function,
+    .token.class-name { color: #0f0; }
+    .token.keyword { color: #0f0; font-weight: bold; }
+    .token.regex,
+    .token.important { color: #fd8; }
+  </style>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      overflow-x: hidden;
+    }
+
+    body {
+      font-family: 'Courier New', 'Consolas', monospace;
+      line-height: 1.6;
+      color: #aaa;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #000;
+    }
+
+    header {
+      margin-bottom: 40px;
+      padding: 20px;
+      border-bottom: 2px solid #0f0;
+    }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      color: #0f0;
+    }
+
+    h2 {
+      font-size: 1.8em;
+      margin-top: 40px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #0f0;
+      color: #0f0;
+    }
+
+    h3 {
+      font-size: 1.4em;
+      margin-top: 30px;
+      color: #0f0;
+    }
+
+    p {
+      margin-bottom: 15px;
+      color: #aaa;
+    }
+
+    pre {
+      background-color: #0a0a0a;
+      color: #ccc;
+      padding: 15px;
+      border: 1px solid #1a1a1a;
+      overflow-x: auto;
+      margin: 15px 0;
+      max-width: 100%;
+    }
+
+    code {
+      font-family: 'Courier New', monospace;
+      background-color: #111;
+      color: #0f0;
+      padding: 2px 6px;
+      border: none;
+    }
+
+    pre code {
+      background-color: transparent;
+      color: #ccc;
+      padding: 0;
+      border: none;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 30px 0;
+    }
+
+    @media (max-width: 768px) {
+      .comparison {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .comparison-box {
+      background-color: #0a0a0a;
+      border: 1px solid #0f0;
+      padding: 20px;
+    }
+
+    .comparison-box h4 {
+      color: #0f0;
+      margin-top: 0;
+      margin-bottom: 15px;
+      font-size: 1.2em;
+      border-bottom: 1px solid #1a1a1a;
+      padding-bottom: 10px;
+    }
+
+    .comparison-box ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .comparison-box li {
+      padding: 5px 0;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .comparison-box li:before {
+      content: ">";
+      color: #0f0;
+      position: absolute;
+      left: 0;
+    }
+
+    .pipeline-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 30px 0;
+      padding: 20px;
+      background-color: #0a0a0a;
+      border: 1px solid #1a1a1a;
+    }
+
+    .pipeline-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pipeline-box {
+      background-color: #000;
+      border: 1px solid #0f0;
+      color: #0f0;
+      padding: 8px 16px;
+      font-size: 0.9em;
+    }
+
+    .pipeline-arrow {
+      color: #0f0;
+      font-size: 1.2em;
+    }
+
+    .pipeline-label {
+      color: #666;
+      font-size: 0.85em;
+      min-width: 120px;
+    }
+
+    .note {
+      background-color: #0a1a0a;
+      padding: 15px;
+      border-left: 3px solid #0f0;
+      margin: 20px 0;
+      color: #7fff7f;
+    }
+
+    .warning {
+      background-color: #1a1a0a;
+      padding: 15px;
+      border-left: 3px solid #ff0;
+      margin: 20px 0;
+      color: #ffa;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+
+    th, td {
+      border: 1px solid #1a1a1a;
+      padding: 12px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #0a0a0a;
+      color: #0f0;
+    }
+
+    td {
+      background-color: #050505;
+    }
+
+    a {
+      color: #0f0;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #0f0;
+      text-decoration: none;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .canvas-demo {
+      width: 100%;
+      height: 200px;
+      background-color: #050505;
+      border: 1px solid #1a1a1a;
+      position: relative;
+      overflow: hidden;
+      margin: 15px 0;
+    }
+
+    .canvas-demo canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-label {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: #0f0;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <a href="pipeline.html" class="back-link">&lt; Back to Rendering Pipeline</a>
+
+  <header>
+    <h1>Shapes vs GameObjects</h1>
+    <p>Understanding when to use each abstraction in GCanvas</p>
+  </header>
+
+  <section>
+    <h2>Two Sides of GCanvas</h2>
+    <p>
+      GCanvas serves two distinct use cases with different abstractions. Understanding when to use each is key to working effectively with the library.
+    </p>
+
+    <div class="comparison">
+      <div class="comparison-box">
+        <h4>Shapes (Drawing)</h4>
+        <ul>
+          <li>Direct canvas rendering</li>
+          <li>No game loop required</li>
+          <li>Call <code>render()</code> manually</li>
+          <li>Stateless between frames</li>
+          <li>Great for: generative art, static visuals, creative coding</li>
+        </ul>
+      </div>
+      <div class="comparison-box">
+        <h4>GameObjects (Pipeline)</h4>
+        <ul>
+          <li>Managed by Game pipeline</li>
+          <li>Automatic update/render cycle</li>
+          <li>Has <code>update(dt)</code> lifecycle</li>
+          <li>Maintains state between frames</li>
+          <li>Great for: games, animations, interactive apps</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The Two Hierarchies</h2>
+
+    <div class="pipeline-diagram">
+      <div class="pipeline-row">
+        <span class="pipeline-label">Shapes:</span>
+        <div class="pipeline-box">Euclidian</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-box">Geometry2d</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-box">Renderable</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-box">Transformable</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-box">Shape</div>
+      </div>
+      <div class="pipeline-row">
+        <span class="pipeline-label">GameObjects:</span>
+        <div class="pipeline-box">GameObject</div>
+        <span class="pipeline-arrow">→</span>
+        <div class="pipeline-box">Scene</div>
+        <span class="pipeline-arrow">/</span>
+        <div class="pipeline-box">Sprite</div>
+        <span class="pipeline-arrow">/</span>
+        <div class="pipeline-box">Text</div>
+      </div>
+      <div class="pipeline-row">
+        <span class="pipeline-label">Containers:</span>
+        <div class="pipeline-box">Group</div>
+        <span class="pipeline-arrow">→</span>
+        <span style="color: #666;">holds Shapes</span>
+      </div>
+      <div class="pipeline-row">
+        <span class="pipeline-label"></span>
+        <div class="pipeline-box">Scene</div>
+        <span class="pipeline-arrow">→</span>
+        <span style="color: #666;">holds GameObjects</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>When to Use What</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Use Case</th>
+          <th>Use This</th>
+          <th>Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Static visualization</td>
+          <td><code>Shape</code> + <code>render()</code></td>
+          <td>No update loop needed</td>
+        </tr>
+        <tr>
+          <td>Generative art</td>
+          <td><code>Shape</code>, <code>Group</code></td>
+          <td>Direct control, no overhead</td>
+        </tr>
+        <tr>
+          <td>Game character</td>
+          <td><code>Sprite</code> (GameObject)</td>
+          <td>Needs update cycle for animation</td>
+        </tr>
+        <tr>
+          <td>UI elements</td>
+          <td><code>Text</code>, <code>Scene</code></td>
+          <td>Pipeline handles positioning</td>
+        </tr>
+        <tr>
+          <td>Complex scene</td>
+          <td><code>Scene</code> with children</td>
+          <td>Hierarchical transforms, lifecycle</td>
+        </tr>
+        <tr>
+          <td>Composite shape</td>
+          <td><code>Group</code></td>
+          <td>Transform multiple shapes together</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Example: Shapes Only (No Game Loop)</h2>
+    <p>
+      You can use GCanvas purely for drawing without any game infrastructure:
+    </p>
+
+    <pre><code class="language-javascript">import { Circle, Rectangle, Group, Painter } from "gcanvas";
+
+// Get canvas context
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+Painter.ctx = ctx;
+
+// Create shapes
+const circle = new Circle(50, { x: 100, y: 100, color: "#0f0" });
+const rect = new Rectangle({ x: 200, y: 100, width: 80, height: 60, color: "#0ff" });
+
+// Render directly - no game loop needed
+circle.render();
+rect.render();
+
+// Group multiple shapes
+const group = new Group({ x: 300, y: 100, rotation: Math.PI / 4 });
+group.add(new Circle(20, { color: "#f0f" }));
+group.add(new Rectangle({ y: 30, width: 40, height: 20, color: "#ff0" }));
+group.render();</code></pre>
+
+    <div class="canvas-demo">
+      <canvas id="shapes-canvas"></canvas>
+      <div class="canvas-label">Shapes rendered directly</div>
+    </div>
+
+    <div class="note">
+      This is perfect for one-off drawings, generative art, or when you want full control over the render loop.
+    </div>
+  </section>
+
+  <section>
+    <h2>Example: GameObjects with Pipeline</h2>
+    <p>
+      When you need animation, input handling, and managed lifecycles:
+    </p>
+
+    <pre><code class="language-javascript">import { Game, Scene, Sprite, Text, Circle, Keys } from "gcanvas";
+
+class MyGame extends Game {
+  init() {
+    super.init();
+
+    // Create a scene (GameObject container)
+    this.scene = new Scene(this, { anchor: "center" });
+
+    // Create a sprite with animation (GameObject)
+    this.player = new Sprite(this, { x: 0, y: 0, frameRate: 10 });
+    this.player.addFrame(new Circle(20, { color: "#0f0" }));
+    this.player.addFrame(new Circle(25, { color: "#0ff" }));
+    this.player.play();
+
+    // Add to scene
+    this.scene.add(this.player);
+
+    // Add scene to pipeline - now it's managed
+    this.pipeline.add(this.scene);
+
+    // Input handling
+    this.events.on(Keys.SPACE, () => this.player.pause());
+  }
+
+  update(dt) {
+    super.update(dt);
+    // Player sprite automatically updates via pipeline
+  }
+}</code></pre>
+
+    <div class="canvas-demo">
+      <canvas id="gameobjects-canvas"></canvas>
+      <div class="canvas-label">Sprite animating via pipeline</div>
+    </div>
+
+    <div class="note">
+      GameObjects get their <code>update(dt)</code> called automatically by the pipeline each frame.
+    </div>
+  </section>
+
+  <section>
+    <h2>Bridging: Shape to GameObject</h2>
+    <p>
+      Sometimes you have a Shape (or Group of shapes) that you want to add to the pipeline. Use <code>ShapeGOFactory</code>:
+    </p>
+
+    <pre><code class="language-javascript">import { Game, Group, Circle, Rectangle, ShapeGOFactory } from "gcanvas";
+
+class MyGame extends Game {
+  init() {
+    super.init();
+
+    // Create a Group of shapes
+    const avatar = new Group();
+    avatar.add(new Circle(30, { color: "#0f0" }));           // head
+    avatar.add(new Rectangle({ y: 50, width: 40, height: 60, color: "#0f0" })); // body
+
+    // Wrap it as a GameObject so it can join the pipeline
+    const avatarGO = ShapeGOFactory.create(this, avatar, {
+      x: 100,
+      y: 100,
+      interactive: true  // enables click/hover events
+    });
+
+    // Now it's a proper GameObject
+    this.pipeline.add(avatarGO);
+  }
+}</code></pre>
+
+    <div class="canvas-demo">
+      <canvas id="bridging-canvas"></canvas>
+      <div class="canvas-label">Shape Group wrapped as GameObject</div>
+    </div>
+
+    <div class="warning">
+      <strong>Important:</strong> Never put GameObjects inside Groups. Group is a Shape container - it won't call <code>update()</code> on its children. Always use Scene for GameObjects.
+    </div>
+  </section>
+
+  <section>
+    <h2>Quick Reference</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Class</th>
+          <th>Type</th>
+          <th>Container</th>
+          <th>Has update()?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Circle</code>, <code>Rectangle</code>, etc.</td>
+          <td>Shape</td>
+          <td>Group</td>
+          <td>No</td>
+        </tr>
+        <tr>
+          <td><code>Group</code></td>
+          <td>Shape container</td>
+          <td>Group</td>
+          <td>No</td>
+        </tr>
+        <tr>
+          <td><code>TextShape</code></td>
+          <td>Shape</td>
+          <td>Group</td>
+          <td>No</td>
+        </tr>
+        <tr>
+          <td><code>GameObject</code></td>
+          <td>Base GO</td>
+          <td>Scene / Pipeline</td>
+          <td>Yes</td>
+        </tr>
+        <tr>
+          <td><code>Scene</code></td>
+          <td>GO container</td>
+          <td>Scene / Pipeline</td>
+          <td>Yes</td>
+        </tr>
+        <tr>
+          <td><code>Sprite</code></td>
+          <td>Animated GO</td>
+          <td>Scene / Pipeline</td>
+          <td>Yes</td>
+        </tr>
+        <tr>
+          <td><code>Text</code></td>
+          <td>Text GO</td>
+          <td>Scene / Pipeline</td>
+          <td>Yes</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>TL;DR</h2>
+    <div class="comparison">
+      <div class="comparison-box">
+        <h4>Just Drawing?</h4>
+        <ul>
+          <li>Use <code>Shape</code>, <code>Group</code></li>
+          <li>Call <code>.render()</code> yourself</li>
+          <li>No Game class needed</li>
+        </ul>
+      </div>
+      <div class="comparison-box">
+        <h4>Building a Game?</h4>
+        <ul>
+          <li>Use <code>GameObject</code>, <code>Scene</code>, <code>Sprite</code></li>
+          <li>Add to <code>pipeline</code></li>
+          <li>Extend <code>Game</code> class</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script type="module" src="./js/gameobjects.js"></script>
+</body>
+
+</html>

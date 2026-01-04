@@ -28,10 +28,10 @@ import { Button } from "/gcanvas.es.min.js";
 
 // Configuration
 const CONFIG = {
-  // Grid parameters - FULLSCREEN
+  // Grid parameters - match spacetime.js for clean visuals
   gridSize: 20,
-  gridResolution: 100, // Denser grid for better coverage
-  baseGridScale: 12, // Base scale, will be multiplied to fill screen
+  gridResolution: 40,
+  baseGridScale: 15,
 
   // Mobile breakpoint
   mobileWidth: 600,
@@ -346,8 +346,8 @@ class SchwarzschildDemo extends Game {
     // Initialize grid vertices
     this.initGrid();
 
-    // Grid scale responsive to screen size
-    this.updateGridScale();
+    // Fixed grid scale (like spacetime.js)
+    this.gridScale = CONFIG.baseGridScale;
 
     // Create metric panel
     this.metricPanel = new MetricPanelGO(this, { name: "metricPanel" });
@@ -461,12 +461,6 @@ class SchwarzschildDemo extends Game {
     }
   }
 
-  updateGridScale() {
-    // Scale grid to show edges - same behavior as kerr.js
-    const minDim = Math.min(this.width, this.height);
-    this.gridScale = (minDim / (CONFIG.gridSize * 2)) * 1.5;
-  }
-
   shuffleParameters() {
     // Randomize mass
     this.mass =
@@ -490,13 +484,15 @@ class SchwarzschildDemo extends Game {
    * Inverted so it looks like a gravity well going DOWN.
    */
   getEmbeddingHeight(r) {
-    return flammEmbeddingHeight(
+    const height = flammEmbeddingHeight(
       r,
       this.rs,
       this.mass,
       CONFIG.gridSize,
       CONFIG.embeddingScale,
     );
+    // Clamp to non-negative to prevent grid lines appearing above the flat plane
+    return Math.max(0, height);
   }
 
   /**
@@ -551,7 +547,6 @@ class SchwarzschildDemo extends Game {
 
     this.camera.update(dt);
     this.updateGeodesic(dt);
-    this.updateGridScale(); // Keep grid responsive
 
     // Update grid with Flamm's paraboloid embedding
     const { gridResolution } = CONFIG;
@@ -578,9 +573,6 @@ class SchwarzschildDemo extends Game {
     const cy = h / 2; // Centered to see full well depth
 
     super.render();
-
-    // Draw key radii circles
-    this.drawKeyRadii(cx, cy);
 
     // Draw grid
     this.drawGrid(cx, cy);
