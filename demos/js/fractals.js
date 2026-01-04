@@ -297,13 +297,14 @@ export class FractalDemo extends Game {
         color: "#fff",
         align: "center",
         baseline: "middle",
+        debugColor: "white",
+        debug: true,
         width: 10,
+        height: 10,
         anchor: Position.BOTTOM_RIGHT,
-        anchorRelative: this.ui,
       });
       this.ui.add(title);
-    }
-    this.ui.update(); //force update to the anchor
+    }    
   }
 
   resetView() {
