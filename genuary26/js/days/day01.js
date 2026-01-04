@@ -2,202 +2,206 @@
  * Genuary 2026 - Day 1
  * Prompt: "One color, one shape"
  *
- * One shape: CIRCLE
- * One color: GREEN (but shifting through all its hues)
+ * THE WORMHOLE
+ * One shape: Circle
+ * One color: Green (#0f0)
  *
- * A hypnotic vortex of circles - hundreds of them spinning,
- * pulsing, and breathing in concentric rings. Each circle is
- * the same shape, each tinted green - but together they create
- * a psychedelic mandala that feels alive.
+ * An infinite tunnel of circles rushing toward you.
+ * Each ring is the same circle, just at different depths.
+ * The tunnel twists and warps as you travel through it.
+ * Click/tap to change direction. Drag to look around.
  */
 
-import { gcanvas } from '../../../src/index.js';
+import { Game, Camera3D } from '../../../src/index.js';
 
-// Configuration
 const CONFIG = {
-  rings: 8,
-  shapesPerRing: [6, 10, 14, 18, 22, 26, 30, 36],
-  baseRadius: 35,
-  ringSpacing: 40,
-  rotationSpeeds: [1.2, -0.9, 0.7, -0.55, 0.45, -0.35, 0.28, -0.22],
-  pulseAmplitudes: [0.2, 0.18, 0.15, 0.12, 0.1, 0.08, 0.06, 0.05],
-  baseHue: 120, // Green
-  hueRange: 40, // Shift within green spectrum (80-160)
+  // Tunnel geometry
+  ringCount: 40,
+  ringSpacing: 50,
+  baseRadius: 250,
+  circlesPerRing: 24,
+
+  // Movement
+  speed: 180,
+  twistSpeed: 0.3,
+  wobbleAmount: 30,
+  wobbleSpeed: 0.8,
+
+  // Visuals - ONE COLOR: GREEN
+  hue: 135,
+  pulseSpeed: 2,
+  glowIntensity: 0.4,
 };
 
-/**
- * Create Day 1 visualization
- * @param {HTMLCanvasElement} canvas - Target canvas element
- * @returns {FluentGame} The game instance for lifecycle management
- */
-export default function day01(canvas) {
-  const game = gcanvas({ canvas, bg: '#000', fluid: false });
-  const scene = game.scene('vortex');
-
-  // Store shape data for animation
-  const allShapes = [];
-
-  // Get center and scale
-  const cx = canvas.width / 2;
-  const cy = canvas.height / 2;
-  const scale = Math.min(canvas.width, canvas.height) / 800;
-
-  // Core - central pulsing circle
-  scene.go({ x: cx, y: cy, name: 'core' })
-    .circle({ radius: 20 * scale, fill: '#0f0' });
-  allShapes.push({ name: 'core', ring: -1, index: 0 });
-
-  // Create concentric rings of circles
-  for (let ring = 0; ring < CONFIG.rings; ring++) {
-    const shapesInRing = CONFIG.shapesPerRing[ring];
-    const ringRadius = (CONFIG.baseRadius + ring * CONFIG.ringSpacing) * scale;
-    const circleRadius = Math.max(4, (14 - ring * 1.2)) * scale;
-
-    for (let i = 0; i < shapesInRing; i++) {
-      const angle = (i / shapesInRing) * Math.PI * 2;
-      const name = `r${ring}_s${i}`;
-
-      // Initial position
-      const x = cx + Math.cos(angle) * ringRadius;
-      const y = cy + Math.sin(angle) * ringRadius;
-
-      // Create the circle - all green, all circles
-      const hue = CONFIG.baseHue + ((ring * 5 + i * 3) % CONFIG.hueRange) - CONFIG.hueRange / 2;
-      scene.go({ x, y, name })
-        .circle({
-          radius: circleRadius,
-          fill: `hsl(${hue}, 100%, 50%)`
-        });
-
-      allShapes.push({
-        name,
-        ring,
-        index: i,
-        baseAngle: angle,
-        ringRadius,
-        circleRadius,
-      });
-    }
+class WormholeDemo extends Game {
+  constructor(canvas) {
+    super(canvas);
+    this.backgroundColor = '#000';
   }
 
-  // Outer particle ring - tiny circles
-  const particleCount = 48;
-  const particleRadius = (CONFIG.baseRadius + CONFIG.rings * CONFIG.ringSpacing + 35) * scale;
+  init() {
+    super.init();
 
-  for (let i = 0; i < particleCount; i++) {
-    const angle = (i / particleCount) * Math.PI * 2;
-    const name = `particle_${i}`;
-    const x = cx + Math.cos(angle) * particleRadius;
-    const y = cy + Math.sin(angle) * particleRadius;
+    // Camera for 3D projection with mouse control
+    this.camera = new Camera3D({
+      perspective: 400,
+      rotationX: 0,
+      rotationY: 0,
+      sensitivity: 0.003,
+      inertia: true,
+      friction: 0.95,
+      clampX: true,
+      minRotationX: -0.8,
+      maxRotationX: 0.8,
+    });
+    this.camera.enableMouseControl(this.canvas);
 
-    scene.go({ x, y, name })
-      .circle({ radius: 3 * scale, fill: '#0f0' });
+    // Tunnel state
+    this.time = 0;
+    this.zOffset = 0;
+    this.direction = 1; // 1 = forward, -1 = backward
 
-    allShapes.push({
-      name,
-      ring: CONFIG.rings,
-      index: i,
-      baseAngle: angle,
-      ringRadius: particleRadius,
-      isParticle: true,
+    // Click to reverse direction
+    this.canvas.addEventListener('click', () => {
+      this.direction *= -1;
+    });
+
+    // Touch support
+    this.canvas.addEventListener('touchend', (e) => {
+      if (!this.camera._isDragging) {
+        this.direction *= -1;
+      }
     });
   }
 
-  // Animation state
-  let time = 0;
+  update(dt) {
+    super.update(dt);
+    this.time += dt;
+    this.zOffset += CONFIG.speed * dt * this.direction;
+    this.camera.update(dt);
+  }
 
-  // Override clear for motion blur trail effect
-  const gameInstance = game.game;
-  gameInstance.clear = function() {
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
-    this.ctx.fillRect(0, 0, this.width, this.height);
+  render() {
+    const ctx = this.ctx;
+    const w = this.width;
+    const h = this.height;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    // Motion blur trail
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Collect all circles with depth for sorting
+    const circles = [];
+
+    const totalDepth = CONFIG.ringCount * CONFIG.ringSpacing;
+
+    for (let ring = 0; ring < CONFIG.ringCount; ring++) {
+      // Calculate ring's z position (wrapping for infinite tunnel)
+      let z = (ring * CONFIG.ringSpacing - this.zOffset) % totalDepth;
+      if (z < 0) z += totalDepth;
+
+      // Skip rings too close or behind camera
+      if (z < 20) continue;
+
+      // Tunnel twist based on depth and time
+      const twist = this.time * CONFIG.twistSpeed + z * 0.002;
+
+      // Wobble the tunnel path
+      const wobbleX = Math.sin(this.time * CONFIG.wobbleSpeed + z * 0.01) * CONFIG.wobbleAmount;
+      const wobbleY = Math.cos(this.time * CONFIG.wobbleSpeed * 0.7 + z * 0.01) * CONFIG.wobbleAmount * 0.6;
+
+      // Ring radius pulses
+      const pulse = 1 + Math.sin(this.time * CONFIG.pulseSpeed + z * 0.02) * 0.1;
+      const ringRadius = CONFIG.baseRadius * pulse;
+
+      // Create circles around this ring
+      for (let i = 0; i < CONFIG.circlesPerRing; i++) {
+        const angle = (i / CONFIG.circlesPerRing) * Math.PI * 2 + twist;
+
+        // Position on the ring
+        const localX = Math.cos(angle) * ringRadius + wobbleX;
+        const localY = Math.sin(angle) * ringRadius + wobbleY;
+
+        // Project through camera
+        const projected = this.camera.project(localX, localY, z);
+
+        // Circle size based on depth
+        const circleRadius = Math.max(2, 12 * projected.scale);
+
+        // ONE COLOR - just vary lightness by depth (keep it green, not white)
+        const depthRatio = 1 - z / totalDepth;
+        const lightness = 35 + depthRatio * 20; // 35-55% (stays green, not white)
+        const alpha = Math.min(1, depthRatio * 1.5);
+
+        circles.push({
+          x: cx + projected.x,
+          y: cy + projected.y,
+          radius: circleRadius,
+          z: projected.z,
+          lightness,
+          alpha,
+        });
+      }
+    }
+
+    // Sort by depth (far to near)
+    circles.sort((a, b) => b.z - a.z);
+
+    // Draw circles - ALL THE SAME GREEN
+    for (const circle of circles) {
+      if (circle.alpha < 0.05) continue;
+
+      // Glow effect
+      const gradient = ctx.createRadialGradient(
+        circle.x, circle.y, 0,
+        circle.x, circle.y, circle.radius * 2
+      );
+
+      const color = `hsl(${CONFIG.hue}, 100%, ${circle.lightness}%)`;
+      const glowColor = `hsla(${CONFIG.hue}, 100%, ${circle.lightness}%, 0)`;
+
+      // Glow effect - same green, just fades out
+      gradient.addColorStop(0, color);
+      gradient.addColorStop(0.4, color);
+      gradient.addColorStop(1, glowColor);
+
+      ctx.beginPath();
+      ctx.arc(circle.x, circle.y, circle.radius * 2, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.globalAlpha = circle.alpha;
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+
+    // Center vortex glow - SAME GREEN
+    const vortexGradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 150);
+    vortexGradient.addColorStop(0, `hsla(${CONFIG.hue}, 100%, 50%, 0.4)`);
+    vortexGradient.addColorStop(0.5, `hsla(${CONFIG.hue}, 100%, 45%, 0.15)`);
+    vortexGradient.addColorStop(1, `hsla(${CONFIG.hue}, 100%, 40%, 0)`);
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 150, 0, Math.PI * 2);
+    ctx.fillStyle = vortexGradient;
+    ctx.fill();
+  }
+}
+
+/**
+ * Create Day 1 visualization
+ * @param {HTMLCanvasElement} canvas
+ * @returns {Object} Game instance with stop() method
+ */
+export default function day01(canvas) {
+  const game = new WormholeDemo(canvas);
+  game.init();
+  game.start();
+
+  // Return object with stop method for lifecycle management
+  return {
+    stop: () => game.stop(),
+    game
   };
-
-  // Animation loop
-  game.on('update', (dt, ctx) => {
-    time += dt;
-
-    // Animate core
-    const core = ctx.refs.core;
-    if (core) {
-      const coreScale = (1 + Math.sin(time * 4) * 0.3) * scale;
-      core.scaleX = coreScale;
-      core.scaleY = coreScale;
-      core.rotation = time * 2;
-
-      // Core color - cycle through greens
-      if (core._fluentShape) {
-        const coreHue = CONFIG.baseHue + Math.sin(time * 2) * (CONFIG.hueRange / 2);
-        const lightness = 50 + Math.sin(time * 6) * 20;
-        core._fluentShape.color = `hsl(${coreHue}, 100%, ${lightness}%)`;
-      }
-    }
-
-    // Animate each ring
-    for (const shape of allShapes) {
-      if (shape.ring < 0) continue; // Skip core
-
-      const go = ctx.refs[shape.name];
-      if (!go) continue;
-
-      if (shape.isParticle) {
-        // Particle animation
-        const particleSpeed = 0.18;
-        const newAngle = shape.baseAngle + time * particleSpeed;
-        const wobble = Math.sin(time * 3 + shape.index * 0.4) * 10 * scale;
-
-        go.x = cx + Math.cos(newAngle) * (shape.ringRadius + wobble);
-        go.y = cy + Math.sin(newAngle) * (shape.ringRadius + wobble);
-
-        // Twinkle
-        const twinkle = 0.3 + Math.abs(Math.sin(time * 10 + shape.index * 0.5)) * 0.7;
-        go.scaleX = twinkle * scale;
-        go.scaleY = twinkle * scale;
-
-        // Color pulse
-        if (go._fluentShape) {
-          const hue = CONFIG.baseHue + Math.sin(time * 2 + shape.index * 0.2) * (CONFIG.hueRange / 2);
-          go._fluentShape.color = `hsl(${hue}, 100%, ${50 + twinkle * 30}%)`;
-        }
-      } else {
-        // Ring shape animation
-        const ringIndex = shape.ring;
-        const rotationSpeed = CONFIG.rotationSpeeds[ringIndex];
-        const pulseAmp = CONFIG.pulseAmplitudes[ringIndex];
-
-        // Rotate
-        const newAngle = shape.baseAngle + time * rotationSpeed;
-
-        // Breathing radius
-        const breathPhase = time * 1.2 + ringIndex * 0.5;
-        const breathRadius = shape.ringRadius + Math.sin(breathPhase) * 12 * scale;
-
-        // Position
-        go.x = cx + Math.cos(newAngle) * breathRadius;
-        go.y = cy + Math.sin(newAngle) * breathRadius;
-
-        // Pulse scale
-        const pulsePhase = time * 3 + ringIndex * 0.4 + shape.index * 0.1;
-        const pulseScale = 1 + Math.sin(pulsePhase) * pulseAmp;
-        go.scaleX = pulseScale;
-        go.scaleY = pulseScale;
-
-        // Rotate individual shapes
-        go.rotation = time * (ringIndex % 2 === 0 ? 3 : -3);
-
-        // Color - all greens, but shifting
-        if (go._fluentShape) {
-          const hueShift = time * 30;
-          const positionHue = shape.index * (360 / CONFIG.shapesPerRing[ringIndex]);
-          const finalHue = CONFIG.baseHue + Math.sin((hueShift + positionHue) * 0.02) * (CONFIG.hueRange / 2);
-          const saturation = 90 + Math.sin(time * 2 + ringIndex) * 10;
-          const lightness = 45 + Math.sin(time * 4 + shape.index * 0.2) * 15;
-
-          go._fluentShape.color = `hsl(${finalHue}, ${saturation}%, ${lightness}%)`;
-        }
-      }
-    }
-  });
-
-  return game.start();
 }
