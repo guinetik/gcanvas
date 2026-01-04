@@ -26,10 +26,10 @@ import { Button } from "../../src/game/ui/button.js";
 
 // Configuration
 const CONFIG = {
-  // Grid parameters - FULLSCREEN
+  // Grid parameters - match spacetime.js for clean visuals
   gridSize: 20,
-  gridResolution: 100, // Dense grid for full coverage
-  baseGridScale: 12,
+  gridResolution: 40,
+  baseGridScale: 15,
 
   // Mobile breakpoint
   mobileWidth: 600,
@@ -395,7 +395,7 @@ class KerrDemo extends Game {
 
     // Initialize grid
     this.initGrid();
-    this.updateGridScale();
+    this.gridScale = CONFIG.baseGridScale;
 
     // Create metric panel
     this.metricPanel = new KerrMetricPanelGO(this, { name: "metricPanel" });
@@ -550,12 +550,6 @@ class KerrDemo extends Game {
     }
   }
 
-  updateGridScale() {
-    // Scale grid to show edges - user can see the fabric boundaries for frame dragging effect
-    const minDim = Math.min(this.width, this.height);
-    this.gridScale = (minDim / (CONFIG.gridSize * 2)) * 1.5;
-  }
-
   shuffleParameters() {
     // Randomize mass
     this.mass =
@@ -605,13 +599,15 @@ class KerrDemo extends Game {
    */
   getEmbeddingHeight(r) {
     const rPlus = Tensor.kerrHorizonRadius(this.mass, this.spin, false);
-    return flammEmbeddingHeight(
+    const height = flammEmbeddingHeight(
       r,
       rPlus,
       this.mass,
       CONFIG.gridSize,
       CONFIG.embeddingScale,
     );
+    // Clamp to non-negative to prevent grid lines appearing above the flat plane
+    return Math.max(0, height);
   }
 
   /**
@@ -690,8 +686,6 @@ class KerrDemo extends Game {
     if (this.formationProgress >= 1) {
       this.updateGeodesic(dt);
     }
-
-    this.updateGridScale();
 
     // Update grid with Kerr geometry
     // The twist is proportional to λ (formation progress), NOT accumulating over time
@@ -792,9 +786,6 @@ class KerrDemo extends Game {
     const cy = h / 2; // Centered to see fabric edges from outside
 
     super.render();
-
-    // Draw key radii (ergosphere, horizons, ISCOs)
-    this.drawKeyRadii(cx, cy);
 
     // Draw ergosphere fill with dragged particles
     this.drawErgosphere(cx, cy);
