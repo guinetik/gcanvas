@@ -2,45 +2,56 @@
  * Genuary 2026 - Day 5
  * Prompt: "Write 'Genuary'. Avoid using a font."
  *
- * ORBITAL TEXT - Pluribus Style
- * Concentric orbital rings emanate from the first letter (G).
- * Background particles flow along these orbits like planets around a sun.
- * Letters formed by particles with fingerprint/cymatic wave patterns.
+ * RIPPLE TEXT - Pluribus Style
+ * Concentric ripples emanate from G like a pebble dropped in water.
+ * As each ripple reaches a letter position, that letter blooms from center.
+ * Ripples persist as background, letters form on top.
  */
 
 import { Game, Camera3D, Painter, ParticleSystem, ParticleEmitter, Updaters, Noise } from '../../../src/index.js';
 
 const CONFIG = {
-  // Text layout
-  letterWidth: 5,
-  letterHeight: 7,
-  letterSpacing: 1.5,
-  pixelSize: 18,
-  marginRatio: 0.85,
+  // Font-based text (smooth curves)
+  fontSize: 140,
+  fontFamily: 'Franklin Gothic Medium',
+  fontWeight: 'bold',
 
-  // Fingerprint wave pattern inside letters
-  waveFrequency: 0.15,
-  waveAmplitude: 8,
-  lineThickness: 0.22,
+  // Fingerprint contour pattern (curved lines following letter shapes)
+  fingerprintEnabled: true,
+  fingerprintSpacing: 6,        // distance between contour lines (pixels)
+  fingerprintThickness: 0.55,   // 0-1, line thickness
+  fingerprintCurve: 0.4,        // how much lines curve (0 = circles, higher = more spiral)
 
   // Particles
-  maxParticles: 8000,
-  particleSize: { min: 0.8, max: 1.4 },
-  sampleDensity: 0.8,
+  maxParticles: 18000,
+  particleSize: { min: 1.6, max: 2.2 },
+  sampleStep: 2,  // denser for fingerprint detail
 
-  // Orbital rings (ripples from G)
-  orbitCount: 35,
-  orbitBaseRadius: 50,
-  orbitSpacing: 40,
-  orbitEccentricity: 0.55,  // wider horizontally
-  orbitSpeed: 0.15,
-  particlesPerOrbit: 50,
-  orbitSpawnDelay: 0.3,  // delay between each ring spawning
-  orbitGrowDuration: 0.5,  // how long each ring takes to grow out
+  // Dash rendering (for letter particles - horizontal ridges)
+  dashLength: 4.0,
+  dashWidth: 0.8,
+
+  // Concentric ripples from G (like pebble drop)
+  rippleCount: 25,              // number of concentric rings
+  rippleBaseRadius: 40,         // innermost ring radius
+  rippleSpacing: 45,            // distance between rings
+  rippleParticlesBase: 30,      // particles in innermost ring
+  rippleParticlesGrowth: 3,     // extra particles per ring
+  rippleSpeed: 0.4,             // orbit speed
+  rippleSpawnDelay: 0.15,       // delay between each ring appearing
+  rippleEccentricity: 0.6,      // ellipse shape (1 = circle)
+
+  // Flag wave effect (subtle)
+  flagWaveSpeed: 0.8,           // how fast the wave travels
+  flagWaveAmplitude: 10,        // how much vertical displacement
+  flagWaveFrequency: 0.004,     // wave frequency across X
+  flagWaveSecondary: 0.2,       // secondary wave strength
 
   // Animation
-  spawnDuration: 1.5,
-  letterStagger: 1.2,     // seconds between each letter
+  spawnDuration: 2.0,       // how long each particle takes to fully form
+  letterStagger: 0.9,       // seconds between each letter STARTING (overlap)
+  gDelay: 0.3,              // when G starts forming (seconds)
+  driftDuration: 8.0,       // how long the leftward drift takes
   breatheAmount: 0.8,
   breatheSpeed: 1.2,
 
@@ -49,22 +60,69 @@ const CONFIG = {
   sensitivity: 0.003,
 
   // Mouse
-  mouseRadius: 120,
-  mousePush: 80,
+  mouseRadius: 180,
+  mousePush: 800,
 };
 
 // 5x7 pixel font
-const LETTERS = {
-  G: [[1,0],[2,0],[3,0],[0,1],[0,2],[0,3],[2,3],[3,3],[4,3],[0,4],[4,4],[0,5],[4,5],[1,6],[2,6],[3,6]],
-  E: [[0,0],[1,0],[2,0],[3,0],[4,0],[0,1],[0,2],[0,3],[1,3],[2,3],[3,3],[0,4],[0,5],[0,6],[1,6],[2,6],[3,6],[4,6]],
-  N: [[0,0],[4,0],[0,1],[1,1],[4,1],[0,2],[2,2],[4,2],[0,3],[2,3],[4,3],[0,4],[3,4],[4,4],[0,5],[4,5],[0,6],[4,6]],
-  U: [[0,0],[4,0],[0,1],[4,1],[0,2],[4,2],[0,3],[4,3],[0,4],[4,4],[0,5],[4,5],[1,6],[2,6],[3,6]],
-  A: [[1,0],[2,0],[3,0],[0,1],[4,1],[0,2],[4,2],[0,3],[1,3],[2,3],[3,3],[4,3],[0,4],[4,4],[0,5],[4,5],[0,6],[4,6]],
-  R: [[0,0],[1,0],[2,0],[3,0],[0,1],[4,1],[0,2],[4,2],[0,3],[1,3],[2,3],[3,3],[0,4],[2,4],[0,5],[3,5],[0,6],[4,6]],
-  Y: [[0,0],[4,0],[0,1],[4,1],[1,2],[3,2],[2,3],[2,4],[2,5],[2,6]],
-};
+// Font bitmap will be created at runtime for smooth curves
 
-class OrbitalTextDemo extends Game {
+/**
+ * Custom particle system that renders letter particles as oriented dashes
+ */
+class DashParticleSystem extends ParticleSystem {
+  drawParticle(ctx, p, x, y, scale) {
+    const a = p.color?.a ?? 1;
+    const size = p.size * scale;
+    if (size < 0.3 || a <= 0) return;
+
+    // Use dash rendering for letter particles
+    if (p.custom?.isLetter && p.custom?.angle !== undefined) {
+      const { r, g, b } = p.color;
+      const angle = p.custom.angle;
+      const glow = p.custom.glow || 0;
+
+      // dashScale: 0 = small dot, 1 = full dash
+      const dashScale = p.custom.dashScale ?? 1;
+
+      // Morph from circle (when dashScale=0) to dash (when dashScale=1)
+      const minLen = size * 0.5;  // dot size when scale=0
+      const maxLen = size * CONFIG.dashLength;
+      const dashLen = minLen + (maxLen - minLen) * dashScale;
+
+      const minW = size * 0.8;  // thicker when dot
+      const maxW = size * CONFIG.dashWidth;
+      const dashW = minW + (maxW - minW) * dashScale;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.lineCap = 'round';
+
+      // Base stroke
+      ctx.strokeStyle = `rgba(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)},${a})`;
+      ctx.lineWidth = Math.max(0.5, dashW);
+      ctx.beginPath();
+      ctx.moveTo(-dashLen / 2, 0);
+      ctx.lineTo(dashLen / 2, 0);
+      ctx.stroke();
+
+      // Glow effect on hover (only if significant)
+      if (glow > 0.15) {
+        ctx.strokeStyle = `rgba(255,255,255,${a * 0.4 * glow})`;
+        ctx.lineWidth = dashW * 2;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    } else {
+      // Default circle rendering for orbital particles
+      super.drawParticle(ctx, p, x, y, scale);
+    }
+  }
+}
+
+class RippleTextDemo extends Game {
   constructor(canvas) {
     super(canvas);
     this.backgroundColor = '#000';
@@ -92,35 +150,44 @@ class OrbitalTextDemo extends Game {
     });
     this.camera.enableMouseControl(this.canvas);
 
-    // Calculate text bounds to find orbit origin (first letter G)
+    // Calculate text bounds - G is at letterCenters[0]
     this.textBounds = this.calculateTextBounds('GENUARY');
+
+    // Orbit origin is always at G's position (relative to text)
     this.orbitOrigin = {
-      x: this.textBounds.firstLetterX,
-      y: 0,
+      x: this.textBounds.letterCenters[0].x,
+      y: this.textBounds.letterCenters[0].y,
+    };
+
+    // Global offset: everything starts centered (offset cancels G's position)
+    // then drifts to 0 so text ends up in final centered position
+    this.globalOffset = {
+      x: -this.orbitOrigin.x,  // starts positive to center G
+      y: -this.orbitOrigin.y,
     };
 
     // Pre-calculate letter target positions
     this.targetPositions = this.calculateTargetPositions('GENUARY');
 
     // Custom updaters
-    const orbitalMotion = this.createOrbitalUpdater();
+    const rippleMotion = this.createRippleUpdater();
     const spawnAnimation = this.createSpawnUpdater();
     const breatheMotion = this.createBreatheUpdater();
     const mouseInteraction = this.createMouseUpdater();
 
-    // ParticleSystem
-    this.particles = new ParticleSystem(this, {
+    // ParticleSystem with custom dash rendering
+    this.particles = new DashParticleSystem(this, {
       camera: this.camera,
       depthSort: true,
       maxParticles: CONFIG.maxParticles,
       blendMode: 'screen',
       updaters: [
-        orbitalMotion,
+        rippleMotion,
         spawnAnimation,
         breatheMotion,
         mouseInteraction,
         Updaters.velocity,
-        Updaters.damping(0.92),
+        Updaters.damping(0.94),
       ],
     });
 
@@ -134,11 +201,11 @@ class OrbitalTextDemo extends Game {
 
     // Spawn particles
     this.spawnLetterParticles();
-    this.spawnOrbitalParticles();
+    this.spawnRippleParticles();
 
     this.pipeline.add(this.particles);
 
-    console.log(`[Day5] Orbital GENUARY: ${this.particles.particleCount} particles`);
+    console.log(`[Day5] GENUARY: ${this.targetPositions.length} letter + ${this.particles.particleCount - this.targetPositions.length} ripple particles`);
 
     // Mouse tracking
     this._onMouseMove = (e) => {
@@ -155,89 +222,154 @@ class OrbitalTextDemo extends Game {
   }
 
   calculateTextBounds(text) {
-    const chars = text.split('');
-    const totalWidth = chars.length * (CONFIG.letterWidth + CONFIG.letterSpacing) - CONFIG.letterSpacing;
+    // Create off-screen canvas to render text
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
 
-    const maxWidth = this.width * CONFIG.marginRatio;
-    const naturalWidth = totalWidth * CONFIG.pixelSize;
-    const scale = Math.min(1, maxWidth / naturalWidth);
-    const pixelSize = CONFIG.pixelSize * scale;
+    // Set up larger canvas first, then set font
+    const estimatedWidth = text.length * CONFIG.fontSize * 0.7;
+    const canvasHeight = CONFIG.fontSize * 1.5;
+    const padding = 30;
 
-    const startX = -totalWidth * pixelSize / 2;
-    const firstLetterX = startX + (CONFIG.letterWidth / 2) * pixelSize;
+    tempCanvas.width = estimatedWidth + padding * 2;
+    tempCanvas.height = canvasHeight + padding * 2;
 
-    // Calculate center of each letter for cascade spawning
+    // Clear and set font AFTER canvas is sized
+    tempCtx.fillStyle = '#000';
+    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Set font
+    const fontString = `${CONFIG.fontWeight} ${CONFIG.fontSize}px ${CONFIG.fontFamily}`;
+    tempCtx.font = fontString;
+
+    // Measure actual text width
+    const metrics = tempCtx.measureText(text);
+    const textWidth = metrics.width;
+
+    // Re-size canvas to exact dimensions needed
+    tempCanvas.width = textWidth + padding * 2;
+    tempCanvas.height = canvasHeight + padding * 2;
+
+    // Must re-set everything after resize (canvas reset)
+    tempCtx.fillStyle = '#000';
+    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    tempCtx.font = fontString;
+    tempCtx.fillStyle = '#fff';
+    tempCtx.textBaseline = 'top';
+
+    // Draw text - position at padding from left, and vertically centered
+    const textY = (tempCanvas.height - CONFIG.fontSize) / 2;
+    tempCtx.fillText(text, padding, textY);
+
+    // Get pixel data
+    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Calculate letter centers
     const letterCenters = [];
-    let offsetX = 0;
-    for (let i = 0; i < chars.length; i++) {
-      const letterCenterX = startX + (offsetX + CONFIG.letterWidth / 2) * pixelSize;
-      letterCenters.push({ x: letterCenterX, y: 0 });
-      offsetX += CONFIG.letterWidth + CONFIG.letterSpacing;
+    let currentX = padding;
+    for (const char of text) {
+      const charWidth = tempCtx.measureText(char).width;
+      letterCenters.push({
+        x: currentX + charWidth / 2 - tempCanvas.width / 2,
+        y: 0,
+        width: charWidth
+      });
+      currentX += charWidth;
     }
 
-    return { startX, pixelSize, firstLetterX, letterCenters };
+    // Store for use in calculateTargetPositions
+    this.fontBitmap = {
+      imageData,
+      width: tempCanvas.width,
+      height: tempCanvas.height,
+      offsetX: -tempCanvas.width / 2,
+      offsetY: -tempCanvas.height / 2
+    };
+
+    return { letterCenters };
   }
 
   calculateTargetPositions(text) {
     const positions = [];
-    const chars = text.split('');
-    const { startX, pixelSize, letterCenters } = this.textBounds;
-    let offsetX = 0;
-    let letterIndex = 0;
+    const { imageData, width, height, offsetX, offsetY } = this.fontBitmap;
+    const { letterCenters } = this.textBounds;
+    const step = CONFIG.sampleStep;
 
-    for (const char of chars) {
-      const letter = LETTERS[char];
-      if (!letter) {
-        offsetX += CONFIG.letterWidth + CONFIG.letterSpacing;
-        letterIndex++;
-        continue;
-      }
+    // Sample the font bitmap
+    for (let py = 0; py < height; py += step) {
+      for (let px = 0; px < width; px += step) {
+        // IMPORTANT: Floor to integers for imageData indexing
+        const ipx = Math.floor(px);
+        const ipy = Math.floor(py);
+        const idx = (ipy * width + ipx) * 4;
+        const pixelValue = imageData.data[idx];  // R channel (white = text)
 
-      // Previous letter center (or G's own center for first letter - the orbit origin)
-      const spawnOrigin = letterIndex === 0
-        ? letterCenters[0]  // G spawns from its own center (orbit origin)
-        : letterCenters[letterIndex - 1];
+        if (pixelValue > 128) {
+          // This pixel is part of the text
+          const wx = px + offsetX;
+          const wy = py + offsetY;
 
-      for (const [lx, ly] of letter) {
-        const centerX = startX + (offsetX + lx) * pixelSize;
-        const centerY = (ly - CONFIG.letterHeight / 2) * pixelSize;
+          // Determine which letter this pixel belongs to
+          let letterIndex = 0;
+          let letterCenterX = letterCenters[0].x;
+          let letterCenterY = 0;
 
-        const halfSize = pixelSize / 2;
-        const step = CONFIG.sampleDensity;
-
-        for (let dy = -halfSize; dy <= halfSize; dy += step) {
-          for (let dx = -halfSize; dx <= halfSize; dx += step) {
-            const wx = centerX + dx;
-            const wy = centerY + dy;
-
-            // Fingerprint wave pattern
-            const noiseVal = Noise.simplex2(wx * 0.008, wy * 0.008);
-            const warpedX = wx + noiseVal * CONFIG.waveAmplitude;
-            const warpedY = wy + noiseVal * CONFIG.waveAmplitude * 0.5;
-
-            const wave = Math.sin(
-              (warpedX + warpedY) * CONFIG.waveFrequency +
-              noiseVal * 3
-            );
-
-            if (Math.abs(wave) < CONFIG.lineThickness) {
-              const z = noiseVal * 15;
-              const brightness = 0.7 + Math.random() * 0.3;
-
-              positions.push({
-                x: wx, y: wy, z: z,
-                brightness: brightness,
-                phase: (wx + wy) * 0.02,
-                letterIndex: letterIndex,
-                spawnOriginX: spawnOrigin.x,
-                spawnOriginY: spawnOrigin.y,
-              });
+          for (let i = 0; i < letterCenters.length; i++) {
+            const lc = letterCenters[i];
+            if (wx >= lc.x - lc.width / 2 && wx < lc.x + lc.width / 2) {
+              letterIndex = i;
+              letterCenterX = lc.x;
+              letterCenterY = lc.y;
+              break;
             }
+            // Default to closest letter
+            if (i === letterCenters.length - 1 || wx < letterCenters[i + 1].x - letterCenters[i + 1].width / 2) {
+              letterIndex = i;
+              letterCenterX = lc.x;
+              letterCenterY = lc.y;
+            }
+          }
+
+          const noiseVal = Noise.simplex2(wx * 0.015, wy * 0.005);
+
+          // Fingerprint contour pattern - curved lines from letter center
+          let includeParticle = true;
+          if (CONFIG.fingerprintEnabled) {
+            // Distance and angle from letter center
+            const dx = wx - letterCenterX;
+            const dy = wy - letterCenterY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+
+            // Create curved contours: distance + angle creates spiral effect
+            // Add noise for organic fingerprint feel
+            const contourVal = dist + angle * CONFIG.fingerprintCurve * 15 + noiseVal * 3;
+            const wave = Math.sin(contourVal * (Math.PI * 2 / CONFIG.fingerprintSpacing));
+
+            includeParticle = Math.abs(wave) < CONFIG.fingerprintThickness;
+          }
+
+          if (includeParticle) {
+            const z = noiseVal * 8;
+            const brightness = 0.75 + Math.random() * 0.25;
+
+            // Orient dashes along the contour lines (perpendicular to radius)
+            const dx = wx - letterCenterX;
+            const dy = wy - letterCenterY;
+            const tangentAngle = Math.atan2(dy, dx) + Math.PI / 2 + noiseVal * 0.2;
+
+            positions.push({
+              x: wx, y: wy, z: z,
+              brightness: brightness,
+              phase: (wx + wy) * 0.02,
+              angle: tangentAngle,
+              letterIndex: letterIndex,
+              letterCenterX: letterCenterX,
+              letterCenterY: letterCenterY,
+            });
           }
         }
       }
-      offsetX += CONFIG.letterWidth + CONFIG.letterSpacing;
-      letterIndex++;
     }
 
     return positions;
@@ -245,147 +377,248 @@ class OrbitalTextDemo extends Game {
 
   spawnLetterParticles() {
     const emitter = this.particles.getEmitter('text');
+    const originX = this.orbitOrigin.x;
+    const originY = this.orbitOrigin.y;
 
     for (const target of this.targetPositions) {
       const p = this.particles.acquire();
       emitter.emit(p);
 
-      // Start at THIS letter's spawn origin (previous letter's center)
-      p.x = target.spawnOriginX + (Math.random() - 0.5) * 30;
-      p.y = target.spawnOriginY + (Math.random() - 0.5) * 30;
-      p.z = (Math.random() - 0.5) * 20;
+      // Calculate angle from orbit origin to this particle's target
+      const dx = target.x - originX;
+      const dy = target.y - originY;
+      const angleToTarget = Math.atan2(dy, dx);
+      const distFromOrigin = Math.sqrt(dx * dx + (dy / CONFIG.rippleEccentricity) ** 2);
+
+      // Find which orbital ring this particle will come from
+      const ringRadius = Math.max(CONFIG.rippleBaseRadius, distFromOrigin * 0.8);
+
+      // Start position: on the orbital ring, at the angle toward the target
+      // Add some spread so particles don't all come from exact same point
+      const startAngle = angleToTarget + (Math.random() - 0.5) * 0.5;
+      const startRadius = ringRadius + (Math.random() - 0.5) * 30;
+
+      p.x = originX + Math.cos(startAngle) * startRadius;
+      p.y = originY + Math.sin(startAngle) * startRadius * CONFIG.rippleEccentricity;
+      p.z = (Math.random() - 0.5) * 10;
 
       p.custom.targetX = target.x;
       p.custom.targetY = target.y;
       p.custom.targetZ = target.z;
-      p.custom.spawnOriginX = target.spawnOriginX;
-      p.custom.spawnOriginY = target.spawnOriginY;
+      p.custom.letterCenterX = target.letterCenterX;
+      p.custom.letterCenterY = target.letterCenterY;
       p.custom.phase = target.phase;
       p.custom.brightness = target.brightness;
       p.custom.baseBrightness = target.brightness;
       p.custom.isLetter = true;
-      // Simple: G when first orbit done, then equal stagger for each letter
-      const gDelay = CONFIG.orbitGrowDuration + 0.2;
-      p.custom.spawnDelay = gDelay + target.letterIndex * CONFIG.letterStagger + Math.random() * 0.1;
+      p.custom.glow = 0;
+
+      // Store target angle and starting angle (pointing from origin toward target)
+      p.custom.targetAngle = target.angle;
+      p.custom.startAngle = angleToTarget + (Math.random() - 0.5) * 0.3;
+      p.custom.angle = p.custom.startAngle;
+
+      // Store target size for dash morphing
+      p.custom.targetDashScale = 1.0;
+      p.custom.dashScale = 0.0;  // starts as dot, grows to full dash
+
+      // Timing: stagger by letter index (G=0, E=1, N=2, etc.)
+      // G starts at gDelay, each subsequent letter waits letterStagger more
+      const letterDelay = CONFIG.gDelay + target.letterIndex * CONFIG.letterStagger;
+
+      // Small random spread within each letter so they don't all appear at once
+      const particleSpread = Math.random() * 0.4;
+
+      p.custom.spawnDelay = letterDelay + particleSpread;
       p.custom.spawnProgress = 0;
 
-      const gray = Math.floor(180 + target.brightness * 75);
-      p.color.r = gray;
-      p.color.g = gray;
-      p.color.b = gray;
+      // Start bright white
+      p.color.r = 255;
+      p.color.g = 255;
+      p.color.b = 255;
       p.color.a = 0;
 
-      p.size = CONFIG.particleSize.min + Math.random() * (CONFIG.particleSize.max - CONFIG.particleSize.min);
+      p.custom.targetSize = CONFIG.particleSize.min + Math.random() * (CONFIG.particleSize.max - CONFIG.particleSize.min);
+      p.size = 2.0;
 
       this.particles.particles.push(p);
     }
   }
 
-  spawnOrbitalParticles() {
+  spawnRippleParticles() {
     const emitter = this.particles.getEmitter('text');
+    const originX = this.orbitOrigin.x;
+    const originY = this.orbitOrigin.y;
 
-    // All orbits centered on G, growing outward like ripples
-    for (let ring = 0; ring < CONFIG.orbitCount; ring++) {
-      const orbitRadius = CONFIG.orbitBaseRadius + ring * CONFIG.orbitSpacing;
-      const particleCount = CONFIG.particlesPerOrbit + ring * 2;
-      const ringDelay = ring * CONFIG.orbitSpawnDelay;
+    // Create concentric rings emanating from G
+    for (let ring = 0; ring < CONFIG.rippleCount; ring++) {
+      const radius = CONFIG.rippleBaseRadius + ring * CONFIG.rippleSpacing;
+      const particleCount = CONFIG.rippleParticlesBase + ring * CONFIG.rippleParticlesGrowth;
 
       for (let i = 0; i < particleCount; i++) {
         const p = this.particles.acquire();
         emitter.emit(p);
 
-        const baseAngle = (i / particleCount) * Math.PI * 2;
-        const angle = baseAngle + (Math.random() - 0.5) * 0.2;
+        const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.1;
 
-        // Tall vertical ellipses - Y is long axis, X is short axis
-        const rx = orbitRadius * CONFIG.orbitEccentricity;
-        const ry = orbitRadius;
+        // Elliptical ripples
+        const rx = radius;
+        const ry = radius * CONFIG.rippleEccentricity;
 
-        // Start at G's center
-        p.x = this.orbitOrigin.x;
-        p.y = this.orbitOrigin.y;
-        p.z = (Math.random() - 0.5) * 5;
+        // Start at ring position (already expanded)
+        p.x = originX + Math.cos(angle) * rx;
+        p.y = originY + Math.sin(angle) * ry;
+        p.z = (Math.random() - 0.5) * 10;
 
         p.custom.isLetter = false;
-        p.custom.isOrbital = true;
-        p.custom.orbitCenterX = this.orbitOrigin.x;
-        p.custom.orbitCenterY = this.orbitOrigin.y;
-        p.custom.orbitRx = rx;
-        p.custom.orbitRy = ry;
-        p.custom.orbitAngle = angle;
-        p.custom.orbitSpeed = CONFIG.orbitSpeed / (1 + ring * 0.1);
-        p.custom.orbitDirection = Math.random() > 0.2 ? 1 : -1;
+        p.custom.isRipple = true;
+        p.custom.originX = originX;
+        p.custom.originY = originY;
+        p.custom.ringRadius = radius;
+        p.custom.rx = rx;
+        p.custom.ry = ry;
+        p.custom.angle = angle;
         p.custom.ringIndex = ring;
-        p.custom.spawnDelay = ringDelay;
+        p.custom.orbitDirection = 1;
+
+        // Rings appear sequentially from center outward
+        p.custom.spawnDelay = ring * CONFIG.rippleSpawnDelay;
         p.custom.spawnProgress = 0;
 
-        const brightness = 0.5 + Math.random() * 0.5;
+        const brightness = 0.5 + Math.random() * 0.4;
         p.custom.brightness = brightness;
-        p.custom.baseBrightness = brightness;
 
-        const gray = Math.floor(180 + brightness * 70);  // 180-250 range
+        const gray = Math.floor(180 + brightness * 60);
         p.color.r = gray;
         p.color.g = gray;
         p.color.b = gray;
-        p.color.a = 0;  // Start invisible, fades in
+        p.color.a = 0;
 
-        p.size = 0.4 + Math.random() * 0.6;
+        p.size = 1.8 + Math.random() * 0.6;
 
         this.particles.particles.push(p);
       }
     }
   }
 
-  createOrbitalUpdater() {
+  createRippleUpdater() {
     return (p, dt, system) => {
-      if (!p.custom.isOrbital) return;
+      if (!p.custom.isRipple) return;
 
-      // Wait for spawn delay
-      if (this.time < p.custom.spawnDelay) return;
-
-      // Grow animation - ring expands outward from G
-      if (p.custom.spawnProgress < 1) {
-        p.custom.spawnProgress = Math.min(1, (p.custom.spawnProgress || 0) + dt / CONFIG.orbitGrowDuration);
-        const t = this.easeOutCubic(p.custom.spawnProgress);
-
-        // Fade in - brighter alpha
-        p.color.a = (0.6 + p.custom.baseBrightness * 0.35) * t;
+      // Wait for spawn delay (rings appear from center outward)
+      if (this.time < p.custom.spawnDelay) {
+        p.color.a = 0;
+        return;
       }
 
-      // Rotate
-      p.custom.orbitAngle += p.custom.orbitSpeed * p.custom.orbitDirection * dt;
+      // Fade in
+      if (p.custom.spawnProgress < 1) {
+        p.custom.spawnProgress = Math.min(1, (p.custom.spawnProgress || 0) + dt * 2);
+        p.color.a = p.custom.spawnProgress * (0.6 + p.custom.brightness * 0.3);
+      }
 
-      // All rings centered on G (orbitOrigin)
-      const scale = p.custom.spawnProgress;  // grow from center
+      // Slowly orbit around the origin
+      p.custom.angle += CONFIG.rippleSpeed * p.custom.orbitDirection * dt / (1 + p.custom.ringIndex * 0.05);
 
-      const targetX = this.orbitOrigin.x + Math.cos(p.custom.orbitAngle) * p.custom.orbitRx * scale;
-      const targetY = this.orbitOrigin.y + Math.sin(p.custom.orbitAngle) * p.custom.orbitRy * scale;
+      // Calculate base position on ellipse
+      const baseX = p.custom.originX + Math.cos(p.custom.angle) * p.custom.rx;
+      const baseY = p.custom.originY + Math.sin(p.custom.angle) * p.custom.ry;
 
-      p.vx += (targetX - p.x) * 0.3;
-      p.vy += (targetY - p.y) * 0.3;
+      // Flag wave effect with unpredictable wind using noise
+      const flagAnchor = -500;
+      const distFromAnchor = Math.max(0, baseX - flagAnchor);
+      const waveStrength = Math.min(1, distFromAnchor / 800);
+
+      // Noise-based wind variation - makes it unpredictable
+      const windNoise = Noise.simplex3(baseX * 0.002, baseY * 0.002, this.time * 0.4);
+      const gustNoise = Noise.simplex2(this.time * 0.8, p.custom.ringIndex * 0.3);
+      const windVariation = 1 + windNoise * 0.5 + gustNoise * 0.3;
+
+      // Primary wave with noise variation
+      const wave1 = Math.sin(
+        this.time * CONFIG.flagWaveSpeed * windVariation +
+        baseX * CONFIG.flagWaveFrequency
+      ) * CONFIG.flagWaveAmplitude * waveStrength;
+
+      // Secondary wave (higher frequency)
+      const wave2 = Math.sin(
+        this.time * CONFIG.flagWaveSpeed * 1.7 +
+        baseX * CONFIG.flagWaveFrequency * 2.3 +
+        windNoise * 2
+      ) * CONFIG.flagWaveAmplitude * CONFIG.flagWaveSecondary * waveStrength;
+
+      // Tertiary turbulence - subtle random gusts
+      const turbulence = Noise.simplex3(
+        baseX * 0.008,
+        baseY * 0.008,
+        this.time * 0.8
+      ) * 3 * waveStrength;
+
+      // Apply flag distortion
+      const targetX = baseX + turbulence * 0.15;
+      const targetY = baseY + wave1 + wave2 + turbulence * 0.5;
+
+      // Smooth movement to target
+      p.x += (targetX - p.x) * 0.12;
+      p.y += (targetY - p.y) * 0.12;
     };
   }
 
   createSpawnUpdater() {
     return (p, dt, system) => {
-      if (!p.custom.isLetter || p.custom.spawnProgress >= 1) return;
+      if (!p.custom.isLetter) return;
 
-      if (this.time > p.custom.spawnDelay) {
-        p.custom.spawnProgress = Math.min(1, (p.custom.spawnProgress || 0) + dt / CONFIG.spawnDuration);
+      const timeSinceSpawn = this.time - p.custom.spawnDelay;
 
-        const t = this.easeOutCubic(p.custom.spawnProgress);
-
-        // Fly from THIS particle's spawn origin (previous letter) to target
-        const startX = p.custom.spawnOriginX;
-        const startY = p.custom.spawnOriginY;
-
-        p.x = startX + (p.custom.targetX - startX) * t;
-        p.y = startY + (p.custom.targetY - startY) * t;
-        p.z = (p.custom.targetZ || 0) * t;
-
-        p.color.a = p.custom.brightness * t;
+      if (timeSinceSpawn < 0) {
+        p.color.a = 0;
+        return;
       }
+
+      // Store initial position on first frame
+      if (p.custom.startX === undefined) {
+        p.custom.startX = p.x;
+        p.custom.startY = p.y;
+        p.custom.startZ = p.z;
+      }
+
+      if (p.custom.spawnProgress >= 1) return;
+
+      // Animate from orbital start position to target
+      p.custom.spawnProgress = Math.min(1, (p.custom.spawnProgress || 0) + dt / CONFIG.spawnDuration);
+
+      const t = this.easeOutQuad(p.custom.spawnProgress);
+
+      // Lerp from orbital start to final position
+      p.x = p.custom.startX + (p.custom.targetX - p.custom.startX) * t;
+      p.y = p.custom.startY + (p.custom.targetY - p.custom.startY) * t;
+      p.z = p.custom.startZ + ((p.custom.targetZ || 0) - p.custom.startZ) * t;
+
+      // Tween angle from starting (pointing from origin) to target (fingerprint contour)
+      p.custom.angle = p.custom.startAngle + (p.custom.targetAngle - p.custom.startAngle) * t;
+
+      // Tween dash scale: 0 = dot, 1 = full dash
+      p.custom.dashScale = t;
+
+      // Size: start small, grow to target
+      const startSize = 1.0;
+      const endSize = p.custom.targetSize || CONFIG.particleSize.min;
+      p.size = startSize + (endSize - startSize) * t;
+
+      // Fade in and settle to final brightness
+      p.color.a = p.custom.brightness * Math.min(1, t * 1.5);
+
+      // Color: start white, transition to final gray
+      const finalGray = Math.floor(180 + p.custom.brightness * 75);
+      const gray = Math.floor(255 - (255 - finalGray) * t);
+      p.color.r = gray;
+      p.color.g = gray;
+      p.color.b = gray;
     };
+  }
+
+  easeOutQuad(t) {
+    return 1 - (1 - t) * (1 - t);
   }
 
   createBreatheUpdater() {
@@ -398,14 +631,29 @@ class OrbitalTextDemo extends Game {
       const baseX = p.custom.targetX + breathe;
       const baseY = p.custom.targetY + breathe * 0.5;
 
-      p.vx += (baseX - p.x) * 0.1;
-      p.vy += (baseY - p.y) * 0.1;
+      // Direct lerp back to position (no spring/overshoot)
+      const mousePush = p.custom.mousePush || 0;
+      const returnSpeed = 0.15 * (1 - mousePush * 0.7);
+
+      p.x += (baseX - p.x) * returnSpeed;
+      p.y += (baseY - p.y) * returnSpeed;
+
+      // Kill velocity to prevent spring effect
+      p.vx *= 0.8;
+      p.vy *= 0.8;
+
+      // Subtle angle drift
+      const angleDrift = Noise.simplex3(p.x * 0.01, p.y * 0.01, this.time * 0.3) * 0.08;
+      p.custom.angle += angleDrift * dt;
     };
   }
 
   createMouseUpdater() {
     return (p, dt, system) => {
-      if (this.mouseX < 0) return;
+      if (this.mouseX < 0) {
+        p.custom.mousePush = 0;
+        return;
+      }
 
       const proj = this.camera.project(p.x, p.y, p.z);
       const screenX = this.width / 2 + proj.x;
@@ -416,14 +664,33 @@ class OrbitalTextDemo extends Game {
       const mouseDist = Math.sqrt(mdx * mdx + mdy * mdy);
 
       if (mouseDist < CONFIG.mouseRadius && mouseDist > 1) {
-        const force = (1 - mouseDist / CONFIG.mouseRadius) * CONFIG.mousePush * dt;
-        p.vx += (mdx / mouseDist) * force;
-        p.vy += (mdy / mouseDist) * force;
+        // Quadratic falloff for punchier close-range repulsion
+        const t = 1 - mouseDist / CONFIG.mouseRadius;
+        const force = t * t * CONFIG.mousePush;
 
-        // Brighten on hover
-        p.custom.brightness = Math.min(1, p.custom.baseBrightness + 0.3);
-      } else if (p.custom.isLetter && p.custom.spawnProgress >= 1) {
-        p.custom.brightness = p.custom.baseBrightness;
+        // Apply force directly to position for immediate response
+        const pushX = (mdx / mouseDist) * force * dt;
+        const pushY = (mdy / mouseDist) * force * dt;
+        p.x += pushX;
+        p.y += pushY;
+        p.vx += pushX * 0.5;
+        p.vy += pushY * 0.5;
+
+        // Track push strength so breathe updater can back off
+        p.custom.mousePush = t;
+
+        // Brighten and glow on hover
+        if (p.custom.isLetter) {
+          p.custom.brightness = Math.min(1, p.custom.baseBrightness + 0.4);
+          p.custom.glow = Math.min(1, (p.custom.glow || 0) + dt * 6);
+        }
+      } else {
+        p.custom.mousePush = Math.max(0, (p.custom.mousePush || 0) - dt * 8);
+
+        if (p.custom.isLetter && p.custom.spawnProgress >= 1) {
+          p.custom.brightness = p.custom.baseBrightness;
+          p.custom.glow = Math.max(0, (p.custom.glow || 0) - dt * 4);
+        }
       }
 
       // Update color based on brightness
@@ -455,18 +722,37 @@ class OrbitalTextDemo extends Game {
     super.update(dt);
     this.time += dt;
     this.camera.update(dt);
+
+    // Animate global offset: starts at (-orbitOrigin.x, -orbitOrigin.y) to center G
+    // Eases to (0, 0) so text ends up centered
+    const driftProgress = Math.min(1, this.time / CONFIG.driftDuration);
+    const t = this.easeInOutQuad(driftProgress);
+
+    const startOffsetX = -this.orbitOrigin.x;
+    const startOffsetY = -this.orbitOrigin.y;
+    this.globalOffset.x = startOffsetX * (1 - t);
+    this.globalOffset.y = startOffsetY * (1 - t);
+  }
+
+  easeInOutQuad(t) {
+    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
   }
 
   render() {
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    // Higher alpha = shorter trails (0.6 for minimal trails)
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     this.ctx.fillRect(0, 0, this.width, this.height);
 
+    // Apply global offset (drift from center to final position)
+    this.ctx.save();
+    this.ctx.translate(this.globalOffset.x, this.globalOffset.y);
     this.pipeline.render(this.ctx);
+    this.ctx.restore();
   }
 }
 
 export default function day05(canvas) {
-  const game = new OrbitalTextDemo(canvas);
+  const game = new RippleTextDemo(canvas);
   game.start();
   return { stop: () => game.stop(), game };
 }
