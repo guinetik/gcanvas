@@ -5,20 +5,20 @@
 :root {
   /* Terminal palette */
   --bg-primary: #000;
-  --bg-secondary: #0a0a0a;
-  --bg-tertiary: #111;
+  --bg-secondary: #050505;
+  --bg-tertiary: #0a0a0a;
   --bg-card: #080808;
   --accent: #0f0;
   --accent-dim: rgba(0, 255, 0, 0.4);
   --accent-glow: rgba(0, 255, 0, 0.15);
   --text-primary: #fff;
   --text-secondary: #888;
-  --text-muted: #555;
+  --text-muted: #444;
   --border: #1a1a1a;
   --border-bright: #333;
 
   /* Layout */
-  --sidebar-width: 220px;
+  --sidebar-width: 240px;
   --header-height: 56px;
   --font-mono: 'Fira Code', 'Courier New', Consolas, monospace;
 
@@ -46,6 +46,45 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Custom Cursor */
+body {
+  cursor: crosshair;
+}
+
+/* ============================================
+   CRT / Scanline Effect
+   ============================================ */
+
+.scanline-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.1)
+  );
+  background-size: 100% 4px;
+  animation: scanlines 0.2s linear infinite;
+  opacity: 0.3;
+}
+
+.vignette-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 998;
+  background: radial-gradient(circle, transparent 60%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+@keyframes scanlines {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 4px; }
+}
+
 /* ============================================
    Mobile Header
    ============================================ */
@@ -57,7 +96,8 @@ html, body {
   left: 0;
   right: 0;
   height: var(--header-height);
-  background: var(--bg-secondary);
+  background: rgba(5, 5, 5, 0.9);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
   z-index: 200;
   padding: 0 16px;
@@ -81,13 +121,14 @@ html, body {
   justify-content: center;
   font-weight: bold;
   font-size: 18px;
+  clip-path: polygon(0 0, 100% 0, 100% 80%, 80% 100%, 0 100%);
 }
 
 .header-title {
   font-size: 14px;
   font-weight: bold;
   color: var(--text-primary);
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 /* Hamburger button */
@@ -107,6 +148,7 @@ html, body {
 
 .hamburger:hover {
   border-color: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .hamburger span {
@@ -148,8 +190,10 @@ html, body {
 }
 
 .nav-branding {
-  padding: 24px 20px;
+  padding: 32px 24px;
   border-bottom: 1px solid var(--border);
+  background:
+    linear-gradient(45deg, transparent 48%, var(--border) 49%, var(--border) 51%, transparent 52%) 0 0 / 10px 10px;
 }
 
 .nav-logo {
@@ -163,21 +207,24 @@ html, body {
   font-weight: bold;
   font-size: 28px;
   margin-bottom: 16px;
+  clip-path: polygon(0 0, 100% 0, 100% 75%, 75% 100%, 0 100%);
+  box-shadow: 0 0 20px var(--accent-glow);
 }
 
 .nav-branding h1 {
   font-size: 16px;
   font-weight: bold;
-  color: var(--accent);
-  letter-spacing: 1px;
+  color: var(--text-primary);
+  letter-spacing: 2px;
   margin-bottom: 4px;
+  text-shadow: 0 0 10px var(--accent-glow);
 }
 
 .nav-subtitle {
   font-size: 11px;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 .nav-links {
@@ -201,37 +248,41 @@ html, body {
 .nav-links a {
   display: flex;
   align-items: center;
-  padding: 10px 20px;
+  padding: 12px 24px;
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 13px;
   transition: var(--transition-fast);
   border-left: 2px solid transparent;
+  position: relative;
 }
 
 .nav-links a:hover {
   background: var(--bg-tertiary);
   color: var(--text-primary);
+  padding-left: 28px;
 }
 
 .nav-links a.active {
-  background: var(--accent-glow);
+  background: linear-gradient(90deg, var(--accent-glow) 0%, transparent 100%);
   color: var(--accent);
   border-left-color: var(--accent);
+  text-shadow: 0 0 8px var(--accent-glow);
 }
 
 .nav-links .day-number {
   width: 32px;
   color: var(--text-muted);
   font-size: 11px;
+  font-family: var(--font-mono);
 }
 
 .nav-links a.active .day-number {
-  color: var(--accent-dim);
+  color: var(--accent);
 }
 
 .nav-footer {
-  padding: 16px 20px;
+  padding: 24px;
   border-top: 1px solid var(--border);
 }
 
@@ -241,10 +292,13 @@ html, body {
   text-decoration: none;
   font-size: 12px;
   transition: var(--transition-fast);
+  opacity: 0.7;
 }
 
 .nav-back:hover {
   color: var(--accent);
+  opacity: 1;
+  transform: translateX(-4px);
 }
 
 /* ============================================
@@ -256,6 +310,7 @@ html, body {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
   z-index: 140;
   opacity: 0;
   transition: opacity var(--transition-smooth);
@@ -280,6 +335,7 @@ html, body {
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
+  z-index: 10;
 }
 
 /* Hide scrollbar but keep functionality */
@@ -306,23 +362,10 @@ html, body {
   height: 400vh; /* Covers all sections */
   pointer-events: none;
   z-index: 0;
-  background:
-    /* Horizontal curved lines */
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 99px,
-      rgba(0, 255, 0, 0.03) 99px,
-      rgba(0, 255, 0, 0.03) 100px
-    ),
-    /* Vertical grid lines with fade */
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 99px,
-      rgba(0, 255, 0, 0.02) 99px,
-      rgba(0, 255, 0, 0.02) 100px
-    );
+  /* Dots pattern */
+  background-image: radial-gradient(var(--border-bright) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.3;
 }
 
 /* Curved grid overlay - SVG-based for true curves */
@@ -341,6 +384,13 @@ html, body {
   width: 100%;
   height: 100%;
   opacity: 0.4;
+  /* Add subtle float animation */
+  animation: floatGrid 20s ease-in-out infinite alternate;
+}
+
+@keyframes floatGrid {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.02) translateY(-20px); }
 }
 
 /* ============================================
@@ -358,6 +408,24 @@ html, body {
   position: relative;
   padding: 40px;
   z-index: 2;
+  overflow: hidden;
+}
+
+/* Large Background Number */
+.day-bg-number {
+  position: absolute;
+  font-size: 40vh;
+  font-weight: 900;
+  color: var(--border);
+  opacity: 0.3;
+  z-index: -1;
+  user-select: none;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  -webkit-text-stroke: 2px var(--border-bright);
+  color: transparent;
 }
 
 /* Connector lines between sections */
@@ -371,11 +439,12 @@ html, body {
   background: linear-gradient(
     to bottom,
     transparent,
-    var(--accent-dim) 30%,
-    var(--accent-dim) 70%,
+    var(--accent) 30%,
+    var(--accent) 70%,
     transparent
   );
   opacity: 0.5;
+  box-shadow: 0 0 10px var(--accent);
 }
 
 .day-section:first-child::before {
@@ -389,12 +458,13 @@ html, body {
   top: -8px;
   left: 50%;
   transform: translateX(-50%);
-  width: 6px;
-  height: 6px;
-  background: var(--accent);
+  width: 8px;
+  height: 8px;
+  background: var(--bg-primary);
+  border: 2px solid var(--accent);
   border-radius: 50%;
-  box-shadow: 0 0 10px var(--accent);
-  opacity: 0.6;
+  box-shadow: 0 0 15px var(--accent);
+  z-index: 5;
 }
 
 .day-section:first-child::after {
@@ -410,116 +480,159 @@ html, body {
   position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  overflow: hidden;
+  /* overflow: hidden; */ /* Allow accents to pop out */
   box-shadow:
     0 0 0 1px var(--border),
-    0 0 40px rgba(0, 255, 0, 0.05),
-    0 0 80px rgba(0, 255, 0, 0.02);
+    0 20px 50px rgba(0, 0, 0, 0.5);
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.day-canvas-container:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow:
+    0 0 0 1px var(--accent-dim),
+    0 30px 60px rgba(0, 255, 0, 0.05);
 }
 
 .day-canvas-container canvas {
   width: 100%;
   height: 100%;
   display: block;
+  /* border-radius: 2px; */
 }
 
-/* Corner accents with extended lines */
+/* Corner accents with extended lines - Tech Look */
 .day-canvas-container::before,
 .day-canvas-container::after {
   content: '';
   position: absolute;
   pointer-events: none;
   z-index: 10;
+  width: 20px;
+  height: 20px;
+  transition: all 0.3s ease;
 }
 
-/* Top-left corner with upward extension */
+/* Top-left corner */
 .day-canvas-container::before {
   top: -1px;
   left: -1px;
-  width: 40px;
-  height: 40px;
-  border-left: 1px solid var(--accent-dim);
-  border-top: 1px solid var(--accent-dim);
-  /* Extend upward with box-shadow */
-  box-shadow:
-    -0px -60px 0 -0.5px var(--accent-dim),
-    -60px 0px 0 -0.5px var(--accent-dim);
+  border-left: 2px solid var(--accent);
+  border-top: 2px solid var(--accent);
 }
 
-/* Bottom-right corner with downward extension */
+/* Bottom-right corner */
 .day-canvas-container::after {
   bottom: -1px;
   right: -1px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+
+.day-canvas-container:hover::before,
+.day-canvas-container:hover::after {
   width: 40px;
   height: 40px;
-  border-right: 1px solid var(--accent-dim);
-  border-bottom: 1px solid var(--accent-dim);
-  box-shadow:
-    0px 60px 0 -0.5px var(--accent-dim),
-    60px 0px 0 -0.5px var(--accent-dim);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 /* Additional corner pieces */
-.day-canvas-wrapper {
-  position: relative;
-}
-
-/* Top-right and bottom-left corners */
 .day-canvas-container .corner-tr,
 .day-canvas-container .corner-bl {
   position: absolute;
-  width: 40px;
-  height: 40px;
+  width: 20px;
+  height: 20px;
   pointer-events: none;
   z-index: 10;
+  transition: all 0.3s ease;
 }
 
 .day-canvas-container .corner-tr {
   top: -1px;
   right: -1px;
-  border-right: 1px solid var(--accent-dim);
-  border-top: 1px solid var(--accent-dim);
-  box-shadow:
-    0px -60px 0 -0.5px var(--accent-dim),
-    60px 0px 0 -0.5px var(--accent-dim);
+  border-right: 2px solid var(--accent);
+  border-top: 2px solid var(--accent);
 }
 
 .day-canvas-container .corner-bl {
   bottom: -1px;
   left: -1px;
-  border-left: 1px solid var(--accent-dim);
-  border-bottom: 1px solid var(--accent-dim);
-  box-shadow:
-    0px 60px 0 -0.5px var(--accent-dim),
-    -60px 0px 0 -0.5px var(--accent-dim);
+  border-left: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+
+.day-canvas-container:hover .corner-tr,
+.day-canvas-container:hover .corner-bl {
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Tech decorations */
+.tech-decor-top {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--accent-dim);
+  letter-spacing: 2px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.day-canvas-container:hover .tech-decor-top {
+  opacity: 1;
 }
 
 /* Day info */
 .day-info {
   text-align: center;
-  margin-top: 32px;
-  max-width: 600px;
+  margin-top: 40px;
+  max-width: 750px;
+  position: relative;
+  z-index: 10;
 }
 
 .day-number-display {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 8px;
+  letter-spacing: 4px;
+  margin-bottom: 12px;
+  font-weight: bold;
 }
 
 .day-title {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: bold;
-  color: var(--accent);
-  margin-bottom: 12px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.day-prompt {
-  font-size: 16px;
-  color: var(--text-secondary);
-  line-height: 1.5;
+.day-interpretation {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.4;
+  margin-bottom: 14px;
+  opacity: 0.9;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.day-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-family: var(--font-mono);
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: inline-block;
+  letter-spacing: 1px;
 }
 
 /* Placeholder state */
@@ -530,16 +643,20 @@ html, body {
   justify-content: center;
   height: 100%;
   color: var(--text-muted);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--bg-card),
+    var(--bg-card) 10px,
+    var(--bg-tertiary) 10px,
+    var(--bg-tertiary) 20px
+  );
 }
 
 .day-placeholder .placeholder-icon {
   font-size: 48px;
   margin-bottom: 16px;
   opacity: 0.3;
-}
-
-.day-placeholder .placeholder-text {
-  font-size: 14px;
+  color: var(--accent);
 }
 
 /* ============================================
@@ -553,14 +670,15 @@ html, body {
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   z-index: 100;
 }
 
 .nav-arrow {
-  width: 44px;
-  height: 44px;
-  background: var(--bg-secondary);
+  width: 48px;
+  height: 48px;
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(4px);
   border: 1px solid var(--border);
   color: var(--text-secondary);
   cursor: pointer;
@@ -568,18 +686,21 @@ html, body {
   align-items: center;
   justify-content: center;
   font-size: 18px;
-  transition: var(--transition-fast);
+  transition: all 0.2s ease;
+  border-radius: 0; /* Square buttons */
 }
 
 .nav-arrow:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--accent-glow);
+  box-shadow: 0 0 15px var(--accent-glow);
+  transform: scale(1.1);
 }
 
 .nav-arrow:disabled {
-  opacity: 0.3;
+  opacity: 0.2;
   cursor: not-allowed;
+  border-color: transparent;
 }
 
 /* ============================================
@@ -595,6 +716,7 @@ html, body {
     left: -280px;
     width: 280px;
     transition: left var(--transition-smooth);
+    box-shadow: 5px 0 20px rgba(0, 0, 0, 0.5);
   }
 
   .sidebar.open {
@@ -620,6 +742,10 @@ html, body {
     height: calc(100vh - var(--header-height));
   }
 
+  .day-bg-number {
+    font-size: 20vh;
+  }
+
   .day-section::before,
   .day-section::after {
     display: none; /* Hide connectors on mobile */
@@ -632,41 +758,49 @@ html, body {
 
   .day-canvas-container::before,
   .day-canvas-container::after {
-    width: 24px;
-    height: 24px;
+    width: 15px;
+    height: 15px;
     box-shadow: none; /* Hide extended lines on mobile */
   }
 
   .day-canvas-container .corner-tr,
   .day-canvas-container .corner-bl {
-    width: 24px;
-    height: 24px;
+    width: 15px;
+    height: 15px;
     box-shadow: none;
   }
 
   .day-info {
-    margin-top: 20px;
+    margin-top: 24px;
   }
 
   .day-title {
-    font-size: 20px;
+    font-size: 24px;
   }
 
-  .day-prompt {
+  .day-interpretation {
     font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .day-date {
+    font-size: 11px;
+    border-top: none;
+    padding-top: 8px;
   }
 
   .nav-arrows {
-    right: 12px;
+    right: 16px;
     bottom: 24px;
     top: auto;
     transform: none;
     flex-direction: row;
+    gap: 16px;
   }
 
   .nav-arrow {
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
   }
 
   .nav-arrow-up span {
@@ -699,7 +833,11 @@ html, body {
 }
 
 .day-section.active .day-info {
-  animation: slideUp 0.4s ease-out;
+  animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.day-section.active .day-bg-number {
+  animation: fadeIn 1s ease-out;
 }
 
 /* ============================================
@@ -723,6 +861,7 @@ html, body {
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 @keyframes spin {

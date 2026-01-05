@@ -6,9 +6,9 @@
 export const PROMPTS = {
   1: 'One color, one shape',
   2: 'Twelve principles of animation',
-  3: 'Droste effect',
+  3: 'Fibonacci forever',
   4: 'Black on black',
-  5: 'Isometric',
+  5: 'Write "Genuary". Avoid using a font.',
   6: 'Symmetry',
   7: 'Simple shapes',
   8: 'Noise',
@@ -38,6 +38,44 @@ export const PROMPTS = {
 };
 
 /**
+ * Creative interpretations for each day
+ * One-liner descriptions of our visualization approach
+ */
+export const INTERPRETATIONS = {
+  1: 'Infinite green circles form a twisting wormhole through space',
+  2: 'Follow-through and overlapping action: how motion ripples through a chain',
+  3: 'Phyllotaxis: the Fibonacci spiral pattern you see in sunflowers and pinecones',
+  4: 'Dark particles emerge from the void, revealed by your cursor',
+  5: 'Pixel-art letters defined in code, rendered as 3D particles',
+  6: 'Coming soon...',
+  7: 'Coming soon...',
+  8: 'Coming soon...',
+  9: 'Coming soon...',
+  10: 'Coming soon...',
+  11: 'Coming soon...',
+  12: 'Coming soon...',
+  13: 'Coming soon...',
+  14: 'Coming soon...',
+  15: 'Coming soon...',
+  16: 'Coming soon...',
+  17: 'Coming soon...',
+  18: 'Coming soon...',
+  19: 'Coming soon...',
+  20: 'Coming soon...',
+  21: 'Coming soon...',
+  22: 'Coming soon...',
+  23: 'Coming soon...',
+  24: 'Coming soon...',
+  25: 'Coming soon...',
+  26: 'Coming soon...',
+  27: 'Coming soon...',
+  28: 'Coming soon...',
+  29: 'Coming soon...',
+  30: 'Coming soon...',
+  31: 'Coming soon...'
+};
+
+/**
  * Get prompt for a specific day
  * @param {number} day - Day number (1-31)
  * @returns {string} The prompt text
@@ -47,7 +85,16 @@ export function getPrompt(day) {
 }
 
 /**
+ * Get interpretation for a specific day
+ * @param {number} day - Day number (1-31)
+ * @returns {string} The interpretation text
+ */
+export function getInterpretation(day) {
+  return INTERPRETATIONS[day] || 'Coming soon...';
+}
+
+/**
  * Total number of Genuary days to display
  * (Showing first 4 for now, expand as implementations are added)
  */
-export const TOTAL_DAYS = 4;
+export const TOTAL_DAYS = 5;

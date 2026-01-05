@@ -8,7 +8,7 @@
  * - Navigation (sidebar, hamburger, arrows)
  */
 
-import { PROMPTS, TOTAL_DAYS, getPrompt } from './prompts.js';
+import { PROMPTS, TOTAL_DAYS, getPrompt, getInterpretation } from './prompts.js';
 
 // ============================================
 // Configuration
@@ -16,7 +16,7 @@ import { PROMPTS, TOTAL_DAYS, getPrompt } from './prompts.js';
 
 const CONFIG = {
   scrollDebounce: 150,
-  implementedDays: [1, 2], // Days with actual implementations (3, 4 coming soon)
+  implementedDays: [1, 2, 3, 5], // Days with actual implementations
 };
 
 // ============================================
@@ -25,7 +25,8 @@ const CONFIG = {
 
 const state = {
   currentDay: 1,
-  games: new Map(), // dayNumber -> FluentGame instance
+  games: new Map(), // dayNumber -> game instance
+  mounting: new Set(), // days currently being mounted (prevent race condition)
   sections: [],
   isScrolling: false,
 };
@@ -53,23 +54,35 @@ const elements = {
  * @param {number} day - Day number to mount
  */
 async function mountDay(day) {
-  // Already mounted? Skip
-  if (state.games.has(day)) {
+  // Already mounted or currently mounting? Skip (prevents race condition)
+  if (state.games.has(day) || state.mounting.has(day)) {
     return;
   }
 
+  // Mark as mounting BEFORE async operation
+  state.mounting.add(day);
+
   const canvas = document.getElementById(`canvas-${day}`);
-  if (!canvas) return;
+  if (!canvas) {
+    state.mounting.delete(day);
+    return;
+  }
 
   // Check if this day has an implementation
   if (!CONFIG.implementedDays.includes(day)) {
     showPlaceholder(canvas, day);
+    state.mounting.delete(day);
     return;
   }
 
   try {
     // Dynamic import of day module
     const dayModule = await import(`./days/day${String(day).padStart(2, '0')}.js`);
+
+    // Double-check we still should mount (might have been unmounted during import)
+    if (!state.mounting.has(day)) {
+      return;
+    }
 
     // Resize canvas to container
     const container = canvas.parentElement;
@@ -79,10 +92,12 @@ async function mountDay(day) {
     // Create and start the game
     const game = dayModule.default(canvas);
     state.games.set(day, game);
+    state.mounting.delete(day);
 
     console.log(`[Genuary] Mounted Day ${day}`);
   } catch (err) {
     console.warn(`[Genuary] Day ${day} not implemented:`, err.message);
+    state.mounting.delete(day);
     showPlaceholder(canvas, day);
   }
 }
@@ -92,6 +107,9 @@ async function mountDay(day) {
  * @param {number} day - Day number to unmount
  */
 function unmountDay(day) {
+  // Cancel any in-progress mount
+  state.mounting.delete(day);
+
   const game = state.games.get(day);
   if (!game) return;
 
@@ -111,46 +129,69 @@ function showPlaceholder(canvas, day) {
   const ctx = canvas.getContext('2d');
   const container = canvas.parentElement;
 
-  canvas.width = container.clientWidth;
-  canvas.height = container.clientHeight;
+  // Handle high DPI
+  const dpr = window.devicePixelRatio || 1;
+  const rect = container.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  // Don't scale context here if we are setting canvas style width/height elsewhere, 
+  // but usually for crisp rendering we want this.
+  // However, the original code didn't handle DPI, so let's stick to the simple size matching
+  // but add some style.
+  canvas.width = rect.width;
+  canvas.height = rect.height;
 
   const w = canvas.width;
   const h = canvas.height;
 
   // Background
-  ctx.fillStyle = '#080808';
+  ctx.fillStyle = '#050505';
   ctx.fillRect(0, 0, w, h);
 
-  // Grid pattern
+  // Dotted Grid
+  ctx.fillStyle = '#1a1a1a';
+  const gridSize = 30;
+  for (let x = 0; x < w; x += gridSize) {
+    for (let y = 0; y < h; y += gridSize) {
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
+  // Cross lines
   ctx.strokeStyle = '#111';
   ctx.lineWidth = 1;
-  const gridSize = 40;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(w, h);
+  ctx.moveTo(w, 0);
+  ctx.lineTo(0, h);
+  ctx.stroke();
 
-  for (let x = 0; x <= w; x += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, h);
-    ctx.stroke();
-  }
-
-  for (let y = 0; y <= h; y += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
-  }
-
-  // Day number
-  ctx.fillStyle = '#1a1a1a';
-  ctx.font = `bold ${Math.min(w, h) * 0.4}px 'Courier New', monospace`;
+  // "OFFLINE" Text with glitch look
+  const fontSize = Math.min(w, h) * 0.1;
+  ctx.font = `bold ${fontSize}px "Fira Code", monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(String(day).padStart(2, '0'), w / 2, h / 2);
+  
+  // Shadow effect
+  ctx.fillStyle = 'rgba(0, 255, 0, 0.05)';
+  ctx.fillText('SYSTEM_OFFLINE', w / 2 + 2, h / 2 + 2);
+  
+  ctx.fillStyle = '#222';
+  ctx.fillText('SYSTEM_OFFLINE', w / 2, h / 2);
 
-  // Coming soon text
-  ctx.fillStyle = '#333';
-  ctx.font = '14px "Courier New", monospace';
-  ctx.fillText('Coming soon...', w / 2, h / 2 + 60);
+  // Day info
+  ctx.font = '14px "Fira Code", monospace';
+  
+  ctx.fillStyle = '#444';
+  ctx.textAlign = 'left';
+  ctx.fillText(`DAY_${String(day).padStart(2, '0')}_PENDING_INIT`, 20, 30);
+  
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#0f0';
+  ctx.globalAlpha = 0.5;
+  ctx.fillText(`INITIALIZING...`, w - 20, h - 20);
+  ctx.globalAlpha = 1.0;
 }
 
 // ============================================
@@ -172,15 +213,18 @@ function generateSections() {
     if (day === 1) section.classList.add('active');
 
     section.innerHTML = `
+      <div class="day-bg-number">${String(day).padStart(2, '0')}</div>
       <div class="day-canvas-container">
         <div class="corner-tr"></div>
         <div class="corner-bl"></div>
+        <div class="tech-decor-top">SYSTEM.Render(0${day})</div>
         <canvas id="canvas-${day}"></canvas>
       </div>
       <div class="day-info">
         <div class="day-number-display">Day ${day}</div>
         <h2 class="day-title">${getPrompt(day)}</h2>
-        <p class="day-prompt">January ${day}, 2026</p>
+        <p class="day-interpretation">${getInterpretation(day)}</p>
+        <p class="day-date">January ${day}, 2026</p>
       </div>
     `;
 
@@ -424,12 +468,22 @@ function handleInitialHash() {
     const day = parseInt(match[1]);
     if (day >= 1 && day <= TOTAL_DAYS) {
       state.currentDay = day;
+      state.pendingMount = day; // Don't mount yet, wait for scroll
       setTimeout(() => {
         scrollToDay(day);
         updateActiveNav(day);
+        // Mount after scroll animation completes (~600ms for smooth scroll)
+        setTimeout(() => {
+          if (state.pendingMount === day) {
+            mountDay(day);
+            state.pendingMount = null;
+          }
+        }, 700);
       }, 100);
+      return true; // Signal that we handled a hash
     }
   }
+  return false;
 }
 
 // ============================================
@@ -451,12 +505,14 @@ async function init() {
   setupArrowNavigation();
   setupResizeHandler();
 
-  // Handle initial URL hash
-  handleInitialHash();
+  // Handle initial URL hash - returns true if we're scrolling to a specific day
+  const handlingHash = handleInitialHash();
 
-  // Mount first day (or hash day)
-  await mountDay(state.currentDay);
-  updateActiveNav(state.currentDay);
+  // Only mount immediately if not handling a hash (hash mounting is delayed for scroll)
+  if (!handlingHash) {
+    await mountDay(state.currentDay);
+    updateActiveNav(state.currentDay);
+  }
 
   console.log('[Genuary] Ready!');
 }

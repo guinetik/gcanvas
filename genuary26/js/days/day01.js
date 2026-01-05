@@ -85,8 +85,8 @@ class WormholeDemo extends Game {
     const ctx = this.ctx;
     const w = this.width;
     const h = this.height;
-    const cx = w / 2;
-    const cy = h / 2;
+    const cx = Math.round(w / 2);
+    const cy = Math.round(h / 2);
 
     // Motion blur trail
     ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
@@ -176,14 +176,18 @@ class WormholeDemo extends Game {
 
     ctx.globalAlpha = 1;
 
-    // Center vortex glow - SAME GREEN
-    const vortexGradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 150);
+    // Center vortex glow - project through camera so it follows the tunnel
+    const vortexCenter = this.camera.project(0, 0, 200);
+    const vcx = cx + vortexCenter.x;
+    const vcy = cy + vortexCenter.y;
+
+    const vortexGradient = ctx.createRadialGradient(vcx, vcy, 0, vcx, vcy, 150);
     vortexGradient.addColorStop(0, `hsla(${CONFIG.hue}, 100%, 50%, 0.4)`);
     vortexGradient.addColorStop(0.5, `hsla(${CONFIG.hue}, 100%, 45%, 0.15)`);
     vortexGradient.addColorStop(1, `hsla(${CONFIG.hue}, 100%, 40%, 0)`);
 
     ctx.beginPath();
-    ctx.arc(cx, cy, 150, 0, Math.PI * 2);
+    ctx.arc(vcx, vcy, 150, 0, Math.PI * 2);
     ctx.fillStyle = vortexGradient;
     ctx.fill();
   }
@@ -196,7 +200,6 @@ class WormholeDemo extends Game {
  */
 export default function day01(canvas) {
   const game = new WormholeDemo(canvas);
-  game.init();
   game.start();
 
   // Return object with stop method for lifecycle management
