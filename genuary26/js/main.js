@@ -16,7 +16,7 @@ import { PROMPTS, TOTAL_DAYS, getPrompt, getInterpretation } from './prompts.js'
 
 const CONFIG = {
   scrollDebounce: 150,
-  implementedDays: [1, 2, 3, 5], // Days with actual implementations
+  implementedDays: [1, 2, 3, 5, 6, 7], // Days with actual implementations
 };
 
 // ============================================

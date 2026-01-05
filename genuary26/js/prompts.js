@@ -9,8 +9,8 @@ export const PROMPTS = {
   3: 'Fibonacci forever',
   4: 'Black on black',
   5: 'Write "Genuary". Avoid using a font.',
-  6: 'Symmetry',
-  7: 'Simple shapes',
+  6: 'Lights on/off. Make something that changes when you switch on or off the “digital” lights',
+  7: 'Boolean algebra. Get inspired by Boolean algebra, in any way.',
   8: 'Noise',
   9: 'Organic forms',
   10: 'Generative music',
@@ -46,9 +46,9 @@ export const INTERPRETATIONS = {
   2: 'Follow-through and overlapping action: how motion ripples through a chain',
   3: 'Phyllotaxis: the Fibonacci spiral pattern you see in sunflowers and pinecones',
   4: 'Dark particles emerge from the void, revealed by your cursor',
-  5: 'Pixel-art letters defined in code, rendered as 3D particles',
-  6: 'Coming soon...',
-  7: 'Coming soon...',
+  5: 'Pixel-art letters defined in code, rendered as 3D particles. Inspired by the title sequence from the TV show "Pluribus".',
+  6: 'Make something that changes when you switch on or off the “digital” lights. A digital lava lamp: toggle the “lights” to fade the heat, glow, and motion in/out',
+  7: 'A flowing logic gate circuit: parse an expression into an AST and animate signals propagating through the wires',
   8: 'Coming soon...',
   9: 'Coming soon...',
   10: 'Coming soon...',
@@ -95,6 +95,6 @@ export function getInterpretation(day) {
 
 /**
  * Total number of Genuary days to display
- * (Showing first 4 for now, expand as implementations are added)
+ * (Expand as implementations are added)
  */
-export const TOTAL_DAYS = 5;
+export const TOTAL_DAYS = 7;
