@@ -8,7 +8,7 @@
  * Ripples persist as background, letters form on top.
  */
 
-import { Game, Camera3D, Painter, ParticleSystem, ParticleEmitter, Updaters, Noise } from '../../../src/index.js';
+import { Game, Camera3D, Painter, ParticleSystem, ParticleEmitter, Updaters, Noise, Easing } from '../../../src/index.js';
 
 const CONFIG = {
   // Font-based text (smooth curves)
@@ -32,9 +32,9 @@ const CONFIG = {
   dashWidth: 0.8,
 
   // Concentric ripples from G (like pebble drop)
-  rippleCount: 25,              // number of concentric rings
-  rippleBaseRadius: 40,         // innermost ring radius
-  rippleSpacing: 45,            // distance between rings
+  rippleCount: 20,              // number of concentric rings
+  rippleBaseRadius: 50,         // innermost ring radius
+  rippleSpacing: 70,            // distance between rings
   rippleParticlesBase: 30,      // particles in innermost ring
   rippleParticlesGrowth: 3,     // extra particles per ring
   rippleSpeed: 0.4,             // orbit speed
@@ -54,6 +54,12 @@ const CONFIG = {
   driftDuration: 8.0,       // how long the leftward drift takes
   breatheAmount: 0.8,
   breatheSpeed: 1.2,
+
+  // G Pulse effect - continuous heartbeat
+  pulsePeriod: 1.8,         // slower heartbeat (seconds per beat)
+  pulseStrength: 6,         // very subtle scatter distance
+  shockwaveSpeed: 300,      // ripple expansion speed (px/sec)
+  shockwaveStrength: 12,    // very subtle orbital push
 
   // Camera
   perspective: 800,
@@ -136,6 +142,11 @@ class RippleTextDemo extends Game {
     this.mouseX = -9999;
     this.mouseY = -9999;
 
+    // Pulse state - continuous heartbeat starting when G forms
+    this.pulseStartTime = CONFIG.gDelay + CONFIG.spawnDuration; // when G finishes forming
+    this.lastPulseBeat = 0;
+    this.shockwaves = []; // track multiple expanding shockwaves
+
     Noise.seed(42);
 
     // Camera
@@ -174,6 +185,7 @@ class RippleTextDemo extends Game {
     const spawnAnimation = this.createSpawnUpdater();
     const breatheMotion = this.createBreatheUpdater();
     const mouseInteraction = this.createMouseUpdater();
+    const pulseEffect = this.createPulseUpdater();
 
     // ParticleSystem with custom dash rendering
     this.particles = new DashParticleSystem(this, {
@@ -186,6 +198,7 @@ class RippleTextDemo extends Game {
         spawnAnimation,
         breatheMotion,
         mouseInteraction,
+        pulseEffect,
         Updaters.velocity,
         Updaters.damping(0.94),
       ],
@@ -393,10 +406,9 @@ class RippleTextDemo extends Game {
       // Find which orbital ring this particle will come from
       const ringRadius = Math.max(CONFIG.rippleBaseRadius, distFromOrigin * 0.8);
 
-      // Start position: on the orbital ring, at the angle toward the target
-      // Add some spread so particles don't all come from exact same point
+      // Start position: one ring further out (x+1) so they travel inward
       const startAngle = angleToTarget + (Math.random() - 0.5) * 0.5;
-      const startRadius = ringRadius + (Math.random() - 0.5) * 30;
+      const startRadius = ringRadius + CONFIG.rippleSpacing + (Math.random() - 0.5) * 20;
 
       p.x = originX + Math.cos(startAngle) * startRadius;
       p.y = originY + Math.sin(startAngle) * startRadius * CONFIG.rippleEccentricity;
@@ -411,6 +423,7 @@ class RippleTextDemo extends Game {
       p.custom.brightness = target.brightness;
       p.custom.baseBrightness = target.brightness;
       p.custom.isLetter = true;
+      p.custom.letterIndex = target.letterIndex;
       p.custom.glow = 0;
 
       // Store target angle and starting angle (pointing from origin toward target)
@@ -422,12 +435,12 @@ class RippleTextDemo extends Game {
       p.custom.targetDashScale = 1.0;
       p.custom.dashScale = 0.0;  // starts as dot, grows to full dash
 
-      // Timing: stagger by letter index (G=0, E=1, N=2, etc.)
-      // G starts at gDelay, each subsequent letter waits letterStagger more
-      const letterDelay = CONFIG.gDelay + target.letterIndex * CONFIG.letterStagger;
+      // Timing: letters spawn in sync with G's heartbeat
+      // G (index 0) starts at gDelay, each subsequent letter spawns on next beat
+      const letterDelay = CONFIG.gDelay + target.letterIndex * CONFIG.pulsePeriod;
 
       // Small random spread within each letter so they don't all appear at once
-      const particleSpread = Math.random() * 0.4;
+      const particleSpread = Math.random() * 0.3;
 
       p.custom.spawnDelay = letterDelay + particleSpread;
       p.custom.spawnProgress = 0;
@@ -703,6 +716,79 @@ class RippleTextDemo extends Game {
     };
   }
 
+  createPulseUpdater() {
+    return (p, dt, system) => {
+      // Only active after G starts forming
+      if (this.time < CONFIG.gDelay) return;
+
+      // Calculate pulse phase (asymmetric with easing: slow ease-in expand, fast ease-out contract)
+      const timeSinceStart = this.time - CONFIG.gDelay;
+      const pulsePhase = (timeSinceStart % CONFIG.pulsePeriod) / CONFIG.pulsePeriod;
+      // Asymmetric wave: 70% expand, 30% contract
+      const expandRatio = 0.7;
+      let pulseIntensity;
+      if (pulsePhase < expandRatio) {
+        // Ease-in expand: slow start, accelerate
+        const t = pulsePhase / expandRatio;
+        pulseIntensity = Easing.easeInCubic(t);
+      } else {
+        // Ease-out contract: fast start, decelerate
+        const t = (pulsePhase - expandRatio) / (1 - expandRatio);
+        pulseIntensity = 1 - Easing.easeOutQuad(t);
+      }
+
+      // G letter particles: subtle heartbeat scatter
+      if (p.custom.isLetter && p.custom.letterIndex === 0) {
+        if (p.custom.spawnProgress < 1) return;
+
+        const dx = p.custom.targetX - this.orbitOrigin.x;
+        const dy = p.custom.targetY - this.orbitOrigin.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+        // Subtle push outward on beat
+        const pushStrength = CONFIG.pulseStrength * pulseIntensity;
+        const targetX = p.custom.targetX + (dx / dist) * pushStrength;
+        const targetY = p.custom.targetY + (dy / dist) * pushStrength;
+
+        // Smooth movement to pulse position
+        p.x += (targetX - p.x) * 0.15;
+        p.y += (targetY - p.y) * 0.15;
+
+        // Subtle brightness pulse
+        const brightBoost = pulseIntensity * 30;
+        p.color.r = Math.min(255, 180 + p.custom.brightness * 75 + brightBoost);
+        p.color.g = Math.min(255, 180 + p.custom.brightness * 75 + brightBoost);
+        p.color.b = Math.min(255, 180 + p.custom.brightness * 75 + brightBoost);
+      }
+
+      // Orbital particles: react to shockwaves
+      if (p.custom.isRipple) {
+        const dx = p.x - this.orbitOrigin.x;
+        const dy = p.y - this.orbitOrigin.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+        // Check all active shockwaves
+        for (const wave of this.shockwaves) {
+          const shockwaveDist = Math.abs(dist - wave.radius);
+          const shockwaveWidth = 60;
+
+          if (shockwaveDist < shockwaveWidth) {
+            const proximity = 1 - (shockwaveDist / shockwaveWidth);
+            const age = (this.time - wave.startTime) / CONFIG.pulsePeriod;
+            const decay = Math.max(0, 1 - age);
+            const pushStrength = CONFIG.shockwaveStrength * proximity * decay * dt;
+
+            p.x += (dx / dist) * pushStrength;
+            p.y += (dy / dist) * pushStrength;
+
+            // Brief brightness boost
+            p.color.a = Math.min(1, (p.color.a || 0.6) + 0.15 * proximity * decay);
+          }
+        }
+      }
+    };
+  }
+
   easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
   }
@@ -732,6 +818,28 @@ class RippleTextDemo extends Game {
     const startOffsetY = -this.orbitOrigin.y;
     this.globalOffset.x = startOffsetX * (1 - t);
     this.globalOffset.y = startOffsetY * (1 - t);
+
+    // Heartbeat pulse - spawn shockwave on each beat
+    if (this.time >= CONFIG.gDelay) {
+      const timeSinceStart = this.time - CONFIG.gDelay;
+      const currentBeat = Math.floor(timeSinceStart / CONFIG.pulsePeriod);
+
+      // Spawn new shockwave on each beat
+      if (currentBeat > this.lastPulseBeat) {
+        this.lastPulseBeat = currentBeat;
+        this.shockwaves.push({
+          startTime: this.time,
+          radius: 0
+        });
+      }
+
+      // Expand all shockwaves and remove old ones
+      this.shockwaves = this.shockwaves.filter(wave => {
+        wave.radius = (this.time - wave.startTime) * CONFIG.shockwaveSpeed;
+        // Keep waves that haven't expanded too far
+        return wave.radius < 1500;
+      });
+    }
   }
 
   easeInOutQuad(t) {
