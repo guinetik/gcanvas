@@ -49,7 +49,7 @@ const CONFIG = {
   // Animation
   spawnDuration: 2.0,       // how long each particle takes to fully form
   letterStagger: 0.9,       // seconds between each letter STARTING (overlap)
-  gDelay: 0.3,              // when G starts forming (seconds)
+  gDelay: 0.0,              // G starts immediately with initial rings
   driftDuration: 8.0,       // how long the leftward drift takes
   breatheAmount: 0.8,
   breatheSpeed: 1.2,
@@ -567,7 +567,7 @@ class RippleTextDemo extends Game {
       // Despawn if expanded too far off screen (use diagonal for corners)
       const maxRadius = Math.sqrt(this.width * this.width + this.height * this.height) * 1.0;
       if (p.custom.currentRadius > maxRadius) {
-        p.life = 0; // mark for removal
+        p.custom.dead = true; // mark for removal
         return;
       }
 
@@ -794,34 +794,47 @@ class RippleTextDemo extends Game {
       // Use easeOutElastic for organic, springy feel
       const pulseIntensity = Easing.easeOutElastic(newestRingProgress);
 
-      // G letter particles: subtle heartbeat scatter
-      if (p.custom.isLetter && p.custom.letterIndex === 0) {
-        if (p.custom.spawnProgress < 1) return;
-
+      // Letter particles: pulse when shockwave reaches them
+      if (p.custom.isLetter && p.custom.spawnProgress >= 1) {
         const dx = p.custom.targetX - this.orbitOrigin.x;
         const dy = p.custom.targetY - this.orbitOrigin.y;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const distFromG = Math.sqrt(dx * dx + dy * dy) || 1;
 
-        // Push outward on beat
-        const pushStrength = CONFIG.pulseStrength * pulseIntensity;
+        // Check if any shockwave is passing through this letter
+        let letterPulseIntensity = 0;
+        for (const wave of this.shockwaves) {
+          const waveDist = Math.abs(distFromG - wave.radius);
+          const waveWidth = 120; // how wide the pulse wave is
 
-        // Add vibration during growth (when pulseIntensity > 0.1)
+          if (waveDist < waveWidth) {
+            // Wave is passing through this letter
+            const proximity = 1 - (waveDist / waveWidth);
+            const waveAge = (this.time - wave.startTime) / CONFIG.pulsePeriod;
+            const decay = Math.max(0, 1 - waveAge * 0.5);
+            letterPulseIntensity = Math.max(letterPulseIntensity, Easing.easeOutElastic(proximity) * decay);
+          }
+        }
+
+        // Pulse strength
+        const pushStrength = CONFIG.pulseStrength * letterPulseIntensity;
+
+        // Add vibration during pulse
         let vibX = 0, vibY = 0;
-        if (pulseIntensity > 0.1) {
-          const vibAmount = CONFIG.pulseVibration * pulseIntensity;
+        if (letterPulseIntensity > 0.1) {
+          const vibAmount = CONFIG.pulseVibration * letterPulseIntensity;
           vibX = (Math.random() - 0.5) * vibAmount;
           vibY = (Math.random() - 0.5) * vibAmount;
         }
 
-        const targetX = p.custom.targetX + (dx / dist) * pushStrength + vibX;
-        const targetY = p.custom.targetY + (dy / dist) * pushStrength + vibY;
+        const targetX = p.custom.targetX + (dx / distFromG) * pushStrength + vibX;
+        const targetY = p.custom.targetY + (dy / distFromG) * pushStrength + vibY;
 
         // Smooth movement to pulse position
         p.x += (targetX - p.x) * 0.18;
         p.y += (targetY - p.y) * 0.18;
 
         // Subtle brightness pulse
-        const brightBoost = pulseIntensity * 30;
+        const brightBoost = letterPulseIntensity * 30;
         p.color.r = Math.min(255, 180 + p.custom.brightness * 75 + brightBoost);
         p.color.g = Math.min(255, 180 + p.custom.brightness * 75 + brightBoost);
         p.color.b = Math.min(255, 180 + p.custom.brightness * 75 + brightBoost);
@@ -908,15 +921,20 @@ class RippleTextDemo extends Game {
           }
         }
 
-        // Spawn new ring at center
-        this.spawnRingAtCenter();
+        // Spawn new ring at center (only if under particle limit)
+        if (this.particles.particles.length < CONFIG.maxParticles) {
+          this.spawnRingAtCenter();
+        }
       }
 
-      // Expand all shockwaves and remove old ones
+      // Expand all shockwaves and remove old ones (keep max 5)
       this.shockwaves = this.shockwaves.filter(wave => {
         wave.radius = (this.time - wave.startTime) * CONFIG.shockwaveSpeed;
         return wave.radius < 1500;
-      });
+      }).slice(-5);
+
+      // Clean up dead particles (marked via custom.dead)
+      this.particles.particles = this.particles.particles.filter(p => !p.custom?.dead);
     }
   }
 
