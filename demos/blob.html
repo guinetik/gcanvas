@@ -3,19 +3,22 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>Basic Game Template</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blob Feeder</title>
     <link rel="stylesheet" href="demos.css" />
+    <script src="./js/info-toggle.js"></script>
 </head>
 
 <body>
     <div id="info">
-        <strong>Bezier Blob</strong> — An animated character that follows your mouse using Bezier curves for organic
-        movement. <br>
-        The blob uses <strong>BezierShape</strong> with dynamic control points that react to velocity and direction.
-        <br>
-        <strong>Physics simulation</strong> gives the blob natural spring-like motion as it follows the cursor. <br>
-        Eyes and pupils track your mouse position independently from the blob's body movement. <br>
-        Move your mouse quickly to see the blob stretch and squish with momentum!
+        <strong>Blob Feeder</strong> — A Tamagotchi-style micro-game where you keep your blob alive by collecting food!<br>
+        <span style="color:#CCC">
+            <li>Guide the blob with your mouse/touch to collect shapes</li>
+            <li>Each level = one musical scale (do-re-mi), longer scales as you progress</li>
+            <li>Pick up items quickly for speed bonuses (up to 2x points)</li>
+            <li>Don't let your blob go hungry - it will shrink and lose points!</li>
+            <li>Watch the blob's face - it shows mood based on hunger and energy</li>
+        </span>
     </div>
     <canvas id="game"></canvas>
     <script type="module">

@@ -3,6 +3,7 @@ body {
   margin: 0;
   display: flex;
   height: 100vh; /* 100% viewport height */
+  height: 100dvh; /* fallback for mobile browsers */
   background: black; /* optional if you want a black background behind everything */
   overflow: hidden;
 }
@@ -17,13 +18,23 @@ canvas#game {
 /* Side navigation */
 nav {
   width: 200px;
-  background: #222;
+  background: #0a0a0a;
   color: white;
   padding: 1rem;
   box-sizing: border-box;
   overflow-y: auto; /* enable scrolling inside nav if content is tall */
   overflow-x: hidden; /* usually don't want horizontal scroll in nav */
   font-family: monospace;
+  border-right: 1px solid #1a1a1a;
+  flex-shrink: 0; /* Prevent nav from shrinking on desktop */
+}
+
+/* Ensure bottom of nav is reachable by adding a spacer */
+nav::after {
+  content: "";
+  display: block;
+  height: 6rem; /* Generous space to clear mobile UI bars */
+  width: 100%;
 }
 
 /* Links inside nav */
@@ -38,15 +49,16 @@ nav a {
 
 /* Hover effect for nav links */
 nav a:hover {
-  background: #333;
+  background: #151515;
+  color: #0f0;
 }
 
 /* Active link highlight */
 nav a.active {
-  background: #333;
-  color: #0f0; /* or whatever highlight color you prefer */
-  border-left: 4px solid #0f0;
-  padding-left: 0.5rem; /* shift text so it doesn't overlap border */
+  background: #111;
+  color: #0f0;
+  border-left: 2px solid #0f0;
+  padding-left: 0.5rem;
 }
 
 /* The iframe takes up remaining space */
@@ -105,10 +117,187 @@ code {
   pointer-events: none;
 }
 
+/* Info toggle button for mobile */
+#info-toggle {
+  display: none;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #0f0;
+  font-family: monospace;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 11;
+  pointer-events: auto;
+  line-height: 1;
+}
+
+#info-toggle:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+/* Mobile info styles */
+@media (max-width: 768px) {
+  #info-toggle {
+    display: block;
+  }
+
+  #info {
+    max-height: 0;
+    padding: 0 20px;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    pointer-events: auto;
+  }
+
+  #info.open {
+    max-height: 300px;
+    padding: 12px 20px;
+    padding-right: 48px;
+  }
+}
+
 strong {
   color: #fff;
 }
 
 path {
-  fill: blue;
+  fill: #00FF00;
+}
+
+/* ========================================
+   Mobile Header (hidden on desktop)
+   ======================================== */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #0a0a0a;
+  z-index: 1000;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  box-sizing: border-box;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.mobile-logo {
+  width: 40px;
+  height: 36px;
+}
+
+.mobile-title {
+  font-family: monospace;
+  font-size: 1.4em;
+  color: #CCC;
+  letter-spacing: 2px;
+  font-weight: bold;
+}
+
+/* Hamburger Button */
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  width: 30px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1001;
+}
+
+.hamburger span {
+  width: 100%;
+  height: 3px;
+  background: #ccc;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+/* Hamburger animation when active */
+.hamburger.active span:nth-child(1) {
+  transform: translateY(7.5px) rotate(45deg);
+}
+
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+  transform: translateY(-7.5px) rotate(-45deg);
+}
+
+/* Nav Overlay (for closing menu) */
+.nav-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+.nav-overlay.open {
+  display: block;
+}
+
+/* ========================================
+   Mobile Responsive Styles
+   ======================================== */
+@media (max-width: 768px) {
+  /* Show mobile header */
+  .mobile-header {
+    display: flex;
+    position: relative; /* In flow so it pushes content down naturally */
+  }
+
+  /* Change body layout to column for mobile */
+  body {
+    flex-direction: column;
+  }
+
+  /* Transform nav into slide-out menu */
+  nav {
+    position: fixed;
+    top: 56px;
+    left: -280px;
+    width: 280px;
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
+    z-index: 100;
+    transition: left 0.3s ease;
+    padding-top: 1rem;
+    padding-bottom: 0; /* Handled by ::after spacer */
+  }
+
+  /* Nav open state */
+  nav.open {
+    left: 0;
+  }
+
+  /* Hide nav branding on mobile (already shown in mobile header) */
+  .nav-branding {
+    display: none;
+  }
+
+  /* Adjust iframe to account for mobile header */
+  iframe {
+    margin-top: 0;
+    height: auto;
+    /* flex: 1 handles the remaining height */
+  }
 }

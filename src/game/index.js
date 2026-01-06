@@ -47,3 +47,4 @@ export { Game } from "./game.js";
 export { Pipeline } from "./pipeline.js";
 export * from "./objects";
 export * from "./ui";
+export * from "./systems";

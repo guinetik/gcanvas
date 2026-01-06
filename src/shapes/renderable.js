@@ -51,6 +51,13 @@ export class Renderable extends Traceable {
     this._shadowOffsetX = options.shadowOffsetX ?? 0;
     this._shadowOffsetY = options.shadowOffsetY ?? 0;
 
+    // Render caching - when enabled, renders to an offscreen canvas once
+    // and blits the cached bitmap on subsequent frames for better performance.
+    this._cacheRendering = options.cacheRendering ?? false;
+    this._cacheCanvas = null;
+    this._cacheDirty = true;
+    this._cachePadding = options.cachePadding ?? 2; // Extra padding for anti-aliasing/strokes
+
     this._tick = 0;
     this.logger.log("Renderable", this.x, this.y, this.width, this.height);
   }
@@ -58,13 +65,13 @@ export class Renderable extends Traceable {
   /**
    * Main render method.
    * Handles visibility, translation, and calls draw() in the transformed context.
+   * If cacheRendering is enabled, renders to an offscreen canvas once and blits it.
    */
   render() {
     if (!this._visible || this._opacity <= 0) return;
 
     Painter.save();
     Painter.effects.setBlendMode(this._blendMode);
-    Painter.opacity.pushOpacity(this._opacity);
 
     if (this.crisp) {
       Painter.translateTo(Math.round(this.x), Math.round(this.y));
@@ -74,13 +81,98 @@ export class Renderable extends Traceable {
 
     this.applyShadow(Painter.ctx);
 
-    // Draw the object (subclasses apply transforms and draw debug in their draw() methods)
-    if (this.constructor.name !== "Renderable") {
+    // If caching IS NOT enabled or we're the base class, render normally
+    if (!this._cacheRendering || this.constructor.name === "Renderable") {
+      Painter.opacity.pushOpacity(this._opacity);
       this.draw();
+      Painter.opacity.popOpacity();
+    } else {
+      // Caching logic - cache the IDENTITY shape (untransformed)
+      const rawWidth = typeof this.width === "number" ? this.width : 0;
+      const rawHeight = typeof this.height === "number" ? this.height : 0;
+      const padding = this._cachePadding * 2;
+      const cacheWidth = Math.ceil(rawWidth + padding) || 1;
+      const cacheHeight = Math.ceil(rawHeight + padding) || 1;
+
+      // Create or resize cache canvas if needed
+      if (
+        !this._cacheCanvas ||
+        this._cacheCanvas.width !== cacheWidth ||
+        this._cacheCanvas.height !== cacheHeight
+      ) {
+        this._cacheCanvas = document.createElement("canvas");
+        this._cacheCanvas.width = cacheWidth;
+        this._cacheCanvas.height = cacheHeight;
+        this._cacheDirty = true;
+      }
+
+      // Re-render to cache if dirty
+      if (this._cacheDirty) {
+        this._renderToCache(cacheWidth, cacheHeight);
+        this._cacheDirty = false;
+      }
+
+      // Blit cached canvas with current opacity AND transforms
+      // This allows efficient rotation/scaling of the cached bitmap
+      Painter.opacity.pushOpacity(this._opacity);
+
+      // Extract transform properties if they exist
+      const rotation = this.rotation ?? 0;
+      const scaleX = this.scaleX ?? 1;
+      const scaleY = this.scaleY ?? 1;
+
+      Painter.img.draw(this._cacheCanvas, 0, 0, {
+        width: cacheWidth,
+        height: cacheHeight,
+        rotation: rotation,
+        scaleX: scaleX,
+        scaleY: scaleY,
+        anchor: "center",
+      });
+
+      Painter.opacity.popOpacity();
     }
 
-    Painter.opacity.popOpacity();
     Painter.restore();
+  }
+
+  /**
+   * Internal method to render the object to the offscreen cache canvas.
+   * @param {number} width - Cache width
+   * @param {number} height - Cache height
+   * @protected
+   */
+  _renderToCache(width, height) {
+    const cacheCtx = this._cacheCanvas.getContext("2d");
+    cacheCtx.clearRect(0, 0, width, height);
+
+    // Swap to cache context
+    const mainCtx = Painter.ctx;
+    Painter.ctx = cacheCtx;
+
+    // Signal subclasses to skip transforms if they are transform-aware
+    this._isCaching = true;
+
+    cacheCtx.save();
+    // Translate to center of cache so (0,0) draws correctly
+    cacheCtx.translate(width / 2, height / 2);
+
+    // Call draw() to render to the cache at full opacity and identity transform
+    this.draw();
+
+    cacheCtx.restore();
+
+    this._isCaching = false;
+
+    // Restore main context
+    Painter.ctx = mainCtx;
+  }
+
+  /**
+   * Mark the render cache as needing refresh.
+   */
+  invalidateCache() {
+    this._cacheDirty = true;
   }
 
   draw() {
@@ -123,6 +215,24 @@ export class Renderable extends Traceable {
     this._visible = Boolean(v);
   }
 
+  get width() {
+    return super.width;
+  }
+
+  set width(v) {
+    super.width = v;
+    this.invalidateCache();
+  }
+
+  get height() {
+    return super.height;
+  }
+
+  set height(v) {
+    super.height = v;
+    this.invalidateCache();
+  }
+
   /**
    * Gets whether the object is active (updated during game loop).
    * @type {boolean}
@@ -157,6 +267,7 @@ export class Renderable extends Traceable {
 
   set shadowColor(v) {
     this._shadowColor = v;
+    this.invalidateCache();
   }
 
   /**
@@ -169,6 +280,7 @@ export class Renderable extends Traceable {
 
   set shadowBlur(v) {
     this._shadowBlur = v;
+    this.invalidateCache();
   }
 
   /**
@@ -181,6 +293,7 @@ export class Renderable extends Traceable {
 
   set shadowOffsetX(v) {
     this._shadowOffsetX = v;
+    this.invalidateCache();
   }
 
   /**
@@ -193,6 +306,7 @@ export class Renderable extends Traceable {
 
   set shadowOffsetY(v) {
     this._shadowOffsetY = v;
+    this.invalidateCache();
   }
 
   /**
@@ -202,5 +316,18 @@ export class Renderable extends Traceable {
    */
   get tick() {
     return this._tick;
+  }
+
+  /**
+   * Whether render caching is enabled for this object.
+   * @type {boolean}
+   */
+  get cacheRendering() {
+    return this._cacheRendering;
+  }
+
+  set cacheRendering(v) {
+    this._cacheRendering = Boolean(v);
+    if (v) this.invalidateCache();
   }
 }

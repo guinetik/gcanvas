@@ -3,17 +3,20 @@
 
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Isometric Scene</title>
   <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
 </head>
 
 <body>
   <div id="info" class="light">
-    <strong>Isometric Scene</strong>
+    <strong>Marble Madness</strong>
     <span>
-      An <code>IsometricScene</code> is a 2D scene with an isometric projection.<br>
-      All objects are drawn in 2D, but the scene is rendered in an isometric view.<br>
-      Use W, A, S, D or the arrow keys to move the ball around the grid.<br>
+      A mini <code>IsometricScene</code> demo with platforms at different heights.<br>
+      <b>WASD</b> to move, <b>Space</b> to jump. Navigate the platforms!<br>
+      <b>Q/E</b> or <b>arrow buttons</b> to rotate the view 90°.<br>
+      The ball will reset if it falls off the edge.<br>
     </span>
   </div>
   <canvas id="game"></canvas>

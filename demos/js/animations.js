@@ -331,6 +331,8 @@ class ShapeBox extends GameObject {
 class AnimationsDemo extends TileLayout {
   constructor(game, options = {}) {
     super(game, options);
+    this.cellSize = 130;
+    this.maxColumns = 4;
     this.boxDefinitions = [
       { type: "hop", innerShape: new Square(30, { color: "white" }) },
       { type: "spring", innerShape: new Square(30, { color: "white" }) },
@@ -378,6 +380,26 @@ class AnimationsDemo extends TileLayout {
     }
     super.update(dt);
   }
+
+  onResize() {
+    const margin = 40;
+    const availableWidth = this.game.width - margin;
+    const columns = Math.min(
+      this.maxColumns,
+      Math.max(1, Math.floor(availableWidth / this.cellSize))
+    );
+
+    if (this.columns !== columns) {
+      this.columns = columns;
+      this.markBoundsDirty();
+    }
+
+    // Center the layout
+    this.transform.position(
+      Math.round(this.game.width / 2),
+      Math.round(this.game.height / 2)
+    );
+  }
 }
 
 // Boilerplate game to run our scene
@@ -396,11 +418,20 @@ export class MyGame extends Game {
 
   init() {
     super.init();
+    // Calculate initial columns based on screen width
+    const cellSize = 130;
+    const maxColumns = 4;
+    const margin = 40;
+    const initialColumns = Math.min(
+      maxColumns,
+      Math.max(1, Math.floor((this.width - margin) / cellSize))
+    );
+
     this.animationsDemo = new AnimationsDemo(this, {
       debug: true,
       anchor: "center",
       spacing: 30,
-      columns: 4,
+      columns: initialColumns,
       padding: 30,
       align: "center",
     });
@@ -410,5 +441,12 @@ export class MyGame extends Game {
         anchor: "bottom-right",
       })
     );
+    this.animationsDemo.onResize();
+  }
+
+  onResize() {
+    if (this.animationsDemo) {
+      this.animationsDemo.onResize();
+    }
   }
 }

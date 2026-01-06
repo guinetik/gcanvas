@@ -11,6 +11,10 @@ import {
   Triangle,
   Star,
   VerticalLayout,
+  applyAnchor,
+  Position,
+  ShapeGOFactory,
+  Rectangle,
 } from "../../src/index";
 
 class ParticlesGame extends Game {
@@ -18,8 +22,8 @@ class ParticlesGame extends Game {
     super(canvas);
     this.backgroundColor = "black";
     this.enableFluidSize();
-    this.NUM_PARTICLES = 200;
-    this.MARGIN = 50;
+    this.NUM_PARTICLES = 500;
+    this.MARGIN = 0;
   }
 
   init() {
@@ -34,22 +38,26 @@ class ParticlesGame extends Game {
     });
     this.pipeline.add(this.particleScene);
     // Create UI scene (above particles)
-    this.uiScene = new VerticalLayout(this, {
+    this.uiScene = new Scene(this, {
       debug: true,
       debugColor: "#0f0",
+      width: 150,
+      height: 140,
     });
     this.pipeline.add(this.uiScene);
+    this.uiScene.add(ShapeGOFactory.create(this, new Rectangle({ width: 148, height: 130, color: Painter.colors.rgba(0, 0, 0, 0.5) })))
+    this.buttons = new VerticalLayout(this);
+    this.buttons.y = 10;
+    this.uiScene.add(this.buttons);
     // Add buttons
-    this.uiScene.add(
+    this.buttons.add(
       new Button(this, {
-        y: 0,
         text: "Clear",
         onClick: this.clearParticles.bind(this),
       })
     );
-    this.uiScene.add(
+    this.buttons.add(
       new Button(this, {
-        y: 50,
         text: "Reset",
         onClick: () => {
           Painter.clear();
@@ -58,22 +66,38 @@ class ParticlesGame extends Game {
         },
       })
     );
-    this.particlesCounter = this.uiScene.add(
+    this.particlesCounter = this.buttons.add(
       new Text(this, "Particles", {
-        x: 0,
-        y: 100,
+        height: 20,
         color: "white",
-        debug: true,
         align: "center",
         baseline: "middle",
       })
     );
+    // Anchor UI to bottom-left
+    applyAnchor(this.uiScene, {
+      anchor: Position.BOTTOM_LEFT,
+    });
     // Input logic...
     this.freeToCreate = true;
-    this.events.on("mousemove", (e) => {
-      this.mouse.x = e.x - this.particleScene.x;
-      this.mouse.y = e.y - this.particleScene.y;
-      this.createParticle();
+    this.events.on("inputmove", (e) => {
+      if (e.touches && e.touches.length > 0) {
+        // Multi-touch support
+        const rect = this.canvas.getBoundingClientRect();
+        for (let i = 0; i < e.touches.length; i++) {
+          const touch = e.touches[i];
+          const tx = touch.clientX - rect.left - this.particleScene.x;
+          const ty = touch.clientY - rect.top - this.particleScene.y;
+          this.mouse.x = tx;
+          this.mouse.y = ty;
+          this.createParticle();
+        }
+      } else {
+        // Normalized mouse/single-touch
+        this.mouse.x = e.x - this.particleScene.x;
+        this.mouse.y = e.y - this.particleScene.y;
+        this.createParticle();
+      }
     });
     this.events.on("inputdown", () => (this.isDown = this.createParticle()));
     this.events.on("inputup", () => (this.isDown = false));
@@ -108,17 +132,13 @@ class ParticlesGame extends Game {
   #prevWidth = 0;
   #prevHeight = 0;
   update(dt) {
-    // Update scene dimensions based on margin
-    this.particleScene.width = this.width - this.MARGIN * 2;
-    this.particleScene.height = this.height - this.MARGIN * 2;
+    // Update scene dimensions based on game dimensions (full screen)
+    this.particleScene.width = this.width;
+    this.particleScene.height = this.height;
     // Center the scene in the game
     this.particleScene.x = this.width / 2;
     this.particleScene.y = this.height / 2;
-    this.uiScene.width = 200;
-    this.uiScene.height = 200;
-    //
-    this.uiScene.x = this.particleScene.x - this.particleScene.width/2 + this.uiScene.width/2;
-    this.uiScene.y = this.particleScene.y - this.particleScene.height/2 + this.uiScene.height/2;
+
     this.particlesCounter.text = `Particles: ${this.particles.length}`;
     super.update(dt);
   }
@@ -169,14 +189,15 @@ class Particle extends GameObject {
 
   createRandomShape() {
     const r = Math.random();
+    const options = { color: this.color, cacheRendering: true };
     if (r < 0.5) {
-      return new Circle(this.size, { color: this.color });
+      return new Circle(this.size, options);
     } else if (r < 0.66) {
-      return new Square(this.size, { color: this.color });
+      return new Square(this.size, options);
     } else if (r < 0.83) {
-      return new Triangle(this.size * 2, { color: this.color });
+      return new Triangle(this.size * 2, options);
     } else {
-      return new Star(this.size, 5, 0.5, { color: this.color });
+      return new Star(this.size, 5, 0.5, options);
     }
   }
 
@@ -186,7 +207,7 @@ class Particle extends GameObject {
   }
 
   resetVelocity() {
-    this.vx = Math.random() * 2 + 1 ;
+    this.vx = Math.random() * 2 + 1;
     this.vy = Math.random() * 2 + 1;
   }
 
@@ -263,7 +284,7 @@ class Particle extends GameObject {
     }
     const moveX = this.x - prevX;
     const moveY = this.y - prevY;
-    
+
     this.rotation += this.spin * timeScale;
 
 

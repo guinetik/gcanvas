@@ -12,7 +12,7 @@
   ],
   "opts": {
     "encoding": "utf8",
-    "destination": "docs",
+    "destination": "docs-gen",
     "readme": "readme.md",
     "recurse": true,
     "verbose": true,

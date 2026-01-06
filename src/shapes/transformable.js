@@ -78,6 +78,7 @@ export class Transformable extends Renderable {
    * Order: rotate → scale
    */
   applyTransforms() {
+    if (this._isCaching) return;
     Painter.rotate(this._rotation);
     Painter.scale(this._scaleX, this._scaleY);
   }

@@ -52,7 +52,6 @@ export class Pipeline extends Loggable {
    * @private
    */
   _hoverObject(obj, e) {
-    //console.log("hoverObject", obj.constructor.name, obj.interactive, obj._hitTest != null);
     // Only applies to interactive objects with a shape and a _hitTest method.
     if (!obj.interactive || !obj._hitTest) return;
     const hit = obj._hitTest(e.x, e.y);
@@ -60,7 +59,6 @@ export class Pipeline extends Loggable {
       // Pointer entered this object
       obj._hovered = true;
       obj.events.emit("mouseover", e);
-      //this.logger.log("Mouseover", obj, e.x, e.y);
     } else if (!hit && obj._hovered) {
       // Pointer left this object
       obj._hovered = false;
@@ -70,19 +68,25 @@ export class Pipeline extends Loggable {
 
   /**
    * Recursively checks all children of a Scene for hover state.
+   * Also checks if the Scene itself is interactive.
    * @param {Scene} scene - The scene whose children will be hover-tested.
    * @param {object} e - Event data containing pointer coordinates (e.x, e.y).
    * @private
    */
   _hoverScene(scene, e) {
-    for (let i = scene.children.length - 1; i >= 0; i--) {
-      const child = scene.children[i];
-      if (child instanceof Scene) {
-        this._hoverScene(child, e); // recurse into nested scenes
-      } else {
-        this._hoverObject(child, e); // hover actual objects
+    // First check children
+    if (scene.children && scene.children.length > 0) {
+      for (let i = scene.children.length - 1; i >= 0; i--) {
+        const child = scene.children[i];
+        if (child instanceof Scene) {
+          this._hoverScene(child, e); // recurse into nested scenes
+        } else {
+          this._hoverObject(child, e); // hover actual objects
+        }
       }
     }
+    // Also check the Scene itself for hover state
+    this._hoverObject(scene, e);
   }
 
   /**
@@ -97,9 +101,6 @@ export class Pipeline extends Loggable {
     // Check from topmost to bottommost object to find the first that was hit.
     for (let i = this.gameObjects.length - 1; i >= 0; i--) {
       const obj = this.gameObjects[i];
-      if (type === "inputdown") {
-        //this.logger.log("inputdown", obj);
-      }
       if (obj instanceof Scene) {
         // If it's a Scene, see if any of its children were hit.
         if (this._dispatchToScene(obj, type, e)) {
@@ -130,7 +131,6 @@ export class Pipeline extends Loggable {
     // Check from topmost to bottommost for hover changes.
     for (let i = this.gameObjects.length - 1; i >= 0; i--) {
       const obj = this.gameObjects[i];
-      //this.logger.log("Hover test for", obj, e.x, e.y);
       if (obj instanceof Scene) {
         this._hoverScene(obj, e);
       } else {
@@ -141,29 +141,33 @@ export class Pipeline extends Loggable {
 
   /**
    * Recursively dispatch an event to a Scene and possibly its nested child Scenes.
+   * Also checks if the Scene itself is interactive and was hit.
    * @param {Scene} scene - The scene to dispatch the event to.
    * @param {string} type - The type of pointer event ("inputdown", "inputup", etc).
    * @param {object} e - Event data with pointer coordinates.
-   * @returns {boolean} True if the event was handled by a child, false otherwise.
+   * @returns {boolean} True if the event was handled by a child or the scene itself, false otherwise.
    * @private
    */
   _dispatchToScene(scene, type, e) {
-    //if(type === "inputdown") this.logger.log("inputdown", scene);
+    // First check children (they render on top, so should get priority)
     for (let i = scene.children.length - 1; i >= 0; i--) {
       const child = scene.children[i];
       if (child instanceof Scene) {
         // Recurse deeper if child is also a Scene
         const hit = this._dispatchToScene(child, type, e);
         if (hit) {
-          //if(type === "inputdown") this.logger.log("HIT", child, type);
           return true;
         }
       } else if (child.interactive && child._hitTest?.(e.x, e.y)) {
         // Found a child that was hit
-        //if(type === "inputdown") this.logger.log("Dispatching to child", child, type);
         child.events.emit(type, e);
         return true;
       }
+    }
+    // If no children handled the event, check if the Scene itself is interactive and hit
+    if (scene.interactive && scene._hitTest?.(e.x, e.y)) {
+      scene.events.emit(type, e);
+      return true;
     }
     return false;
   }

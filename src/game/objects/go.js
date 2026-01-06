@@ -182,8 +182,9 @@ export class GameObject extends Transformable {
     }
 
     // Now check if the point is inside our local bounds
-    const halfW = this.width / 2;
-    const halfH = this.height / 2;
+    // Use bounds from getBounds() if available, otherwise fall back to this.width/height
+    const halfW = (bounds.width || this.width || 0) / 2;
+    const halfH = (bounds.height || this.height || 0) / 2;
 
     return (
       localX >= -halfW && localX <= halfW && localY >= -halfH && localY <= halfH

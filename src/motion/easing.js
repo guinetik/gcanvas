@@ -3,6 +3,39 @@ export class Easing {
   // EASING FUNCTIONS
   // =========================================================================
 
+  static lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  /**
+   * Linear - no easing, straight line
+   * @param {number} t - Input (0-1)
+   * @returns {number} Same value as input
+   */
+  static linear(t) {
+    return t;
+  }
+
+  /**
+   * Smoothstep - classic shader S-curve interpolation
+   * Smooth start and end with zero first derivative at endpoints
+   * @param {number} t - Input (0-1)
+   * @returns {number} Eased value
+   */
+  static smoothstep(t) {
+    return t * t * (3 - 2 * t);
+  }
+
+  /**
+   * Smootherstep - Ken Perlin's improved smoothstep
+   * Even smoother with zero first AND second derivatives at endpoints
+   * @param {number} t - Input (0-1)
+   * @returns {number} Eased value
+   */
+  static smootherstep(t) {
+    return t * t * t * (t * (t * 6 - 15) + 10);
+  }
+
   /**
    * Quadratic ease-in
    * @param {number} t - Input (0-1)

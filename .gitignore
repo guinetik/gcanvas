@@ -136,5 +136,4 @@ dist
 .pnp.*
 
 public
-docs
-llm-docs
+docs-gen/

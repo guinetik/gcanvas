@@ -4,6 +4,7 @@ import {
   FPSCounter,
   Button,
   HorizontalLayout,
+  VerticalLayout,
   Painter,
   ToggleButton,
   Cursor,
@@ -12,6 +13,7 @@ import {
   Rectangle,
   BezierShape,
   ShapeGOFactory,
+  Position,
 } from "../../src/index";
 
 /**
@@ -24,6 +26,44 @@ class BezierDemoGame extends Game {
     this.backgroundColor = "black";
   }
 
+  /**
+   * Check if we're on a touch device
+   */
+  isTouchDevice() {
+    return (
+      "ontouchstart" in window ||
+      navigator.maxTouchPoints > 0 ||
+      navigator.msMaxTouchPoints > 0
+    );
+  }
+
+  /**
+   * Check if screen is narrow (mobile width)
+   */
+  isMobile() {
+    return this.width < 600;
+  }
+
+  /**
+   * Get responsive configuration based on screen size
+   */
+  getResponsiveConfig() {
+    const isMobile = this.isMobile();
+    return {
+      // Use shorter labels on mobile
+      addLabel: isMobile ? "➕ Add" : "➕ Add Points",
+      editLabel: isMobile ? "✋ Edit" : "✋ Edit Points",
+      cutLabel: isMobile ? "✂️ Cut" : "✂️ Cut Shape",
+      clearLabel: isMobile ? "🧼" : "🧼 Clear",
+      // Narrower buttons on mobile
+      buttonWidth: isMobile ? 70 : 125,
+      clearWidth: isMobile ? 40 : 100,
+      // UI layout dimensions
+      layoutWidth: isMobile ? 280 : 500,
+      layoutHeight: 50,
+    };
+  }
+
   init() {
     super.init();
     // Create the scenes
@@ -31,36 +71,48 @@ class BezierDemoGame extends Game {
       debug: true,
       debugColor: "yellow",
     });
+
+    const config = this.getResponsiveConfig();
+
     this.uiScene = new BezierUIScene(this, this.bezierScene, {
       debug: true,
       debugColor: "magenta",
-      widht: 450,
-      height: 50,
-      padding: 45,
-      anchor: "bottom-left",
-      anchorRelative: this.bezierScene,
+      width: config.layoutWidth,
+      height: config.layoutHeight,
+      padding: 10,
+      anchor: Position.BOTTOM_CENTER,
+      anchorOffsetY: -20,
     });
-    this.uiScene.width = 525;
-    this.uiScene.height = 50;
+
     // Add them to the pipeline
     this.pipeline.add(this.bezierScene);
     this.pipeline.add(this.uiScene);
     this.uiScene.init();
+
     // Show FPS counter
     this.pipeline.add(new FPSCounter(this, { anchor: "bottom-right" }));
-    // Setup custom cursor
-    this.addCursor = new TextShape("➕", {
-      font: "24px monospace",
-      color: "white",
-    });
-    this.editCursor = new TextShape("✋", {
-      font: "24px monospace",
-      color: "white",
-    });
-    this.cursor = new Cursor(this, this.addCursor, this.addCursor, {
-      x: 0,
-      y: 0,
-    });
+
+    // Only setup custom cursor on non-touch devices
+    if (!this.isTouchDevice()) {
+      this.addCursor = new TextShape("➕", {
+        font: "24px monospace",
+        color: "white",
+      });
+      this.editCursor = new TextShape("✋", {
+        font: "24px monospace",
+        color: "white",
+      });
+      this.cursor = new Cursor(this, this.addCursor, this.addCursor, {
+        x: 0,
+        y: 0,
+      });
+    }
+  }
+
+  onResize() {
+    if (this.uiScene) {
+      this.uiScene.onResize();
+    }
   }
 }
 
@@ -73,7 +125,7 @@ class BezierDemoGame extends Game {
 class BezierScene extends Scene {
   constructor(game, options = {}) {
     super(game, options);
-    this.MARGIN = 50;
+    this.MARGIN = 0;
     this.interactive = true;
     // Control points the user has placed
     this.points = [];
@@ -114,16 +166,19 @@ class BezierScene extends Scene {
   setMode(mode) {
     this.mode = mode;
 
-    if (mode === "add") {
-      this.game.cursor.normalShape = this.game.cursor.pressedShape =
-        this.game.addCursor;
-      this.game.cursor.offsetX = 1;
-      this.game.cursor.offsetY = -6;
-    } else {
-      this.game.cursor.normalShape = this.game.cursor.pressedShape =
-        this.game.editCursor;
-      this.game.cursor.offsetX = 3;
-      this.game.cursor.offsetY = -3;
+    // Only update cursor on non-touch devices
+    if (this.game.cursor) {
+      if (mode === "add") {
+        this.game.cursor.normalShape = this.game.cursor.pressedShape =
+          this.game.addCursor;
+        this.game.cursor.offsetX = 1;
+        this.game.cursor.offsetY = -6;
+      } else {
+        this.game.cursor.normalShape = this.game.cursor.pressedShape =
+          this.game.editCursor;
+        this.game.cursor.offsetX = 3;
+        this.game.cursor.offsetY = -3;
+      }
     }
   }
 
@@ -335,10 +390,21 @@ class BezierScene extends Scene {
   }
 
   /**
+   * Check if a point is within the UI area
+   */
+  isInUIArea(x, y) {
+    // Get screen coordinates (input coords are already screen coords)
+    const screenY = y + this.height / 2;
+    // UI is at bottom, check if click is in bottom 80px
+    return screenY > this.game.height - 80;
+  }
+
+  /**
    * Pointer down handler
    */
   pointerDown(x, y) {
-    if (this.game.canvas.style.cursor === "pointer") {
+    // Skip if clicking on UI area (buttons)
+    if (this.game.canvas.style.cursor === "pointer" || this.isInUIArea(x, y)) {
       return;
     }
     if (this.mode === "add") {
@@ -491,88 +557,135 @@ class BezierUIScene extends Scene {
     super(game, options);
     this.bezierScene = bezierScene;
     this.onMenu = false;
+    this.currentMode = null;
+    this._lastMobileState = null;
+  }
+
+  /**
+   * Get button style configuration (transparent background)
+   */
+  getButtonStyle() {
+    return {
+      colorHoverBg: "transparent",
+      colorDefaultBg: "transparent",
+      colorPressedBg: "transparent",
+      colorDefaultText: "white",
+    };
   }
 
   init() {
-    let currentMode = null;
+    this.createButtons();
+  }
+
+  /**
+   * Create buttons with current responsive config
+   */
+  createButtons() {
+    // Clear existing layout
+    if (this.layout) {
+      this.remove(this.layout);
+      this.layout = null;
+    }
+
+    const config = this.game.getResponsiveConfig();
+    const buttonStyle = this.getButtonStyle();
+
     this.layout = new HorizontalLayout(this.game, {
-      width: 350,
-      height: 50,
+      width: config.layoutWidth,
+      height: config.layoutHeight,
+      spacing: 5,
     });
+
     this.addModeButton = this.layout.add(
       new ToggleButton(this.game, {
-        text: "➕Add Points",
-        width: 125,
+        text: config.addLabel,
+        width: config.buttonWidth,
         height: 32,
-        colorHoverBg: "transparent",
-        colorDefaultBg: "transparent",
-        colorPressedBg: "transparent",
-        colorDefaultText: "white",
+        ...buttonStyle,
         startToggled: true,
         onToggle: (active) => {
-          if (currentMode) {
-            currentMode.toggle(false);
+          if (this.currentMode && this.currentMode !== this.addModeButton) {
+            this.currentMode.toggle(false);
           }
           if (active) {
             this.bezierScene.setMode("add");
-            currentMode = this.addModeButton;
+            this.currentMode = this.addModeButton;
           }
         },
       })
     );
+
     this.editModeButton = this.layout.add(
       new ToggleButton(this.game, {
-        text: "✋Edit Points",
-        width: 125,
+        text: config.editLabel,
+        width: config.buttonWidth,
         height: 32,
-        colorHoverBg: "transparent",
-        colorDefaultBg: "transparent",
-        colorPressedBg: "transparent",
-        colorDefaultText: "white",
+        ...buttonStyle,
         onToggle: (active) => {
-          if (currentMode) {
-            currentMode.toggle(false);
+          if (this.currentMode && this.currentMode !== this.editModeButton) {
+            this.currentMode.toggle(false);
           }
           if (active) {
             this.bezierScene.setMode("edit");
-            currentMode = this.editModeButton;
+            this.currentMode = this.editModeButton;
           }
         },
       })
     );
+
     this.cutModeButton = this.layout.add(
       new Button(this.game, {
-        text: "✂️Cut Shape",
-        width: 125,
+        text: config.cutLabel,
+        width: config.buttonWidth,
         height: 32,
-        colorHoverBg: "transparent",
-        colorDefaultBg: "transparent",
-        colorPressedBg: "transparent",
-        colorDefaultText: "white",
+        ...buttonStyle,
         onClick: () => {
-          this.editModeButton.toggle(false);
-          this.addModeButton.toggle(false);
-          currentMode = null;
+          if (this.editModeButton) this.editModeButton.toggle(false);
+          if (this.addModeButton) this.addModeButton.toggle(false);
+          this.currentMode = null;
           this.bezierScene.cutShape();
         },
       })
     );
-    this.layout.add(
+
+    this.clearButton = this.layout.add(
       new Button(this.game, {
-        text: "🧼 Clear",
-        width: 100,
+        text: config.clearLabel,
+        width: config.clearWidth,
         height: 32,
-        colorHoverBg: "transparent",
-        colorDefaultBg: "transparent",
-        colorPressedBg: "transparent",
-        colorDefaultText: "white",
+        ...buttonStyle,
         onClick: () => {
           this.bezierScene.clear();
         },
       })
     );
+
     this.add(this.layout);
-    currentMode = this.addModeButton;
+    this.currentMode = this.addModeButton;
+
+    // Update scene dimensions
+    this.width = config.layoutWidth;
+    this.height = config.layoutHeight;
+    this.markBoundsDirty();
+  }
+
+  /**
+   * Handle resize - recreate buttons if mobile state changed
+   */
+  onResize() {
+    const isMobile = this.game.isMobile();
+
+    // Only recreate if mobile state changed
+    if (this._lastMobileState !== isMobile) {
+      this._lastMobileState = isMobile;
+      this.createButtons();
+    }
+
+    // Update scene dimensions
+    const config = this.game.getResponsiveConfig();
+    this.width = config.layoutWidth;
+    this.height = config.layoutHeight;
+    this.markBoundsDirty();
   }
 }
 /// Main game class
