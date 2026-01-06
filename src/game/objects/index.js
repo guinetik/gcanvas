@@ -53,5 +53,6 @@ export { PlatformerScene } from "./platformer-scene.js";
 export * from "./layoutscene.js";
 // Specialized GameObjects
 export { Sprite } from "./sprite.js";
+export { SpriteSheet } from "./spritesheet.js";
 export { Text } from "./text.js";
 export { ImageGo } from "./imagego.js";
