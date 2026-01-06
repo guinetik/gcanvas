@@ -32,13 +32,12 @@ const CONFIG = {
   dashWidth: 0.8,
 
   // Concentric ripples from G (like pebble drop)
-  rippleCount: 20,              // number of concentric rings
+  initialRings: 3,              // rings visible from start (spawn G)
   rippleBaseRadius: 50,         // innermost ring radius
   rippleSpacing: 70,            // distance between rings
-  rippleParticlesBase: 30,      // particles in innermost ring
-  rippleParticlesGrowth: 3,     // extra particles per ring
+  rippleParticlesBase: 35,      // particles in innermost ring
+  rippleParticlesGrowth: 4,     // extra particles per ring
   rippleSpeed: 0.4,             // orbit speed
-  rippleSpawnDelay: 0.15,       // delay between each ring appearing
   rippleEccentricity: 0.6,      // ellipse shape (1 = circle)
 
   // Flag wave effect (subtle)
@@ -56,10 +55,11 @@ const CONFIG = {
   breatheSpeed: 1.2,
 
   // G Pulse effect - continuous heartbeat
-  pulsePeriod: 1.8,         // slower heartbeat (seconds per beat)
-  pulseStrength: 6,         // very subtle scatter distance
-  shockwaveSpeed: 300,      // ripple expansion speed (px/sec)
-  shockwaveStrength: 12,    // very subtle orbital push
+  pulsePeriod: 1.2,         // heartbeat speed (seconds per beat)
+  pulseStrength: 12,        // scatter distance
+  pulseVibration: 3,        // vibration amount during growth
+  shockwaveSpeed: 350,      // faster ripple expansion
+  shockwaveStrength: 15,    // orbital push
 
   // Camera
   perspective: 800,
@@ -143,9 +143,10 @@ class RippleTextDemo extends Game {
     this.mouseY = -9999;
 
     // Pulse state - continuous heartbeat starting when G forms
-    this.pulseStartTime = CONFIG.gDelay + CONFIG.spawnDuration; // when G finishes forming
+    this.pulseStartTime = CONFIG.gDelay + CONFIG.spawnDuration;
     this.lastPulseBeat = 0;
-    this.shockwaves = []; // track multiple expanding shockwaves
+    this.shockwaves = [];
+    this.currentRingCount = CONFIG.initialRings; // start with initial rings, grow on pulse
 
     Noise.seed(42);
 
@@ -459,58 +460,103 @@ class RippleTextDemo extends Game {
   }
 
   spawnRippleParticles() {
+    // Only spawn initial rings at start - more rings added on each pulse
+    for (let ring = 0; ring < CONFIG.initialRings; ring++) {
+      this.spawnRing(ring);
+    }
+  }
+
+  spawnRingAtCenter() {
+    const emitter = this.particles.getEmitter('text');
+    const originX = this.orbitOrigin.x;
+    const originY = this.orbitOrigin.y;
+    const particleCount = CONFIG.rippleParticlesBase;
+
+    for (let i = 0; i < particleCount; i++) {
+      const p = this.particles.acquire();
+      emitter.emit(p);
+
+      const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.1;
+
+      // Start at center
+      p.x = originX + Math.cos(angle) * 10;
+      p.y = originY + Math.sin(angle) * 10 * CONFIG.rippleEccentricity;
+      p.z = (Math.random() - 0.5) * 10;
+
+      p.custom.isLetter = false;
+      p.custom.isRipple = true;
+      p.custom.originX = originX;
+      p.custom.originY = originY;
+      p.custom.angle = angle;
+      p.custom.ringIndex = 0;
+      p.custom.orbitDirection = 1;
+
+      // Will expand to first ring position
+      p.custom.targetRadius = CONFIG.rippleBaseRadius;
+      p.custom.currentRadius = 10;
+      p.custom.expandSpeed = CONFIG.shockwaveSpeed * 0.8;
+      p.custom.expanding = true;
+
+      const brightness = 0.5 + Math.random() * 0.4;
+      p.custom.brightness = brightness;
+
+      const gray = Math.floor(180 + brightness * 60);
+      p.color.r = gray;
+      p.color.g = gray;
+      p.color.b = gray;
+      p.color.a = 0.6 + brightness * 0.3;
+
+      p.size = 1.8 + Math.random() * 0.6;
+
+      this.particles.particles.push(p);
+    }
+  }
+
+  spawnRing(ringIndex) {
     const emitter = this.particles.getEmitter('text');
     const originX = this.orbitOrigin.x;
     const originY = this.orbitOrigin.y;
 
-    // Create concentric rings emanating from G
-    for (let ring = 0; ring < CONFIG.rippleCount; ring++) {
-      const radius = CONFIG.rippleBaseRadius + ring * CONFIG.rippleSpacing;
-      const particleCount = CONFIG.rippleParticlesBase + ring * CONFIG.rippleParticlesGrowth;
+    const targetRadius = CONFIG.rippleBaseRadius + ringIndex * CONFIG.rippleSpacing;
+    const particleCount = CONFIG.rippleParticlesBase + ringIndex * CONFIG.rippleParticlesGrowth;
 
-      for (let i = 0; i < particleCount; i++) {
-        const p = this.particles.acquire();
-        emitter.emit(p);
+    for (let i = 0; i < particleCount; i++) {
+      const p = this.particles.acquire();
+      emitter.emit(p);
 
-        const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.1;
+      const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.1;
 
-        // Elliptical ripples
-        const rx = radius;
-        const ry = radius * CONFIG.rippleEccentricity;
+      // START at center (small), will expand to target radius
+      p.x = originX + Math.cos(angle) * 10;
+      p.y = originY + Math.sin(angle) * 10 * CONFIG.rippleEccentricity;
+      p.z = (Math.random() - 0.5) * 10;
 
-        // Start at ring position (already expanded)
-        p.x = originX + Math.cos(angle) * rx;
-        p.y = originY + Math.sin(angle) * ry;
-        p.z = (Math.random() - 0.5) * 10;
+      p.custom.isLetter = false;
+      p.custom.isRipple = true;
+      p.custom.originX = originX;
+      p.custom.originY = originY;
+      p.custom.angle = angle;
+      p.custom.ringIndex = ringIndex;
+      p.custom.orbitDirection = 1;
 
-        p.custom.isLetter = false;
-        p.custom.isRipple = true;
-        p.custom.originX = originX;
-        p.custom.originY = originY;
-        p.custom.ringRadius = radius;
-        p.custom.rx = rx;
-        p.custom.ry = ry;
-        p.custom.angle = angle;
-        p.custom.ringIndex = ring;
-        p.custom.orbitDirection = 1;
+      // Expansion animation
+      p.custom.targetRadius = targetRadius;
+      p.custom.currentRadius = 10; // start small
+      p.custom.expandSpeed = CONFIG.shockwaveSpeed * 0.8; // expand speed
+      p.custom.expanding = true;
 
-        // Rings appear sequentially from center outward
-        p.custom.spawnDelay = ring * CONFIG.rippleSpawnDelay;
-        p.custom.spawnProgress = 0;
+      const brightness = 0.5 + Math.random() * 0.4;
+      p.custom.brightness = brightness;
 
-        const brightness = 0.5 + Math.random() * 0.4;
-        p.custom.brightness = brightness;
+      const gray = Math.floor(180 + brightness * 60);
+      p.color.r = gray;
+      p.color.g = gray;
+      p.color.b = gray;
+      p.color.a = 0.6 + brightness * 0.3;
 
-        const gray = Math.floor(180 + brightness * 60);
-        p.color.r = gray;
-        p.color.g = gray;
-        p.color.b = gray;
-        p.color.a = 0;
+      p.size = 1.8 + Math.random() * 0.6;
 
-        p.size = 1.8 + Math.random() * 0.6;
-
-        this.particles.particles.push(p);
-      }
+      this.particles.particles.push(p);
     }
   }
 
@@ -518,22 +564,30 @@ class RippleTextDemo extends Game {
     return (p, dt, system) => {
       if (!p.custom.isRipple) return;
 
-      // Wait for spawn delay (rings appear from center outward)
-      if (this.time < p.custom.spawnDelay) {
-        p.color.a = 0;
+      // Despawn if expanded too far off screen (use diagonal for corners)
+      const maxRadius = Math.sqrt(this.width * this.width + this.height * this.height) * 1.0;
+      if (p.custom.currentRadius > maxRadius) {
+        p.life = 0; // mark for removal
         return;
       }
 
-      // Fade in
-      if (p.custom.spawnProgress < 1) {
-        p.custom.spawnProgress = Math.min(1, (p.custom.spawnProgress || 0) + dt * 2);
-        p.color.a = p.custom.spawnProgress * (0.6 + p.custom.brightness * 0.3);
+      // Expand from center to target radius
+      if (p.custom.expanding) {
+        p.custom.currentRadius += p.custom.expandSpeed * dt;
+        if (p.custom.currentRadius >= p.custom.targetRadius) {
+          p.custom.currentRadius = p.custom.targetRadius;
+          p.custom.expanding = false;
+        }
       }
+
+      // Update rx/ry based on current radius
+      p.custom.rx = p.custom.currentRadius;
+      p.custom.ry = p.custom.currentRadius * CONFIG.rippleEccentricity;
 
       // Slowly orbit around the origin
       p.custom.angle += CONFIG.rippleSpeed * p.custom.orbitDirection * dt / (1 + p.custom.ringIndex * 0.05);
 
-      // Calculate base position on ellipse
+      // Calculate base position on ellipse using current (expanding) radius
       const baseX = p.custom.originX + Math.cos(p.custom.angle) * p.custom.rx;
       const baseY = p.custom.originY + Math.sin(p.custom.angle) * p.custom.ry;
 
@@ -600,26 +654,28 @@ class RippleTextDemo extends Game {
       // Animate from orbital start position to target
       p.custom.spawnProgress = Math.min(1, (p.custom.spawnProgress || 0) + dt / CONFIG.spawnDuration);
 
-      const t = this.easeOutQuad(p.custom.spawnProgress);
+      // Use elastic easing for organic feel
+      const t = Easing.easeOutElastic(p.custom.spawnProgress);
+      const tSmooth = Easing.easeOutQuad(p.custom.spawnProgress); // smoother for some props
 
-      // Lerp from orbital start to final position
+      // Lerp from orbital start to final position (elastic)
       p.x = p.custom.startX + (p.custom.targetX - p.custom.startX) * t;
       p.y = p.custom.startY + (p.custom.targetY - p.custom.startY) * t;
-      p.z = p.custom.startZ + ((p.custom.targetZ || 0) - p.custom.startZ) * t;
+      p.z = p.custom.startZ + ((p.custom.targetZ || 0) - p.custom.startZ) * tSmooth;
 
       // Tween angle from starting (pointing from origin) to target (fingerprint contour)
       p.custom.angle = p.custom.startAngle + (p.custom.targetAngle - p.custom.startAngle) * t;
 
       // Tween dash scale: 0 = dot, 1 = full dash
-      p.custom.dashScale = t;
+      p.custom.dashScale = tSmooth;
 
       // Size: start small, grow to target
       const startSize = 1.0;
       const endSize = p.custom.targetSize || CONFIG.particleSize.min;
-      p.size = startSize + (endSize - startSize) * t;
+      p.size = startSize + (endSize - startSize) * tSmooth;
 
       // Fade in and settle to final brightness
-      p.color.a = p.custom.brightness * Math.min(1, t * 1.5);
+      p.color.a = p.custom.brightness * Math.min(1, tSmooth * 1.5);
 
       // Color: start white, transition to final gray
       const finalGray = Math.floor(180 + p.custom.brightness * 75);
@@ -721,21 +777,22 @@ class RippleTextDemo extends Game {
       // Only active after G starts forming
       if (this.time < CONFIG.gDelay) return;
 
-      // Calculate pulse phase (asymmetric with easing: slow ease-in expand, fast ease-out contract)
-      const timeSinceStart = this.time - CONFIG.gDelay;
-      const pulsePhase = (timeSinceStart % CONFIG.pulsePeriod) / CONFIG.pulsePeriod;
-      // Asymmetric wave: 70% expand, 30% contract
-      const expandRatio = 0.7;
-      let pulseIntensity;
-      if (pulsePhase < expandRatio) {
-        // Ease-in expand: slow start, accelerate
-        const t = pulsePhase / expandRatio;
-        pulseIntensity = Easing.easeInCubic(t);
-      } else {
-        // Ease-out contract: fast start, decelerate
-        const t = (pulsePhase - expandRatio) / (1 - expandRatio);
-        pulseIntensity = 1 - Easing.easeOutQuad(t);
+      // Find the newest/innermost expanding ring to sync G pulse with
+      let newestRingProgress = 0;
+      for (const rp of this.particles.particles) {
+        if (rp.custom?.isRipple && rp.custom.expanding) {
+          // How far has this ring expanded? (0 = just started, 1 = reached target)
+          const progress = (rp.custom.currentRadius - 10) / (rp.custom.targetRadius - 10);
+          if (rp.custom.currentRadius < CONFIG.rippleBaseRadius + CONFIG.rippleSpacing) {
+            // This is an inner ring still expanding - use its progress
+            newestRingProgress = Math.max(newestRingProgress, Math.min(1, progress));
+          }
+        }
       }
+
+      // G expands as orbit travels out, contracts with elastic bounce
+      // Use easeOutElastic for organic, springy feel
+      const pulseIntensity = Easing.easeOutElastic(newestRingProgress);
 
       // G letter particles: subtle heartbeat scatter
       if (p.custom.isLetter && p.custom.letterIndex === 0) {
@@ -745,14 +802,23 @@ class RippleTextDemo extends Game {
         const dy = p.custom.targetY - this.orbitOrigin.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
-        // Subtle push outward on beat
+        // Push outward on beat
         const pushStrength = CONFIG.pulseStrength * pulseIntensity;
-        const targetX = p.custom.targetX + (dx / dist) * pushStrength;
-        const targetY = p.custom.targetY + (dy / dist) * pushStrength;
+
+        // Add vibration during growth (when pulseIntensity > 0.1)
+        let vibX = 0, vibY = 0;
+        if (pulseIntensity > 0.1) {
+          const vibAmount = CONFIG.pulseVibration * pulseIntensity;
+          vibX = (Math.random() - 0.5) * vibAmount;
+          vibY = (Math.random() - 0.5) * vibAmount;
+        }
+
+        const targetX = p.custom.targetX + (dx / dist) * pushStrength + vibX;
+        const targetY = p.custom.targetY + (dy / dist) * pushStrength + vibY;
 
         // Smooth movement to pulse position
-        p.x += (targetX - p.x) * 0.15;
-        p.y += (targetY - p.y) * 0.15;
+        p.x += (targetX - p.x) * 0.18;
+        p.y += (targetY - p.y) * 0.18;
 
         // Subtle brightness pulse
         const brightBoost = pulseIntensity * 30;
@@ -819,24 +885,36 @@ class RippleTextDemo extends Game {
     this.globalOffset.x = startOffsetX * (1 - t);
     this.globalOffset.y = startOffsetY * (1 - t);
 
-    // Heartbeat pulse - spawn shockwave on each beat
+    // Heartbeat pulse - spawn shockwave and new ring on each beat
     if (this.time >= CONFIG.gDelay) {
       const timeSinceStart = this.time - CONFIG.gDelay;
       const currentBeat = Math.floor(timeSinceStart / CONFIG.pulsePeriod);
 
-      // Spawn new shockwave on each beat
+      // On each new beat: spawn shockwave + new ring
       if (currentBeat > this.lastPulseBeat) {
         this.lastPulseBeat = currentBeat;
+
+        // Spawn shockwave
         this.shockwaves.push({
           startTime: this.time,
           radius: 0
         });
+
+        // Push ALL existing rings outward (increase their target radius)
+        for (const p of this.particles.particles) {
+          if (p.custom?.isRipple) {
+            p.custom.targetRadius += CONFIG.rippleSpacing;
+            p.custom.expanding = true; // start expanding again
+          }
+        }
+
+        // Spawn new ring at center
+        this.spawnRingAtCenter();
       }
 
       // Expand all shockwaves and remove old ones
       this.shockwaves = this.shockwaves.filter(wave => {
         wave.radius = (this.time - wave.startTime) * CONFIG.shockwaveSpeed;
-        // Keep waves that haven't expanded too far
         return wave.radius < 1500;
       });
     }
