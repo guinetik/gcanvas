@@ -86,7 +86,14 @@ class Player extends GameObject {
   constructor(game) {
     super(game);
     this.shape = new Circle(40, { color: 'blue' });
-    this.enableInteractivity(this.shape);
+    
+    // Enable interactivity
+    this.interactive = true;
+    
+    // Listen for input events
+    this.on('inputdown', (e) => {
+      console.log('Clicked!');
+    });
   }
 
   update(dt) {
@@ -99,11 +106,6 @@ class Player extends GameObject {
   render() {
     // Called every frame after update
     this.shape.draw();
-  }
-
-  onPointerDown(e) {
-    // Automatic input handling
-    console.log('Clicked!');
   }
 }
 

@@ -235,7 +235,7 @@ game.start(); // Start the game loop
 
 - `update(dt)` — Run game logic each frame
 - `render()` — Optional custom rendering 
-- Event handling through `enableInteractivity(shape)`
+- Event handling through the event emitter pattern
 
 This is the base class for all interactive entities:
 
@@ -244,7 +244,14 @@ class Player extends GameObject {
   constructor(game) {
     super(game);
     this.shape = new Circle(100, 100, 40, { fillColor: "blue" });
-    this.enableInteractivity(this.shape);
+    
+    // Enable interactivity
+    this.interactive = true;
+    
+    // Listen for input events
+    this.on('inputdown', (e) => {
+      console.log('Player clicked!');
+    });
   }
   
   update(dt) {
@@ -256,10 +263,6 @@ class Player extends GameObject {
   
   render() {
     this.shape.draw();
-  }
-  
-  onPointerDown(e) {
-    console.log('Player clicked!');
   }
 }
 ```
@@ -396,21 +399,26 @@ The `Tweenetik` system animates object properties directly over time using easin
 
 ```js
 // Animate a button when pressed
-onPointerDown() {
-  Tweenetik.to(this.shape, 
-    { scaleX: 1.2, scaleY: 1.2 }, 
-    0.2, 
-    Easing.easeOutBack,
-    {
-      onComplete: () => {
-        Tweenetik.to(this.shape, 
-          { scaleX: 1.0, scaleY: 1.0 }, 
-          0.3, 
-          Easing.easeInOutQuad
-        );
+constructor(game) {
+  super(game);
+  this.interactive = true;
+  
+  this.on('inputdown', () => {
+    Tweenetik.to(this.shape, 
+      { scaleX: 1.2, scaleY: 1.2 }, 
+      0.2, 
+      Easing.easeOutBack,
+      {
+        onComplete: () => {
+          Tweenetik.to(this.shape, 
+            { scaleX: 1.0, scaleY: 1.0 }, 
+            0.3, 
+            Easing.easeInBack
+          );
+        }
       }
-    }
-  );
+    );
+  });
 }
 ```
 
@@ -545,7 +553,7 @@ class Bob extends GameObject {
   constructor(game) {
     super(game);
     this.shape = new Circle(100, 100, 40, { fillColor: "tomato" });
-    this.enableInteractivity(this.shape);
+    this.interactive = true;
   }
 
   update(dt) {
@@ -575,7 +583,7 @@ class SpinningShape extends GameObject {
   constructor(game) {
     super(game);
     this.shape = new Circle(200, 200, 50, { fillColor: 'cyan' });
-    this.enableInteractivity(this.shape);
+    this.interactive = true;
     this.hovered = false;
 
     this.on('mouseover', () => this.hovered = true);

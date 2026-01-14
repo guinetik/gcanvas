@@ -124,6 +124,119 @@ class MyGame extends Game {
 
 > **Note:** GameObjects get their `update(dt)` called automatically by the pipeline each frame.
 
+## Creating Custom GameObjects with Shapes
+
+The most common pattern is to create a custom GameObject that owns and renders Shape instances:
+
+```javascript
+import { Game, GameObject, Rectangle, Scene } from "gcanvas";
+
+/**
+ * Custom GameObject that owns a Shape
+ */
+class PlaceholderBox extends GameObject {
+  constructor(game) {
+    // ⚠️ IMPORTANT: Pass width/height for hit testing to work!
+    super(game, { width: 100, height: 100 });
+
+    // Create the shape (this is just data - not in the pipeline)
+    this.shape = new Rectangle({
+      width: 100,
+      height: 100,
+      color: "#4CAF50",
+      stroke: "#fff",
+      lineWidth: 2,
+    });
+
+    // Enable interactivity
+    this.interactive = true;
+    
+    // Listen for events
+    this.on('inputdown', (e) => {
+      console.log("Box clicked!");
+    });
+  }
+
+  /**
+   * Update logic (called every frame by pipeline)
+   */
+  update(dt) {
+    super.update(dt);
+    // Add game logic here (movement, animation, etc.)
+  }
+
+  /**
+   * Render the shape
+   * ⚠️ IMPORTANT: Use shape.render(), NOT shape.draw()!
+   */
+  render() {
+    super.render();  // GameObject's render (handles transform context)
+    this.shape.render();  // ✅ Shape's render (handles visibility/opacity/transforms)
+  }
+}
+
+class MyGame extends Game {
+  init() {
+    super.init();
+    
+    const scene = new Scene(this);
+    scene.x = this.width / 2;
+    scene.y = this.height / 2;
+    
+    // Add custom GameObject to scene
+    const box = new PlaceholderBox(this);
+    scene.add(box);
+    
+    this.pipeline.add(scene);
+  }
+}
+```
+
+### Why `shape.render()` and not `shape.draw()`?
+
+Shapes have two methods:
+
+| Method | Purpose | When to Use |
+|--------|---------|-------------|
+| `render()` | Public API - handles visibility, opacity, transforms, then calls `draw()` | ✅ Always use this |
+| `draw()` | Internal - the actual drawing logic | ❌ Never call directly |
+
+**Correct:**
+```javascript
+render() {
+  super.render();
+  this.shape.render();  // ✅ Handles all transform/visibility logic
+}
+```
+
+**Wrong:**
+```javascript
+render() {
+  super.render();
+  this.shape.draw();  // ❌ Skips visibility/opacity/transform setup!
+}
+```
+
+### Why pass `width` and `height` to GameObject?
+
+GameObject needs dimensions for **hit testing** (click/hover detection). Without it, your interactive events won't fire:
+
+```javascript
+// ❌ WRONG - Events won't work!
+constructor(game) {
+  super(game);  // No width/height!
+  this.interactive = true;
+  this.on('inputdown', () => console.log('Never fires!'));
+}
+
+// ✅ CORRECT - Events work!
+constructor(game) {
+  super(game, { width: 100, height: 100 });  // Defines hit area
+  this.interactive = true;
+  this.on('inputdown', () => console.log('Works!'));
+}
+```
+
 ## Bridging: Shape to GameObject
 
 Sometimes you have a Shape (or Group of shapes) that you want to add to the pipeline. Use `ShapeGOFactory`:

@@ -81,7 +81,14 @@ class Player extends GameObject {
   constructor(game) {
     super(game);
     this.shape = new Circle(40, { color: 'blue' });
-    this.enableInteractivity(this.shape);
+    
+    // Enable interactivity
+    this.interactive = true;
+    
+    // Listen for input events
+    this.on('inputdown', (e) => {
+      console.log('Player clicked!');
+    });
   }
 
   update(dt) {
