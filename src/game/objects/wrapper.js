@@ -68,7 +68,13 @@ export class GameObjectShapeWrapper extends GameObject {
    * @param {Object} options - Configuration options
    */
   constructor(game, shape, options = {}) {
-    super(game, options);
+    // IMPORTANT: Strip 'anchor' from options passed to GameObject
+    // In shape context, 'anchor' means "image rendering anchor" (center, top-left, etc.)
+    // In GameObject, 'anchor' triggers applyAnchor mixin for auto-positioning
+    // These are different concepts - don't let shape anchor trigger positioning
+    const { anchor: _shapeAnchor, ...goOptions } = options;
+
+    super(game, goOptions);
 
     // Validate shape
     if (!shape || shape == null || shape == undefined) {
@@ -224,9 +230,15 @@ export class GameObjectShapeWrapper extends GameObject {
 
   /**
    * Draw method to render the shape
+   *
+   * IMPORTANT: Call shape.draw() NOT shape.render()!
+   * The wrapper's render() has already translated to (this.x, this.y).
+   * Calling shape.render() would call Painter.translateTo(shape.x, shape.y)
+   * which OVERWRITES (not adds to) the current translation.
+   * By calling shape.draw() directly, we render at the wrapper's position.
    */
   draw() {
     super.draw();
-    this.shape.render();
+    this.shape.draw();
   }
 }

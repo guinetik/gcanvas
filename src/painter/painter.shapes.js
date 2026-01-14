@@ -254,23 +254,29 @@ export class PainterShapes {
    * @param {number} [lineWidth] - Line width
    * @returns {void}
    */
-  static polygon(points, fillColor, strokeColor, lineWidth) {
+  static polygon(points, fillColor, strokeColor, lineWidth, lineJoin) {
     if (points.length < 2) return;
 
-    Painter.lines.beginPath();
-    Painter.lines.moveTo(points[0].x, points[0].y);
+    const ctx = Painter.ctx;
+    
+    // Build the path
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
 
     for (let i = 1; i < points.length; i++) {
-      Painter.lines.lineTo(points[i].x, points[i].y);
+      ctx.lineTo(points[i].x, points[i].y);
     }
 
-    Painter.lines.closePath();
+    ctx.closePath();
 
+    // Fill using Painter.colors (sets fillStyle and calls fill)
     if (fillColor) {
       Painter.colors.fill(fillColor);
     }
 
+    // Stroke using Painter.colors
     if (strokeColor) {
+      if (lineJoin) ctx.lineJoin = lineJoin;
       Painter.colors.stroke(strokeColor, lineWidth);
     }
   }

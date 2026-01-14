@@ -70,6 +70,11 @@ export class Transformable extends Renderable {
    */
   draw() {
     this.applyTransforms();
+    // Flush any stale canvas fill state before shape draws
+    // This prevents color bleeding between consecutive shape renders
+    const ctx = Painter.ctx;
+    ctx.beginPath();
+    ctx.fill();
     this.drawDebug();
   }
 

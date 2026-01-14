@@ -147,23 +147,23 @@ export class ImageShape extends Shape {
     // Skip drawing if not visible or no bitmap available
     if (!this.visible) return;
     if (!this._bitmap && !this._buffer) return;
-    
+
     super.draw();
-    
+
     // For ImageData, we must use the buffer
     let source = (this._bitmap instanceof ImageData) ? this._buffer : this._bitmap;
-    
+
     if (!source || (this._bitmap instanceof ImageData && !this._buffer)) {
       // If we need a buffer but don't have one yet, try to create it
       if (this._bitmap instanceof ImageData) {
         this.buffer(this._bitmap);
         source = this._buffer;
       }
-      
+
       // If we still don't have a valid source, skip drawing
       if (!source) return;
     }
-    
+
     // Delegates all transform/alpha/smoothing handling to Painter.img.draw
     Painter.img.draw(source, 0, 0, {
       width: this.width,
