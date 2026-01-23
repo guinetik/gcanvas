@@ -34,6 +34,10 @@ export class Keys {
   static E = "E";
   static R = "R";
   static F = "F";
+  static G = "G";
+  static J = "J";
+  static K = "K";
+  static L = "L";
   static Z = "Z";
   static C = "C";
   static UP = "UP";
@@ -50,7 +54,7 @@ export class Keys {
    * Customize this list as needed for your game.
    */
   static _codeMap = {
-    // WASD + QE + RFZC
+    // WASD + QE + RFZC + GJKL
     KeyW: Keys.W,
     KeyA: Keys.A,
     KeyS: Keys.S,
@@ -59,6 +63,10 @@ export class Keys {
     KeyE: Keys.E,
     KeyR: Keys.R,
     KeyF: Keys.F,
+    KeyG: Keys.G,
+    KeyJ: Keys.J,
+    KeyK: Keys.K,
+    KeyL: Keys.L,
     KeyZ: Keys.Z,
     KeyC: Keys.C,
 
