@@ -200,3 +200,109 @@ export function heatTransferFalloff(temp1, temp2, distance, maxDistance, rate, f
 
   return heatDiff * rate * proximity;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PARTICLE SYSTEM HEAT TRANSFER
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Apply heat transfer between nearby particles in a particle system.
+ * Uses Newton's law of cooling with distance falloff.
+ * Follows the same pattern as Collision.applyCircleSeparation.
+ *
+ * @param {Array<Object>} particles - Array of particles with { x, y, custom }
+ * @param {Object} [options={}] - Configuration options
+ * @param {number} [options.maxDistance=50] - Maximum distance for heat transfer
+ * @param {number} [options.rate=0.01] - Heat transfer rate coefficient
+ * @param {number} [options.falloff=1] - Distance falloff (1=linear, 2=quadratic)
+ * @param {string} [options.temperatureKey='temperature'] - Key in particle.custom
+ * @param {Function} [options.filter=null] - Filter function (particle) => boolean
+ * @param {boolean} [options.useSizeAsRadius=true] - Use particle.size for distance calc
+ *
+ * @example
+ * // Basic usage - all particles exchange heat
+ * applyParticleHeatTransfer(particles, {
+ *   maxDistance: 40,
+ *   rate: 0.02,
+ * });
+ *
+ * @example
+ * // With filter - exclude sorted particles (Maxwell's Demon)
+ * applyParticleHeatTransfer(particles, {
+ *   maxDistance: 36,
+ *   rate: 0.015,
+ *   filter: (p) => !p.custom.sorted,
+ * });
+ *
+ * @example
+ * // With quadratic falloff for more localized transfer
+ * applyParticleHeatTransfer(particles, {
+ *   maxDistance: 60,
+ *   rate: 0.025,
+ *   falloff: 2,
+ * });
+ */
+export function applyParticleHeatTransfer(particles, options = {}) {
+  const {
+    maxDistance = 50,
+    rate = 0.01,
+    falloff = 1,
+    temperatureKey = 'temperature',
+    filter = null,
+    useSizeAsRadius = true,
+  } = options;
+
+  const n = particles.length;
+  const maxDist2 = maxDistance * maxDistance;
+
+  for (let i = 0; i < n; i++) {
+    const pi = particles[i];
+
+    // Skip filtered particles
+    if (filter && !filter(pi)) continue;
+
+    // Ensure temperature exists
+    if (pi.custom[temperatureKey] === undefined) {
+      pi.custom[temperatureKey] = 0.5;
+    }
+
+    for (let j = i + 1; j < n; j++) {
+      const pj = particles[j];
+
+      // Skip filtered particles
+      if (filter && !filter(pj)) continue;
+
+      // Ensure temperature exists
+      if (pj.custom[temperatureKey] === undefined) {
+        pj.custom[temperatureKey] = 0.5;
+      }
+
+      // Distance check (squared for performance)
+      const dx = pi.x - pj.x;
+      const dy = pi.y - pj.y;
+      const dist2 = dx * dx + dy * dy;
+
+      if (dist2 >= maxDist2 || dist2 < 0.0001) continue;
+
+      const dist = Math.sqrt(dist2);
+
+      // Calculate heat transfer with optional distance falloff
+      const delta = heatTransferFalloff(
+        pi.custom[temperatureKey],
+        pj.custom[temperatureKey],
+        dist,
+        maxDistance,
+        rate,
+        falloff
+      );
+
+      // Apply symmetric transfer (energy conservation)
+      pi.custom[temperatureKey] += delta;
+      pj.custom[temperatureKey] -= delta;
+
+      // Clamp to valid range
+      pi.custom[temperatureKey] = Math.max(0, Math.min(1, pi.custom[temperatureKey]));
+      pj.custom[temperatureKey] = Math.max(0, Math.min(1, pj.custom[temperatureKey]));
+    }
+  }
+}
