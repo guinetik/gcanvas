@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Scene Interactivity Test</title>
+        <link rel="stylesheet" href="demos.css" />
+        <script src="./js/info-toggle.js"></script>
+    </head>
+
+    <body>
+        <div id="info">
+            <strong>Scene Interactivity Test</strong> — Verifies that
+            GameObjects inside Scenes receive input events correctly.<br />
+            <span style="color: #ccc">
+                <li>Click on any colored box to see event fired</li>
+                <li>Hover over boxes to see hover state change</li>
+                <li>Nested scenes work too!</li>
+            </span>
+        </div>
+        <canvas id="game"></canvas>
+
+        <script type="module">
+            import {
+                Game,
+                Scene,
+                GameObject,
+                Rectangle,
+                TextShape,
+                Text,
+                FPSCounter,
+            } from "/gcanvas.es.min.js";
+
+            class ClickableBox extends GameObject {
+                constructor(game, color, label) {
+                    super(game, { width: 150, height: 100 });
+
+                    // Enable interactivity
+                    this.interactive = true;
+
+                    this.color = color;
+                    this.defaultColor = color;
+                    this.clickCount = 0;
+
+                    // Create shapes
+                    this.box = new Rectangle({
+                        width: 150,
+                        height: 100,
+                        color: this.color,
+                        strokeColor: "#fff",
+                        lineWidth: 2,
+                    });
+
+                    this.label = new TextShape(label, {
+                        font: "bold 14px monospace",
+                        color: "#fff",
+                        align: "center",
+                        baseline: "top",
+                    });
+
+                    this.counter = new TextShape("Clicks: 0", {
+                        font: "12px monospace",
+                        color: "#fff",
+                        align: "center",
+                        baseline: "bottom",
+                    });
+
+                    // Setup events
+                    this.on("inputdown", (e) => {
+                        this.clickCount++;
+                        this.counter.text = `Clicks: ${this.clickCount}`;
+                        console.log(
+                            `${label} clicked! Total: ${this.clickCount}`,
+                        );
+
+                        // Flash effect
+                        this.box.color = "#fff";
+                        setTimeout(() => {
+                            this.box.color = this.hovered
+                                ? this.brighten(this.defaultColor)
+                                : this.defaultColor;
+                        }, 100);
+                    });
+
+                    this.on("mouseover", () => {
+                        this.hovered = true;
+                        this.box.color = this.brighten(this.defaultColor);
+                        this.box.lineWidth = 3;
+                    });
+
+                    this.on("mouseout", () => {
+                        this.hovered = false;
+                        this.box.color = this.defaultColor;
+                        this.box.lineWidth = 2;
+                    });
+                }
+
+                brighten(color) {
+                    // Simple color brightening
+                    const hex = color.replace("#", "");
+                    const r = Math.min(
+                        255,
+                        parseInt(hex.substr(0, 2), 16) + 40,
+                    );
+                    const g = Math.min(
+                        255,
+                        parseInt(hex.substr(2, 2), 16) + 40,
+                    );
+                    const b = Math.min(
+                        255,
+                        parseInt(hex.substr(4, 2), 16) + 40,
+                    );
+                    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+                }
+
+                draw() {
+                    super.draw();
+
+                    // Draw box
+                    this.box.x = 0;
+                    this.box.y = 0;
+                    this.box.render();
+
+                    // Draw label
+                    this.label.x = 0;
+                    this.label.y = -30;
+                    this.label.render();
+
+                    // Draw counter
+                    this.counter.x = 0;
+                    this.counter.y = 30;
+                    this.counter.render();
+                }
+            }
+
+            class SceneInteractivityTest extends Game {
+                constructor(canvas) {
+                    super(canvas);
+                    this.backgroundColor = "#000";
+                    this.enableFluidSize();
+                }
+
+                init() {
+                    super.init();
+
+                    // Create main scene
+                    const mainScene = new Scene(this, { name: "MainScene" });
+                    mainScene.x = this.width / 2;
+                    mainScene.y = this.height / 2 - 100;
+
+                    // Add boxes directly to main scene
+                    const box1 = new ClickableBox(this, "#e74c3c", "Box 1");
+                    box1.x = -200;
+                    box1.y = -80;
+                    mainScene.add(box1);
+
+                    const box2 = new ClickableBox(this, "#3498db", "Box 2");
+                    box2.x = 0;
+                    box2.y = -80;
+                    mainScene.add(box2);
+
+                    const box3 = new ClickableBox(this, "#2ecc71", "Box 3");
+                    box3.x = 200;
+                    box3.y = -80;
+                    mainScene.add(box3);
+
+                    // Create nested scene
+                    const nestedScene = new Scene(this, {
+                        name: "NestedScene",
+                    });
+                    nestedScene.y = 120;
+
+                    // Add boxes to nested scene
+                    const nestedBox1 = new ClickableBox(
+                        this,
+                        "#9b59b6",
+                        "Nested 1",
+                    );
+                    nestedBox1.x = -100;
+                    nestedScene.add(nestedBox1);
+
+                    const nestedBox2 = new ClickableBox(
+                        this,
+                        "#f39c12",
+                        "Nested 2",
+                    );
+                    nestedBox2.x = 100;
+                    nestedScene.add(nestedBox2);
+
+                    // Add nested scene to main scene
+                    mainScene.add(nestedScene);
+
+                    // Add main scene to pipeline
+                    this.pipeline.add(mainScene);
+
+                    // Add FPS counter
+                    this.pipeline.add(
+                        new FPSCounter(this, { anchor: "bottom-right" }),
+                    );
+
+                    this.mainScene = mainScene;
+                }
+
+                update(dt) {
+                    super.update(dt);
+
+                    // Keep scene centered
+                    this.mainScene.x = this.width / 2;
+                    this.mainScene.y = this.height / 2 - 50;
+                }
+            }
+
+            window.addEventListener("load", () => {
+                const canvas = document.getElementById("game");
+                const demo = new SceneInteractivityTest(canvas);
+                demo.start();
+            });
+        </script>
+    </body>
+</html>
