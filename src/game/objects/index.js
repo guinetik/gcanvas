@@ -56,3 +56,5 @@ export { Sprite } from "./sprite.js";
 export { SpriteSheet } from "./spritesheet.js";
 export { Text } from "./text.js";
 export { ImageGo } from "./imagego.js";
+// Utilities
+export { Mask } from "./mask.js";
