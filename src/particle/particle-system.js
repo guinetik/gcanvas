@@ -7,6 +7,7 @@
  * - Optional Camera3D integration with depth sorting
  * - Multiple emitter support
  * - Blend mode control
+ * - Optional WebGL GPU-accelerated rendering
  *
  * @example
  * const particles = new ParticleSystem(this, {
@@ -14,6 +15,7 @@
  *   depthSort: true,
  *   maxParticles: 3000,
  *   blendMode: "screen",
+ *   useWebGL: true,  // Enable GPU rendering
  *   updaters: [Updaters.velocity, Updaters.lifetime, Updaters.gravity(150)],
  * });
  * particles.addEmitter("fountain", new ParticleEmitter({ rate: 50 }));
@@ -23,6 +25,7 @@ import { GameObject } from "../game/objects/go.js";
 import { Painter } from "../painter/painter.js";
 import { Particle } from "./particle.js";
 import { Updaters } from "./updaters.js";
+import { WebGLParticleRenderer } from "../webgl/webgl-particle-renderer.js";
 
 export class ParticleSystem extends GameObject {
   /**
@@ -34,6 +37,13 @@ export class ParticleSystem extends GameObject {
    * @param {string} [options.blendMode="source-over"] - Canvas blend mode
    * @param {Function[]} [options.updaters] - Array of updater functions
    * @param {boolean} [options.worldSpace=false] - Position particles in world space
+   * @param {boolean} [options.useWebGL=false] - Use GPU-accelerated rendering
+   * @param {WebGLParticleRenderer} [options.webglRenderer] - External WebGL renderer
+   * @param {string} [options.webglShape='circle'] - WebGL particle shape
+   * @param {string} [options.webglBlendMode='alpha'] - WebGL blend mode ('alpha' or 'additive')
+   * @param {boolean} [options.depthShading=false] - Shade particles by depth (closer=brighter)
+   * @param {number} [options.depthShadingMin=0.3] - Minimum brightness for far particles
+   * @param {number} [options.depthShadingMax=1.0] - Maximum brightness for near particles
    */
   constructor(game, options = {}) {
     super(game, options);
@@ -59,6 +69,37 @@ export class ParticleSystem extends GameObject {
     // Rendering
     this.blendMode = options.blendMode ?? "source-over";
     this.worldSpace = options.worldSpace ?? false;
+
+    // WebGL rendering (optional GPU acceleration)
+    this.webglRenderer = null;
+    if (options.webglRenderer) {
+      // Use provided renderer
+      this.webglRenderer = options.webglRenderer;
+    } else if (options.useWebGL) {
+      // Auto-create WebGL renderer
+      this.webglRenderer = new WebGLParticleRenderer(this.maxParticles, {
+        width: game.width,
+        height: game.height,
+        shape: options.webglShape ?? 'circle',
+        blendMode: options.webglBlendMode ?? 'alpha',
+      });
+      if (!this.webglRenderer.isAvailable()) {
+        console.warn('WebGL not available, falling back to Canvas 2D');
+        this.webglRenderer = null;
+      }
+    }
+
+    // Depth shading (closer = brighter, further = darker)
+    this.depthShading = options.depthShading ?? false;
+    this.depthShadingMin = options.depthShadingMin ?? 0.3;
+    this.depthShadingMax = options.depthShadingMax ?? 1.0;
+
+    // WebGL offset for particles in local/centered coordinate systems (e.g. inside Scene3D)
+    // When particles use centered coords (-w/2 to w/2), set this to { x: w/2, y: h/2 }
+    this.webglOffset = options.webglOffset ?? null;
+
+    // Reusable array for WebGL render list (avoid allocation per frame)
+    this._webglRenderList = [];
 
     // Stats
     this._particleCount = 0;
@@ -184,11 +225,113 @@ export class ParticleSystem extends GameObject {
 
     if (this.particles.length === 0) return;
 
-    if (this.camera && this.depthSort) {
+    // Use WebGL if available
+    if (this.webglRenderer) {
+      this.renderWebGL();
+    } else if (this.camera && this.depthSort) {
       this.renderWithDepthSort();
     } else {
       this.renderSimple();
     }
+  }
+
+  /**
+   * GPU-accelerated rendering using WebGL point sprites.
+   * Projects particles through camera (if available), depth sorts,
+   * and renders via WebGLParticleRenderer.
+   */
+  renderWebGL() {
+    const renderer = this.webglRenderer;
+    const renderList = this._webglRenderList;
+
+    // Resize WebGL canvas if needed
+    if (renderer.width !== this.game.width || renderer.height !== this.game.height) {
+      renderer.resize(this.game.width, this.game.height);
+    }
+
+    // Clear render list
+    renderList.length = 0;
+
+    // Build render list with projections
+    const centerX = this.game.width / 2;
+    const centerY = this.game.height / 2;
+
+    if (this.camera && this.depthSort) {
+      // 3D mode: project through camera
+      for (const p of this.particles) {
+        const proj = this.camera.project(p.x, p.y, p.z);
+
+        // Cull particles behind camera
+        if (proj.z < -this.camera.perspective + 10) continue;
+
+        renderList.push({
+          x: centerX + proj.x,
+          y: centerY + proj.y,
+          z: proj.z,
+          size: p.size * proj.scale,
+          color: p.color,
+        });
+      }
+
+      // Sort back to front (painter's algorithm)
+      renderList.sort((a, b) => b.z - a.z);
+
+      // Apply depth shading if enabled
+      if (this.depthShading && renderList.length > 1) {
+        // Find z range
+        let minZ = Infinity, maxZ = -Infinity;
+        for (const item of renderList) {
+          if (item.z < minZ) minZ = item.z;
+          if (item.z > maxZ) maxZ = item.z;
+        }
+        const zRange = maxZ - minZ;
+
+        if (zRange > 0) {
+          const brightnessRange = this.depthShadingMax - this.depthShadingMin;
+
+          for (const item of renderList) {
+            // Normalize z: 0 = far (maxZ), 1 = near (minZ)
+            const t = (maxZ - item.z) / zRange;
+            const brightness = this.depthShadingMin + t * brightnessRange;
+
+            // Apply brightness to color (create new color object to avoid mutating particle)
+            item.color = {
+              r: item.color.r * brightness,
+              g: item.color.g * brightness,
+              b: item.color.b * brightness,
+              a: item.color.a,
+            };
+          }
+        }
+      }
+    } else {
+      // 2D mode: direct screen coords (with optional offset for centered coordinate systems)
+      const offsetX = this.webglOffset?.x ?? 0;
+      const offsetY = this.webglOffset?.y ?? 0;
+      for (const p of this.particles) {
+        renderList.push({
+          x: p.x + offsetX,
+          y: p.y + offsetY,
+          size: p.size,
+          color: p.color,
+        });
+      }
+    }
+
+    // Upload to GPU and render
+    renderer.clear();
+    const count = renderer.updateParticles(renderList);
+    renderer.render(count);
+
+    // Composite onto main canvas
+    // If using webglOffset, composite at negative offset to counteract Scene3D translation
+    const compositeX = this.webglOffset ? -this.webglOffset.x : 0;
+    const compositeY = this.webglOffset ? -this.webglOffset.y : 0;
+    Painter.useCtx((ctx) => {
+      ctx.globalCompositeOperation = this.blendMode;
+      renderer.compositeOnto(ctx, compositeX, compositeY);
+      ctx.globalCompositeOperation = "source-over";
+    });
   }
 
   /**
@@ -302,6 +445,27 @@ export class ParticleSystem extends GameObject {
     }
     this.particles = [];
     this._particleCount = 0;
+  }
+
+  /**
+   * Destroy the particle system and free resources.
+   */
+  destroy() {
+    this.clear();
+    if (this.webglRenderer) {
+      this.webglRenderer.destroy();
+      this.webglRenderer = null;
+    }
+    this.pool = [];
+    this.emitters.clear();
+  }
+
+  /**
+   * Check if WebGL rendering is active.
+   * @type {boolean}
+   */
+  get isWebGL() {
+    return this.webglRenderer !== null && this.webglRenderer.isAvailable();
   }
 
   /**
