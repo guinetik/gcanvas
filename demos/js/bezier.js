@@ -75,7 +75,7 @@ class BezierDemoGame extends Game {
     const config = this.getResponsiveConfig();
 
     this.uiScene = new BezierUIScene(this, this.bezierScene, {
-      debug: true,
+      debug: false,
       debugColor: "magenta",
       width: config.layoutWidth,
       height: config.layoutHeight,
@@ -612,7 +612,7 @@ class BezierUIScene extends Scene {
             this.currentMode = this.addModeButton;
           }
         },
-      })
+      }),
     );
 
     this.editModeButton = this.layout.add(
@@ -630,7 +630,7 @@ class BezierUIScene extends Scene {
             this.currentMode = this.editModeButton;
           }
         },
-      })
+      }),
     );
 
     this.cutModeButton = this.layout.add(
@@ -645,7 +645,7 @@ class BezierUIScene extends Scene {
           this.currentMode = null;
           this.bezierScene.cutShape();
         },
-      })
+      }),
     );
 
     this.clearButton = this.layout.add(
@@ -657,7 +657,7 @@ class BezierUIScene extends Scene {
         onClick: () => {
           this.bezierScene.clear();
         },
-      })
+      }),
     );
 
     this.add(this.layout);
