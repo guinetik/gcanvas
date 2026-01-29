@@ -163,6 +163,13 @@ export class GameObject extends Transformable {
       localX -= obj.x || 0;
       localY -= obj.y || 0;
 
+      // Apply additional hit test offset (e.g., scroll offset from LayoutScene)
+      if (obj.getHitTestOffset) {
+        const offset = obj.getHitTestOffset();
+        localX -= offset.x || 0;
+        localY -= offset.y || 0;
+      }
+
       // Rotation: apply inverse rotation if needed
       if (obj.rotation) {
         const cos = Math.cos(-obj.rotation);

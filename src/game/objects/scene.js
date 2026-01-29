@@ -186,4 +186,23 @@ export class Scene extends GameObject {
   get children() {
     return this._collection.children;
   }
+
+  /**
+   * Returns additional offset to apply during hit testing.
+   * Override in subclasses (e.g., LayoutScene) to account for scroll offset.
+   * @returns {{x: number, y: number}} Additional offset for hit test coordinate transform
+   */
+  getHitTestOffset() {
+    return { x: 0, y: 0 };
+  }
+
+  /**
+   * Checks if a child should be hittable (receive input events).
+   * Override in subclasses (e.g., LayoutScene) to implement viewport culling.
+   * @param {GameObject} child - The child to check
+   * @returns {boolean} True if child should be hittable
+   */
+  isChildHittable(child) {
+    return true;
+  }
 }

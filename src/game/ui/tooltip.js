@@ -237,12 +237,20 @@ export class Tooltip extends GameObject {
     this.bg.height = textHeight + this.padding * 2;
 
     // Position each line inside bg
-    const startX = -this.bg.width / 2 + this.padding;
-    const startY = -this.bg.height / 2 + this.padding;
+    // TextShape now centers its bounding box at (x, y), so for left/top aligned text
+    // we need to position the CENTER where we want it, not the top-left corner.
+    // Text should START at the left edge + padding, so CENTER is at left edge + padding + textWidth/2
+    const bgLeft = -this.bg.width / 2;
 
     for (let i = 0; i < this.lineShapes.length; i++) {
-      this.lineShapes[i].x = startX;
-      this.lineShapes[i].y = startY + i * lineHeight;
+      const shape = this.lineShapes[i];
+      const textHalfWidth = (shape._width || 0) / 2;
+      const textHalfHeight = (shape._height || lineHeight) / 2;
+
+      // Text starts at left edge + padding, so center is at left edge + padding + halfWidth
+      shape.x = bgLeft + this.padding + textHalfWidth;
+      // Text starts at top edge + padding + i*lineHeight, so center is offset by halfHeight
+      shape.y = -this.bg.height / 2 + this.padding + i * lineHeight + textHalfHeight;
     }
   }
 

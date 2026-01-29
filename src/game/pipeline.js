@@ -78,6 +78,17 @@ export class Pipeline extends Loggable {
     if (scene.children && scene.children.length > 0) {
       for (let i = scene.children.length - 1; i >= 0; i--) {
         const child = scene.children[i];
+
+        // Check if child is hittable (e.g., within viewport for scrollable layouts)
+        if (scene.isChildHittable && !scene.isChildHittable(child)) {
+          // Force mouseout if child was hovered but is now outside viewport
+          if (child._hovered) {
+            child._hovered = false;
+            child.events.emit("mouseout", e);
+          }
+          continue;
+        }
+
         if (child instanceof Scene) {
           this._hoverScene(child, e); // recurse into nested scenes
         } else {
@@ -152,6 +163,12 @@ export class Pipeline extends Loggable {
     // First check children (they render on top, so should get priority)
     for (let i = scene.children.length - 1; i >= 0; i--) {
       const child = scene.children[i];
+
+      // Check if child is hittable (e.g., within viewport for scrollable layouts)
+      if (scene.isChildHittable && !scene.isChildHittable(child)) {
+        continue;
+      }
+
       if (child instanceof Scene) {
         // Recurse deeper if child is also a Scene
         const hit = this._dispatchToScene(child, type, e);
