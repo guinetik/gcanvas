@@ -431,6 +431,63 @@ export class LayoutScene extends Scene {
     this._scrollOffset = { x: 0, y: 0 };
     this._scrollVelocity = { x: 0, y: 0 };
   }
+
+  /**
+   * Returns scroll offset for hit testing coordinate transformation.
+   * @returns {{x: number, y: number}} Scroll offset to apply
+   */
+  getHitTestOffset() {
+    if (!this.scrollable) {
+      return { x: 0, y: 0 };
+    }
+    return {
+      x: this._scrollOffset?.x || 0,
+      y: this._scrollOffset?.y || 0,
+    };
+  }
+
+  /**
+   * Checks if a child is within the visible viewport and should be hittable.
+   * @param {GameObject} child - The child to check
+   * @returns {boolean} True if child is within viewport
+   */
+  isChildHittable(child) {
+    // If not scrollable or doesn't need scrolling, all children are hittable
+    if (!this.scrollable || !this._needsScrolling()) {
+      return true;
+    }
+
+    const axis = this.getScrollAxis();
+    const vpW = this._viewportWidth ?? this.width;
+    const vpH = this._viewportHeight ?? this.height;
+    const scrollX = this._scrollOffset?.x || 0;
+    const scrollY = this._scrollOffset?.y || 0;
+
+    // Child position with scroll applied (relative to viewport center)
+    const childScrolledX = child.x + scrollX;
+    const childScrolledY = child.y + scrollY;
+
+    // Get child dimensions (use half for centered bounds check)
+    const childHalfW = (child.width || 0) / 2;
+    const childHalfH = (child.height || 0) / 2;
+
+    // Check if child overlaps with viewport
+    if (axis.horizontal) {
+      // Child right edge must be past viewport left, child left edge must be before viewport right
+      if (childScrolledX + childHalfW < -vpW / 2 || childScrolledX - childHalfW > vpW / 2) {
+        return false;
+      }
+    }
+
+    if (axis.vertical) {
+      // Child bottom edge must be past viewport top, child top edge must be before viewport bottom
+      if (childScrolledY + childHalfH < -vpH / 2 || childScrolledY - childHalfH > vpH / 2) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 }
 
 // HorizontalLayout with clean implementation
