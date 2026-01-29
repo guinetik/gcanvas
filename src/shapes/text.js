@@ -32,6 +32,10 @@ export class TextShape extends Shape {
 
   /**
    * Draw the text using Painter
+   *
+   * Text is drawn at an offset to center it within its bounding box.
+   * This ensures that regardless of alignment setting, the text's
+   * bounding box is centered at the object's (x, y) position.
    */
   draw() {
     super.draw();
@@ -39,7 +43,8 @@ export class TextShape extends Shape {
     Painter.text.setFont(this.font);
     Painter.text.setTextAlign(this.align);
     Painter.text.setTextBaseline(this.baseline);
-    Painter.text.fillText(this.text, 0, 0, this.color);
+    // Apply alignment offset to center text within its bounding box
+    Painter.text.fillText(this.text, -this._centerOffsetX, -this._centerOffsetY, this.color);
   }
 
   _calculateAlignmentOffsets() {
@@ -47,7 +52,13 @@ export class TextShape extends Shape {
     if (!Painter.text) return;
     // Measure text dimensions
     const metrics = Painter.text.measureTextDimensions(this.text, this.font);
+
     // Calculate horizontal center point offset
+    // Goal: center the text bounding box at (0, 0) in local coordinates
+    // We draw at (-_centerOffsetX), so:
+    //   left:   draw at -width/2 so text spans [-width/2, +width/2]
+    //   center: draw at 0 (already centered)
+    //   right:  draw at +width/2 so text spans [-width/2, +width/2]
     switch (this._align) {
       case "left":
         this._centerOffsetX = metrics.width / 2;
@@ -56,22 +67,27 @@ export class TextShape extends Shape {
         this._centerOffsetX = 0;
         break;
       case "right":
-        this._centerOffsetX = -metrics.width / 2 - 5;
+        this._centerOffsetX = -metrics.width / 2;
         break;
     }
+
     // Calculate vertical center point offset
+    // Goal: center the text bounding box at (0, 0) in local coordinates
+    // We draw at (-_centerOffsetY), so:
+    //   top:    draw at -height/2 so text spans [-height/2, +height/2]
+    //   middle: draw at 0 (already centered)
+    //   bottom: draw at +height/2 so text spans [-height/2, +height/2]
     switch (this._baseline) {
       case "top":
-        this._centerOffsetY = metrics.height/4;
+        this._centerOffsetY = metrics.height / 2;
         break;
       case "middle":
-        this._centerOffsetY = -2;
+        this._centerOffsetY = 0;
         break;
       case "bottom":
-        this._centerOffsetY = -metrics.height;
+        this._centerOffsetY = -metrics.height / 2;
         break;
     }
-    //console.log("calculateAlignmentOffsets", this._centerOffsetY, this._centerOffsetX);
   }
 
   getTextBounds() {

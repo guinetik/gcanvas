@@ -6,6 +6,34 @@ import { Shape } from "./shape";
  */
 export class SVGShape extends Shape {
   /**
+   * Load an SVG file from a URL and create an SVGShape
+   * @param {string} url - URL to the SVG file
+   * @param {object} options - Standard shape options plus SVG-specific options
+   * @returns {Promise<SVGShape>} Promise that resolves to the SVGShape instance
+   */
+  static async fromURL(url, options = {}) {
+    const response = await fetch(url);
+    const svgText = await response.text();
+
+    // Parse SVG to extract path data
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgText, 'image/svg+xml');
+
+    // Get the first path element's d attribute
+    const pathElement = doc.querySelector('path');
+    if (!pathElement) {
+      throw new Error('No path element found in SVG');
+    }
+
+    const pathData = pathElement.getAttribute('d');
+    if (!pathData) {
+      throw new Error('Path element has no d attribute');
+    }
+
+    return new SVGShape(pathData, options);
+  }
+
+  /**
    * @param {number} x - Center X position
    * @param {number} y - Center Y position
    * @param {string} svgPathData - SVG path data string (e.g. "M0,0 L10,10...")
@@ -17,6 +45,8 @@ export class SVGShape extends Shape {
   constructor(svgPathData, options = {}) {
     super(options);
     // SVG specific options
+    // Note: 'scale' is for pre-scaling the path data
+    // scaleX/scaleY are inherited from Transformable for runtime transforms (e.g., flipping)
     this.scale = options.scale || 1;
     this.centerPath =
       options.centerPath !== undefined ? options.centerPath : true;
