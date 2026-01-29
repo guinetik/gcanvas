@@ -438,6 +438,23 @@ export {
 } from './particle';
 
 // ==========================================================================
+// Physics Module
+// ==========================================================================
+
+export {
+  Physics,
+  PhysicsUpdaters,
+  CollisionResult,
+  ForceResult,
+  VelocityResult,
+  ElasticCollisionResult,
+  Bounds3D,
+  Sphere as PhysicsSphere,
+  Position3D,
+  PhysicsParticle
+} from './physics';
+
+// ==========================================================================
 // WebGL Module (Optional)
 // ==========================================================================
 

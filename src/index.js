@@ -21,5 +21,8 @@ export * from "./state";
 // Particle system
 export * from "./particle";
 
+// Physics (for particle simulations)
+export * from "./physics";
+
 // WebGL (optional, for shader effects)
 export * from "./webgl";
