@@ -1,9 +1,9 @@
 /**
- * Dadras Attractor 3D Visualization
+ * Lorenz Attractor 3D Visualization
  *
- * A 3D chaotic attractor visualization where particles follow the Dadras
- * dynamical system equations. Trails are colored by velocity (blue=slow,
- * red=fast) with additive blending for a glowing effect.
+ * The classic "butterfly effect" attractor discovered by Edward Lorenz (1963)
+ * while studying atmospheric convection. Particles follow the chaotic
+ * trajectories colored by velocity (blue=slow, red=fast).
  *
  * Uses the Attractors module for pure math functions and WebGL for
  * high-performance line rendering.
@@ -18,24 +18,31 @@ import { WebGLLineRenderer } from "/gcanvas.es.min.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CONFIG = {
-  // Attractor settings (uses Attractors.dadras for equations)
+  // Attractor settings (uses Attractors.lorenz for equations)
   attractor: {
-    dt: 0.01, // Integration time step
-    scale: 50, // Scale factor for display
+    dt: 0.005, // Integration time step
+    scale: 12, // Scale factor for display (Lorenz is larger)
   },
 
   // Particle settings
   particles: {
-    count: 500,
-    trailLength: 200,
-    spawnRange: 5, // Initial position range around origin
+    count: 400,
+    trailLength: 250,
+    spawnRange: 2, // Initial position range around origin
   },
 
-  // Camera settings
+  // Center offset - Lorenz attractor orbits around z≈27 (ρ-1)
+  center: {
+    x: 5,
+    y: 0,
+    z: 27,
+  },
+
+  // Camera settings - angled to show butterfly shape
   camera: {
     perspective: 800,
-    rotationX: 0.3,
-    rotationY: 0,
+    rotationX: -2, // Tilt to see butterfly spread
+    rotationY: -3, // Rotated to face the wings
     inertia: true,
     friction: 0.95,
     clampX: false,
@@ -43,29 +50,29 @@ const CONFIG = {
 
   // Visual settings
   visual: {
-    minHue: 60, // Red (fast)
-    maxHue: 240, // Blue (slow)
-    maxSpeed: 30, // Speed normalization threshold
-    saturation: 80,
-    lightness: 50,
-    maxAlpha: 0.9,
-    hueShiftSpeed: 20, // Degrees per second (0 to disable)
+    minHue: 30, // Orange-red (fast)
+    maxHue: 200, // Cyan-blue (slow)
+    maxSpeed: 50, // Speed normalization threshold
+    saturation: 85,
+    lightness: 55,
+    maxAlpha: 0.85,
+    hueShiftSpeed: 15, // Degrees per second (0 to disable)
   },
 
   // Glitch/blink effect
   blink: {
-    chance: 0.02,
+    chance: 0.015,
     minDuration: 0.05,
-    maxDuration: 0.3,
-    intensityBoost: 1.5,
-    saturationBoost: 1.2,
-    alphaBoost: 1.3,
+    maxDuration: 0.25,
+    intensityBoost: 1.4,
+    saturationBoost: 1.15,
+    alphaBoost: 1.25,
   },
 
   // Zoom settings
   zoom: {
-    min: 0.3,
-    max: 3.0,
+    min: 0.2,
+    max: 2.5,
     speed: 0.5,
     easing: 0.12,
     baseScreenSize: 600,
@@ -109,7 +116,7 @@ class AttractorParticle {
     this.position = {
       x: (Math.random() - 0.5) * spawnRange,
       y: (Math.random() - 0.5) * spawnRange,
-      z: (Math.random() - 0.5) * spawnRange,
+      z: (Math.random() - 0.5) * spawnRange + CONFIG.center.z, // Start near attractor
     };
     this.trail = [];
     this.speed = 0;
@@ -154,11 +161,12 @@ class AttractorParticle {
     this.position = result.position;
     this.speed = result.speed;
 
-    // Add to trail (scaled for display)
+    // Add to trail (scaled and centered for display)
+    // Subtract center offset so attractor rotates around its center
     this.trail.unshift({
-      x: this.position.x * scale,
-      y: this.position.y * scale,
-      z: this.position.z * scale,
+      x: (this.position.x - CONFIG.center.x) * scale,
+      y: (this.position.y - CONFIG.center.y) * scale,
+      z: (this.position.z - CONFIG.center.z) * scale,
       speed: this.speed,
     });
 
@@ -174,9 +182,9 @@ class AttractorParticle {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Dadras Attractor Demo
+ * Lorenz Attractor Demo
  */
-class DadrasDemo extends Game {
+class LorenzDemo extends Game {
   constructor(canvas) {
     super(canvas);
     this.backgroundColor = "#000";
@@ -187,7 +195,7 @@ class DadrasDemo extends Game {
     super.init();
 
     // Get attractor info for display
-    this.attractor = Attractors.dadras;
+    this.attractor = Attractors.lorenz;
     console.log(`Attractor: ${this.attractor.name}`);
     console.log(`Equations:`, this.attractor.equations);
 
@@ -225,10 +233,17 @@ class DadrasDemo extends Game {
       this.targetZoom = this.defaultZoom;
     });
 
+    // Log camera params on mouse release (for finding good starting angle)
+    this.canvas.addEventListener("mouseup", () => {
+      console.log(`Camera: rotationX: ${this.camera.rotationX.toFixed(3)}, rotationY: ${this.camera.rotationY.toFixed(3)}`);
+    });
+
     // Initialize particles using the attractor step function
     this.particles = [];
     for (let i = 0; i < CONFIG.particles.count; i++) {
-      this.particles.push(new AttractorParticle(this.stepFn, CONFIG.particles.spawnRange));
+      this.particles.push(
+        new AttractorParticle(this.stepFn, CONFIG.particles.spawnRange)
+      );
     }
 
     // WebGL line renderer
@@ -263,6 +278,11 @@ class DadrasDemo extends Game {
   update(dt) {
     super.update(dt);
     this.camera.update(dt);
+
+    // Normalize rotation to prevent unbounded values
+    const TAU = Math.PI * 2;
+    this.camera.rotationY = ((this.camera.rotationY % TAU) + TAU) % TAU;
+
     this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoom.easing;
     this.time += dt;
 
@@ -400,6 +420,6 @@ class DadrasDemo extends Game {
 
 window.addEventListener("load", () => {
   const canvas = document.getElementById("game");
-  const demo = new DadrasDemo(canvas);
+  const demo = new LorenzDemo(canvas);
   demo.start();
 });

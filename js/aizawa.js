@@ -1,9 +1,9 @@
 /**
- * Dadras Attractor 3D Visualization
+ * Aizawa Attractor 3D Visualization
  *
- * A 3D chaotic attractor visualization where particles follow the Dadras
- * dynamical system equations. Trails are colored by velocity (blue=slow,
- * red=fast) with additive blending for a glowing effect.
+ * A 3D chaotic system with intricate folding structure, named after
+ * Japanese mathematician Tomohiko Aizawa. Features complex orbits
+ * with a distinctive torus-like shape.
  *
  * Uses the Attractors module for pure math functions and WebGL for
  * high-performance line rendering.
@@ -18,23 +18,30 @@ import { WebGLLineRenderer } from "/gcanvas.es.min.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CONFIG = {
-  // Attractor settings (uses Attractors.dadras for equations)
+  // Attractor settings (uses Attractors.aizawa for equations)
   attractor: {
-    dt: 0.01, // Integration time step
-    scale: 50, // Scale factor for display
+    dt: 0.008, // Integration time step
+    scale: 120, // Scale factor for display (Aizawa is small)
   },
 
   // Particle settings
   particles: {
-    count: 500,
-    trailLength: 200,
-    spawnRange: 5, // Initial position range around origin
+    count: 350,
+    trailLength: 220,
+    spawnRange: 0.5, // Initial position range around origin
+  },
+
+  // Center offset - adjust to match attractor's visual barycenter
+  center: {
+    x: 0,
+    y: 0,
+    z: 0.5, // Aizawa orbits around z ≈ 0.5
   },
 
   // Camera settings
   camera: {
     perspective: 800,
-    rotationX: 0.3,
+    rotationX: 0.4,
     rotationY: 0,
     inertia: true,
     friction: 0.95,
@@ -43,20 +50,20 @@ const CONFIG = {
 
   // Visual settings
   visual: {
-    minHue: 60, // Red (fast)
-    maxHue: 240, // Blue (slow)
-    maxSpeed: 30, // Speed normalization threshold
-    saturation: 80,
-    lightness: 50,
-    maxAlpha: 0.9,
-    hueShiftSpeed: 20, // Degrees per second (0 to disable)
+    minHue: 280, // Magenta (fast)
+    maxHue: 180, // Cyan (slow)
+    maxSpeed: 8, // Speed normalization threshold
+    saturation: 90,
+    lightness: 55,
+    maxAlpha: 0.85,
+    hueShiftSpeed: 12, // Degrees per second
   },
 
   // Glitch/blink effect
   blink: {
-    chance: 0.02,
-    minDuration: 0.05,
-    maxDuration: 0.3,
+    chance: 0.018,
+    minDuration: 0.04,
+    maxDuration: 0.2,
     intensityBoost: 1.5,
     saturationBoost: 1.2,
     alphaBoost: 1.3,
@@ -65,7 +72,7 @@ const CONFIG = {
   // Zoom settings
   zoom: {
     min: 0.3,
-    max: 3.0,
+    max: 2.5,
     speed: 0.5,
     easing: 0.12,
     baseScreenSize: 600,
@@ -100,10 +107,6 @@ function hslToRgb(h, s, l) {
  * A particle following attractor dynamics
  */
 class AttractorParticle {
-  /**
-   * @param {Function} stepFn - Attractor step function
-   * @param {number} spawnRange - Initial position range
-   */
   constructor(stepFn, spawnRange) {
     this.stepFn = stepFn;
     this.position = {
@@ -119,9 +122,6 @@ class AttractorParticle {
     this.blinkIntensity = 0;
   }
 
-  /**
-   * Update blink state
-   */
   updateBlink(dt) {
     const { chance, minDuration, maxDuration } = CONFIG.blink;
 
@@ -143,26 +143,21 @@ class AttractorParticle {
     }
   }
 
-  /**
-   * Update particle position using attractor
-   */
   update(dt, scale) {
-    // Use the attractor step function
     const result = this.stepFn(this.position, dt);
 
-    // Update position
     this.position = result.position;
     this.speed = result.speed;
 
-    // Add to trail (scaled for display)
+    // Add to trail (reoriented and scaled for display)
+    // Swap Y and Z so the attractor's vertical axis aligns with screen vertical
     this.trail.unshift({
       x: this.position.x * scale,
-      y: this.position.y * scale,
-      z: this.position.z * scale,
+      y: this.position.z * scale,  // Z becomes screen Y (vertical)
+      z: this.position.y * scale,  // Y becomes depth
       speed: this.speed,
     });
 
-    // Trim trail
     if (this.trail.length > CONFIG.particles.trailLength) {
       this.trail.pop();
     }
@@ -174,9 +169,9 @@ class AttractorParticle {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Dadras Attractor Demo
+ * Aizawa Attractor Demo
  */
-class DadrasDemo extends Game {
+class AizawaDemo extends Game {
   constructor(canvas) {
     super(canvas);
     this.backgroundColor = "#000";
@@ -186,12 +181,12 @@ class DadrasDemo extends Game {
   init() {
     super.init();
 
-    // Get attractor info for display
-    this.attractor = Attractors.dadras;
+    // Get attractor info
+    this.attractor = Attractors.aizawa;
     console.log(`Attractor: ${this.attractor.name}`);
     console.log(`Equations:`, this.attractor.equations);
 
-    // Create stepper function with default params
+    // Create stepper function
     this.stepFn = this.attractor.createStepper();
 
     // Calculate initial zoom
@@ -210,7 +205,10 @@ class DadrasDemo extends Game {
       friction: CONFIG.camera.friction,
       clampX: CONFIG.camera.clampX,
     });
-    this.camera.enableMouseControl(this.canvas);
+    this.camera.enableMouseControl(this.canvas, {
+      invertX: true,   // flip left/right
+      invertY: true,   // flip up/down
+    });
 
     // Gesture handler for zoom
     this.gesture = new Gesture(this.canvas, {
@@ -225,10 +223,27 @@ class DadrasDemo extends Game {
       this.targetZoom = this.defaultZoom;
     });
 
-    // Initialize particles using the attractor step function
+    // Log camera params on mouse release (for finding good starting angle)
+    this.canvas.addEventListener("mouseup", () => {
+      console.log(`Camera: rotationX: ${this.camera.rotationX.toFixed(3)}, rotationY: ${this.camera.rotationY.toFixed(3)}`);
+
+      // Calculate and log barycenter to help find the right center offset
+      let sumX = 0, sumY = 0, sumZ = 0, count = 0;
+      for (const p of this.particles) {
+        sumX += p.position.x;
+        sumY += p.position.y;
+        sumZ += p.position.z;
+        count++;
+      }
+      console.log(`Barycenter: x: ${(sumX/count).toFixed(3)}, y: ${(sumY/count).toFixed(3)}, z: ${(sumZ/count).toFixed(3)}`);
+    });
+
+    // Initialize particles
     this.particles = [];
     for (let i = 0; i < CONFIG.particles.count; i++) {
-      this.particles.push(new AttractorParticle(this.stepFn, CONFIG.particles.spawnRange));
+      this.particles.push(
+        new AttractorParticle(this.stepFn, CONFIG.particles.spawnRange)
+      );
     }
 
     // WebGL line renderer
@@ -263,6 +278,11 @@ class DadrasDemo extends Game {
   update(dt) {
     super.update(dt);
     this.camera.update(dt);
+
+    // Normalize rotation to prevent unbounded values
+    const TAU = Math.PI * 2;
+    this.camera.rotationY = ((this.camera.rotationY % TAU) + TAU) % TAU;
+
     this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoom.easing;
     this.time += dt;
 
@@ -296,8 +316,8 @@ class DadrasDemo extends Game {
 
         const age = i / particle.trail.length;
         const speedNorm = Math.min(curr.speed / maxSpeed, 1);
-        const baseHue = maxHue - speedNorm * (maxHue - minHue);
-        const hue = (baseHue + hueOffset) % 360;
+        const baseHue = maxHue + speedNorm * (minHue - maxHue);
+        const hue = (baseHue + hueOffset + 360) % 360;
 
         const sat = Math.min(100, saturation * (1 + blink * (saturationBoost - 1)));
         const lit = Math.min(100, lightness * (1 + blink * (intensityBoost - 1)));
@@ -347,8 +367,8 @@ class DadrasDemo extends Game {
 
         const age = i / particle.trail.length;
         const speedNorm = Math.min(curr.speed / maxSpeed, 1);
-        const baseHue = maxHue - speedNorm * (maxHue - minHue);
-        const hue = (baseHue + hueOffset) % 360;
+        const baseHue = maxHue + speedNorm * (minHue - maxHue);
+        const hue = (baseHue + hueOffset + 360) % 360;
 
         const sat = Math.min(100, saturation * (1 + blink * (saturationBoost - 1)));
         const lit = Math.min(100, lightness * (1 + blink * (intensityBoost - 1)));
@@ -400,6 +420,6 @@ class DadrasDemo extends Game {
 
 window.addEventListener("load", () => {
   const canvas = document.getElementById("game");
-  const demo = new DadrasDemo(canvas);
+  const demo = new AizawaDemo(canvas);
   demo.start();
 });

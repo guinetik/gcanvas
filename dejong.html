@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>De Jong Attractor 2D</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>De Jong Attractor</strong><br/>
+    <span style="color:#CCC">
+      <li>x_{n+1} = sin(a·y_n) - cos(b·x_n)</li>
+      <li>y_{n+1} = sin(c·x_n) - cos(d·y_n)</li>
+      <li>a=-2.24, b=-0.65, c=-0.43, d=-2.43</li>
+      <li>2D iterative swirl pattern</li>
+      <li>Scroll/pinch to zoom</li>
+      <li>Double-click to reset</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/dejong.js"></script>
+</body>
+</html>

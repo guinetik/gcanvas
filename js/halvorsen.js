@@ -1,9 +1,8 @@
 /**
- * Dadras Attractor 3D Visualization
+ * Halvorsen Attractor 3D Visualization
  *
- * A 3D chaotic attractor visualization where particles follow the Dadras
- * dynamical system equations. Trails are colored by velocity (blue=slow,
- * red=fast) with additive blending for a glowing effect.
+ * A symmetric chaotic attractor with three-fold rotational symmetry.
+ * Creates beautiful intertwined spiral structures.
  *
  * Uses the Attractors module for pure math functions and WebGL for
  * high-performance line rendering.
@@ -18,45 +17,53 @@ import { WebGLLineRenderer } from "/gcanvas.es.min.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CONFIG = {
-  // Attractor settings (uses Attractors.dadras for equations)
+  // Attractor settings (uses Attractors.halvorsen for equations)
   attractor: {
-    dt: 0.01, // Integration time step
-    scale: 50, // Scale factor for display
+    dt: 0.004, // Integration time step
+    scale: 25, // Scale factor for display
   },
 
   // Particle settings
   particles: {
-    count: 500,
-    trailLength: 200,
-    spawnRange: 5, // Initial position range around origin
+    count: 420,
+    trailLength: 280,
+    spawnRange: 1,
+  },
+
+  // Center offset - Halvorsen barycenter is around (-5,-5,-5) due to symmetry
+  // With Y/Z swap: x→screen X, z→screen Y, y→depth
+  center: {
+    x: 0,
+    y: 0,
+    z: 0,
   },
 
   // Camera settings
   camera: {
-    perspective: 800,
-    rotationX: 0.3,
-    rotationY: 0,
+    perspective: 300,
+    rotationX: 0.615,
+    rotationY: 0.495,
     inertia: true,
     friction: 0.95,
     clampX: false,
   },
 
-  // Visual settings
+  // Visual settings - cool blue/purple palette
   visual: {
-    minHue: 60, // Red (fast)
-    maxHue: 240, // Blue (slow)
-    maxSpeed: 30, // Speed normalization threshold
+    minHue: 320, // Pink (fast)
+    maxHue: 220, // Blue (slow)
+    maxSpeed: 40,
     saturation: 80,
-    lightness: 50,
-    maxAlpha: 0.9,
-    hueShiftSpeed: 20, // Degrees per second (0 to disable)
+    lightness: 55,
+    maxAlpha: 0.85,
+    hueShiftSpeed: 15,
   },
 
   // Glitch/blink effect
   blink: {
     chance: 0.02,
-    minDuration: 0.05,
-    maxDuration: 0.3,
+    minDuration: 0.04,
+    maxDuration: 0.18,
     intensityBoost: 1.5,
     saturationBoost: 1.2,
     alphaBoost: 1.3,
@@ -64,8 +71,8 @@ const CONFIG = {
 
   // Zoom settings
   zoom: {
-    min: 0.3,
-    max: 3.0,
+    min: 0.25,
+    max: 2.5,
     speed: 0.5,
     easing: 0.12,
     baseScreenSize: 600,
@@ -76,9 +83,6 @@ const CONFIG = {
 // HELPER FUNCTIONS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Convert HSL to RGB
- */
 function hslToRgb(h, s, l) {
   s /= 100;
   l /= 100;
@@ -96,14 +100,7 @@ function hslToRgb(h, s, l) {
 // ATTRACTOR PARTICLE
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * A particle following attractor dynamics
- */
 class AttractorParticle {
-  /**
-   * @param {Function} stepFn - Attractor step function
-   * @param {number} spawnRange - Initial position range
-   */
   constructor(stepFn, spawnRange) {
     this.stepFn = stepFn;
     this.position = {
@@ -113,15 +110,10 @@ class AttractorParticle {
     };
     this.trail = [];
     this.speed = 0;
-
-    // Blink/glitch state
     this.blinkTime = 0;
     this.blinkIntensity = 0;
   }
 
-  /**
-   * Update blink state
-   */
   updateBlink(dt) {
     const { chance, minDuration, maxDuration } = CONFIG.blink;
 
@@ -143,26 +135,30 @@ class AttractorParticle {
     }
   }
 
-  /**
-   * Update particle position using attractor
-   */
-  update(dt, scale) {
-    // Use the attractor step function
+  update(dt, scale, spawnRange) {
     const result = this.stepFn(this.position, dt);
-
-    // Update position
     this.position = result.position;
     this.speed = result.speed;
 
-    // Add to trail (scaled for display)
+    // Small chance to respawn at random position (keeps transient "thickness")
+    if (Math.random() < 0.003) {
+      this.position = {
+        x: (Math.random() - 0.5) * spawnRange,
+        y: (Math.random() - 0.5) * spawnRange,
+        z: (Math.random() - 0.5) * spawnRange,
+      };
+      this.trail = [];
+    }
+
+    // Add to trail (centered and scaled for display)
+    // Swap Y/Z so vertical mouse drag rotates naturally
     this.trail.unshift({
-      x: this.position.x * scale,
-      y: this.position.y * scale,
-      z: this.position.z * scale,
+      x: (this.position.x - CONFIG.center.x) * scale,
+      y: (this.position.z - CONFIG.center.z) * scale,  // Z becomes screen Y (vertical)
+      z: (this.position.y - CONFIG.center.y) * scale,  // Y becomes depth
       speed: this.speed,
     });
 
-    // Trim trail
     if (this.trail.length > CONFIG.particles.trailLength) {
       this.trail.pop();
     }
@@ -173,10 +169,7 @@ class AttractorParticle {
 // DEMO CLASS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Dadras Attractor Demo
- */
-class DadrasDemo extends Game {
+class HalvorsenDemo extends Game {
   constructor(canvas) {
     super(canvas);
     this.backgroundColor = "#000";
@@ -186,22 +179,18 @@ class DadrasDemo extends Game {
   init() {
     super.init();
 
-    // Get attractor info for display
-    this.attractor = Attractors.dadras;
+    this.attractor = Attractors.halvorsen;
     console.log(`Attractor: ${this.attractor.name}`);
     console.log(`Equations:`, this.attractor.equations);
 
-    // Create stepper function with default params
     this.stepFn = this.attractor.createStepper();
 
-    // Calculate initial zoom
     const { min, max, baseScreenSize } = CONFIG.zoom;
     const initialZoom = Math.min(max, Math.max(min, Screen.minDimension() / baseScreenSize));
     this.zoom = initialZoom;
     this.targetZoom = initialZoom;
     this.defaultZoom = initialZoom;
 
-    // Camera with mouse control
     this.camera = new Camera3D({
       perspective: CONFIG.camera.perspective,
       rotationX: CONFIG.camera.rotationX,
@@ -212,7 +201,6 @@ class DadrasDemo extends Game {
     });
     this.camera.enableMouseControl(this.canvas);
 
-    // Gesture handler for zoom
     this.gesture = new Gesture(this.canvas, {
       onZoom: (delta) => {
         this.targetZoom *= 1 + delta * CONFIG.zoom.speed;
@@ -220,18 +208,30 @@ class DadrasDemo extends Game {
       onPan: null,
     });
 
-    // Double-click to reset
     this.canvas.addEventListener("dblclick", () => {
       this.targetZoom = this.defaultZoom;
     });
 
-    // Initialize particles using the attractor step function
+    // Log camera params and barycenter on mouse release
+    this.canvas.addEventListener("mouseup", () => {
+      console.log(`Camera: rotationX: ${this.camera.rotationX.toFixed(3)}, rotationY: ${this.camera.rotationY.toFixed(3)}`);
+      let sumX = 0, sumY = 0, sumZ = 0, count = 0;
+      for (const p of this.particles) {
+        sumX += p.position.x;
+        sumY += p.position.y;
+        sumZ += p.position.z;
+        count++;
+      }
+      console.log(`Barycenter: x: ${(sumX/count).toFixed(3)}, y: ${(sumY/count).toFixed(3)}, z: ${(sumZ/count).toFixed(3)}`);
+    });
+
     this.particles = [];
     for (let i = 0; i < CONFIG.particles.count; i++) {
-      this.particles.push(new AttractorParticle(this.stepFn, CONFIG.particles.spawnRange));
+      this.particles.push(
+        new AttractorParticle(this.stepFn, CONFIG.particles.spawnRange)
+      );
     }
 
-    // WebGL line renderer
     const maxSegments = CONFIG.particles.count * CONFIG.particles.trailLength;
     this.lineRenderer = new WebGLLineRenderer(maxSegments, {
       width: this.width,
@@ -267,7 +267,7 @@ class DadrasDemo extends Game {
     this.time += dt;
 
     for (const particle of this.particles) {
-      particle.update(CONFIG.attractor.dt, CONFIG.attractor.scale);
+      particle.update(CONFIG.attractor.dt, CONFIG.attractor.scale, CONFIG.particles.spawnRange);
       particle.updateBlink(dt);
     }
   }
@@ -296,8 +296,8 @@ class DadrasDemo extends Game {
 
         const age = i / particle.trail.length;
         const speedNorm = Math.min(curr.speed / maxSpeed, 1);
-        const baseHue = maxHue - speedNorm * (maxHue - minHue);
-        const hue = (baseHue + hueOffset) % 360;
+        const baseHue = maxHue + speedNorm * (minHue - maxHue);
+        const hue = (baseHue + hueOffset + 360) % 360;
 
         const sat = Math.min(100, saturation * (1 + blink * (saturationBoost - 1)));
         const lit = Math.min(100, lightness * (1 + blink * (intensityBoost - 1)));
@@ -347,8 +347,8 @@ class DadrasDemo extends Game {
 
         const age = i / particle.trail.length;
         const speedNorm = Math.min(curr.speed / maxSpeed, 1);
-        const baseHue = maxHue - speedNorm * (maxHue - minHue);
-        const hue = (baseHue + hueOffset) % 360;
+        const baseHue = maxHue + speedNorm * (minHue - maxHue);
+        const hue = (baseHue + hueOffset + 360) % 360;
 
         const sat = Math.min(100, saturation * (1 + blink * (saturationBoost - 1)));
         const lit = Math.min(100, lightness * (1 + blink * (intensityBoost - 1)));
@@ -400,6 +400,6 @@ class DadrasDemo extends Game {
 
 window.addEventListener("load", () => {
   const canvas = document.getElementById("game");
-  const demo = new DadrasDemo(canvas);
+  const demo = new HalvorsenDemo(canvas);
   demo.start();
 });
