@@ -7,7 +7,7 @@
  * Ψ(x,t) = A * e^(-(x-vt)²/4a²) * e^(i(kx-ωt))
  */
 
-import { Game, Painter, Camera3D, Text, applyAnchor, Position, Scene, verticalLayout, applyLayout } from "../../src/index.js";
+import { Game, Painter, Camera3D, Text, applyAnchor, Position, Scene, verticalLayout, applyLayout, Gesture, Screen } from "../../src/index.js";
 import { gaussianWavePacket } from "../../src/math/quantum.js";
 
 // Configuration
@@ -16,8 +16,8 @@ const CONFIG = {
   amplitude: 1.0,
   sigma: 0.8,           // Width of Gaussian envelope
   k: 8.0,               // Wave number (controls oscillation frequency)
-  omega: 4.0,           // Angular frequency
-  velocity: 0.5,        // Group velocity of packet
+  omega: 8.0,           // Angular frequency (phase velocity = ω/k = 1.0)
+  velocity: 0.5,        // Group velocity of packet (envelope moves slower than phase)
 
   // Visualization
   numPoints: 300,       // Points along the wave
@@ -38,6 +38,17 @@ const CONFIG = {
   // Animation
   timeScale: 1.0,
 
+  // Zoom
+  minZoom: 0.3,
+  maxZoom: 3.0,
+  zoomSpeed: 0.5,         // Zoom sensitivity (increased)
+  zoomEasing: 0.12,       // Easing interpolation speed (0-1)
+  baseScreenSize: 600,    // Reference screen size for zoom calculation
+
+  // Collapse interaction
+  collapseHoldTime: 200,  // ms to hold before collapse triggers
+  collapseDragThreshold: 8, // px movement to cancel collapse (it's a drag)
+
   // Colors
   waveColor: [80, 160, 255],    // Cyan-blue for the helix
   waveGlow: [150, 200, 255],    // Brighter for the center
@@ -57,22 +68,58 @@ class SchrodingerDemo extends Game {
     super.init();
     this.time = 0;
 
-    // Create 3D camera with mouse controls
+    // Calculate initial zoom based on screen size to fill canvas better
+    const initialZoom = Math.min(
+      CONFIG.maxZoom,
+      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
+    );
+    this.zoom = initialZoom;
+    this.targetZoom = initialZoom;
+    this.defaultZoom = initialZoom;
+
+    // Create 3D camera with mouse controls and inertia
     this.camera = new Camera3D({
       rotationX: CONFIG.rotationX,
       rotationY: CONFIG.rotationY,
       perspective: CONFIG.perspective,
-      minRotationX: -1.2,
-      maxRotationX: 1.2,
+      clampX: false,        // Allow free rotation without limits
+      inertia: true,        // Enable momentum after drag release
+      friction: 0.94,       // Velocity decay (higher = longer drift)
+      velocityScale: 1.2,   // Multiplier for throw velocity
     });
 
     // Enable mouse/touch rotation
     this.camera.enableMouseControl(this.canvas);
 
-    // Override double-click to also reset time
+    // Enable zoom via mouse wheel and pinch gesture
+    this.gesture = new Gesture(this.canvas, {
+      onZoom: (delta) => {
+        // Update target zoom (eases smoothly in update loop)
+        this.targetZoom *= 1 + delta * CONFIG.zoomSpeed;
+        this.targetZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, this.targetZoom));
+      },
+      // Don't handle pan - Camera3D handles rotation via drag
+      onPan: null,
+    });
+
+    // Override double-click to also reset time and zoom
     this.canvas.addEventListener("dblclick", () => {
       this.time = 0;
+      this.targetZoom = this.defaultZoom;
     });
+
+    // Collapse interaction state
+    this.isCollapsed = false;
+    this.collapseAmount = 0;      // 0 = normal, 1 = fully collapsed (animated)
+    this.collapseOffset = 0;      // Current offset (tweening)
+    this.collapseTargetOffset = 0; // Target offset to tween toward
+    this.collapseTimer = null;
+    this.collapseSampleTimer = null; // Timer for periodic resampling
+    this.pointerStartX = 0;
+    this.pointerStartY = 0;
+
+    // Setup collapse detection (hold without dragging = measure/collapse)
+    this.setupCollapseInteraction();
 
     // Create info panel container anchored to top center
     this.infoPanel = new Scene(this, { x: 0, y: 0 });
@@ -137,15 +184,156 @@ class SchrodingerDemo extends Game {
   }
 
   /**
-   * 3D rotation and projection - delegates to Camera3D
+   * Setup collapse interaction - hold without moving triggers wave function collapse
+   */
+  setupCollapseInteraction() {
+    const startCollapse = (x, y) => {
+      this.pointerStartX = x;
+      this.pointerStartY = y;
+      
+      // Start timer - if we hold long enough without moving, collapse
+      this.collapseTimer = setTimeout(() => {
+        if (!this.isCollapsed) {
+          this.collapse();
+        }
+      }, CONFIG.collapseHoldTime);
+    };
+
+    const checkDrag = (x, y) => {
+      // If moved beyond threshold, cancel collapse timer (it's a drag)
+      const dx = Math.abs(x - this.pointerStartX);
+      const dy = Math.abs(y - this.pointerStartY);
+      if (dx > CONFIG.collapseDragThreshold || dy > CONFIG.collapseDragThreshold) {
+        this.cancelCollapseTimer();
+      }
+    };
+
+    const endCollapse = () => {
+      this.cancelCollapseTimer();
+      this.stopCollapseSampling();
+      this.isCollapsed = false;
+    };
+
+    // Mouse events
+    this.canvas.addEventListener("mousedown", (e) => {
+      startCollapse(e.clientX, e.clientY);
+    });
+    this.canvas.addEventListener("mousemove", (e) => {
+      checkDrag(e.clientX, e.clientY);
+    });
+    this.canvas.addEventListener("mouseup", endCollapse);
+    this.canvas.addEventListener("mouseleave", endCollapse);
+
+    // Touch events
+    this.canvas.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) {
+        startCollapse(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    });
+    this.canvas.addEventListener("touchmove", (e) => {
+      if (e.touches.length === 1) {
+        checkDrag(e.touches[0].clientX, e.touches[0].clientY);
+      } else {
+        // Multi-touch (pinch) cancels collapse
+        this.cancelCollapseTimer();
+      }
+    });
+    this.canvas.addEventListener("touchend", endCollapse);
+    this.canvas.addEventListener("touchcancel", endCollapse);
+  }
+
+  /**
+   * Cancel any pending collapse timer
+   */
+  cancelCollapseTimer() {
+    if (this.collapseTimer) {
+      clearTimeout(this.collapseTimer);
+      this.collapseTimer = null;
+    }
+  }
+
+  /**
+   * Sample a new random offset from Gaussian distribution
+   */
+  sampleCollapseOffset() {
+    const u1 = Math.random();
+    const u2 = Math.random();
+    const gaussian = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    return gaussian * CONFIG.sigma;
+  }
+
+  /**
+   * Collapse the wave function - start sampling positions periodically
+   */
+  collapse() {
+    this.isCollapsed = true;
+    
+    // Initial sample
+    this.collapseOffset = this.sampleCollapseOffset();
+    this.collapseTargetOffset = this.collapseOffset;
+    
+    // Start periodic resampling while collapsed
+    this.startCollapseSampling();
+  }
+
+  /**
+   * Start periodic position sampling while collapsed
+   */
+  startCollapseSampling() {
+    this.stopCollapseSampling();
+    
+    const resample = () => {
+      if (this.isCollapsed) {
+        // Set new target position
+        this.collapseTargetOffset = this.sampleCollapseOffset();
+        // Schedule next sample (300-600ms random interval)
+        this.collapseSampleTimer = setTimeout(resample, 300 + Math.random() * 300);
+      }
+    };
+    
+    // First resample after initial delay
+    this.collapseSampleTimer = setTimeout(resample, 400);
+  }
+
+  /**
+   * Stop periodic sampling
+   */
+  stopCollapseSampling() {
+    if (this.collapseSampleTimer) {
+      clearTimeout(this.collapseSampleTimer);
+      this.collapseSampleTimer = null;
+    }
+  }
+
+  /**
+   * 3D rotation and projection - delegates to Camera3D with zoom applied
    */
   project3D(x, y, z) {
-    return this.camera.project(x, y, z);
+    const proj = this.camera.project(x, y, z);
+    return {
+      x: proj.x * this.zoom,
+      y: proj.y * this.zoom,
+      z: proj.z,
+      scale: proj.scale * this.zoom,
+    };
   }
 
   update(dt) {
     super.update(dt);
     this.time += dt * CONFIG.timeScale;
+
+    // Update camera for inertia physics
+    this.camera.update(dt);
+
+    // Ease zoom towards target
+    this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoomEasing;
+
+    // Animate collapse amount
+    const targetCollapse = this.isCollapsed ? 1 : 0;
+    this.collapseAmount += (targetCollapse - this.collapseAmount) * 0.15;
+
+    // Tween collapse offset toward target (smooth bezier-like easing)
+    this.collapseOffset += (this.collapseTargetOffset - this.collapseOffset) * 0.08;
 
     // Loop when wave packet exits the visible range
     const packetCenter = CONFIG.velocity * this.time;
@@ -161,6 +349,14 @@ class SchrodingerDemo extends Game {
     }
   }
 
+  onResize() {
+    // Recalculate default zoom for new screen size
+    this.defaultZoom = Math.min(
+      CONFIG.maxZoom,
+      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
+    );
+  }
+
   render() {
     const w = this.width;
     const h = this.height;
@@ -173,6 +369,12 @@ class SchrodingerDemo extends Game {
     const points = [];
     const { numPoints, xRange, helixRadius, zScale } = CONFIG;
 
+    // Collapsed target position = sampled position (center + offset)
+    const packetCenter = CONFIG.velocity * this.time;
+    const collapsedX = packetCenter + this.collapseOffset;
+    const collapsedZ = collapsedX * zScale;
+    const collapse = this.collapseAmount;
+
     for (let i = 0; i < numPoints; i++) {
       const t_param = i / (numPoints - 1);
       const x = (t_param - 0.5) * xRange;
@@ -180,9 +382,16 @@ class SchrodingerDemo extends Game {
       const { psi, envelope } = this.computeWavePacket(x, this.time);
 
       // 3D coordinates: helix in Re/Im plane, extending along Z
-      const px = psi.real * helixRadius;  // Re(Ψ) -> X
-      const py = psi.imag * helixRadius;  // Im(Ψ) -> Y
-      const pz = x * zScale;               // position -> Z
+      let px = psi.real * helixRadius;  // Re(Ψ) -> X
+      let py = psi.imag * helixRadius;  // Im(Ψ) -> Y
+      let pz = x * zScale;               // position -> Z
+
+      // Collapse animation: lerp all points toward the collapsed position
+      if (collapse > 0.01) {
+        px = px * (1 - collapse);  // X collapses to 0
+        py = py * (1 - collapse);  // Y collapses to 0
+        pz = pz + (collapsedZ - pz) * collapse;  // Z collapses to measured position
+      }
 
       const projected = this.project3D(px, py, pz);
 
@@ -218,8 +427,91 @@ class SchrodingerDemo extends Game {
     // Draw projection on grid (2D wave)
     this.drawProjection(cx, cy, points);
 
+    // Draw collapse indicator if collapsed
+    if (this.isCollapsed) {
+      this.drawCollapseIndicator(cx, cy);
+    }
+
     // Info text
     this.drawInfo(w, h);
+  }
+
+  /**
+   * Draw squiggly line from collapsed position to red envelope curve
+   */
+  drawCollapseIndicator(cx, cy) {
+    const { zScale, gridY, helixRadius } = CONFIG;
+    const collapse = this.collapseAmount;
+    
+    // Sampled collapse position (center + random offset, travels with envelope)
+    const packetCenter = CONFIG.velocity * this.time;
+    const collapsedX = packetCenter + this.collapseOffset;
+    
+    // Get the envelope height at the sampled position
+    const { envelope } = this.computeWavePacket(collapsedX, this.time);
+    const envHeight = envelope * helixRadius * 0.8;
+    
+    // Project points: collapsed position on axis and on envelope
+    const axisProj = this.project3D(0, 0, collapsedX * zScale);
+    const envelopeProj = this.project3D(0, gridY - envHeight, collapsedX * zScale);
+    
+    // Draw squiggly line from axis to envelope (quantum fluctuations)
+    Painter.useCtx((ctx) => {
+      ctx.strokeStyle = `rgba(255, 255, 100, ${0.8 * collapse})`;
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      
+      const startX = cx + axisProj.x;
+      const startY = cy + axisProj.y;
+      const endX = cx + envelopeProj.x;
+      const endY = cy + envelopeProj.y;
+      
+      // Number of segments and wave properties
+      const segments = 20;
+      const waveAmplitude = 8 * collapse;
+      const waveFrequency = 3;
+      const timeOffset = this.time * 10; // Animate the squiggle
+      
+      ctx.moveTo(startX, startY);
+      
+      for (let i = 1; i <= segments; i++) {
+        const t = i / segments;
+        // Linear interpolation along the line
+        const baseX = startX + (endX - startX) * t;
+        const baseY = startY + (endY - startY) * t;
+        
+        // Perpendicular offset for squiggle (sine wave)
+        const angle = Math.atan2(endY - startY, endX - startX) + Math.PI / 2;
+        const wave = Math.sin(t * Math.PI * waveFrequency * 2 + timeOffset) * waveAmplitude * (1 - Math.abs(t - 0.5) * 2);
+        
+        const squiggleX = baseX + Math.cos(angle) * wave;
+        const squiggleY = baseY + Math.sin(angle) * wave;
+        
+        ctx.lineTo(squiggleX, squiggleY);
+      }
+      ctx.stroke();
+    });
+
+    // Draw particle dot on axis (where it collapsed to)
+    Painter.useCtx((ctx) => {
+      ctx.fillStyle = `rgba(255, 255, 100, ${collapse})`;
+      ctx.shadowColor = "#ffff66";
+      ctx.shadowBlur = 12 * collapse;
+      ctx.arc(cx + axisProj.x, cy + axisProj.y, 5 * axisProj.scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+
+    // Draw dot on the envelope curve
+    Painter.useCtx((ctx) => {
+      ctx.fillStyle = `rgba(255, 255, 100, ${collapse})`;
+      ctx.shadowColor = "#ffff66";
+      ctx.shadowBlur = 10 * collapse;
+      ctx.arc(cx + envelopeProj.x, cy + envelopeProj.y, 5 * envelopeProj.scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
   }
 
   drawGrid(cx, cy) {
@@ -260,28 +552,32 @@ class SchrodingerDemo extends Game {
 
   drawAxis(cx, cy) {
     const { zScale, xRange } = CONFIG;
+    
+    // Fade out when collapsed (losing momentum information)
+    const fade = 1 - this.collapseAmount;
+    if (fade < 0.01) return; // Fully collapsed, don't draw
 
     // Main position axis (Z direction in 3D space)
     const p1 = this.project3D(0, 0, -xRange / 2 * zScale * 1.2);
     const p2 = this.project3D(0, 0, xRange / 2 * zScale * 1.2);
 
-    // Glowing axis line
+    // Glowing axis line (fades with collapse)
     Painter.useCtx((ctx) => {
-      ctx.strokeStyle = CONFIG.axisColor;
+      ctx.strokeStyle = `rgba(100, 150, 200, ${0.6 * fade})`;
       ctx.lineWidth = 2;
       ctx.moveTo(cx + p1.x, cy + p1.y);
       ctx.lineTo(cx + p2.x, cy + p2.y);
       ctx.stroke();
     });
 
-    // Bright center dot where wave packet is
+    // Bright center dot where wave packet is (fades with collapse)
     const packetCenter = CONFIG.velocity * this.time;
     const centerProj = this.project3D(0, 0, packetCenter * zScale);
 
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = `rgba(255, 255, 255, ${fade})`;
       ctx.shadowColor = "#88ccff";
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = 20 * fade;
       ctx.arc(cx + centerProj.x, cy + centerProj.y, 4, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
@@ -394,7 +690,7 @@ class SchrodingerDemo extends Game {
       ctx.fillStyle = "#445";
       ctx.font = "10px monospace";
       ctx.textAlign = "right";
-      ctx.fillText("drag to rotate  |  double-click to reset", w - 15, h - 30);
+      ctx.fillText("drag to rotate  |  scroll to zoom  |  hold to collapse  |  double-click to reset", w - 15, h - 30);
 
       // Legend
       ctx.fillText("Helix = \u03A8  |  Blue = Re(\u03A8)  |  Red = |\u03A8|\u00B2", w - 15, h - 15);
