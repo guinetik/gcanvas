@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clifford Attractor 2D</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Clifford Attractor</strong><br/>
+    <span style="color:#CCC">
+      <li>x_{n+1} = sin(a·y_n) + c·cos(a·x_n)</li>
+      <li>y_{n+1} = sin(b·x_n) + d·cos(b·y_n)</li>
+      <li>a=-1.4, b=1.6, c=1.0, d=0.7</li>
+      <li>2D iterative fractal pattern</li>
+      <li>Scroll/pinch to zoom</li>
+      <li>Double-click to reset</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/clifford.js"></script>
+</body>
+</html>
