@@ -460,6 +460,17 @@ export {
 
 export {
   WebGLRenderer,
-  WebGLRendererOptions,
-  SPHERE_SHADERS
+  WebGLParticleRenderer,
+  WebGLLineRenderer,
+  WebGLDeJongRenderer,
+  WebGLCliffordRenderer,
+  DEJONG_MAX_ITERATIONS,
+  DEJONG_POINT_VERTEX,
+  DEJONG_POINT_FRAGMENTS,
+  CLIFFORD_MAX_ITERATIONS,
+  CLIFFORD_POINT_VERTEX,
+  CLIFFORD_POINT_FRAGMENTS,
+  SPHERE_SHADERS,
+  WebGLBlendMode,
+  PointSpriteShape
 } from './webgl';
