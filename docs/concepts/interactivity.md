@@ -78,7 +78,7 @@ class Button extends GameObject {
 Here's a complete interactive button with hover and click feedback:
 
 ```js
-import { Game, GameObject, Rectangle, Text } from '@guinetik/gcanvas';
+import { Game, GameObject, Rectangle, TextShape } from '@guinetik/gcanvas';
 
 class InteractiveButton extends GameObject {
   constructor(game, label, onClick) {
@@ -94,11 +94,10 @@ class InteractiveButton extends GameObject {
     this.background = new Rectangle({
       width: 200,
       height: 60,
-      color: '#4CAF50',
-      cornerRadius: 8
+      color: '#4CAF50'
     });
-    
-    this.label = new Text(label, {
+
+    this.label = new TextShape(label, {
       font: '20px sans-serif',
       color: '#fff',
       align: 'center',

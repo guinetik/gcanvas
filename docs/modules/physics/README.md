@@ -266,3 +266,10 @@ F = G * m1 * m2 / r²
 ```
 KE = 0.5 * m * v²
 ```
+
+## See Also
+
+- [Particle Module](../particle/README.md) - ParticleSystem integration
+- [Heat Module](../math/heat.md) - Thermal dynamics and buoyancy
+- [Fluid Dynamics](../../fluid-dynamics.md) - SPH fluid/gas simulation
+- [WebGL Module](../webgl/README.md) - GPU-accelerated particle rendering

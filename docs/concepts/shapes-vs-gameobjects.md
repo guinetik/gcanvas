@@ -280,6 +280,158 @@ class MyGame extends Game {
 | `Sprite` | Animated GO | Scene / Pipeline | Yes |
 | `Text` | Text GO | Scene / Pipeline | Yes |
 
+## 3D Extensions: Scene3D and Camera3D
+
+The 3D system extends the **GameObject hierarchy**, not the Shape hierarchy. This is important to understand:
+
+```
+GameObject Hierarchy (Pipeline)
+│
+├── Scene ───────────────── 2D container
+│   └── Scene3D ─────────── 3D projection container (extends Scene)
+│
+├── LayoutScene ─────────── Auto-layout container
+│   ├── HorizontalLayout
+│   ├── VerticalLayout
+│   ├── TileLayout
+│   └── GridLayout
+```
+
+### Why Scene3D Extends Scene (Not Group)
+
+Scene3D is a **GameObject container** that:
+- Has `update(dt)` lifecycle (needed to update camera)
+- Contains GameObjects with `z` coordinates
+- Projects children through Camera3D automatically
+- Depth-sorts children for correct rendering
+
+```javascript
+import { Game, Scene3D, Camera3D, GameObject, Rectangle } from "gcanvas";
+
+class Box3D extends GameObject {
+  constructor(game) {
+    super(game);
+    this.z = 0;  // 3D coordinate - works because Scene3D handles it
+    this.shape = new Rectangle({ width: 60, height: 60, color: "#4a9eff" });
+  }
+
+  render() {
+    this.shape.render();
+  }
+}
+
+class My3DDemo extends Game {
+  init() {
+    super.init();
+
+    this.camera = new Camera3D({ perspective: 800 });
+
+    // Scene3D must be centered for 3D origin to appear at screen center
+    this.scene3d = new Scene3D(this, {
+      x: this.width / 2,
+      y: this.height / 2,
+      camera: this.camera,
+      depthSort: true,
+    });
+
+    // Add GameObjects with z coordinates
+    const front = new Box3D(this);
+    front.z = 100;   // In front
+
+    const back = new Box3D(this);
+    back.z = -100;   // Behind
+
+    this.scene3d.add(front);
+    this.scene3d.add(back);
+    this.pipeline.add(this.scene3d);
+  }
+}
+```
+
+### Shapes in 3D Context
+
+Shapes themselves don't have `z` - they're 2D primitives. The 3D projection happens at the **GameObject level**:
+
+```javascript
+// ❌ Shapes don't have z coordinates
+const circle = new Circle(50, { x: 100, y: 100, z: 50 }); // z is ignored!
+
+// ✅ GameObjects in Scene3D have z coordinates
+class MyObject extends GameObject {
+  constructor(game) {
+    super(game);
+    this.z = 50;  // This works in Scene3D
+    this.shape = new Circle(50, { color: "#0f0" });
+  }
+}
+```
+
+### Camera3D Projection Summary
+
+| Component | Type | Purpose |
+|-----------|------|---------|
+| `Camera3D` | Utility | Projects 3D → 2D, handles rotation |
+| `Scene3D` | GameObject | Container that applies Camera3D to children |
+| `Sphere3D`, `Cube3D`, etc. | Shape | 3D-looking shapes (use their own projection) |
+
+**Key insight:** `Sphere3D` and `Cube3D` are Shapes that internally use Camera3D for their own faces. They can work standalone or inside Scene3D for additional transformations.
+
+## Layout Scenes
+
+Layout scenes are specialized **Scene** subclasses for automatic positioning:
+
+```javascript
+import { HorizontalLayout, VerticalLayout, Rectangle, ShapeGOFactory } from "gcanvas";
+
+// Create layout (extends Scene)
+const toolbar = new HorizontalLayout(this, {
+  anchor: Position.TOP_CENTER,
+  spacing: 10,
+  padding: 10,
+});
+
+// Add GameObjects (not Shapes directly!)
+const buttonShape = new Rectangle({ width: 80, height: 40, color: "#4CAF50" });
+const buttonGO = ShapeGOFactory.create(this, buttonShape);
+toolbar.add(buttonGO);
+
+this.pipeline.add(toolbar);
+```
+
+Layout scenes automatically:
+- Position children in sequence (horizontal, vertical, tile, grid)
+- Handle scrolling when content exceeds viewport
+- Maintain proper GameObject lifecycle
+
+## Complete Hierarchy Reference
+
+```
+                    SHAPES (Drawing)                    GAMEOBJECTS (Pipeline)
+                    ─────────────────                   ──────────────────────
+
+                    Euclidian                           GameObject
+                        │                                   │
+                    Geometry2d                         ┌────┴────┬────────┐
+                        │                              │         │        │
+                    Renderable                       Scene    Sprite    Text
+                        │                              │
+                    Transformable                 ┌────┴────┐
+                        │                         │         │
+                      Shape                   Scene3D   LayoutScene
+                        │                                   │
+           ┌────────────┼────────────┐              ┌──────┼──────┐
+           │            │            │              │      │      │
+        Circle     Rectangle      Star      Horizontal  Vertical  Tile
+           │            │            │        Layout    Layout   Layout
+        Group      TextShape     Polygon
+    (container)
+```
+
+**Key rules:**
+- Shapes go in `Group`
+- GameObjects go in `Scene` (or Scene3D, LayoutScene)
+- Never mix: don't put GameObjects in Group, don't expect Shapes to have `update()`
+
 ## TL;DR
 
 **Just Drawing?**
@@ -292,9 +444,26 @@ class MyGame extends Game {
 - Add to `pipeline`
 - Extend `Game` class
 
+**Need 3D?**
+- Use `Scene3D` with `Camera3D`
+- Add `z` property to GameObjects
+- Shapes render in 2D; projection happens at GameObject level
+
+**Need Layouts?**
+- Use `HorizontalLayout`, `VerticalLayout`, `TileLayout`, or `GridLayout`
+- Wrap Shapes with `ShapeGOFactory.create()` to add to layouts
+- Layouts are Scenes with automatic positioning
+
 ## See Also
 
 - [Coordinate System](./coordinate-system.md) - How positioning works (center-based, parent-child, Camera3D)
 - [Rendering Pipeline](./rendering-pipeline.md) - Deep dive into the Shape hierarchy
 - [Architecture Overview](./architecture-overview.md) - High-level system design
 - [Lifecycle](./lifecycle.md) - GameObject lifecycle details
+
+### Module References
+
+- [Camera3D Module](../modules/util/camera3d.md) - Full Camera3D API reference
+- [Scene3D Module](../modules/util/scene3d.md) - Scene3D API and usage patterns
+- [Shapes Module](../modules/shapes/README.md) - All shape primitives
+- [Game Module](../modules/game/README.md) - Game, Scene, Pipeline reference

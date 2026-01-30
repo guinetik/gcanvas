@@ -557,3 +557,7 @@ for (let i = 0; i < 50; i++) {
 
 - [Camera3D](../util/camera3d.md) - 3D camera and projection
 - [Motion Module](../motion/README.md) - Animation patterns
+- [WebGL Module](../webgl/README.md) - GPU-accelerated particle rendering (10,000+ particles)
+- [Physics Module](../physics/README.md) - Particle collisions and forces
+- [Heat Module](../math/heat.md) - Thermal dynamics for particles
+- [Fluid Dynamics](../../fluid-dynamics.md) - SPH fluid/gas simulation

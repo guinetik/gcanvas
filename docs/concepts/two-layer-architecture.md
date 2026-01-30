@@ -40,7 +40,7 @@ Painter.init(canvas.getContext('2d'));
 
 // Create shapes
 const circle = new Circle(50, { x: 100, y: 100, color: 'red' });
-const rect = new Rectangle(80, 40, { x: 200, y: 100, color: 'blue' });
+const rect = new Rectangle({ width: 80, height: 40, x: 200, y: 100, color: 'blue' });
 
 // Draw immediately
 Painter.clear();
@@ -192,7 +192,7 @@ class HybridGame extends Game {
 
     // Shape layer for static background
     this.background = new Group();
-    this.background.add(new Rectangle(this.width, this.height, { color: '#222' }));
+    this.background.add(new Rectangle({ width: this.width, height: this.height, color: '#222' }));
   }
 
   render() {

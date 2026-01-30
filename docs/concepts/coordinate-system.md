@@ -317,6 +317,35 @@ items.forEach(item => menu.add(item));
    - Vertical: `offsetY = -totalHeight / 2`
    - Horizontal: `offsetX = -totalWidth / 2`
 
+### LayoutScene Classes
+
+For automatic positioning, use the LayoutScene subclasses:
+
+```javascript
+import { HorizontalLayout, VerticalLayout, TileLayout, Position } from "gcanvas";
+
+// HorizontalLayout positions children in a row
+const toolbar = new HorizontalLayout(this, {
+  anchor: Position.TOP_CENTER,
+  spacing: 10,
+  padding: 10,
+});
+
+// VerticalLayout positions children in a column
+const menu = new VerticalLayout(this, {
+  anchor: Position.CENTER,
+  spacing: 15,
+});
+
+// TileLayout positions children in a grid
+const grid = new TileLayout(this, {
+  columns: 4,
+  spacing: 10,
+});
+```
+
+LayoutScenes extend Scene, so children use **relative coordinates** just like regular Scenes. The layout system automatically computes and applies positions.
+
 ---
 
 ## 6. Practical Tips
@@ -380,5 +409,7 @@ Painter.useCtx((ctx) => {
 
 ## See Also
 
-- [Shapes vs GameObjects](./shapes-vs-gameobjects.md) - Understanding the two hierarchies
+- [Shapes vs GameObjects](./shapes-vs-gameobjects.md) - Understanding the two hierarchies (Shape vs GameObject, Scene3D, Layouts)
 - [Rendering Pipeline](./rendering-pipeline.md) - How objects are rendered each frame
+- [Camera3D Module](../modules/util/camera3d.md) - Full Camera3D API reference
+- [Scene3D Module](../modules/util/scene3d.md) - Scene3D API and usage patterns
