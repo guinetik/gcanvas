@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Halvorsen Attractor 3D</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Halvorsen Attractor</strong><br/>
+    <span style="color:#CCC">
+      <li>dx/dt = -ax - 4y - 4z - y²</li>
+      <li>dy/dt = -ay - 4z - 4x - z²</li>
+      <li>dz/dt = -az - 4x - 4y - x²</li>
+      <li>a = 1.89</li>
+      <li>Three-fold rotational symmetry</li>
+      <li>Blue = slow, Pink = fast</li>
+      <li>Drag to rotate</li>
+      <li>Scroll/pinch to zoom</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/halvorsen.js"></script>
+</body>
+</html>

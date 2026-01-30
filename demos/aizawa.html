@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aizawa Attractor 3D</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Aizawa Attractor</strong><br/>
+    <span style="color:#CCC">
+      <li>dx/dt = (z - b)x - dy</li>
+      <li>dy/dt = dx + (z - b)y</li>
+      <li>dz/dt = c + az - z³/3 - (x² + y²)(1 + ez) + fzx³</li>
+      <li>a=0.95, b=0.7, c=0.6, d=3.5, e=0.25, f=0.1</li>
+      <li>Cyan = slow, Magenta = fast</li>
+      <li>Drag to rotate</li>
+      <li>Scroll/pinch to zoom</li>
+      <li>Double-click to reset</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/aizawa.js"></script>
+</body>
+</html>
