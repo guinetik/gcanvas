@@ -3,11 +3,11 @@ import { Painter } from "../painter/painter.js";
 /**
  * Circle - A drawable canvas circle shape.
  *
- * Responsibilities:
- * - Draws a circle using the Painter API
- * - Supports fill and stroke styles
- * - Supports canvas transforms (position, rotation, scale)
- * - Optional drawing constraints (bounds)
+ * With the origin-based coordinate system (v3.0):
+ * - Uses bounding box for origin calculations (same as rectangles)
+ * - Default origin (0, 0) = top-left of bounding box
+ * - Circle center is drawn at (radius, radius) from the origin
+ * - Set origin: "center" to position by circle center
  *
  * Limitations:
  * - Not interactive or self-animated (wrap in a GameObject for that)
@@ -22,16 +22,22 @@ export class Circle extends Shape {
 
   /**
    * Renders the circle using the Painter API.
+   * Draws at (radius, radius) to place circle center correctly
+   * relative to the bounding box top-left at (0, 0).
    */
   draw() {
     super.draw();
+    // Circle center is at (radius, radius) from the bounding box top-left
+    const cx = this._radius;
+    const cy = this._radius;
+
     if (this.color) {
-      Painter.shapes.fillCircle(0, 0, this._radius, this.color);
+      Painter.shapes.fillCircle(cx, cy, this._radius, this.color);
     }
     if (this.stroke) {
       Painter.shapes.strokeCircle(
-        0,
-        0,
+        cx,
+        cy,
         this._radius,
         this.stroke,
         this.lineWidth

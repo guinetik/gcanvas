@@ -2,16 +2,14 @@ import { Shape } from "./shape.js";
 import { Painter } from "../painter/painter.js";
 
 /**
- * RoundedRectangle - A drawable centered rectangle with rounded corners.
+ * RoundedRectangle - A drawable rectangle with rounded corners.
  *
- * Draws a rounded rectangle from its center using Painter.
+ * With the origin-based coordinate system (v3.0):
+ * - Draws at (0, 0) in local coordinates
+ * - The origin point is handled by the transformation pipeline
  */
 export class RoundedRectangle extends Shape {
   /**
-   * @param {number} x - Center X
-   * @param {number} y - Center Y
-   * @param {number} width - Rectangle width
-   * @param {number} height - Rectangle height
    * @param {number|number[]} radii - Corner radius or array of radii for each corner
    * @param {Object} [options] - Shape rendering options
    */
@@ -41,14 +39,11 @@ export class RoundedRectangle extends Shape {
    */
   draw() {
     super.draw();
-    const x = -this.width / 2;
-    const y = -this.height / 2;
-    // Use the Painter's roundRect utility methods
+    // Draw at (0, 0) - the transformation pipeline handles origin-based positioning
     if (this.color && this.stroke) {
-      // If both fill and stroke are needed
       Painter.shapes.roundRect(
-        x,
-        y,
+        0,
+        0,
         this.width,
         this.height,
         this.radii,
@@ -57,20 +52,18 @@ export class RoundedRectangle extends Shape {
         this.lineWidth
       );
     } else if (this.color) {
-      // If only fill is needed
       Painter.shapes.fillRoundRect(
-        x,
-        y,
+        0,
+        0,
         this.width,
         this.height,
         this.radii,
         this.color
       );
     } else if (this.stroke) {
-      // If only stroke is needed
       Painter.shapes.strokeRoundRect(
-        x,
-        y,
+        0,
+        0,
         this.width,
         this.height,
         this.radii,

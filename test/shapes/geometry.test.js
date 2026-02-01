@@ -76,11 +76,21 @@ describe("Geometry2d", () => {
     });
   });
 
-  it("should return correctly local position", () => {
+  it("should return correctly local position (origin-based)", () => {
+    // With default origin (0, 0) = top-left, getLocalPosition returns x, y directly
     const geometry = new Geometry2d({ x: 10, y: 20, width: 100, height: 200 });
+    expect(geometry.getLocalPosition()).toEqual({
+      x: 10,
+      y: 20,
+    });
+  });
+
+  it("should return top-left offset local position with center origin", () => {
+    // With center origin, getLocalPosition returns top-left = position - (width/2, height/2)
+    const geometry = new Geometry2d({ x: 10, y: 20, width: 100, height: 200, origin: "center" });
     expect(geometry.getLocalPosition()).toEqual({
       x: -40,
       y: -80,
     });
-  });   
+  });
 });

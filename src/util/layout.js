@@ -1,4 +1,15 @@
 /**
+ * Layout utilities for positioning items in horizontal, vertical, and grid layouts.
+ *
+ * With the origin-based coordinate system (v3.0):
+ * - Layout positions are for item origins (top-left by default)
+ * - centerItems option defaults to false (origin-based positioning)
+ * - Use centerItems: true for legacy center-based positioning
+ *
+ * @module layout
+ */
+
+/**
  * Applies layout positions to items with optional transformation
  *
  * @param {Object[]} items - Array of objects to position (must have x, y properties)
@@ -35,19 +46,23 @@ export function applyLayout(items, positions, options = {}) {
 /**
  * Creates a horizontal layout for the given items
  *
+ * With the origin-based coordinate system (v3.0):
+ * - Positions are for item origins (top-left by default)
+ * - centerItems defaults to false for origin-based positioning
+ *
  * @param {Object[]} items - Array of objects with width and height properties
  * @param {Object} options - Layout configuration options
  * @param {number} [options.spacing=10] - Space between items
  * @param {number} [options.padding=0] - Padding around the entire layout
  * @param {string} [options.align="start"] - Vertical alignment ("start", "center", "end")
- * @param {boolean} [options.centerItems=true] - Whether to position items relative to their centers
+ * @param {boolean} [options.centerItems=false] - Whether to position items relative to their centers
  * @return {Object} Result containing positioned items and layout dimensions
  */
 export function horizontalLayout(items, options = {}) {
   const spacing = options.spacing ?? 10;
   const padding = options.padding ?? 0;
   const align = options.align ?? "start";
-  const centerItems = options.centerItems ?? true;
+  const centerItems = options.centerItems ?? false;
 
   let x = padding;
   let maxHeight = 0;
@@ -104,19 +119,23 @@ export function horizontalLayout(items, options = {}) {
 /**
  * Creates a vertical layout for the given items
  *
+ * With the origin-based coordinate system (v3.0):
+ * - Positions are for item origins (top-left by default)
+ * - centerItems defaults to false for origin-based positioning
+ *
  * @param {Object[]} items - Array of objects with width and height properties
  * @param {Object} options - Layout configuration options
  * @param {number} [options.spacing=10] - Space between items
  * @param {number} [options.padding=0] - Padding around the entire layout
  * @param {string} [options.align="start"] - Horizontal alignment ("start", "center", "end")
- * @param {boolean} [options.centerItems=true] - Whether to position items relative to their centers
+ * @param {boolean} [options.centerItems=false] - Whether to position items relative to their centers
  * @return {Object} Result containing positioned items and layout dimensions
  */
 export function verticalLayout(items, options = {}) {
   const spacing = options.spacing ?? 10;
   const padding = options.padding ?? 0;
   const align = options.align ?? "start";
-  const centerItems = options.centerItems ?? true;
+  const centerItems = options.centerItems ?? false;
 
   let y = padding;
   let maxWidth = 0;
@@ -173,12 +192,16 @@ export function verticalLayout(items, options = {}) {
 /**
  * Creates a tile layout for the given items
  *
+ * With the origin-based coordinate system (v3.0):
+ * - Positions are for item origins (top-left by default)
+ * - centerItems defaults to false for origin-based positioning
+ *
  * @param {Object[]} items - Array of objects with width and height properties
  * @param {Object} options - Layout configuration options
  * @param {number} [options.columns=4] - Number of columns in the grid
  * @param {number} [options.spacing=10] - Space between items
  * @param {number} [options.padding=0] - Padding around the entire layout
- * @param {boolean} [options.centerItems=true] - Whether to position items relative to their centers
+ * @param {boolean} [options.centerItems=false] - Whether to position items relative to their centers
  * @return {Object} Result containing positioned items and layout dimensions
  */
 export function tileLayout(items, options = {}) {
@@ -189,7 +212,7 @@ export function tileLayout(items, options = {}) {
   const columns = options.columns ?? 4;
   const spacing = options.spacing ?? 10;
   const padding = options.padding ?? 0;
-  const centerItems = options.centerItems ?? true;
+  const centerItems = options.centerItems ?? false;
 
   // Assume uniform tile size based on first item
   const tileWidth = items[0].width ?? 0;
@@ -234,6 +257,21 @@ export function tileLayout(items, options = {}) {
   };
 }
 
+/**
+ * Creates a grid layout for the given items with variable cell sizes
+ *
+ * With the origin-based coordinate system (v3.0):
+ * - Positions are for item origins (top-left by default)
+ * - centerItems defaults to false for origin-based positioning
+ *
+ * @param {Object[]} items - Array of objects with width and height properties
+ * @param {Object} options - Layout configuration options
+ * @param {number} [options.columns=4] - Number of columns in the grid
+ * @param {number} [options.spacing=10] - Space between items
+ * @param {number} [options.padding=0] - Padding around the entire layout
+ * @param {boolean} [options.centerItems=false] - Whether to position items relative to their centers
+ * @return {Object} Result containing positioned items and layout dimensions
+ */
 export function gridLayout(items, options = {}) {
   if (items.length === 0) {
     return { positions: [], width: 0, height: 0 };
@@ -242,7 +280,7 @@ export function gridLayout(items, options = {}) {
   const columns = options.columns ?? 4;
   const spacing = options.spacing ?? 10;
   const padding = options.padding ?? 0;
-  const centerItems = options.centerItems ?? true;
+  const centerItems = options.centerItems ?? false;
 
   // Determine max width and height for each column and row
   const colWidths = new Array(columns).fill(0);

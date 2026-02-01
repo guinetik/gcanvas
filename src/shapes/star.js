@@ -1,18 +1,31 @@
 import { Shape } from "./shape.js";
 import { Painter } from "../painter/painter.js";
 
+/**
+ * Star - A multi-pointed star shape.
+ *
+ * With the origin-based coordinate system (v3.0):
+ * - Draws relative to bounding box at (0, 0)
+ * - Star center is at (radius, radius)
+ */
 export class Star extends Shape {
   constructor(radius = 40, spikes = 5, inset = 0.5, options = {}) {
     super(options);
     this.radius = radius;
     this.spikes = spikes;
     this.inset = inset;
+    this.width = radius * 2;
+    this.height = radius * 2;
   }
 
   draw() {
     super.draw();
     const step = Math.PI / this.spikes;
     const rotationOffset = -Math.PI / 2;
+    // Star center is at (radius, radius) from bounding box top-left
+    const cx = this.radius;
+    const cy = this.radius;
+
     // Render
     Painter.lines.beginPath();
     // Draw the star shape
@@ -20,8 +33,8 @@ export class Star extends Shape {
       const isOuter = i % 2 === 0;
       const r = isOuter ? this.radius : this.radius * this.inset;
       const angle = i * step + rotationOffset;
-      const x = Math.cos(angle) * r;
-      const y = Math.sin(angle) * r;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
       if (i === 0) {
         Painter.lines.moveTo(x, y);
       } else {

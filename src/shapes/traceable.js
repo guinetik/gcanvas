@@ -40,17 +40,18 @@ export class Traceable extends Geometry2d {
   }
 
   /**
-   * Returns debug bounds in local space (centered at origin).
+   * Returns debug bounds in local space.
+   * With origin-based coordinates, bounds start at (0, 0).
    * Override in subclasses for custom debug bounds.
    * @returns {{x: number, y: number, width: number, height: number}}
    */
   getDebugBounds() {
-    // Return bounds centered at local origin (0, 0)
+    // Return bounds starting at local origin (0, 0)
     return {
       width: this.width,
       height: this.height,
-      x: -this.width / 2,
-      y: -this.height / 2,
+      x: 0,
+      y: 0,
     };
   }
 

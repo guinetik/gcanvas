@@ -135,6 +135,11 @@ export class GameObject extends Transformable {
    * Test whether a given point lies inside the object's bounds,
    * taking into account the full transformation hierarchy (position, rotation, scale).
    *
+   * With the origin-based coordinate system (v3.0):
+   * - Object's local space starts at (0, 0) top-left
+   * - Hit test checks if point is within (0, 0) to (width, height)
+   * - Rotation/scale happens around the pivot point (based on origin)
+   *
    * @param {number} x - X screen coordinate
    * @param {number} y - Y screen coordinate
    * @returns {boolean} True if the point is inside this object's bounds
@@ -170,32 +175,53 @@ export class GameObject extends Transformable {
         localY -= offset.y || 0;
       }
 
-      // Rotation: apply inverse rotation if needed
+      // Get pivot point for rotation/scale (based on origin)
+      const pivotX = (obj.width || 0) * (obj.originX ?? 0);
+      const pivotY = (obj.height || 0) * (obj.originY ?? 0);
+
+      // Rotation: apply inverse rotation around pivot
       if (obj.rotation) {
+        // Translate to pivot
+        localX -= pivotX;
+        localY -= pivotY;
+
         const cos = Math.cos(-obj.rotation);
         const sin = Math.sin(-obj.rotation);
         const tempX = localX;
         localX = tempX * cos - localY * sin;
         localY = tempX * sin + localY * cos;
+
+        // Translate back from pivot
+        localX += pivotX;
+        localY += pivotY;
       }
 
-      // Scale: apply inverse scale if needed
-      if (obj.scaleX !== undefined && obj.scaleX !== 0) {
-        localX /= obj.scaleX;
-      }
-      if (obj.scaleY !== undefined && obj.scaleY !== 0) {
-        localY /= obj.scaleY;
+      // Scale: apply inverse scale around pivot
+      if ((obj.scaleX !== undefined && obj.scaleX !== 1) ||
+          (obj.scaleY !== undefined && obj.scaleY !== 1)) {
+        // Translate to pivot
+        localX -= pivotX;
+        localY -= pivotY;
+
+        if (obj.scaleX !== undefined && obj.scaleX !== 0) {
+          localX /= obj.scaleX;
+        }
+        if (obj.scaleY !== undefined && obj.scaleY !== 0) {
+          localY /= obj.scaleY;
+        }
+
+        // Translate back from pivot
+        localX += pivotX;
+        localY += pivotY;
       }
     }
 
     // Now check if the point is inside our local bounds
-    // Use bounds from getBounds() if available, otherwise fall back to this.width/height
-    const halfW = (bounds.width || this.width || 0) / 2;
-    const halfH = (bounds.height || this.height || 0) / 2;
+    // With origin-based coordinates, bounds are from (0, 0) to (width, height)
+    const w = bounds.width || this.width || 0;
+    const h = bounds.height || this.height || 0;
 
-    return (
-      localX >= -halfW && localX <= halfW && localY >= -halfH && localY <= halfH
-    );
+    return localX >= 0 && localX <= w && localY >= 0 && localY <= h;
   }
 
   /**

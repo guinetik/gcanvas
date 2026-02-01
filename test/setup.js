@@ -10,6 +10,8 @@ vi.mock('../src/painter/painter', () => ({
       translate: vi.fn(),
       rotate: vi.fn(),
       scale: vi.fn(),
+      beginPath: vi.fn(),
+      fill: vi.fn(),
     },
     shapes: {
       outlineRect: vi.fn(),
@@ -21,6 +23,9 @@ vi.mock('../src/painter/painter', () => ({
     save: vi.fn(),
     restore: vi.fn(),
     translateTo: vi.fn(),
+    translate: vi.fn(),
+    rotate: vi.fn(),
+    scale: vi.fn(),
     useCtx: vi.fn((callback) => {
       const mockCtx = {
         save: vi.fn(),
