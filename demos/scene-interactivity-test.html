@@ -33,7 +33,7 @@
 
             class ClickableBox extends GameObject {
                 constructor(game, color, label) {
-                    super(game, { width: 150, height: 100 });
+                    super(game, { width: 150, height: 100, originX: 0.5, originY: 0.5 });
 
                     // Enable interactivity
                     this.interactive = true;
@@ -49,20 +49,23 @@
                         color: this.color,
                         strokeColor: "#fff",
                         lineWidth: 2,
+                        origin: "center",
                     });
 
                     this.label = new TextShape(label, {
                         font: "bold 14px monospace",
                         color: "#fff",
                         align: "center",
-                        baseline: "top",
+                        baseline: "bottom",
+                        origin: "center",
                     });
 
                     this.counter = new TextShape("Clicks: 0", {
                         font: "12px monospace",
                         color: "#fff",
                         align: "center",
-                        baseline: "bottom",
+                        baseline: "top",
+                        origin: "center",
                     });
 
                     // Setup events
@@ -144,7 +147,7 @@
                     super.init();
 
                     // Create main scene
-                    const mainScene = new Scene(this, { name: "MainScene" });
+                    const mainScene = new Scene(this, { name: "MainScene", origin: "center" });
                     mainScene.x = this.width / 2;
                     mainScene.y = this.height / 2 - 100;
 
@@ -167,6 +170,7 @@
                     // Create nested scene
                     const nestedScene = new Scene(this, {
                         name: "NestedScene",
+                        origin: "center",
                     });
                     nestedScene.y = 120;
 

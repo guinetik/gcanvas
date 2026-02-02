@@ -18,13 +18,17 @@ export class Triangle extends Shape {
 
   draw() {
     super.draw();
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     const half = this.size / 2;
-    // Triangle positioned within its bounding box
-    // Points relative to bounding box top-left at (0, 0)
+    // Triangle positioned within its bounding box, offset by origin
     const points = [
-      { x: half, y: 0 },           // top center
-      { x: this.size, y: this.size }, // bottom right
-      { x: 0, y: this.size },         // bottom left
+      { x: half + offsetX, y: offsetY },                    // top center
+      { x: this.size + offsetX, y: this.size + offsetY },   // bottom right
+      { x: offsetX, y: this.size + offsetY },               // bottom left
     ];
 
     Painter.shapes.polygon(

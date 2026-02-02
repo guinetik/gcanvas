@@ -20,8 +20,13 @@ import {
  */
 class ShapeWrapper extends GameObject {
   constructor(game, shape) {
-    super(game);
+    super(game, { originX: 0.5, originY: 0.5 });
     this.shape = shape;
+    // Pass origin to shape
+    if (shape) {
+      shape.originX = 0.5;
+      shape.originY = 0.5;
+    }
   }
 
   draw() {
@@ -57,6 +62,7 @@ export class MyGame extends Game {
       height: 400,
       debug: false,
       debugColor: "#ff00ff",
+      origin: "center",
       anchor: "center"
     });
     this.pipeline.add(this.mainScene);
@@ -85,18 +91,19 @@ export class MyGame extends Game {
  */
 class TransformingSceneDemo extends GameObject {
   constructor(game) {
-    super(game);
+    super(game, { originX: 0.5, originY: 0.5 });
 
     // Create a scene that will be transformed
     this.scene = new Scene(game, {
       width: 120,
       height: 120,
       debug: false,
-      debugColor: "#ff00ff"
+      debugColor: "#ff00ff",
+      origin: "center"
     });
 
     // Position using transform API
-    this.scene.transform.position(-200, -80);
+    this.scene.transform.position(-200, 0);
 
     // Add shapes to the scene
     const rect = new Rectangle({
@@ -104,21 +111,24 @@ class TransformingSceneDemo extends GameObject {
       height: 40,
       color: "#e94560",
       stroke: "#fff",
-      lineWidth: 2
+      lineWidth: 2,
+      origin: "center"
     });
     rect.transform.position(-25, -25);
 
     const circle = new Circle(15, {
       color: "#00d9ff",
       stroke: "#fff",
-      lineWidth: 2
+      lineWidth: 2,
+      origin: "center"
     });
     circle.transform.position(25, 25);
 
     const star = new Star(12, 5, 0.5, {
       color: "#ffc107",
       stroke: "#fff",
-      lineWidth: 1
+      lineWidth: 1,
+      origin: "center"
     });
     star.transform.position(25, -25);
 
@@ -130,10 +140,11 @@ class TransformingSceneDemo extends GameObject {
     // Label
     this.label = new TextShape("Scene Transforms", {
       x: -200,
-      y: -150,
+      y: -80,
       font: "bold 12px monospace",
       color: "#fff",
-      align: "center"
+      align: "center",
+      origin: "center"
     });
 
     this.elapsed = 0;
@@ -162,23 +173,25 @@ class TransformingSceneDemo extends GameObject {
  */
 class NestedSceneDemo extends GameObject {
   constructor(game) {
-    super(game);
+    super(game, { originX: 0.5, originY: 0.5 });
 
     // Outer scene
     this.outerScene = new Scene(game, {
       width: 150,
       height: 150,
       debug: false,
-      debugColor: "#ff00ff"
+      debugColor: "#ff00ff",
+      origin: "center"
     });
-    this.outerScene.transform.position(0, -80);
+    this.outerScene.transform.position(0, 0);
 
     // Inner scene (nested inside outer)
     this.innerScene = new Scene(game, {
       width: 80,
       height: 80,
       debug: false,
-      debugColor: "#00ffff"
+      debugColor: "#00ffff",
+      origin: "center"
     });
 
     // Add shapes to inner scene
@@ -187,7 +200,8 @@ class NestedSceneDemo extends GameObject {
       height: 30,
       color: "#7bed9f",
       stroke: "#fff",
-      lineWidth: 2
+      lineWidth: 2,
+      origin: "center"
     });
     this.innerScene.add(wrapShape(game, innerRect));
 
@@ -205,7 +219,8 @@ class NestedSceneDemo extends GameObject {
       const marker = new Circle(8, {
         color: ["#ff6b6b", "#ffc107", "#00d9ff", "#7bed9f"][i],
         stroke: "#fff",
-        lineWidth: 1
+        lineWidth: 1,
+        origin: "center"
       });
       marker.transform.position(pos.x, pos.y);
       this.outerScene.add(wrapShape(game, marker));
@@ -214,10 +229,11 @@ class NestedSceneDemo extends GameObject {
     // Label
     this.label = new TextShape("Nested Scenes", {
       x: 0,
-      y: -150,
+      y: -80,
       font: "bold 12px monospace",
       color: "#fff",
-      align: "center"
+      align: "center",
+      origin: "center"
     });
 
     this.elapsed = 0;
@@ -249,15 +265,16 @@ class NestedSceneDemo extends GameObject {
  */
 class ZOrderDemo extends GameObject {
   constructor(game) {
-    super(game);
+    super(game, { originX: 0.5, originY: 0.5 });
 
     this.scene = new Scene(game, {
       width: 140,
       height: 140,
       debug: false,
-      debugColor: "#ff00ff"
+      debugColor: "#ff00ff",
+      origin: "center"
     });
-    this.scene.transform.position(200, -80);
+    this.scene.transform.position(200, 0);
 
     // Create overlapping shapes
     this.shapes = [];
@@ -275,7 +292,8 @@ class ZOrderDemo extends GameObject {
         height: 50,
         color: color,
         stroke: "#fff",
-        lineWidth: 2
+        lineWidth: 2,
+        origin: "center"
       });
       rect.transform.position(positions[i].x, positions[i].y);
       const wrapped = wrapShape(game, rect);
@@ -286,10 +304,11 @@ class ZOrderDemo extends GameObject {
     // Label
     this.label = new TextShape("Z-Ordering", {
       x: 200,
-      y: -150,
+      y: -80,
       font: "bold 12px monospace",
       color: "#fff",
-      align: "center"
+      align: "center",
+      origin: "center"
     });
 
     this.elapsed = 0;

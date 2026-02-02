@@ -34,27 +34,37 @@ class ShapeBox extends GameObject {
   constructor(game, innerShape, type, options = {}) {
     super(game, options);
     const whites = ["bezier", "patrol", "follow", "waypoint"];
-    const group = new Group();
+    const group = new Group({ origin: "center" });
     // Use Transform API to set group dimensions
     group.transform.size(options.width, options.height);
 
     const bg = new Rectangle({
       width: 100,
       height: 100,
+      origin: "center",
       color: whites.includes(type) ? "white" : "transparent",
       stroke: "white",
       lineWidth: 2,
     });
     group.add(bg);
+    
+    // Center the inner shape
+    innerShape.originX = 0.5;
+    innerShape.originY = 0.5;
     group.add(innerShape);
+    
     this.type = type;
     this.group = group;
+    
+    // Add label at bottom, horizontally centered
     this.group.add(
       new TextShape(this.type, {
         x: 0,
         y: 40,
         font: "16px monospace",
         color: whites.includes(type) ? "black" : "white",
+        origin: "center",
+        align: "center",
       })
     );
     // Store a reference to the inner shape so you can update its animation separately.
@@ -357,9 +367,10 @@ class AnimationsDemo extends TileLayout {
     this.boxes = this.boxDefinitions.map((boxDef) => {
       const innerShape = boxDef.innerShape;
       const type = boxDef.type;
-      const shapeBox = new ShapeBox(game, innerShape, type, {
+      const shapeBox = new ShapeBox(this.game, innerShape, type, {
         width: 100,
         height: 100,
+        origin: "center",
         x: 0,
         y: 0,
       });
@@ -429,6 +440,7 @@ export class MyGame extends Game {
 
     this.animationsDemo = new AnimationsDemo(this, {
       debug: true,
+      origin: "center",
       anchor: "center",
       spacing: 30,
       columns: initialColumns,

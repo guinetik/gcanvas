@@ -79,30 +79,32 @@ const CONFIG = {
  */
 class ParticleStation extends GameObject {
   constructor(game, x, y, width, height, label) {
-    super(game, { x, y, width, height });
+    super(game, { x, y, width, height, originX: 0.5, originY: 0.5 });
     this.z = 0; // For Scene3D projection
     this.label = label;
 
-    // Background box using Rectangle shape
+    // Background box using Rectangle shape - centered at (0,0) relative to station
     this.bg = new Rectangle({
+      x: 0,
+      y: 0,
       width,
       height,
       color: "rgba(255, 255, 255, 0.03)",
       stroke: "rgba(255, 255, 255, 0.15)",
       lineWidth: 1,
+      origin: "center",
     });
 
-    // Label using TextShape
+    // Label using TextShape - centered horizontally, at bottom of box
     this.labelText = new TextShape(label, {
+      x: 0,
       y: height / 2 - 15,
       font: "12px monospace",
       color: "#00FF00",
       align: "center",
       baseline: "middle",
+      origin: "center",
     });
-    this.labelText.x = x;
-    this.bg.x = x;
-    this.bg.y = y;
   }
 
   /**
@@ -113,27 +115,24 @@ class ParticleStation extends GameObject {
     this.width = width;
     this.height = height;
 
-    // Update background rectangle
+    // Update background rectangle - stays at (0,0) relative to station
     this.bg.width = width;
     this.bg.height = height;
-    this.bg.x = x;
-    this.bg.y = this.y;
 
-    // Update label position
+    // Update label position - bottom of box
     this.labelText.y = height / 2 - 15;
-    this.labelText.x = x;
   }
 
-  // Get emitter spawn position (center-bottom of station)
+  // Get emitter spawn position (center-bottom of station) in world coords
   getEmitterPosition() {
     return {
       x: this.x,
-      y: this.y + this.height / 2 - 40,
+      y: this.height / 2 - 40,
       z: 0,
     };
   }
 
-  // Get top position for snow
+  // Get top position for snow (in world coords)
   getTopPosition() {
     return {
       x: this.x,
@@ -142,7 +141,7 @@ class ParticleStation extends GameObject {
     };
   }
 
-  // Get bottom position for fountain/fire
+  // Get bottom position for fountain/fire (in world coords)
   getBottomPosition() {
     return {
       x: this.x,
@@ -151,13 +150,13 @@ class ParticleStation extends GameObject {
     };
   }
 
-  // Get center position for confetti
+  // Get center position for confetti (in world coords)
   getCenterPosition() {
-    return { x: this.x, y: this.y, z: 0 };
+    return { x: this.x, y: 0, z: 0 };
   }
 
-  render() {
-    super.render();
+  draw() {
+    // Render shapes in local coordinate space (Scene3D handles translation)
     this.bg.render();
     this.labelText.render();
   }
@@ -258,6 +257,7 @@ class ParticlesShowcase extends Game {
       camera: this.camera,
       depthSort: false, // Stations are all at z=0
       scaleByDepth: true,
+      origin: "center",
     });
 
     this.stations = labels.map((label, i) => {

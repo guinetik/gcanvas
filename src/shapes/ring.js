@@ -19,9 +19,14 @@ export class Ring extends Shape {
 
   draw() {
     super.draw();
-    // Ring center is at (outerRadius, outerRadius) from bounding box top-left
-    const cx = this.outerRadius;
-    const cy = this.outerRadius;
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
+    // Ring center relative to bounding box
+    const cx = this.outerRadius + offsetX;
+    const cy = this.outerRadius + offsetY;
 
     Painter.lines.beginPath();
     Painter.shapes.arc(cx, cy, this.outerRadius, 0, Math.PI * 2);

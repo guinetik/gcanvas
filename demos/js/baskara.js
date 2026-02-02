@@ -61,6 +61,8 @@ class FormulaPanelGO extends GameObject {
       ...options,
       width: panelWidth,
       height: panelHeight,
+      originX: 0.5,
+      originY: 0.5,
       anchor: Position.BOTTOM_LEFT,
       anchorMargin: 20,
     });
@@ -74,6 +76,7 @@ class FormulaPanelGO extends GameObject {
       width: panelWidth,
       height: panelHeight,
       color: "rgba(0, 0, 0, 0.6)",
+      origin: "center",
     });
 
     // Create text shapes for each equation

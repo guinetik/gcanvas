@@ -24,12 +24,17 @@ export class Line extends Shape {
 
   draw() {
     super.draw();
-    // Line from top-left (0, 0) to bottom-right (length, length)
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
+    // Line from top-left to bottom-right, offset by origin
     Painter.lines.line(
-      0,
-      0,
-      this.length,
-      this.length,
+      offsetX,
+      offsetY,
+      this.length + offsetX,
+      this.length + offsetY,
       this.stroke,
       this.lineWidth
     );

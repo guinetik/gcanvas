@@ -25,7 +25,7 @@ const CONFIG = {
 
 export class TileDemo extends Scene {
   constructor(game, options = {}) {
-    super(game, options);
+    super(game, { ...options, origin: "center" });
     this.elapsedTime = this.lastChangeTime = 0;
   }
 
@@ -61,7 +61,8 @@ export class TileDemo extends Scene {
       spacing: CONFIG.tileSpacing,
       padding: CONFIG.tilePadding,
       autoSize: true,
-      debug: true,
+      debug: false,
+      origin: "center",
       // Enable scrolling
       scrollable: true,
       viewportWidth: viewport.width,
@@ -89,6 +90,7 @@ export class TileDemo extends Scene {
       spacing: isMobile ? 5 : 10,
       padding: 10,
       debug: false,
+      origin: "center",
       align: "center",
     });
     this.add(this.bottomUI);
@@ -97,6 +99,7 @@ export class TileDemo extends Scene {
     this.bottomUI.add(new Button(game, {
       text: isMobile ? "+" : "Add",
       width: isMobile ? 40 : buttonWidth,
+      origin: "center",
       onClick: () => this.addTile(),
     }));
 
@@ -104,6 +107,7 @@ export class TileDemo extends Scene {
     this.bottomUI.add(new Button(game, {
       text: isMobile ? "-" : "Remove",
       width: isMobile ? 40 : buttonWidth,
+      origin: "center",
       onClick: () => this.removeTile(),
     }));
 
@@ -111,6 +115,7 @@ export class TileDemo extends Scene {
     this.bottomUI.add(new Button(game, {
       text: isMobile ? "+Col" : "+ Column",
       width: isMobile ? 50 : buttonWidth,
+      origin: "center",
       onClick: () => {
         const maxColumns = this.getResponsiveColumns();
         if (this.grid.columns < maxColumns) {
@@ -124,6 +129,7 @@ export class TileDemo extends Scene {
     this.bottomUI.add(new Button(game, {
       text: isMobile ? "-Col" : "- Column",
       width: isMobile ? 50 : buttonWidth,
+      origin: "center",
       onClick: () => {
         this.grid.columns = Math.max(1, this.grid.columns - 1);
         this.grid.markBoundsDirty();
@@ -134,6 +140,7 @@ export class TileDemo extends Scene {
     this.bottomUI.add(new Button(game, {
       text: isMobile ? "+10" : "Add 10",
       width: isMobile ? 45 : buttonWidth,
+      origin: "center",
       onClick: () => {
         for (let i = 0; i < 10; i++) this.addTile();
       },
@@ -146,6 +153,7 @@ export class TileDemo extends Scene {
       height: CONFIG.tileSize,
       color: Painter.colors.randomColorHSL(),
       strokeColor: "white",
+      origin: "center",
     });
     const tileGO = ShapeGOFactory.create(this.game, rect);
     this.grid.add(tileGO);

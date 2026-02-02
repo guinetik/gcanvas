@@ -19,11 +19,16 @@ export class Polygon extends Shape {
 
   draw() {
     super.draw();
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     const points = [];
     const step = (2 * Math.PI) / this.sides;
-    // Polygon center is at (radius, radius) from bounding box top-left
-    const cx = this.radius;
-    const cy = this.radius;
+    // Polygon center relative to bounding box
+    const cx = this.radius + offsetX;
+    const cy = this.radius + offsetY;
 
     for (let i = 0; i < this.sides; i++) {
       const angle = i * step;

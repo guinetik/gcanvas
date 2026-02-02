@@ -126,7 +126,7 @@ export class Stepper extends GameObject {
    * @private
    */
   initComponents() {
-    this.group = new Group();
+    this.group = new Group({ origin: "center" });
 
     // Calculate positions (centered layout)
     const totalWidth = this.width;
@@ -162,6 +162,7 @@ export class Stepper extends GameObject {
         color: UI_THEME.colors.dimText,
         align: "center",
         baseline: "middle",
+        origin: "center",
       });
       this.label.y = labelY;
       this.group.add(this.label);
@@ -174,6 +175,7 @@ export class Stepper extends GameObject {
       color: UI_THEME.button.default.bg,
       stroke: UI_THEME.button.default.stroke,
       lineWidth: 1,
+      origin: "center",
     });
     this.decrementBg.x = decrementX;
     this.decrementBg.y = controlsY;
@@ -184,6 +186,7 @@ export class Stepper extends GameObject {
       color: UI_THEME.button.default.text,
       align: "center",
       baseline: "middle",
+      origin: "center",
     });
     this.decrementText.x = decrementX;
     this.decrementText.y = controlsY;
@@ -195,6 +198,7 @@ export class Stepper extends GameObject {
       color: UI_THEME.colors.darkerBg,
       stroke: UI_THEME.colors.subtleBorder,
       lineWidth: 1,
+      origin: "center",
     });
     this.valueBg.x = valueX;
     this.valueBg.y = controlsY;
@@ -205,6 +209,7 @@ export class Stepper extends GameObject {
       color: UI_THEME.colors.neonGreen,
       align: "center",
       baseline: "middle",
+      origin: "center",
     });
     this.valueText.x = valueX;
     this.valueText.y = controlsY;
@@ -216,6 +221,7 @@ export class Stepper extends GameObject {
       color: UI_THEME.button.default.bg,
       stroke: UI_THEME.button.default.stroke,
       lineWidth: 1,
+      origin: "center",
     });
     this.incrementBg.x = incrementX;
     this.incrementBg.y = controlsY;
@@ -226,6 +232,7 @@ export class Stepper extends GameObject {
       color: UI_THEME.button.default.text,
       align: "center",
       baseline: "middle",
+      origin: "center",
     });
     this.incrementText.x = incrementX;
     this.incrementText.y = controlsY;

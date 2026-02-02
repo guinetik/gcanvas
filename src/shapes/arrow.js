@@ -22,12 +22,17 @@ export class Arrow extends Shape {
 
   draw() {
     super.draw();
+    
+    // Calculate origin offset
+    const offsetX = -this.length * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     const headLength = this.length * 0.4;
     const shaftLength = this.length - headLength;
     const shaftWidth = this.width / 2;
-    // Arrow center is at (length/2, height/2) from bounding box top-left
-    const cx = this.length / 2;
-    const cy = this.height / 2;
+    // Arrow center relative to bounding box
+    const cx = this.length / 2 + offsetX;
+    const cy = this.height / 2 + offsetY;
 
     Painter.lines.beginPath();
     // Start at left side of shaft, top edge
@@ -35,11 +40,11 @@ export class Arrow extends Shape {
     // Right side of shaft, top edge
     Painter.lines.lineTo(cx + shaftLength / 2 - headLength, cy - shaftWidth / 2);
     // Top notch of arrowhead
-    Painter.lines.lineTo(cx + shaftLength / 2 - headLength, 0);
+    Painter.lines.lineTo(cx + shaftLength / 2 - headLength, offsetY);
     // Arrow tip
-    Painter.lines.lineTo(this.length, cy);
+    Painter.lines.lineTo(this.length + offsetX, cy);
     // Bottom notch of arrowhead
-    Painter.lines.lineTo(cx + shaftLength / 2 - headLength, this.height);
+    Painter.lines.lineTo(cx + shaftLength / 2 - headLength, this.height + offsetY);
     // Right side of shaft, bottom edge
     Painter.lines.lineTo(cx + shaftLength / 2 - headLength, cy + shaftWidth / 2);
     // Left side of shaft, bottom edge

@@ -28,17 +28,19 @@ export class Diamond extends Shape {
    */
   draw() {
     super.draw();
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     const halfW = this.width / 2;
     const halfH = this.height / 2;
-    // Diamond center is at (halfW, halfH) from bounding box top-left
-    const cx = halfW;
-    const cy = halfH;
 
     const points = [
-      { x: cx, y: 0 },           // Top
-      { x: this.width, y: cy },   // Right
-      { x: cx, y: this.height },  // Bottom
-      { x: 0, y: cy },            // Left
+      { x: halfW + offsetX, y: offsetY },                    // Top
+      { x: this.width + offsetX, y: halfH + offsetY },       // Right
+      { x: halfW + offsetX, y: this.height + offsetY },      // Bottom
+      { x: offsetX, y: halfH + offsetY },                    // Left
     ];
 
     Painter.shapes.polygon(

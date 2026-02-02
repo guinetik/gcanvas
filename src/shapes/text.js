@@ -33,9 +33,9 @@ export class TextShape extends Shape {
   /**
    * Draw the text using Painter
    *
-   * Text is drawn at an offset to center it within its bounding box.
-   * This ensures that regardless of alignment setting, the text's
-   * bounding box is centered at the object's (x, y) position.
+   * Text is drawn at an offset based on both:
+   * 1. The origin offset (for positioning)
+   * 2. The alignment offset (for text alignment within bounds)
    */
   draw() {
     super.draw();
@@ -43,8 +43,18 @@ export class TextShape extends Shape {
     Painter.text.setFont(this.font);
     Painter.text.setTextAlign(this.align);
     Painter.text.setTextBaseline(this.baseline);
-    // Apply alignment offset to center text within its bounding box
-    Painter.text.fillText(this.text, -this._centerOffsetX, -this._centerOffsetY, this.color);
+    
+    // Calculate origin offset (same pattern as other shapes)
+    const originOffsetX = -this.width * this.originX;
+    const originOffsetY = -this.height * this.originY;
+    
+    // Apply both origin offset and alignment offset
+    // The alignment offset centers text within the bounding box
+    // The origin offset positions the bounding box based on origin
+    const drawX = originOffsetX + this.width / 2 - this._centerOffsetX;
+    const drawY = originOffsetY + this.height / 2 - this._centerOffsetY;
+    
+    Painter.text.fillText(this.text, drawX, drawY, this.color);
   }
 
   _calculateAlignmentOffsets() {
@@ -138,16 +148,19 @@ export class TextShape extends Shape {
   }
 
   /**
-   * Debug bounds should match text bounds
+   * Debug bounds should match text bounds, accounting for origin offset.
    * @returns {Object} Debug bounds with width and height
    */
   getDebugBounds() {
-    const textBounds = this.getTextBounds();
+    // Calculate origin offset (same pattern as other shapes)
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     return {
-      x: textBounds.x,
-      y: textBounds.y,
-      width: textBounds.width,
-      height: textBounds.height,
+      x: offsetX,
+      y: offsetY,
+      width: this.width,
+      height: this.height,
     };
   }
 

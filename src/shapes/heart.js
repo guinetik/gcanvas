@@ -15,6 +15,11 @@ export class Heart extends Shape {
 
   draw() {
     super.draw();
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     const w = this.width;
     const h = this.height;
     const halfW = w / 2;
@@ -23,15 +28,15 @@ export class Heart extends Shape {
 
     lines.beginPath();
     // Start at top center
-    lines.moveTo(halfW, topCurveHeight);
+    lines.moveTo(halfW + offsetX, topCurveHeight + offsetY);
     // Left arc (from center to left side)
-    lines.bezierCurveTo(halfW, 0, 0, 0, 0, topCurveHeight);
+    lines.bezierCurveTo(halfW + offsetX, offsetY, offsetX, offsetY, offsetX, topCurveHeight + offsetY);
     // Bottom point (left side down to bottom center)
-    lines.bezierCurveTo(0, h * 0.8, halfW, h, halfW, h);
+    lines.bezierCurveTo(offsetX, h * 0.8 + offsetY, halfW + offsetX, h + offsetY, halfW + offsetX, h + offsetY);
     // Right arc (bottom center up to right side)
-    lines.bezierCurveTo(halfW, h, w, h * 0.8, w, topCurveHeight);
+    lines.bezierCurveTo(halfW + offsetX, h + offsetY, w + offsetX, h * 0.8 + offsetY, w + offsetX, topCurveHeight + offsetY);
     // Back to top center
-    lines.bezierCurveTo(w, 0, halfW, 0, halfW, topCurveHeight);
+    lines.bezierCurveTo(w + offsetX, offsetY, halfW + offsetX, offsetY, halfW + offsetX, topCurveHeight + offsetY);
     lines.closePath();
 
     if (this.color) {

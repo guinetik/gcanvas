@@ -28,10 +28,13 @@ class MyGame extends Game {
     // Add signature animation
     this.signature = new SignatureAnimation(this, {
       debug: true,
-      anchor: "center",
+      origin: "center",
+      width: 500,  // Match signature path width (-200 to 250 = 450px + padding)
+      height: 150,
     });
-    this.signature.width = 400;
-    this.signature.height = 150;
+    // Position at center of screen
+    this.signature.x = this.width / 2;
+    this.signature.y = this.height / 2;
     this.scene.add(this.signature);
 
     // Add FPS counter in the UI scene
@@ -191,6 +194,10 @@ class SignatureAnimation extends GameObject {
   }
 
   update(dt) {
+    // Keep centered on screen
+    this.x = this.game.width / 2;
+    this.y = this.game.height / 2;
+    
     // Update progress if animation not complete
     if (!this.complete) {
       this.progress += dt * this.speed;

@@ -21,8 +21,8 @@ class MyGame extends Game {
     super.init();
     // Set up scenes
     console.groupCollapsed("init");
-    this.scene = new Scene(this, { debug: true, debugColor: "#0f0", anchor: "center" });
-    this.ui = new Scene(this, { debug: true, debugColor: "#0f0", anchor: "center" });
+    this.scene = new Scene(this, { debug: true, debugColor: "#0f0", origin: "center", anchor: "center" });
+    this.ui = new Scene(this, { debug: true, debugColor: "#0f0", origin: "center", anchor: "center" });
     this.pipeline.add(this.scene); // game layer
     this.pipeline.add(this.ui); // UI layer
     console.groupEnd();

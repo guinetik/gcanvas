@@ -18,11 +18,16 @@ export class Pin extends Shape {
 
   draw() {
     super.draw();
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     const r = this.radius;
     const h = this.height;
-    // Center of circular head is at (r, r) from top-left
-    const cx = r;
-    const cy = r;
+    // Center of circular head relative to bounding box
+    const cx = r + offsetX;
+    const cy = r + offsetY;
 
     Painter.lines.beginPath();
 
@@ -30,9 +35,9 @@ export class Pin extends Shape {
     Painter.shapes.arc(cx, cy, r, Math.PI, 0);
 
     // Draw tail (triangle pointing down)
-    Painter.lines.lineTo(cx + r, cy);     // Right side of circle base
-    Painter.lines.lineTo(cx, h);          // Bottom point
-    Painter.lines.lineTo(cx - r, cy);     // Left side of circle base
+    Painter.lines.lineTo(cx + r, cy);           // Right side of circle base
+    Painter.lines.lineTo(cx, h + offsetY);      // Bottom point
+    Painter.lines.lineTo(cx - r, cy);           // Left side of circle base
     Painter.lines.closePath();
 
     if (this.color) {

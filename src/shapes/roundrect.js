@@ -39,11 +39,15 @@ export class RoundedRectangle extends Shape {
    */
   draw() {
     super.draw();
-    // Draw at (0, 0) - the transformation pipeline handles origin-based positioning
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     if (this.color && this.stroke) {
       Painter.shapes.roundRect(
-        0,
-        0,
+        offsetX,
+        offsetY,
         this.width,
         this.height,
         this.radii,
@@ -53,8 +57,8 @@ export class RoundedRectangle extends Shape {
       );
     } else if (this.color) {
       Painter.shapes.fillRoundRect(
-        0,
-        0,
+        offsetX,
+        offsetY,
         this.width,
         this.height,
         this.radii,
@@ -62,8 +66,8 @@ export class RoundedRectangle extends Shape {
       );
     } else if (this.stroke) {
       Painter.shapes.strokeRoundRect(
-        0,
-        0,
+        offsetX,
+        offsetY,
         this.width,
         this.height,
         this.radii,

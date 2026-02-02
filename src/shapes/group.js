@@ -222,7 +222,13 @@ export class Group extends Transformable {
 
 
   /**
-   * Override calculateBounds to compute from children
+   * Override calculateBounds to compute from children.
+   * 
+   * With the origin-based coordinate system (v3.0):
+   * - Each child's position (x, y) represents its origin point
+   * - The child's origin (originX, originY) determines where that point is on the child
+   * - We calculate each child's bounding box accounting for its origin
+   * 
    * @returns {Object} Bounds object
    */
   calculateBounds() {
@@ -256,14 +262,21 @@ export class Group extends Transformable {
       // Get the child's position and dimensions
       const childX = child.x;
       const childY = child.y;
-      const childWidth = child.width;
-      const childHeight = child.height;
+      const childWidth = child.width || 0;
+      const childHeight = child.height || 0;
+      
+      // Get child's origin (default to top-left if not defined)
+      const childOriginX = child.originX ?? 0;
+      const childOriginY = child.originY ?? 0;
 
-      // Calculate the child's bounding box edges
-      const childLeft = childX - childWidth / 2;
-      const childRight = childX + childWidth / 2;
-      const childTop = childY - childHeight / 2;
-      const childBottom = childY + childHeight / 2;
+      // Calculate the child's bounding box edges based on its origin
+      // For origin (0, 0) = top-left: left = x, right = x + width
+      // For origin (0.5, 0.5) = center: left = x - width/2, right = x + width/2
+      // For origin (1, 1) = bottom-right: left = x - width, right = x
+      const childLeft = childX - childWidth * childOriginX;
+      const childRight = childX + childWidth * (1 - childOriginX);
+      const childTop = childY - childHeight * childOriginY;
+      const childBottom = childY + childHeight * (1 - childOriginY);
 
       // Update min/max coordinates
       minX = Math.min(minX, childLeft);
@@ -276,7 +289,7 @@ export class Group extends Transformable {
     const width = maxX - minX;
     const height = maxY - minY;
 
-    // Return bounds centered on group position
+    // Return bounds at group position
     return {
       x: this.x,
       y: this.y,
@@ -286,20 +299,63 @@ export class Group extends Transformable {
   }
 
   /**
-   * Returns debug bounds in local space (centered at origin).
+   * Returns debug bounds in local space.
    * Used for debug drawing after transforms have been applied.
+   * 
+   * With the origin-based coordinate system (v3.0):
+   * - Debug bounds start at (0, 0) in local space
+   * - This matches the shape drawing coordinate system
+   * 
    * @returns {{x: number, y: number, width: number, height: number}}
    */
   getDebugBounds() {
-    const bounds = this.calculateBounds();
+    // If explicitly sized, use origin-based offset
+    if (this.userDefinedDimensions) {
+      const offsetX = -this._width * this.originX || 0;
+      const offsetY = -this._height * this.originY || 0;
+      return {
+        x: offsetX,
+        y: offsetY,
+        width: this._width,
+        height: this._height,
+      };
+    }
 
-    // Return bounds centered at local origin (0, 0)
-    // This works because debug is drawn after translation to group's position
+    // Calculate actual bounds from children
+    if (!this.children?.length) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const child of this.children) {
+      const childX = child.x;
+      const childY = child.y;
+      const childWidth = child.width || 0;
+      const childHeight = child.height || 0;
+      const childOriginX = child.originX ?? 0;
+      const childOriginY = child.originY ?? 0;
+
+      const childLeft = childX - childWidth * childOriginX;
+      const childRight = childX + childWidth * (1 - childOriginX);
+      const childTop = childY - childHeight * childOriginY;
+      const childBottom = childY + childHeight * (1 - childOriginY);
+
+      minX = Math.min(minX, childLeft);
+      maxX = Math.max(maxX, childRight);
+      minY = Math.min(minY, childTop);
+      maxY = Math.max(maxY, childBottom);
+    }
+
+    // Return bounds at actual content position (not origin-adjusted)
     return {
-      width: bounds.width,
-      height: bounds.height,
-      x: -bounds.width / 2,
-      y: -bounds.height / 2,
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
     };
   }
 

@@ -142,10 +142,15 @@ export class Scene extends GameObject {
    * @returns {{x: number, y: number, width: number, height: number}}
    */
   getDebugBounds() {
-    // Return bounds starting at local origin (0, 0)
+    // Return bounds offset based on origin (same as shapes use for drawing)
+    // For center origin: bounds from (-w/2, -h/2) to (w/2, h/2)
+    // For top-left origin: bounds from (0, 0) to (w, h)
+    const offsetX = -this.width * this.originX;
+    const offsetY = -this.height * this.originY;
+    
     return {
-      x: 0,
-      y: 0,
+      x: offsetX,
+      y: offsetY,
       width: this.width,
       height: this.height,
     };

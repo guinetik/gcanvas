@@ -12,6 +12,12 @@
 /**
  * Applies layout positions to items with optional transformation
  *
+ * With the origin-based coordinate system (v3.0):
+ * - Layout positions are calculated as cell centers (when centerItems: true)
+ * - This function adjusts for each item's origin to correctly position items
+ * - Items with origin: "center" (0.5, 0.5) need no adjustment
+ * - Items with origin: "top-left" (0, 0) are offset by -width/2, -height/2
+ *
  * @param {Object[]} items - Array of objects to position (must have x, y properties)
  * @param {Object[]} positions - Array of position objects from layout functions
  * @param {Object} options - Options for applying positions
@@ -28,14 +34,28 @@ export function applyLayout(items, positions, options = {}) {
   items.forEach((item, index) => {
     if (index < positions.length) {
       const pos = positions[index];
+      
+      // Get the item's origin (default is 0, 0 for top-left)
+      const originX = item.originX ?? 0;
+      const originY = item.originY ?? 0;
+      const itemWidth = item.width ?? 0;
+      const itemHeight = item.height ?? 0;
+      
+      // Calculate origin adjustment
+      // Layout positions are cell centers. To position correctly:
+      // - Center origin (0.5, 0.5): item.x = cellCenter.x (no adjustment)
+      // - Top-left origin (0, 0): item.x = cellCenter.x - width/2
+      // General formula: adjustment = (0.5 - origin) * dimension
+      const originAdjustX = (0.5 - originX) * itemWidth;
+      const originAdjustY = (0.5 - originY) * itemHeight;
 
       if (transform) {
         const transformed = transform(pos);
-        item.x = transformed.x + offsetX;
-        item.y = transformed.y + offsetY;
+        item.x = transformed.x + offsetX + originAdjustX;
+        item.y = transformed.y + offsetY + originAdjustY;
       } else {
-        item.x = pos.x + offsetX;
-        item.y = pos.y + offsetY;
+        item.x = pos.x + offsetX + originAdjustX;
+        item.y = pos.y + offsetY + originAdjustY;
       }
     }
   });
@@ -82,18 +102,23 @@ export function horizontalLayout(items, options = {}) {
     // X position depends on whether we're centering the items
     const itemX = centerItems ? x + width / 2 : x;
 
-    // Y position determined by alignment
+    // Y position determined by alignment (starting after padding)
     let itemY;
     switch (align) {
       case "center":
-        itemY = (maxHeight - height) / 2;
+        itemY = padding + (maxHeight - height) / 2;
         break;
       case "end":
-        itemY = maxHeight - height;
+        itemY = padding + maxHeight - height;
         break;
       case "start":
       default:
-        itemY = 0;
+        itemY = padding;
+    }
+    
+    // If centering items, Y should also be center-based
+    if (centerItems) {
+      itemY += height / 2;
     }
 
     positions.push({ x: itemX, y: itemY });

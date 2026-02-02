@@ -22,14 +22,24 @@ export class Circle extends Shape {
 
   /**
    * Renders the circle using the Painter API.
-   * Draws at (radius, radius) to place circle center correctly
-   * relative to the bounding box top-left at (0, 0).
+   * 
+   * With origin-based coordinates:
+   * - origin (0, 0) = top-left: circle center at (radius, radius) from (0, 0)
+   * - origin (0.5, 0.5) = center: circle center at (0, 0)
    */
   draw() {
     super.draw();
-    // Circle center is at (radius, radius) from the bounding box top-left
-    const cx = this._radius;
-    const cy = this._radius;
+    
+    // Calculate draw offset based on origin (using bounding box)
+    // For a circle, bounding box is (0, 0) to (diameter, diameter)
+    // Circle center relative to bounding box top-left is (radius, radius)
+    // Use || 0 to convert -0 to 0 for consistent behavior
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
+    // Circle center in local space after applying origin offset
+    const cx = this._radius + offsetX;
+    const cy = this._radius + offsetY;
 
     if (this.color) {
       Painter.shapes.fillCircle(cx, cy, this._radius, this.color);

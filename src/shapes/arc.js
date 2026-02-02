@@ -26,9 +26,14 @@ export class Arc extends Shape {
 
   draw() {
     super.draw();
-    // Arc center is at (radius, radius) from bounding box top-left
-    const cx = this.radius;
-    const cy = this.radius;
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
+    // Arc center relative to bounding box
+    const cx = this.radius + offsetX;
+    const cy = this.radius + offsetY;
 
     Painter.lines.beginPath();
     Painter.shapes.arc(cx, cy, this.radius, this.startAngle, this.endAngle, false);

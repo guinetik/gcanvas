@@ -41,17 +41,20 @@ export class Traceable extends Geometry2d {
 
   /**
    * Returns debug bounds in local space.
-   * With origin-based coordinates, bounds start at (0, 0).
+   * Accounts for origin - debug box is drawn at the same offset as the shape.
    * Override in subclasses for custom debug bounds.
    * @returns {{x: number, y: number, width: number, height: number}}
    */
   getDebugBounds() {
-    // Return bounds starting at local origin (0, 0)
+    // Calculate offset based on origin (same as shapes use for drawing)
+    const offsetX = -this.width * this.originX;
+    const offsetY = -this.height * this.originY;
+    
     return {
+      x: offsetX,
+      y: offsetY,
       width: this.width,
       height: this.height,
-      x: 0,
-      y: 0,
     };
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "@guinetik/gcanvas",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "A batteries-included 2D canvas framework for games and generative art",
   "main": "dist/gcanvas.es.js",
   "types": "types/index.d.ts",

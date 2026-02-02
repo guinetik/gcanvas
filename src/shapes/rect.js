@@ -23,13 +23,19 @@ export class Rectangle extends Shape {
   }
 
   drawRect() {
-    // Draw at (0, 0) - the transformation pipeline handles origin-based positioning
+    // Calculate draw offset based on origin
+    // For origin (0, 0) = top-left: draw at (0, 0)
+    // For origin (0.5, 0.5) = center: draw at (-width/2, -height/2)
+    // Use || 0 to convert -0 to 0 for consistent behavior
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     if (this.color) {
-      Painter.shapes.rect(0, 0, this.width, this.height, this.color);
+      Painter.shapes.rect(offsetX, offsetY, this.width, this.height, this.color);
     }
 
     if (this.stroke) {
-      Painter.shapes.outlineRect(0, 0, this.width, this.height, this.stroke, this.lineWidth);
+      Painter.shapes.outlineRect(offsetX, offsetY, this.width, this.height, this.stroke, this.lineWidth);
     }
   }
 }

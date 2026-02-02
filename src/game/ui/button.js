@@ -74,6 +74,9 @@ export class Button extends GameObject {
    * @param {...any} rest - Additional properties passed to the superclass.
    */
   constructor(game, options = {}) {
+    // Force origin to center since button internals use center-based positioning
+    options.origin = options.origin ?? "center";
+    
     // Pass options to the GameObject constructor
     super(game, options);
     
@@ -175,7 +178,8 @@ export class Button extends GameObject {
       height: this.height,
       color: this.colors.default.bg,
       stroke: this.colors.default.stroke,
-      lineWidth: 2
+      lineWidth: 2,
+      origin: "center",
     });
   }
 
@@ -192,7 +196,8 @@ export class Button extends GameObject {
       font: font,
       color: textColor,
       align: this.textAlign,
-      baseline: this.textBaseline
+      baseline: this.textBaseline,
+      origin: "center",
     });
     
     this.alignText();
@@ -257,7 +262,7 @@ export class Button extends GameObject {
    * @private
    */
   initGroup() {
-    this.group = new Group();
+    this.group = new Group({ origin: "center" });
     this.group.add(this.bg);
     this.group.add(this.label);
   }
@@ -487,6 +492,21 @@ export class Button extends GameObject {
     return {
       x: this.x,
       y: this.y,
+      width: this.width,
+      height: this.height,
+    };
+  }
+
+  /**
+   * Get debug bounds in local space, accounting for origin.
+   * @returns {{x: number, y: number, width: number, height: number}} Debug bounds
+   */
+  getDebugBounds() {
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    return {
+      x: offsetX,
+      y: offsetY,
       width: this.width,
       height: this.height,
     };

@@ -20,11 +20,16 @@ export class Star extends Shape {
 
   draw() {
     super.draw();
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     const step = Math.PI / this.spikes;
     const rotationOffset = -Math.PI / 2;
-    // Star center is at (radius, radius) from bounding box top-left
-    const cx = this.radius;
-    const cy = this.radius;
+    // Star center relative to bounding box
+    const cx = this.radius + offsetX;
+    const cy = this.radius + offsetY;
 
     // Render
     Painter.lines.beginPath();

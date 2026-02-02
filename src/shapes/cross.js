@@ -26,11 +26,16 @@ export class Cross extends Shape {
 
   draw() {
     super.draw();
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
     const s = this.size / 2;
     const t = this.thickness / 2;
-    // Cross center is at (s, s) from bounding box top-left
-    const cx = s;
-    const cy = s;
+    // Cross center relative to bounding box
+    const cx = s + offsetX;
+    const cy = s + offsetY;
 
     if (this.diagonal) {
       // Draw an X (rotated +)
@@ -51,17 +56,17 @@ export class Cross extends Shape {
     } else {
       // Draw a + shape
       Painter.lines.beginPath();
-      Painter.lines.moveTo(cx - t, 0);
-      Painter.lines.lineTo(cx + t, 0);
+      Painter.lines.moveTo(cx - t, offsetY);
+      Painter.lines.lineTo(cx + t, offsetY);
       Painter.lines.lineTo(cx + t, cy - t);
-      Painter.lines.lineTo(this.size, cy - t);
-      Painter.lines.lineTo(this.size, cy + t);
+      Painter.lines.lineTo(this.size + offsetX, cy - t);
+      Painter.lines.lineTo(this.size + offsetX, cy + t);
       Painter.lines.lineTo(cx + t, cy + t);
-      Painter.lines.lineTo(cx + t, this.size);
-      Painter.lines.lineTo(cx - t, this.size);
+      Painter.lines.lineTo(cx + t, this.size + offsetY);
+      Painter.lines.lineTo(cx - t, this.size + offsetY);
       Painter.lines.lineTo(cx - t, cy + t);
-      Painter.lines.lineTo(0, cy + t);
-      Painter.lines.lineTo(0, cy - t);
+      Painter.lines.lineTo(offsetX, cy + t);
+      Painter.lines.lineTo(offsetX, cy - t);
       Painter.lines.lineTo(cx - t, cy - t);
       Painter.lines.closePath();
     }

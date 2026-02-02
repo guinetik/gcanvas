@@ -324,14 +324,17 @@ class PaintScene extends GameObject {
 class UIScene extends Scene {
   constructor(game, paintScene, options = {}) {
     super(game, options);
-    this.debug = false;
-    this.debugColor = "yellow";
+    // Don't override debug from options
+    this.debugColor = options.debugColor || "yellow";
     this.paintScene = paintScene;
     this.layout = new HorizontalLayout(game, {
       x: 0,
       y: 0,
       spacing: 8,
       padding: 0,
+      origin: "center",
+      debug: true,
+      debugColor: "magenta",
     });
     this.toolPencil = this.layout.add(
       new ToggleButton(game, {
@@ -442,8 +445,9 @@ class DemoGame extends Game {
     this.uiScene = new UIScene(this, this.paintScene, {
       debug: true,
       debugColor: "yellow",
+      origin: "center",
       anchor: Position.BOTTOM_CENTER,
-      anchorRelative: this.paintScene,
+      anchorMargin: 30,
       width: 80 + 80 + 80 + 80 + 32,
       height: 40,
     });
@@ -453,7 +457,7 @@ class DemoGame extends Game {
   init() {
     super.init();
     // Create the paint scene
-    this.paintScene = new PaintScene(this, { debug: true, anchor: "center" });
+    this.paintScene = new PaintScene(this, { debug: true, origin: "center" });
     this.pipeline.add(this.paintScene);
     // Add them to the pipeline
     this.createUI();

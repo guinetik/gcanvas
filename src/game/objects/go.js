@@ -217,11 +217,20 @@ export class GameObject extends Transformable {
     }
 
     // Now check if the point is inside our local bounds
-    // With origin-based coordinates, bounds are from (0, 0) to (width, height)
+    // With origin-based coordinates, bounds are offset from (0, 0) based on origin
+    // For center origin (0.5, 0.5): bounds from (-w/2, -h/2) to (w/2, h/2)
+    // For top-left origin (0, 0): bounds from (0, 0) to (w, h)
     const w = bounds.width || this.width || 0;
     const h = bounds.height || this.height || 0;
+    const originX = this.originX ?? 0;
+    const originY = this.originY ?? 0;
+    
+    // Calculate bounds offset (same as shapes use for drawing)
+    const offsetX = -w * originX;
+    const offsetY = -h * originY;
 
-    return localX >= 0 && localX <= w && localY >= 0 && localY <= h;
+    return localX >= offsetX && localX <= offsetX + w && 
+           localY >= offsetY && localY <= offsetY + h;
   }
 
   /**

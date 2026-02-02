@@ -20,9 +20,14 @@ export class PieSlice extends Shape {
 
   draw() {
     super.draw();
-    // Slice center is at (radius, radius) from bounding box top-left
-    const cx = this.radius;
-    const cy = this.radius;
+    
+    // Calculate origin offset
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    
+    // Slice center relative to bounding box
+    const cx = this.radius + offsetX;
+    const cy = this.radius + offsetY;
 
     Painter.lines.beginPath();
     Painter.lines.moveTo(cx, cy);

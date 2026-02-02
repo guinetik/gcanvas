@@ -85,26 +85,22 @@ export class Transformable extends Renderable {
   }
 
   /**
-   * Applies canvas transform context with pivot support.
-   * Transforms are applied around the origin (pivot) point.
-   * Order: translate to pivot → rotate → scale → translate back
+   * Applies canvas transform context.
+   * Transforms are applied around local (0, 0) which is the origin point.
+   * The shape's draw() method handles offset so its origin aligns with (0, 0).
+   * 
+   * This means:
+   * - For center origin: rotate/scale around the shape's center
+   * - For top-left origin: rotate/scale around the shape's top-left corner
    */
   applyTransforms() {
     if (this._isCaching) return;
 
-    // Get pivot from parent render call (set by Renderable.render())
-    const pivotX = this._pivotX ?? this.width * this.originX;
-    const pivotY = this._pivotY ?? this.height * this.originY;
-
-    // 1. Translate to pivot point
-    Painter.translate(pivotX, pivotY);
-
-    // 2. Apply rotation and scale around pivot
+    // Apply rotation and scale around local (0, 0)
+    // After render() translates to (x, y), local (0, 0) is at (x, y) in world space
+    // The shape's draw() offsets itself so its origin point is at (0, 0)
     Painter.rotate(this._rotation);
     Painter.scale(this._scaleX, this._scaleY);
-
-    // 3. Translate back so drawing starts at (0, 0)
-    Painter.translate(-pivotX, -pivotY);
   }
 
   /**
