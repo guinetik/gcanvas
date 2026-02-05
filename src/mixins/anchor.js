@@ -57,11 +57,22 @@ export function applyAnchor(go, options = {}) {
 
       if (relativeObj) {
         // Position relative to another object
+        // IMPORTANT: Position.calculate expects container x,y to be the TOP-LEFT corner.
+        // If the relative object has a non-zero origin, we need to convert its x,y
+        // (which is where its origin point is) to the top-left corner position.
+        const relOriginX = relativeObj.originX ?? 0;
+        const relOriginY = relativeObj.originY ?? 0;
+        const relWidth = relativeObj.width || 0;
+        const relHeight = relativeObj.height || 0;
+        
+        // Convert from origin-based position to top-left corner position
+        // relativeObj.x is where the origin (at originX, originY) is placed
+        // Top-left is at: x - originX * width, y - originY * height
         const containerObj = {
-          x: relativeObj.x,
-          y: relativeObj.y,
-          width: relativeObj.width,
-          height: relativeObj.height,
+          x: relativeObj.x - relOriginX * relWidth,
+          y: relativeObj.y - relOriginY * relHeight,
+          width: relWidth,
+          height: relHeight,
         };
 
         position = Position.calculate(

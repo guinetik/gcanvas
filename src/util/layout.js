@@ -13,49 +13,62 @@
  * Applies layout positions to items with optional transformation
  *
  * With the origin-based coordinate system (v3.0):
- * - Layout positions are calculated as cell centers (when centerItems: true)
- * - This function adjusts for each item's origin to correctly position items
- * - Items with origin: "center" (0.5, 0.5) need no adjustment
- * - Items with origin: "top-left" (0, 0) are offset by -width/2, -height/2
+ * - Layout positions can be either top-left (centerItems: false) or center (centerItems: true)
+ * - By default, assumes positions are for top-left (no origin adjustment)
+ * - Set centerItems: true if layout was created with centerItems: true
  *
  * @param {Object[]} items - Array of objects to position (must have x, y properties)
  * @param {Object[]} positions - Array of position objects from layout functions
  * @param {Object} options - Options for applying positions
  * @param {number} [options.offsetX=0] - X offset to apply to all positions
  * @param {number} [options.offsetY=0] - Y offset to apply to all positions
+ * @param {boolean} [options.centerItems=false] - Whether layout positions are cell centers
  * @param {function} [options.transform] - Optional transform function to apply to positions
  * @return {Object[]} The items with updated positions
  */
 export function applyLayout(items, positions, options = {}) {
   const offsetX = options.offsetX ?? 0;
   const offsetY = options.offsetY ?? 0;
+  const centerItems = options.centerItems ?? false;
   const transform = options.transform;
 
   items.forEach((item, index) => {
     if (index < positions.length) {
       const pos = positions[index];
       
-      // Get the item's origin (default is 0, 0 for top-left)
-      const originX = item.originX ?? 0;
-      const originY = item.originY ?? 0;
-      const itemWidth = item.width ?? 0;
-      const itemHeight = item.height ?? 0;
+      let finalX, finalY;
       
-      // Calculate origin adjustment
-      // Layout positions are cell centers. To position correctly:
-      // - Center origin (0.5, 0.5): item.x = cellCenter.x (no adjustment)
-      // - Top-left origin (0, 0): item.x = cellCenter.x - width/2
-      // General formula: adjustment = (0.5 - origin) * dimension
-      const originAdjustX = (0.5 - originX) * itemWidth;
-      const originAdjustY = (0.5 - originY) * itemHeight;
+      if (centerItems) {
+        // Layout positions are cell centers - adjust for item's origin
+        // Items with center origin (0.5, 0.5) need no adjustment
+        // Items with top-left origin (0, 0) need to subtract half dimensions
+        const originX = item.originX ?? 0;
+        const originY = item.originY ?? 0;
+        const itemWidth = item.width ?? 0;
+        const itemHeight = item.height ?? 0;
+        
+        // Convert from center position to origin position
+        // originAdjust = (originX - 0.5) * dimension
+        // For center origin: 0, for top-left origin: -width/2
+        const originAdjustX = (originX - 0.5) * itemWidth;
+        const originAdjustY = (originY - 0.5) * itemHeight;
+        
+        finalX = pos.x + originAdjustX;
+        finalY = pos.y + originAdjustY;
+      } else {
+        // Layout positions are top-left - no origin adjustment needed
+        // Items are positioned directly at the layout coordinates
+        finalX = pos.x;
+        finalY = pos.y;
+      }
 
       if (transform) {
-        const transformed = transform(pos);
-        item.x = transformed.x + offsetX + originAdjustX;
-        item.y = transformed.y + offsetY + originAdjustY;
+        const transformed = transform({ x: finalX, y: finalY });
+        item.x = transformed.x + offsetX;
+        item.y = transformed.y + offsetY;
       } else {
-        item.x = pos.x + offsetX + originAdjustX;
-        item.y = pos.y + offsetY + originAdjustY;
+        item.x = finalX + offsetX;
+        item.y = finalY + offsetY;
       }
     }
   });

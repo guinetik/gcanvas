@@ -144,6 +144,90 @@ export class Group extends Transformable {
     }
   }
 
+  /**
+   * Get the content bounds for caching.
+   * Returns the min/max coordinates of all children accounting for their origins.
+   * @private
+   * @returns {{minX: number, minY: number, maxX: number, maxY: number}}
+   */
+  _getContentBounds() {
+    if (!this.children?.length) {
+      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const child of this.children) {
+      const childX = child.x;
+      const childY = child.y;
+      const childWidth = child.width || 0;
+      const childHeight = child.height || 0;
+      const childOriginX = child.originX ?? 0;
+      const childOriginY = child.originY ?? 0;
+
+      // Calculate the child's bounding box edges based on its origin
+      const childLeft = childX - childWidth * childOriginX;
+      const childRight = childX + childWidth * (1 - childOriginX);
+      const childTop = childY - childHeight * childOriginY;
+      const childBottom = childY + childHeight * (1 - childOriginY);
+
+      minX = Math.min(minX, childLeft);
+      maxX = Math.max(maxX, childRight);
+      minY = Math.min(minY, childTop);
+      maxY = Math.max(maxY, childBottom);
+    }
+
+    return { minX, minY, maxX, maxY };
+  }
+
+  /**
+   * Override _renderToCache to properly handle children with negative positions.
+   * This translates content into positive cache canvas space and stores the offset.
+   * @param {number} width - Cache canvas width
+   * @param {number} height - Cache canvas height
+   * @protected
+   */
+  _renderToCache(width, height) {
+    const cacheCtx = this._cacheCanvas.getContext("2d");
+    cacheCtx.clearRect(0, 0, width, height);
+
+    // Get actual content bounds
+    const bounds = this._getContentBounds();
+    
+    // Calculate offset to shift negative content into positive space
+    // This ensures all content renders within the cache canvas
+    const offsetX = -bounds.minX + this._cachePadding;
+    const offsetY = -bounds.minY + this._cachePadding;
+    
+    // Store the offset for use when blitting
+    // The offset positions the cache canvas so the Group's origin aligns correctly
+    this._cacheOffsetX = bounds.minX;
+    this._cacheOffsetY = bounds.minY;
+
+    // Swap to cache context
+    const mainCtx = Painter.ctx;
+    Painter.ctx = cacheCtx;
+
+    // Signal that we're caching (skip transforms in applyTransforms)
+    this._isCaching = true;
+
+    cacheCtx.save();
+    // Translate so all content is in positive space
+    cacheCtx.translate(offsetX, offsetY);
+
+    // Render children directly (skip Group's own transforms since we're caching)
+    this._renderChildren();
+
+    cacheCtx.restore();
+
+    this._isCaching = false;
+
+    // Restore main context
+    Painter.ctx = mainCtx;
+  }
 
   /**
    * Update all children with active update methods

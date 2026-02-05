@@ -57,6 +57,9 @@ export class Renderable extends Traceable {
     this._cacheCanvas = null;
     this._cacheDirty = true;
     this._cachePadding = options.cachePadding ?? 2; // Extra padding for anti-aliasing/strokes
+    // Cache content offset - for Groups with children at negative positions
+    this._cacheOffsetX = 0;
+    this._cacheOffsetY = 0;
 
     this._tick = 0;
     this.logger.log("Renderable", this.x, this.y, this.width, this.height);
@@ -137,7 +140,9 @@ export class Renderable extends Traceable {
       const scaleX = this.scaleX ?? 1;
       const scaleY = this.scaleY ?? 1;
 
-      Painter.img.draw(this._cacheCanvas, 0, 0, {
+      // Apply cache offset - for Groups with children at negative positions
+      // The offset accounts for content that was rendered into positive cache space
+      Painter.img.draw(this._cacheCanvas, this._cacheOffsetX, this._cacheOffsetY, {
         width: cacheWidth,
         height: cacheHeight,
         rotation: rotation,
