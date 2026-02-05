@@ -12,8 +12,9 @@ Every visual element in GCanvas inherits from a chain of base classes. Each laye
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                  │
 │   Euclidian                                                      │
-│   ├── x, y (position)                                           │
+│   ├── x, y (position at origin point)                           │
 │   ├── width, height (dimensions)                                │
+│   ├── originX, originY, origin (pivot point)                    │
 │   └── debug rendering support                                   │
 │       │                                                          │
 │       ▼                                                          │
@@ -39,8 +40,8 @@ Every visual element in GCanvas inherits from a chain of base classes. Each laye
 │       │                                                          │
 │       ▼                                                          │
 │   Transformable                                                  │
-│   ├── rotation - angle in radians                               │
-│   ├── scaleX, scaleY - scaling factors                          │
+│   ├── rotation - angle in degrees (pivots around origin)        │
+│   ├── scaleX, scaleY - scaling factors (from origin)            │
 │   ├── applyTransforms() - canvas transform                      │
 │   └── getTransformedBounds() - rotated bounds                   │
 │       │                                                          │
@@ -70,14 +71,16 @@ The foundation class providing basic spatial properties.
 
 ```js
 class Euclidian {
-  x = 0;        // Center X position
-  y = 0;        // Center Y position
+  x = 0;        // X position (at origin point)
+  y = 0;        // Y position (at origin point)
   width = 0;    // Width
   height = 0;   // Height
+  originX = 0;  // X origin (0-1, default 0 = left)
+  originY = 0;  // Y origin (0-1, default 0 = top)
 }
 ```
 
-**Key Concept:** Position is center-based, not top-left. A shape at `(100, 100)` has its center at that point.
+**Key Concept:** Position is origin-based. By default, `origin: "top-left"` means `(x, y)` is the top-left corner. Set `origin: "center"` for center-based positioning.
 
 ### 2. Geometry2d
 
@@ -151,13 +154,15 @@ render() {
 
 **Source:** `src/shapes/transformable.js`
 
-Adds rotation and scaling.
+Adds rotation and scaling, which pivot around the origin point.
 
 ```js
-shape.rotation = Math.PI / 4;  // 45 degrees
-shape.scaleX = 2.0;
+shape.rotation = 45;  // 45 degrees (pivots around origin)
+shape.scaleX = 2.0;   // Scales from origin
 shape.scaleY = 0.5;
 ```
+
+> **Tip:** For intuitive rotation/scaling, use `origin: "center"` so transforms pivot around the shape's center.
 
 **Transform application:**
 
@@ -220,26 +225,26 @@ When `shape.render()` is called (or `shape.draw()` directly):
 
 ## Coordinate System
 
-GCanvas uses a **center-based** coordinate system:
+GCanvas uses an **origin-based** coordinate system with a default top-left origin:
 
 ```
-       ┌────────────────────────────────────┐
-       │            Canvas                   │
-       │                                     │
-       │      (0,0) top-left                │
-       │        ┌──────────────────┐        │
-       │        │                  │        │
-       │        │    (x, y)        │        │
-       │        │       ●──────────┼─width  │
-       │        │       │          │        │
-       │        │       │          │        │
-       │        └───────┼──────────┘        │
-       │              height                 │
-       │                                     │
-       └────────────────────────────────────┘
+       origin: "top-left" (default)         origin: "center"
+       ┌────────────────────────────────┐   ┌────────────────────────────────┐
+       │  (x, y)                        │   │                                │
+       │    ●─────────────────┐         │   │        ┌─────────────────┐     │
+       │    │                 │         │   │        │                 │     │
+       │    │                 │─ width  │   │        │    (x, y)       │     │
+       │    │                 │         │   │        │       ●         │     │
+       │    │                 │         │   │        │                 │     │
+       │    └─────────────────┘         │   │        └─────────────────┘     │
+       │            │                   │   │                                │
+       │          height                │   │                                │
+       └────────────────────────────────┘   └────────────────────────────────┘
 ```
 
-The `(x, y)` point is the **center** of the shape, not the top-left corner.
+The `(x, y)` point is the **origin** of the shape. With default `origin: "top-left"`, this is the top-left corner. With `origin: "center"`, this is the center point.
+
+See [Coordinate System](./coordinate-system.md) for full details.
 
 ## Creating Custom Shapes
 

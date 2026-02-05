@@ -125,10 +125,13 @@ All shapes inherit these properties:
 
 ```js
 // From Euclidian
-shape.x          // Center X position
-shape.y          // Center Y position
+shape.x          // X position (at origin point)
+shape.y          // Y position (at origin point)
 shape.width      // Width
 shape.height     // Height
+shape.origin     // Origin shorthand: "top-left" (default), "center", etc.
+shape.originX    // Normalized X origin (0-1)
+shape.originY    // Normalized Y origin (0-1)
 
 // From Geometry2d
 shape.minX       // Minimum X constraint
@@ -148,9 +151,9 @@ shape.shadowOffsetX
 shape.shadowOffsetY
 
 // From Transformable
-shape.rotation   // Rotation in degrees
-shape.scaleX     // Horizontal scale
-shape.scaleY     // Vertical scale
+shape.rotation   // Rotation in degrees (pivots around origin)
+shape.scaleX     // Horizontal scale (scales from origin)
+shape.scaleY     // Vertical scale (scales from origin)
 
 // From Shape
 shape.color      // Fill color
@@ -160,22 +163,33 @@ shape.lineJoin   // "miter", "round", "bevel"
 shape.lineCap    // "butt", "round", "square"
 ```
 
+> **Note:** The `origin` property determines where `(x, y)` positions the shape and the pivot point for rotation/scaling. Default is `"top-left"`. Use `"center"` for intuitive rotation/scaling. See [Coordinate System](../../concepts/coordinate-system.md).
+
 ## Usage Patterns
 
 ### Basic Drawing
 
 ```js
+// Top-left at (100, 100) - default origin
 const circle = new Circle(50, { x: 100, y: 100, color: 'red' });
 circle.draw();
+
+// Center at (100, 100)
+const centered = new Circle(50, { x: 100, y: 100, color: 'blue', origin: 'center' });
+centered.draw();
 ```
 
 ### With Transforms
 
 ```js
+// For rotation/scaling, center origin is often preferred
 const rect = new Rectangle({
+  x: 200,
+  y: 150,
   width: 100,
   height: 50,
   color: '#4ecdc4',
+  origin: 'center',  // Rotation/scale pivots around center
   rotation: 45,      // 45 degrees
   scaleX: 1.5,
   opacity: 0.8
@@ -186,11 +200,11 @@ rect.draw();
 ### Grouping Shapes
 
 ```js
-const group = new Group({ x: 400, y: 300 });
-group.add(new Circle(30, { color: 'red' }));
-group.add(new Rectangle({ y: 50, width: 60, height: 30, color: 'blue' }));
+const group = new Group({ x: 400, y: 300, origin: 'center' });
+group.add(new Circle(30, { color: 'red', origin: 'center' }));
+group.add(new Rectangle({ y: 50, width: 60, height: 30, color: 'blue', origin: 'center' }));
 
-// Transform entire group
+// Transform entire group (rotates around group center)
 group.rotation = 15;
 group.draw();
 ```

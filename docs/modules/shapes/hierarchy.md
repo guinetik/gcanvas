@@ -18,8 +18,10 @@ Every visual element in GCanvas inherits from a chain of base classes. Each laye
 │       ▼                                                                  │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
 │   │ Euclidian                                                        │   │
-│   │ ├── x, y         (center position)                              │   │
+│   │ ├── x, y         (position at origin point)                     │   │
 │   │ ├── width, height (dimensions)                                  │   │
+│   │ ├── originX, originY (pivot point 0-1)                          │   │
+│   │ ├── origin       (shorthand: "top-left", "center", etc.)        │   │
 │   │ ├── debug        (enable debug rendering)                       │   │
 │   │ └── debugColor   (debug outline color)                          │   │
 │   └─────────────────────────────────────────────────────────────────┘   │
@@ -109,11 +111,11 @@ Every visual element in GCanvas inherits from a chain of base classes. Each laye
 
 | Layer | Responsibility | Key Methods/Properties |
 |-------|---------------|----------------------|
-| **Euclidian** | Spatial existence | `x`, `y`, `width`, `height` |
+| **Euclidian** | Spatial existence | `x`, `y`, `width`, `height`, `origin`, `originX`, `originY` |
 | **Geometry2d** | Bounding & constraints | `getBounds()`, `minX/maxX/minY/maxY` |
 | **Traceable** | Debug visualization | `drawDebug()` |
 | **Renderable** | Render lifecycle | `render()`, `visible`, `opacity` |
-| **Transformable** | Canvas transforms | `rotation`, `scaleX`, `scaleY` |
+| **Transformable** | Canvas transforms | `rotation`, `scaleX`, `scaleY` (pivot around origin) |
 | **Shape** | Canvas styling | `color`, `stroke`, `lineWidth` |
 
 ## Why This Hierarchy?

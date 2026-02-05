@@ -40,7 +40,7 @@ Plus all options from [Geometry2d](./geometry2d.md).
 
 ### Inherited
 
-From Euclidian: `x`, `y`, `width`, `height`, `debug`, `debugColor`
+From Euclidian: `x`, `y`, `width`, `height`, `originX`, `originY`, `origin`, `debug`, `debugColor`
 
 From Geometry2d: `minX`, `maxX`, `minY`, `maxY`, `crisp`, `boundsDirty`
 

@@ -7,9 +7,11 @@
 ## Overview
 
 Transformable adds canvas transformation support:
-- **Rotation** in degrees
-- **Scaling** (horizontal and vertical)
+- **Rotation** in degrees (pivots around origin point)
+- **Scaling** (horizontal and vertical, scales from origin point)
 - **Transformed bounds** calculation
+
+The `origin` property (inherited from Euclidian) determines the pivot point for all transforms. Default is `"top-left"`, but `"center"` is commonly used for intuitive rotation/scaling behavior.
 
 This is the final base layer before custom shape styling is introduced.
 
@@ -89,10 +91,19 @@ const bounds = shape.getBounds();
 Rotation is specified in **degrees** (converted to radians internally):
 
 ```js
+// Rotates around top-left corner (default)
 const shape = new Rectangle({
   width: 100,
   height: 50,
   rotation: 45  // 45 degrees clockwise
+});
+
+// Rotates around center (more intuitive)
+const centeredShape = new Rectangle({
+  width: 100,
+  height: 50,
+  origin: 'center',
+  rotation: 45  // 45 degrees clockwise around center
 });
 
 // Update rotation
@@ -102,12 +113,20 @@ shape.rotation = -30;  // 30 degrees counter-clockwise
 
 ## Scaling
 
-Scale factors multiply the shape's dimensions:
+Scale factors multiply the shape's dimensions from the origin point:
 
 ```js
+// Scales from top-left corner (default)
 const shape = new Circle(50, {
   scaleX: 2,   // Twice as wide
   scaleY: 0.5  // Half as tall
+});
+
+// Scales from center (more intuitive - shape stays centered)
+const centeredShape = new Circle(50, {
+  origin: 'center',
+  scaleX: 2,   
+  scaleY: 0.5  
 });
 
 // Result: ellipse 200 wide, 50 tall
@@ -125,22 +144,35 @@ shape.scaleX = -1;
 
 // Flip vertically
 shape.scaleY = -1;
+
+// For pulse/bounce effects, use center origin:
+const button = new Rectangle({
+  origin: 'center',
+  scaleX: 1,
+  scaleY: 1
+});
 ```
 
 ## Transform Order
 
 Transforms are applied in this order:
 
-1. **Translate** to (x, y) — from Renderable
-2. **Rotate** by rotation angle
-3. **Scale** by scaleX, scaleY
+1. **Translate** to (x, y) — the object's position
+2. **Translate** to pivot point — based on origin (e.g., center of shape)
+3. **Rotate** by rotation angle — around pivot point
+4. **Scale** by scaleX, scaleY — from pivot point
+5. **Translate** back from pivot — so drawing starts at correct position
 
 ```js
-// Canvas transform stack:
-ctx.translate(x, y);      // Move to position
-ctx.rotate(rotation);     // Rotate around position
-ctx.scale(scaleX, scaleY); // Scale from position
+// Simplified canvas transform stack:
+ctx.translate(x, y);           // Move to position
+ctx.translate(pivotX, pivotY); // Move to pivot (originX * width, originY * height)
+ctx.rotate(rotation);          // Rotate around pivot
+ctx.scale(scaleX, scaleY);     // Scale from pivot
+ctx.translate(-pivotX, -pivotY); // Move back so drawing starts at top-left
 ```
+
+With `origin: "top-left"` (default), the pivot is at (0, 0), so rotation/scaling happen around the top-left corner. With `origin: "center"`, the pivot is at the center of the shape.
 
 ## Transformed Bounds
 
@@ -187,7 +219,8 @@ const rect = new Rectangle({
   y: 300,
   width: 100,
   height: 60,
-  color: '#4ecdc4'
+  color: '#4ecdc4',
+  origin: 'center'  // Rotate around center for smooth spin
 });
 
 function animate() {
@@ -206,6 +239,14 @@ animate();
 ## Example: Pulsing Scale
 
 ```js
+// Use center origin for symmetric pulsing
+const shape = new Circle(50, {
+  x: 400,
+  y: 300,
+  color: '#ff6b6b',
+  origin: 'center'  // Pulse stays centered
+});
+
 let time = 0;
 
 function animate() {

@@ -21,7 +21,7 @@ GCanvas serves two distinct use cases with different abstractions. Understanding
 Euclidian → Geometry2d → Renderable → Transformable → Shape
 ```
 
-- **Euclidian**: Basic positioning (x, y, width, height)
+- **Euclidian**: Basic positioning (x, y, width, height, origin)
 - **Geometry2d**: Bounds constraints, bounding box calculations
 - **Renderable**: Visibility, opacity, shadows
 - **Transformable**: Rotation, scaling
@@ -456,7 +456,7 @@ Layout scenes automatically:
 
 ## See Also
 
-- [Coordinate System](./coordinate-system.md) - How positioning works (center-based, parent-child, Camera3D)
+- [Coordinate System](./coordinate-system.md) - How positioning works (origin-based, parent-child, Camera3D)
 - [Rendering Pipeline](./rendering-pipeline.md) - Deep dive into the Shape hierarchy
 - [Architecture Overview](./architecture-overview.md) - High-level system design
 - [Lifecycle](./lifecycle.md) - GameObject lifecycle details

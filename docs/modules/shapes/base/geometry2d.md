@@ -36,7 +36,7 @@ Plus all options from [Euclidian](./euclidian.md).
 
 ### Inherited from Euclidian
 
-`x`, `y`, `width`, `height`, `debug`, `debugColor`
+`x`, `y`, `width`, `height`, `originX`, `originY`, `origin`, `debug`, `debugColor`
 
 ### Own Properties
 
@@ -82,11 +82,16 @@ calculateBounds() {
 
 ### getLocalPosition()
 
-Returns the object's top-left corner position. Useful for layout systems.
+Returns the object's top-left corner position, calculated from the origin point. Useful for layout systems.
 
 ```js
-const local = shape.getLocalPosition();
-// { x: 75, y: 85 } for a shape at (100,100) with width 50, height 30
+// For a shape at (100,100) with width 50, height 30:
+
+// With origin: "top-left" (default)
+shape.getLocalPosition(); // { x: 100, y: 100 }
+
+// With origin: "center"
+shape.getLocalPosition(); // { x: 75, y: 85 }
 ```
 
 **Returns:** `{ x: number, y: number }`
@@ -114,21 +119,22 @@ shape.markBoundsDirty();
 
 ### setTopLeft(x, y)
 
-Sets position using top-left coordinates instead of center.
+Sets position such that the top-left corner is at the given coordinates, regardless of the current origin.
 
 ```js
 shape.setTopLeft(0, 0); // Top-left at (0,0)
-// Center is now at (width/2, height/2)
+// Adjusts x, y based on current origin to achieve this
 ```
 
 **Returns:** `this` (for chaining)
 
 ### setCenter(x, y)
 
-Sets the center position (same as setting x and y directly).
+Sets position such that the center is at the given coordinates, regardless of the current origin.
 
 ```js
 shape.setCenter(400, 300);
+// Adjusts x, y based on current origin to achieve this
 ```
 
 **Returns:** `this` (for chaining)
