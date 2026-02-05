@@ -10,6 +10,8 @@ export class HUD extends GameObject {
       color: "#ffff00",
       align: "center",
       baseline: "top",
+      originX: 0.5,
+      originY: 0,
     });
 
     // Score - top left
@@ -18,6 +20,8 @@ export class HUD extends GameObject {
       color: "#ffffff",
       align: "left",
       baseline: "top",
+      originX: 0,
+      originY: 0,
     });
 
     // Level - top right
@@ -26,6 +30,8 @@ export class HUD extends GameObject {
       color: "#00ffff",
       align: "right",
       baseline: "top",
+      originX: 1,
+      originY: 0,
     });
 
     // Lives - bottom left (above FPS)
@@ -34,6 +40,8 @@ export class HUD extends GameObject {
       color: "#00ff00",
       align: "left",
       baseline: "bottom",
+      originX: 0,
+      originY: 1,
     });
 
     // Center message (font size set dynamically based on screen width)
@@ -42,6 +50,7 @@ export class HUD extends GameObject {
       color: "#ffff00",
       align: "center",
       baseline: "middle",
+      origin: "center",
     });
 
     // Message auto-hide timer

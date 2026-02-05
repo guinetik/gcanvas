@@ -28,6 +28,7 @@ export class Player extends GameObject {
       height: 12,
       y: 2,
       color: "#00ff00",
+      origin: "center",
     });
 
     // Cannon (top center)
@@ -36,6 +37,7 @@ export class Player extends GameObject {
       height: 10,
       y: -8,
       color: "#00ff00",
+      origin: "center",
     });
 
     // Cannon tip
@@ -44,6 +46,7 @@ export class Player extends GameObject {
       height: 4,
       y: -14,
       color: "#88ff88",
+      origin: "center",
     });
 
     // Left wing
@@ -53,6 +56,7 @@ export class Player extends GameObject {
       x: -13,
       y: 5,
       color: "#00dd00",
+      origin: "center",
     });
 
     // Right wing
@@ -62,6 +66,7 @@ export class Player extends GameObject {
       x: 13,
       y: 5,
       color: "#00dd00",
+      origin: "center",
     });
 
     // Left wing detail
@@ -71,6 +76,7 @@ export class Player extends GameObject {
       x: -19,
       y: 6,
       color: "#00aa00",
+      origin: "center",
     });
 
     // Right wing detail
@@ -80,6 +86,7 @@ export class Player extends GameObject {
       x: 19,
       y: 6,
       color: "#00aa00",
+      origin: "center",
     });
 
     // Engine glow left
@@ -89,6 +96,7 @@ export class Player extends GameObject {
       x: -6,
       y: 10,
       color: "#ffaa00",
+      origin: "center",
     });
 
     // Engine glow right
@@ -98,6 +106,7 @@ export class Player extends GameObject {
       x: 6,
       y: 10,
       color: "#ffaa00",
+      origin: "center",
     });
 
     this.ship.add(hull);
@@ -152,6 +161,42 @@ export class Player extends GameObject {
     this.shieldRechargeDelay = 0; // Time before recharge starts
     this.shieldFlash = 0; // For visual effect
 
+    // Mobile touch controls
+    this.touchActive = false;
+    this.touchX = 0;
+    this.setupTouchControls();
+  }
+
+  /**
+   * Sets up touch event handlers for mobile play
+   */
+  setupTouchControls() {
+    const canvas = this.game.canvas;
+
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      this.touchActive = true;
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      this.touchX = touch.clientX - rect.left;
+    }, { passive: false });
+
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      if (this.touchActive) {
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        this.touchX = touch.clientX - rect.left;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener("touchend", () => {
+      this.touchActive = false;
+    });
+
+    canvas.addEventListener("touchcancel", () => {
+      this.touchActive = false;
+    });
   }
 
   /**
@@ -243,8 +288,18 @@ export class Player extends GameObject {
     const canMove = this.game.gameState === "playing" || this.game.gameState === "bossfight";
 
     // Handle movement (arrow keys and WASD)
-    const movingLeft = canMove && (Keys.isDown(Keys.LEFT) || Keys.isDown("a") || Keys.isDown("A"));
-    const movingRight = canMove && (Keys.isDown(Keys.RIGHT) || Keys.isDown("d") || Keys.isDown("D"));
+    let movingLeft = canMove && (Keys.isDown(Keys.LEFT) || Keys.isDown("a") || Keys.isDown("A"));
+    let movingRight = canMove && (Keys.isDown(Keys.RIGHT) || Keys.isDown("d") || Keys.isDown("D"));
+
+    // Touch controls - move toward touch position
+    if (this.touchActive && canMove) {
+      const deadzone = 20; // pixels from ship center before moving
+      const diff = this.touchX - this.x;
+      if (Math.abs(diff) > deadzone) {
+        movingLeft = diff < 0;
+        movingRight = diff > 0;
+      }
+    }
 
     // Speed boost during star power + upgrade multiplier
     let speed = PLAYER_SPEED * this.speedMultiplier;
@@ -312,7 +367,9 @@ export class Player extends GameObject {
     }
 
     // Handle shooting (only during active gameplay, including boss fight)
-    if (Keys.isDown(Keys.SPACE) && this.canShoot && canMove) {
+    // Touch = auto-fire, keyboard = space bar
+    const wantsToShoot = Keys.isDown(Keys.SPACE) || this.touchActive;
+    if (wantsToShoot && this.canShoot && canMove) {
       this.shoot();
     }
 
