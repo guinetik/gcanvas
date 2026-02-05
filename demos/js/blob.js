@@ -28,10 +28,10 @@ import {
 // Game configuration
 const CONFIG = {
   // Blob starting size
-  startRadius: 40,
-  maxRadius: 120,
-  minRadius: 20,             // minimum size before death
-  growthPerCollect: 3,
+  startRadius: 60,           // default starting size (increased from 40)
+  maxRadius: 150,            // maximum size
+  minRadius: 35,             // minimum size before death (increased from 20)
+  growthPerCollect: 4,
 
   // Hunger/starvation system
   hungerTime: 3.0,           // seconds without eating before hunger starts
@@ -87,8 +87,6 @@ class BezierBlobGame extends Game {
       // Always horizontal at bottom left
       layoutType: "horizontal",
       anchor: Position.BOTTOM_LEFT,
-      anchorOffsetX: 10,
-      anchorOffsetY: -10,
     };
   }
 
@@ -343,84 +341,84 @@ class BlobScene extends Scene {
     // Add the blob to the scene
     this.add(this.blob);
 
-    // Create eyes for the blob
+    // Create eyes for the blob - no position offsets, positioned dynamically
     const leftEye = ShapeGOFactory.create(
       this.game,
       new Circle(10, {
-        x: -20,
-        y: -15,
         color: "white",
         stroke: "rgba(0, 0, 0, 0.5)",
         lineWidth: 1,
+        origin: "center",
       }),
       {
         debug: this.debug,
         debugColor: "white",
+        origin: "center",
       }
     );
 
     const rightEye = ShapeGOFactory.create(
       this.game,
       new Circle(10, {
-        x: 20,
-        y: -15,
         color: "white",
         stroke: "rgba(0, 0, 0, 0.5)",
         lineWidth: 1,
+        origin: "center",
       }),
       {
         debug: this.debug,
         debugColor: "white",
+        origin: "center",
       }
     );
 
-    // Create pupils
+    // Create pupils - no position offsets, positioned dynamically
     const leftPupil = ShapeGOFactory.create(
       this.game,
       new Circle(4, {
-        x: -20,
-        y: -15,
         color: "black",
+        origin: "center",
       }),
       {
         debug: this.debug,
         debugColor: "blue",
+        origin: "center",
       }
     );
 
     const rightPupil = ShapeGOFactory.create(
       this.game,
       new Circle(4, {
-        x: 20,
-        y: -15,
         color: "black",
+        origin: "center",
       }),
       {
         debug: this.debug,
         debugColor: "blue",
+        origin: "center",
       }
     );
 
-    // Create mouth (initially a small line)
+    // Create mouth - no position offsets, positioned dynamically
     const mouthShape = new BezierShape(
       [
         ["M", -15, 0],
         ["Q", 0, 5, 15, 0],
       ],
       {
-        x: 0,
-        y: 10,
         width: 30,
         height: 10,
         stroke: "rgba(0, 0, 0, 0.7)",
         lineWidth: 3,
         color: null,
+        origin: "center",
       }
     );
 
     const mouth = ShapeGOFactory.create(this.game, mouthShape, {
       debug: this.debug,
       debugColor: "red",
+      origin: "center",
     });
 
     // Add facial features to the scene
@@ -688,17 +686,23 @@ class BlobScene extends Scene {
     this.blob.x = physics.currentX;
     this.blob.y = physics.currentY;
 
+    // Scale factor for positioning (radius/100 baseline)
+    const sizeScale = physics.currentRadius / 100;
+    const eyeOffsetX = 20 * sizeScale;
+    const eyeOffsetY = 15 * sizeScale;
+    const mouthOffsetY = 15 * sizeScale;
+
     // Position face during fall
-    this.leftEye.x = physics.currentX - 20;
-    this.leftEye.y = physics.currentY - 15;
-    this.rightEye.x = physics.currentX + 20;
-    this.rightEye.y = physics.currentY - 15;
+    this.leftEye.x = physics.currentX - eyeOffsetX;
+    this.leftEye.y = physics.currentY - eyeOffsetY;
+    this.rightEye.x = physics.currentX + eyeOffsetX;
+    this.rightEye.y = physics.currentY - eyeOffsetY;
     this.leftPupil.x = this.leftEye.x;
     this.leftPupil.y = this.leftEye.y;
     this.rightPupil.x = this.rightEye.x;
     this.rightPupil.y = this.rightEye.y;
     this.mouth.x = physics.currentX;
-    this.mouth.y = physics.currentY + 10;
+    this.mouth.y = physics.currentY + mouthOffsetY;
 
     // Darken during fall
     this.blob.shape.color = "rgba(30, 30, 30, 0.9)";
@@ -723,27 +727,37 @@ class BlobScene extends Scene {
     this.blob.x = physics.currentX;
     this.blob.y = physics.currentY;
 
-    // Position face on squished blob
-    const faceY = physics.currentY - 15 * squishY;
-    this.leftEye.x = physics.currentX - 20 * squishX;
-    this.leftEye.y = faceY;
-    this.leftEye.scaleX = squishX * 0.5;
-    this.leftEye.scaleY = squishY * 0.5;
+    // Scale factor for positioning (radius/100 baseline)
+    const sizeScale = physics.currentRadius / 100;
+    const eyeOffsetX = 20 * sizeScale;
+    const eyeOffsetY = 15 * sizeScale;
+    const mouthOffsetY = 10 * sizeScale;
 
-    this.rightEye.x = physics.currentX + 20 * squishX;
+    // Position face on squished blob
+    const faceY = physics.currentY - eyeOffsetY * squishY;
+    this.leftEye.x = physics.currentX - eyeOffsetX * squishX;
+    this.leftEye.y = faceY;
+    this.leftEye.scaleX = sizeScale * squishX * 0.5;
+    this.leftEye.scaleY = sizeScale * squishY * 0.5;
+
+    this.rightEye.x = physics.currentX + eyeOffsetX * squishX;
     this.rightEye.y = faceY;
-    this.rightEye.scaleX = squishX * 0.5;
-    this.rightEye.scaleY = squishY * 0.5;
+    this.rightEye.scaleX = sizeScale * squishX * 0.5;
+    this.rightEye.scaleY = sizeScale * squishY * 0.5;
 
     this.leftPupil.x = this.leftEye.x;
     this.leftPupil.y = this.leftEye.y;
+    this.leftPupil.scaleX = sizeScale * squishX * 0.5;
+    this.leftPupil.scaleY = sizeScale * squishY * 0.5;
     this.rightPupil.x = this.rightEye.x;
     this.rightPupil.y = this.rightEye.y;
+    this.rightPupil.scaleX = sizeScale * squishX * 0.5;
+    this.rightPupil.scaleY = sizeScale * squishY * 0.5;
 
     this.mouth.x = physics.currentX;
-    this.mouth.y = physics.currentY + 5 * squishY;
-    this.mouth.scaleX = squishX;
-    this.mouth.scaleY = squishY * 0.5;
+    this.mouth.y = physics.currentY + mouthOffsetY * squishY;
+    this.mouth.scaleX = sizeScale * squishX * 0.8;
+    this.mouth.scaleY = sizeScale * squishY * 0.4;
 
     // Dead color
     this.blob.shape.color = "rgba(20, 20, 20, 0.9)";
@@ -783,6 +797,7 @@ class BlobScene extends Scene {
         text: "▶ PLAY",
         width: 140,
         height: 60,
+        origin: "center",
         onClick: () => this.startGame(),
       });
       this.add(this.playButton);
@@ -840,6 +855,20 @@ class BlobScene extends Scene {
     physics.vx = 0;
     physics.vy = 0;
     physics.energy = 1.0;
+
+    // Initialize facial feature positions so pupils start centered
+    const sizeScale = physics.currentRadius / 100;
+    const eyeOffsetX = 20 * sizeScale;
+    const eyeOffsetY = 15 * sizeScale;
+    this.leftEye.x = physics.currentX - eyeOffsetX;
+    this.leftEye.y = physics.currentY - eyeOffsetY;
+    this.rightEye.x = physics.currentX + eyeOffsetX;
+    this.rightEye.y = physics.currentY - eyeOffsetY;
+    // Start pupils centered in eyes
+    this.leftPupil.x = this.leftEye.x;
+    this.leftPupil.y = this.leftEye.y;
+    this.rightPupil.x = this.rightEye.x;
+    this.rightPupil.y = this.rightEye.y;
 
     // Reset mood
     this.setMood(1);
@@ -1471,109 +1500,98 @@ class BlobScene extends Scene {
     this.blob.x = physics.currentX;
     this.blob.y = physics.currentY;
 
-    // Calculate scale factor based on blob size
-    // Note: blob body scales via updateBlobShape(), not scaleX/Y
-    // Scale features proportionally (100 = design baseline)
+    // Scale factor - use radius/100 as baseline (original approach)
+    // At starting radius 40, scale is 0.4
     const sizeScale = physics.currentRadius / 100;
 
-    // Update eye positions and shapes - scale offsets by blob size
-    const baseEyeOffsetY = -15;
-    const baseEyeOffsetX = 20;
-    const eyeOffsetY = baseEyeOffsetY * sizeScale;
-    const eyeOffsetX = baseEyeOffsetX * sizeScale;
-    const eyeYAdjust = Math.min(physics.excitementLevel * 5, 3) * sizeScale; // Eyes move up when excited
+    // Base offsets for facial features (designed for scale 1.0 = radius 100)
+    // At radius 40 (scale 0.4), these get scaled down proportionally
+    const baseEyeOffsetX = 20;  // Horizontal distance from center
+    const baseEyeOffsetY = 15;  // Vertical distance above center
+    const baseMouthOffsetY = 15; // Vertical distance below center
 
-    // Scale the eyes and pupils
+    // Scale offsets by blob size
+    const eyeOffsetX = baseEyeOffsetX * sizeScale;
+    const eyeOffsetY = baseEyeOffsetY * sizeScale;
+    const mouthOffsetY = baseMouthOffsetY * sizeScale;
+
+    // Excitement makes eyes move up slightly
+    const eyeYAdjust = Math.min(physics.excitementLevel * 3, 2) * sizeScale;
+
+    // Scale the eyes, pupils, and mouth
     this.leftEye.scaleX = this.leftEye.scaleY = sizeScale;
     this.rightEye.scaleX = this.rightEye.scaleY = sizeScale;
     this.leftPupil.scaleX = this.leftPupil.scaleY = sizeScale;
     this.rightPupil.scaleX = this.rightPupil.scaleY = sizeScale;
-    this.mouth.scaleX = this.mouth.scaleY = sizeScale;
+    this.mouth.scaleX = this.mouth.scaleY = sizeScale * 0.8; // Mouth slightly smaller
 
-    // Position eyes based on blob position
+    // Position eyes relative to blob center (eyes above center)
     this.leftEye.x = physics.currentX - eyeOffsetX;
-    this.leftEye.y = physics.currentY + eyeOffsetY - eyeYAdjust;
-    // Position pupils based on eye position
+    this.leftEye.y = physics.currentY - eyeOffsetY - eyeYAdjust;
     this.rightEye.x = physics.currentX + eyeOffsetX;
-    this.rightEye.y = physics.currentY + eyeOffsetY - eyeYAdjust;
-    //
-    // Eye tracking
-    // First, calculate vectors from eye centers to mouse
-    const leftEyeToDx = this.mouseX - this.leftEye.x;
-    const leftEyeToDy = this.mouseY - this.leftEye.y;
-    // Right eye vector
-    const rightEyeToDx = this.mouseX - this.rightEye.x;
-    const rightEyeToDy = this.mouseY - this.rightEye.y;
-    // Eye dimensions (scaled)
-    const eyeRadius = 10 * sizeScale; // The full white part of the eye
-    const pupilRadius = 4 * sizeScale; // The black part of the eye
-    // Maximum distance the pupil center can move from eye center
-    // This ensures the pupil always stays within the white part
-    const maxPupilOffset = eyeRadius - pupilRadius - 1; // -1 for a small margin
-    // Calculate pupil positions for each eye
-    // -- Left Eye --
-    // First, normalize direction vector
-    const leftEyeDist = Math.sqrt(
-      leftEyeToDx * leftEyeToDx + leftEyeToDy * leftEyeToDy
-    );
-    let leftPupilX = 0,
-      leftPupilY = 0;
-    if (leftEyeDist > 0) {
-      // Normalize and scale by max offset
-      const normalizedX = leftEyeToDx / leftEyeDist;
-      const normalizedY = leftEyeToDy / leftEyeDist;
-      // Scale the movement - eyes follow more strongly when looking directly at the cursor
-      // and less when looking at extreme angles
-      // Calculate a scaled magnitude (distance from eye center to pupil center)
-      // Formula creates a sigmoid-like response curve
-      const scaledMagnitude = maxPupilOffset * Math.tanh(leftEyeDist / 200);
-      leftPupilX = normalizedX * scaledMagnitude;
-      leftPupilY = normalizedY * scaledMagnitude;
-    }
-    //
-    // -- Right Eye --
-    // First, normalize direction vector
-    const rightEyeDist = Math.sqrt(
-      rightEyeToDx * rightEyeToDx + rightEyeToDy * rightEyeToDy
-    );
-    let rightPupilX = 0,
-      rightPupilY = 0;
-    if (rightEyeDist > 0) {
-      // Normalize and scale by max offset
-      const normalizedX = rightEyeToDx / rightEyeDist;
-      const normalizedY = rightEyeToDy / rightEyeDist;
-      // Calculate scaled magnitude with the same formula
-      const scaledMagnitude = maxPupilOffset * Math.tanh(rightEyeDist / 200);
-      rightPupilX = normalizedX * scaledMagnitude;
-      rightPupilY = normalizedY * scaledMagnitude;
-    }
-    //
-    // Apply smoothing with Tween - this creates a more natural lag in eye movement
-    const eyeResponseSpeed = 80; // Higher = faster response
-    // Tween the pupil positions to follow the calculated offsets
-    this.leftPupil.x = Tween.lerp(
-      this.leftPupil.x,
-      this.leftEye.x + leftPupilX,
-      dt * eyeResponseSpeed
-    );
-    this.leftPupil.y = Tween.lerp(
-      this.leftPupil.y,
-      this.leftEye.y + leftPupilY,
-      dt * eyeResponseSpeed
-    );
-    this.rightPupil.x = Tween.lerp(
-      this.rightPupil.x,
-      this.rightEye.x + rightPupilX,
-      dt * eyeResponseSpeed
-    );
-    this.rightPupil.y = Tween.lerp(
-      this.rightPupil.y,
-      this.rightEye.y + rightPupilY,
-      dt * eyeResponseSpeed
-    );
-    // Position mouth (scale the offset)
+    this.rightEye.y = physics.currentY - eyeOffsetY - eyeYAdjust;
+
+    // Eye tracking - calculate where pupils should look
+    // Base sizes: eye radius = 10, pupil radius = 4
+    // After scaling: eye = 10 * sizeScale, pupil = 4 * sizeScale
+    // Pupil center must stay within: eyeRadius - pupilRadius from eye center
+    const scaledEyeRadius = 10 * sizeScale;
+    const scaledPupilRadius = 4 * sizeScale;
+    const maxPupilOffset = (scaledEyeRadius - scaledPupilRadius) * 0.8; // 80% of max for margin
+
+    // Helper function to calculate clamped pupil offset
+    const calcPupilOffset = (eyeX, eyeY) => {
+      const dx = this.mouseX - eyeX;
+      const dy = this.mouseY - eyeY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 1) return { x: 0, y: 0 };
+      
+      // Normalize direction
+      const nx = dx / dist;
+      const ny = dy / dist;
+      
+      // Calculate how far to move (capped at maxPupilOffset)
+      // Use smooth interpolation that saturates at maxPupilOffset
+      const moveDist = Math.min(maxPupilOffset, dist * 0.05);
+      
+      return { x: nx * moveDist, y: ny * moveDist };
+    };
+
+    // Calculate pupil offsets
+    const leftOffset = calcPupilOffset(this.leftEye.x, this.leftEye.y);
+    const rightOffset = calcPupilOffset(this.rightEye.x, this.rightEye.y);
+
+    // Target positions (eye center + offset)
+    const leftTargetX = this.leftEye.x + leftOffset.x;
+    const leftTargetY = this.leftEye.y + leftOffset.y;
+    const rightTargetX = this.rightEye.x + rightOffset.x;
+    const rightTargetY = this.rightEye.y + rightOffset.y;
+
+    // Smooth pupil movement
+    const eyeResponseSpeed = 10;
+    this.leftPupil.x = Tween.lerp(this.leftPupil.x, leftTargetX, dt * eyeResponseSpeed);
+    this.leftPupil.y = Tween.lerp(this.leftPupil.y, leftTargetY, dt * eyeResponseSpeed);
+    this.rightPupil.x = Tween.lerp(this.rightPupil.x, rightTargetX, dt * eyeResponseSpeed);
+    this.rightPupil.y = Tween.lerp(this.rightPupil.y, rightTargetY, dt * eyeResponseSpeed);
+
+    // HARD CLAMP: Ensure pupils never exceed maxPupilOffset from eye center
+    const clampPupilToEye = (pupil, eye) => {
+      const dx = pupil.x - eye.x;
+      const dy = pupil.y - eye.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > maxPupilOffset) {
+        const scale = maxPupilOffset / dist;
+        pupil.x = eye.x + dx * scale;
+        pupil.y = eye.y + dy * scale;
+      }
+    };
+    clampPupilToEye(this.leftPupil, this.leftEye);
+    clampPupilToEye(this.rightPupil, this.rightEye);
+
+    // Position mouth below center (further down to avoid overlap)
     this.mouth.x = physics.currentX;
-    this.mouth.y = physics.currentY + 10 * sizeScale;
+    this.mouth.y = physics.currentY + mouthOffsetY;
   }
 
   /**
@@ -1758,34 +1776,35 @@ class BlobScene extends Scene {
     if (this.isReady()) return;
 
     const { score, multiplier } = this.gameState;
-    const physics = this.blobPhysics;
+    const diff = this.getDifficulty();
+    const cx = this.game.width / 2;
+    const bottomY = this.game.height - 60;
 
-    // Score display (top center)
     Painter.useCtx((ctx) => {
-      ctx.font = "bold 24px monospace";
       ctx.textAlign = "center";
-      ctx.textBaseline = "top";
 
-      // Score with subtle glow
+      // Score display (center bottom)
+      ctx.font = "bold 24px monospace";
+      ctx.textBaseline = "bottom";
       ctx.shadowColor = "rgba(255, 255, 255, 0.3)";
       ctx.shadowBlur = 4;
       ctx.fillStyle = "white";
-      ctx.fillText(`SCORE: ${score}`, this.game.width / 2, 20);
+      ctx.fillText(`SCORE: ${score}`, cx, bottomY);
 
-      // Multiplier (if > 1)
+      // Level indicator (below score, centered)
+      ctx.font = "12px monospace";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+      ctx.shadowBlur = 0;
+      ctx.textBaseline = "top";
+      ctx.fillText(`Level: ${Math.floor(diff * 10) + 1}`, cx, bottomY + 5);
+
+      // Multiplier (above score if active)
       if (multiplier > 1) {
         ctx.font = "bold 18px monospace";
         ctx.fillStyle = `hsl(${60 + multiplier * 30}, 80%, 55%)`;
-        ctx.shadowBlur = 0; // No glow on multiplier
-        ctx.fillText(`x${multiplier} COMBO!`, this.game.width / 2, 50);
+        ctx.textBaseline = "bottom";
+        ctx.fillText(`x${multiplier} COMBO!`, cx, bottomY - 30);
       }
-
-      // Difficulty indicator (small, bottom)
-      const diff = this.getDifficulty();
-      ctx.font = "12px monospace";
-      ctx.fillStyle = `rgba(255, 255, 255, 0.5)`;
-      ctx.shadowBlur = 0;
-      ctx.fillText(`Level: ${Math.floor(diff * 10) + 1}`, this.game.width / 2, this.game.height - 130);
     });
   }
 
@@ -2170,17 +2189,16 @@ class BlobUIScene extends Scene {
       debug: this.game.debug,
       debugColor: "purple",
       anchor: config.anchor,
-      width:200,
-      height:30,
-      anchorOffsetX: config.anchorOffsetX,
-      anchorOffsetY: config.anchorOffsetY,
+      anchorMargin: 15,
+      origin: "center",
     });
 
-    // Add buttons
+    // Add buttons with center origin
     this.resetBtn = new Button(this.game, {
       text: "Reset",
       width: config.buttonWidth,
       height: config.buttonHeight,
+      origin: "center",
       onClick: () => this.resetBlob(),
     });
     this.layout.add(this.resetBtn);
@@ -2189,6 +2207,7 @@ class BlobUIScene extends Scene {
       text: "🎨 Recolor",
       width: config.buttonWidth,
       height: config.buttonHeight,
+      origin: "center",
       onClick: () => this.blobScene.triggerBlobGradientShift(),
     });
     this.layout.add(this.colorBtn);
