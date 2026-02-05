@@ -89,7 +89,8 @@ function initEuclidianDemo() {
     y: 100,
     color: '#333',
     stroke: '#0f0',
-    lineWidth: 1
+    lineWidth: 1,
+    origin: "center",
   });
 
   // Create text labels showing coordinates
@@ -100,7 +101,8 @@ function initEuclidianDemo() {
     font: '12px monospace',
     align: 'center',
     baseline: 'top',
-    opacity: 0.9
+    opacity: 0.9,
+    origin: "center",
   });
 
   // Create and add grid to pipeline
@@ -176,7 +178,8 @@ function initGeometry2dDemo() {
         color: '#333',
         stroke: '#0f0',
         lineWidth: 1,
-        debug: false
+        debug: false,
+        origin: "center",
       });
 
       constraintBounds = new Rectangle({
@@ -187,7 +190,8 @@ function initGeometry2dDemo() {
         color: null,
         stroke: '#0f0',
         lineWidth: 1,
-        debug: false
+        debug: false,
+        origin: "center",
       });
       
       game.pipeline.add(constraintBounds);
@@ -268,7 +272,8 @@ function initRenderableDemo() {
         shadowOffsetY: 2,
         color: '#1a1a1a',
         stroke: '#0f0',
-        lineWidth: 1
+        lineWidth: 1,
+        origin: "center",
       });
 
       shape2 = new Circle(25, {
@@ -281,7 +286,8 @@ function initRenderableDemo() {
         shadowOffsetY: 3,
         color: '#2a2a2a',
         stroke: '#0f0',
-        lineWidth: 1
+        lineWidth: 1,
+        origin: "center",
       });
 
       shape3 = new Triangle({
@@ -295,7 +301,8 @@ function initRenderableDemo() {
         shadowOffsetY: 2,
         color: '#1a1a1a',
         stroke: '#0f0',
-        lineWidth: 1
+        lineWidth: 1,
+        origin: "center",
       });
       
       game.pipeline.add(shape1);
@@ -347,7 +354,8 @@ function initTransformableDemo() {
         scaleY: 0.8,
         color: '#1a1a1a',
         stroke: '#0f0',
-        lineWidth: 1
+        lineWidth: 1,
+        origin: "center",
       });
 
       shape2 = new Circle(20, {
@@ -358,7 +366,8 @@ function initTransformableDemo() {
         scaleY: 1.2,
         color: '#2a2a2a',
         stroke: '#0f0',
-        lineWidth: 1
+        lineWidth: 1,
+        origin: "center",
       });
 
       shape3 = new Triangle({
@@ -370,7 +379,8 @@ function initTransformableDemo() {
         scaleY: 2.0,
         color: '#1a1a1a',
         stroke: '#0f0',
-        lineWidth: 1
+        lineWidth: 1,
+        origin: "center",
       });
       
       game.pipeline.add(shape1);
@@ -428,7 +438,8 @@ function initShapeDemo() {
         stroke: '#0f0',
         lineWidth: 1,
         lineJoin: 'miter',
-        lineCap: 'butt'
+        lineCap: 'butt',
+        origin: "center",
       });
 
       circle = new Circle(25, {
@@ -438,7 +449,8 @@ function initShapeDemo() {
         stroke: '#0f0',
         lineWidth: 1,
         lineJoin: 'round',
-        lineCap: 'round'
+        lineCap: 'round',
+        origin: "center",
       });
 
       triangle = new Triangle({
@@ -449,7 +461,8 @@ function initShapeDemo() {
         stroke: '#0f0',
         lineWidth: 1,
         lineJoin: 'miter',
-        lineCap: 'butt'
+        lineCap: 'butt',
+        origin: "center",
       });
       
       game.pipeline.add(rect);
@@ -497,7 +510,8 @@ function initGroupDemo() {
         height: 50,
         color: '#1a1a1a',
         stroke: '#0f0',
-        lineWidth: 1
+        lineWidth: 1,
+        origin: "center",
       });
 
       const circle = new Circle(25, {
@@ -505,7 +519,8 @@ function initGroupDemo() {
         y: 0,
         color: '#2a2a2a',
         stroke: '#0f0',
-        lineWidth: 1
+        lineWidth: 1,
+        origin: "center",
       });
 
       const text = new TextShape('GROUP', {
@@ -514,7 +529,8 @@ function initGroupDemo() {
         color: '#0f0',
         align: 'center',
         baseline: 'middle',
-        font: '14px monospace'
+        font: '14px monospace',
+        origin: "center",
       });
 
       // Add shapes to the group
