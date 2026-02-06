@@ -132,18 +132,27 @@ export class Scene extends GameObject {
   }
 
   /**
-   * Returns debug bounds in local space (centered at origin).
+   * Returns debug bounds in local space.
    * Used for debug drawing after transforms have been applied.
+   *
+   * With the origin-based coordinate system (v3.0):
+   * - Debug bounds start at (0, 0) in local space
+   * - This matches the shape drawing coordinate system
+   *
    * @returns {{x: number, y: number, width: number, height: number}}
    */
   getDebugBounds() {
-    // Return bounds centered at local origin (0, 0)
-    // This works because debug is drawn after translation to scene's position
+    // Return bounds offset based on origin (same as shapes use for drawing)
+    // For center origin: bounds from (-w/2, -h/2) to (w/2, h/2)
+    // For top-left origin: bounds from (0, 0) to (w, h)
+    const offsetX = -this.width * this.originX;
+    const offsetY = -this.height * this.originY;
+    
     return {
+      x: offsetX,
+      y: offsetY,
       width: this.width,
       height: this.height,
-      x: -this.width / 2,
-      y: -this.height / 2,
     };
   }
 

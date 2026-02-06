@@ -29,14 +29,14 @@ export class MondrianDemo extends Game {
 
     // Setup
     this.backgroundColor = "#ffffff";
-    this.gridScene = new Scene(this, { debugColor: "black" });
+    this.gridScene = new Scene(this, { debugColor: "black", origin: "center" });
 
-    // Configure grid scene
+    // Configure grid scene - center it on the canvas
     const margin = 20;
     this.gridScene.width = this.width - margin * 2;
     this.gridScene.height = this.height - margin * 2;
-    this.gridScene.x = margin;
-    this.gridScene.y = margin;
+    this.gridScene.x = this.width / 2;
+    this.gridScene.y = this.height / 2;
 
     // Generate initial composition
     this.generateMondrianRectangles(
@@ -52,26 +52,25 @@ export class MondrianDemo extends Game {
   }
 
   animateExplosion() {
-    const centerX = this.width / 2;
-    const centerY = this.height / 2;
+    // Center is now at (0, 0) in scene coordinates
     const maxDimension = Math.max(this.width, this.height);
     const children = this.gridScene._collection.getSortedChildren();
 
     children.forEach((rect) => {
-      // Calculate angle and distance from center
-      const angle = Math.atan2(rect.y - centerY, rect.x - centerX);
+      // Calculate angle and distance from center (center is 0,0 in scene coords)
+      const angle = Math.atan2(rect.y, rect.x);
       const distanceFromCenter = Math.sqrt(
-        Math.pow(rect.x - centerX, 2) + Math.pow(rect.y - centerY, 2)
+        Math.pow(rect.x, 2) + Math.pow(rect.y, 2)
       );
       const normalizedDistance = Math.min(
         1,
         distanceFromCenter / (Math.min(this.width, this.height) / 2)
       );
 
-      // Calculate animation parameters
+      // Calculate animation parameters (in scene-relative coords where center is 0,0)
       const flyDistance = maxDimension * 1.5;
-      const destX = centerX + Math.cos(angle) * flyDistance;
-      const destY = centerY + Math.sin(angle) * flyDistance;
+      const destX = Math.cos(angle) * flyDistance;
+      const destY = Math.sin(angle) * flyDistance;
       const delay = (1 - normalizedDistance) * 0.5;
       const rotation = (Math.random() * 2 - 1) * Math.PI * 4;
 
@@ -219,15 +218,19 @@ export class MondrianDemo extends Game {
         stroke: "#000000",
         lineWidth: lineWidth,
         crisp: false,
+        origin: "center",
       });
 
-      // Calculate positions and animation parameters
-      const finalX = square.x + square.width / 2;
-      const finalY = square.y + square.height / 2;
-      const angle = Math.atan2(finalY - centerY, finalX - centerX);
+      // Calculate positions relative to scene center (origin is center)
+      const halfWidth = totalWidth / 2;
+      const halfHeight = totalHeight / 2;
+      const finalX = square.x + square.width / 2 - halfWidth;
+      const finalY = square.y + square.height / 2 - halfHeight;
+      // Animation from scene center (0,0) outward
+      const angle = Math.atan2(finalY, finalX);
       const flyDistance = maxDimension * 1.5;
-      const startX = centerX + Math.cos(angle) * flyDistance;
-      const startY = centerY + Math.sin(angle) * flyDistance;
+      const startX = Math.cos(angle) * flyDistance;
+      const startY = Math.sin(angle) * flyDistance;
 
       // Create game object
       const go = ShapeGOFactory.create(this, rect, {
@@ -241,9 +244,9 @@ export class MondrianDemo extends Game {
 
       this.gridScene.add(go);
 
-      // Calculate animation timing
+      // Calculate animation timing (distance from center, which is 0,0)
       const distance = Math.sqrt(
-        Math.pow(finalX - centerX, 2) + Math.pow(finalY - centerY, 2)
+        Math.pow(finalX, 2) + Math.pow(finalY, 2)
       );
       const normalizedDistance = Math.min(
         1,
@@ -278,6 +281,8 @@ export class MondrianDemo extends Game {
     if (this.boundsDirty) {
       this.gridScene.width = this.width - 40;
       this.gridScene.height = this.height - 40;
+      this.gridScene.x = this.width / 2;
+      this.gridScene.y = this.height / 2;
     }
 
     super.update(dt);

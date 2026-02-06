@@ -57,6 +57,9 @@ export class Renderable extends Traceable {
     this._cacheCanvas = null;
     this._cacheDirty = true;
     this._cachePadding = options.cachePadding ?? 2; // Extra padding for anti-aliasing/strokes
+    // Cache content offset - for Groups with children at negative positions
+    this._cacheOffsetX = 0;
+    this._cacheOffsetY = 0;
 
     this._tick = 0;
     this.logger.log("Renderable", this.x, this.y, this.width, this.height);
@@ -66,6 +69,12 @@ export class Renderable extends Traceable {
    * Main render method.
    * Handles visibility, translation, and calls draw() in the transformed context.
    * If cacheRendering is enabled, renders to an offscreen canvas once and blits it.
+   *
+   * The render pipeline:
+   * 1. Translate to object position (x, y)
+   * 2. Calculate pivot offset based on origin
+   * 3. Apply transforms (rotation, scale) around the pivot
+   * 4. Translate back so drawing starts at (0, 0)
    */
   render() {
     if (!this._visible || this._opacity <= 0) return;
@@ -73,11 +82,21 @@ export class Renderable extends Traceable {
     Painter.save();
     Painter.effects.setBlendMode(this._blendMode);
 
+    // 1. Translate to object position
     if (this.crisp) {
       Painter.translateTo(Math.round(this.x), Math.round(this.y));
     } else {
       Painter.translateTo(this.x, this.y);
     }
+
+    // 2. Calculate pivot offset from origin
+    // Origin (0, 0) = top-left, (0.5, 0.5) = center, (1, 1) = bottom-right
+    const pivotX = this.width * this.originX;
+    const pivotY = this.height * this.originY;
+
+    // Store pivot for use in transform pipeline
+    this._pivotX = pivotX;
+    this._pivotY = pivotY;
 
     this.applyShadow(Painter.ctx);
 
@@ -121,7 +140,9 @@ export class Renderable extends Traceable {
       const scaleX = this.scaleX ?? 1;
       const scaleY = this.scaleY ?? 1;
 
-      Painter.img.draw(this._cacheCanvas, 0, 0, {
+      // Apply cache offset - for Groups with children at negative positions
+      // The offset accounts for content that was rendered into positive cache space
+      Painter.img.draw(this._cacheCanvas, this._cacheOffsetX, this._cacheOffsetY, {
         width: cacheWidth,
         height: cacheHeight,
         rotation: rotation,
@@ -154,8 +175,12 @@ export class Renderable extends Traceable {
     this._isCaching = true;
 
     cacheCtx.save();
-    // Translate to center of cache so (0,0) draws correctly
-    cacheCtx.translate(width / 2, height / 2);
+    // Translate to pivot point based on origin
+    // For origin (0, 0) = top-left, translate by (padding, padding)
+    // For origin (0.5, 0.5) = center, translate to (width/2, height/2)
+    const pivotX = this.width * this.originX + this._cachePadding;
+    const pivotY = this.height * this.originY + this._cachePadding;
+    cacheCtx.translate(pivotX, pivotY);
 
     // Call draw() to render to the cache at full opacity and identity transform
     this.draw();

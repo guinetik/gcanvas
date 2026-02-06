@@ -90,6 +90,7 @@ class SpriteDemo extends Game {
     this.pipeline.add(new Text(this, "Sprite Timeline Demo", {
       font: "bold 24px monospace",
       color: "#00ff00",
+      origin: "center",
       anchor: Position.CENTER,
       anchorOffsetY: -220,
     }));
@@ -98,6 +99,7 @@ class SpriteDemo extends Game {
     this.pipeline.add(new Text(this, "Space: Play/Pause | R: Rewind | S: Stop | Arrows: Step Frame", {
       font: "14px monospace",
       color: "#666666",
+      origin: "center",
       anchor: Position.CENTER,
       anchorOffsetY: -190,
     }));
@@ -106,6 +108,7 @@ class SpriteDemo extends Game {
     this.statusText = new Text(this, "", {
       font: "14px monospace",
       color: "#00cc00",
+      origin: "center",
       anchor: Position.BOTTOM_CENTER,
       anchorOffsetY: -30,
     });
@@ -132,7 +135,8 @@ class SpriteDemo extends Game {
     const viewport = this.getViewportDimensions();
 
     this.gallery = new TileLayout(this, {
-      debug: false,
+      debug: true,
+      origin: "center",
       columns: initialColumns,
       spacing: 15,
       scrollable: true,
@@ -149,6 +153,7 @@ class SpriteDemo extends Game {
       const cell = new Scene(this, {
         width: cellSize,
         height: cellSize,
+        origin: "center",
       });
 
       // Background - wrap Shape as GameObject for Scene
@@ -158,6 +163,7 @@ class SpriteDemo extends Game {
         color: "#0a0a0a",
         stroke: "#00ff00",
         lineWidth: 1,
+        origin: "center",
       }));
       cell.add(bg);
 
@@ -173,6 +179,7 @@ class SpriteDemo extends Game {
         color: "#00ff00",
         align: "center",
         baseline: "bottom",
+        origin: "center",
       });
       cell.add(label);
 
@@ -194,7 +201,7 @@ class SpriteDemo extends Game {
     const colors = ["#ff6b6b", "#ee5a6f", "#f06595", "#cc5de8", "#845ef7", "#5c7cfa"];
 
     sizes.forEach((size, i) => {
-      sprite.addFrame(new Circle(size, { color: colors[i], stroke: "white", lineWidth: 2 }));
+      sprite.addFrame(new Circle(size, { color: colors[i], stroke: "white", lineWidth: 2, origin: "center" }));
     });
 
     return sprite;
@@ -207,10 +214,10 @@ class SpriteDemo extends Game {
       autoPlay: true,
     });
 
-    sprite.addFrame(new Circle(25, { color: "#51cf66", stroke: "white", lineWidth: 2 }));
-    sprite.addFrame(new Square(45, { color: "#51cf66", stroke: "white", lineWidth: 2 }));
-    sprite.addFrame(new Triangle(50, { color: "#51cf66", stroke: "white", lineWidth: 2 }));
-    sprite.addFrame(new Star({ outerRadius: 30, innerRadius: 15, points: 5, color: "#51cf66", stroke: "white", lineWidth: 2 }));
+    sprite.addFrame(new Circle(25, { color: "#51cf66", stroke: "white", lineWidth: 2, origin: "center" }));
+    sprite.addFrame(new Square(45, { color: "#51cf66", stroke: "white", lineWidth: 2, origin: "center" }));
+    sprite.addFrame(new Triangle(50, { color: "#51cf66", stroke: "white", lineWidth: 2, origin: "center" }));
+    sprite.addFrame(new Star({ outerRadius: 30, innerRadius: 15, points: 5, color: "#51cf66", stroke: "white", lineWidth: 2, origin: "center" }));
 
     return sprite;
   }
@@ -224,7 +231,7 @@ class SpriteDemo extends Game {
 
     const colors = ["#ff6b6b", "#ffd43b", "#51cf66", "#339af0", "#cc5de8", "#f783ac"];
     colors.forEach(color => {
-      sprite.addFrame(new Square(50, { color, stroke: "white", lineWidth: 2 }));
+      sprite.addFrame(new Square(50, { color, stroke: "white", lineWidth: 2, origin: "center" }));
     });
 
     return sprite;
@@ -247,7 +254,7 @@ class SpriteDemo extends Game {
     ];
 
     frames.forEach(frame => {
-      const circle = new Circle(25, { color: "#ff6347", stroke: "white", lineWidth: 2 });
+      const circle = new Circle(25, { color: "#ff6347", stroke: "white", lineWidth: 2, origin: "center" });
       circle.scaleX = frame.scaleX;
       circle.scaleY = frame.scaleY;
       sprite.addFrame(circle);
@@ -273,6 +280,7 @@ class SpriteDemo extends Game {
         color: "#ff922b",
         stroke: "white",
         lineWidth: 2,
+        origin: "center",
       }));
     });
 
@@ -304,6 +312,7 @@ class SpriteDemo extends Game {
         color: "#00ff00",
         stroke: "#00cc00",
         lineWidth: 2,
+        origin: "center",
       }));
     });
 
@@ -321,36 +330,36 @@ class SpriteDemo extends Game {
     const color = "#00ff00";
 
     // Frame 1: Standing / left leg forward
-    const frame1 = new Group();
+    const frame1 = new Group({ origin: "center" });
     // Head
-    frame1.add(new Rectangle({ x: 0, y: -20, width: px * 3, height: px * 3, color }));
+    frame1.add(new Rectangle({ x: 0, y: -20, width: px * 3, height: px * 3, color, origin: "center" }));
     // Body
-    frame1.add(new Rectangle({ x: 0, y: -8, width: px * 2, height: px * 4, color }));
+    frame1.add(new Rectangle({ x: 0, y: -8, width: px * 2, height: px * 4, color, origin: "center" }));
     // Left leg forward
-    frame1.add(new Rectangle({ x: -px, y: 4, width: px, height: px * 3, color }));
+    frame1.add(new Rectangle({ x: -px, y: 4, width: px, height: px * 3, color, origin: "center" }));
     // Right leg back
-    frame1.add(new Rectangle({ x: px, y: 2, width: px, height: px * 2, color }));
+    frame1.add(new Rectangle({ x: px, y: 2, width: px, height: px * 2, color, origin: "center" }));
     // Arms
-    frame1.add(new Rectangle({ x: -px * 2, y: -6, width: px, height: px * 2, color }));
-    frame1.add(new Rectangle({ x: px * 2, y: -10, width: px, height: px * 2, color }));
+    frame1.add(new Rectangle({ x: -px * 2, y: -6, width: px, height: px * 2, color, origin: "center" }));
+    frame1.add(new Rectangle({ x: px * 2, y: -10, width: px, height: px * 2, color, origin: "center" }));
 
     // Frame 2: Standing straight
-    const frame2 = new Group();
-    frame2.add(new Rectangle({ x: 0, y: -20, width: px * 3, height: px * 3, color }));
-    frame2.add(new Rectangle({ x: 0, y: -8, width: px * 2, height: px * 4, color }));
-    frame2.add(new Rectangle({ x: -px, y: 4, width: px, height: px * 3, color }));
-    frame2.add(new Rectangle({ x: px, y: 4, width: px, height: px * 3, color }));
-    frame2.add(new Rectangle({ x: -px * 2, y: -8, width: px, height: px * 2, color }));
-    frame2.add(new Rectangle({ x: px * 2, y: -8, width: px, height: px * 2, color }));
+    const frame2 = new Group({ origin: "center" });
+    frame2.add(new Rectangle({ x: 0, y: -20, width: px * 3, height: px * 3, color, origin: "center" }));
+    frame2.add(new Rectangle({ x: 0, y: -8, width: px * 2, height: px * 4, color, origin: "center" }));
+    frame2.add(new Rectangle({ x: -px, y: 4, width: px, height: px * 3, color, origin: "center" }));
+    frame2.add(new Rectangle({ x: px, y: 4, width: px, height: px * 3, color, origin: "center" }));
+    frame2.add(new Rectangle({ x: -px * 2, y: -8, width: px, height: px * 2, color, origin: "center" }));
+    frame2.add(new Rectangle({ x: px * 2, y: -8, width: px, height: px * 2, color, origin: "center" }));
 
     // Frame 3: Right leg forward
-    const frame3 = new Group();
-    frame3.add(new Rectangle({ x: 0, y: -20, width: px * 3, height: px * 3, color }));
-    frame3.add(new Rectangle({ x: 0, y: -8, width: px * 2, height: px * 4, color }));
-    frame3.add(new Rectangle({ x: -px, y: 2, width: px, height: px * 2, color }));
-    frame3.add(new Rectangle({ x: px, y: 4, width: px, height: px * 3, color }));
-    frame3.add(new Rectangle({ x: -px * 2, y: -10, width: px, height: px * 2, color }));
-    frame3.add(new Rectangle({ x: px * 2, y: -6, width: px, height: px * 2, color }));
+    const frame3 = new Group({ origin: "center" });
+    frame3.add(new Rectangle({ x: 0, y: -20, width: px * 3, height: px * 3, color, origin: "center" }));
+    frame3.add(new Rectangle({ x: 0, y: -8, width: px * 2, height: px * 4, color, origin: "center" }));
+    frame3.add(new Rectangle({ x: -px, y: 2, width: px, height: px * 2, color, origin: "center" }));
+    frame3.add(new Rectangle({ x: px, y: 4, width: px, height: px * 3, color, origin: "center" }));
+    frame3.add(new Rectangle({ x: -px * 2, y: -10, width: px, height: px * 2, color, origin: "center" }));
+    frame3.add(new Rectangle({ x: px * 2, y: -6, width: px, height: px * 2, color, origin: "center" }));
 
     sprite.addFrame(frame1);
     sprite.addFrame(frame2);
@@ -387,6 +396,7 @@ class SpriteDemo extends Game {
         color: cfg.color,
         stroke: "#00ff00",
         lineWidth: 1,
+        origin: "center",
       }));
     });
 

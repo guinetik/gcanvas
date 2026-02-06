@@ -23,6 +23,8 @@ import {
   Rectangle,
   ShapeGOFactory,
   HorizontalLayout,
+  VerticalLayout,
+  Screen,
 } from "../../src/index.js";
 import { zoneTemperature } from "../../src/math/heat.js";
 import { Easing } from "../../src/motion/easing.js";
@@ -123,6 +125,10 @@ class FluidGasGame extends Game {
 
   init() {
     super.init();
+    
+    // Initialize Screen for responsive handling
+    Screen.init(this);
+    
     this.pointer.x = this.width * 0.5;
     this.pointer.y = this.height * 0.5;
 
@@ -136,10 +142,13 @@ class FluidGasGame extends Game {
       stroke: CONFIG.container.strokeColor,
       lineWidth: CONFIG.container.strokeWidth,
       color: null,
+      origin: "center",
     });
     this.containerRect = ShapeGOFactory.create(this, containerShape, {
       x: this.bounds.x + this.bounds.w / 2,
       y: this.bounds.y + this.bounds.h / 2,
+      originX: 0.5,
+      originY: 0.5,
     });
     this.pipeline.add(this.containerRect);
 
@@ -177,6 +186,9 @@ class FluidGasGame extends Game {
 
     // Handle resize
     this.onResize = () => this._handleResize();
+    
+    // Listen for device type changes to rebuild UI
+    this.events.on("devicechange", () => this._rebuildUI());
   }
 
   /**
@@ -189,6 +201,12 @@ class FluidGasGame extends Game {
       this.containerRect.transform
         .position(this.bounds.x + this.bounds.w / 2, this.bounds.y + this.bounds.h / 2)
         .size(this.bounds.w, this.bounds.h);
+      
+      // Update the shape dimensions too
+      if (this.containerRect.shape) {
+        this.containerRect.shape.width = this.bounds.w;
+        this.containerRect.shape.height = this.bounds.h;
+      }
     }
     
     if (this.fluid) {
@@ -197,6 +215,29 @@ class FluidGasGame extends Game {
     
     if (this.buttonRow) this.buttonRow.markBoundsDirty();
     if (this.stepperRow) this.stepperRow.markBoundsDirty();
+  }
+
+  /**
+   * Rebuild UI when device type changes (mobile <-> desktop)
+   */
+  _rebuildUI() {
+    // Remove old UI elements
+    if (this.buttonRow) {
+      this.pipeline.remove(this.buttonRow);
+    }
+    if (this.stepperRow) {
+      this.pipeline.remove(this.stepperRow);
+    }
+    if (this.fpsCounter) {
+      this.pipeline.remove(this.fpsCounter);
+    }
+    
+    // Rebuild UI with new responsive values
+    this._buildUI();
+    
+    // Update container bounds for new device type
+    this._updateContainerBounds();
+    this._handleResize();
   }
 
   update(dt) {
@@ -276,80 +317,102 @@ class FluidGasGame extends Game {
   }
 
   _buildUI() {
-    const { margin, width, height, spacing } = CONFIG.ui;
-    const buttonRowWidth = width * 3 + spacing * 2;
-    const buttonRowHeight = height;
-    const stepperWidth = 130;
-    const stepperHeight = 46;
-    const stepperRowWidth = stepperWidth * 4 - (spacing + 32);
+    const isMobile = Screen.isMobile;
+    
+    // Responsive sizing
+    const margin = Screen.responsive(8, 12, 16);
+    const buttonWidth = Screen.responsive(90, 110, 130);
+    const buttonHeight = Screen.responsive(28, 30, 32);
+    const spacing = Screen.responsive(4, 6, 8);
+    const stepperWidth = Screen.responsive(100, 115, 130);
+    const stepperHeight = Screen.responsive(40, 43, 46);
+    const stepperValueWidth = Screen.responsive(36, 42, 48);
+    const stepperButtonSize = Screen.responsive(22, 24, 26);
+    const stepperInnerHeight = Screen.responsive(22, 24, 26);
 
-    // Button row
+    // Button row - centered on mobile, bottom-left on desktop
     const buttonRow = new HorizontalLayout(this, {
-      width: buttonRowWidth,
-      height: buttonRowHeight,
       spacing,
+      debug: true,
+      debugColor: "red",
       padding: 0,
-      anchor: Position.BOTTOM_LEFT,
-      margin: margin,
+      origin: "center",
+      anchor: isMobile ? Position.BOTTOM_CENTER : Position.BOTTOM_LEFT,
+      anchorMargin: margin,
+      anchorOffsetY: isMobile ? -(stepperHeight + spacing * 2) : 0,
     });
 
     this.btnMode = new ToggleButton(this, {
-      width,
-      height,
-      text: "Mode: Liquid",
+      width: buttonWidth,
+      height: buttonHeight,
+      text: isMobile ? "Liquid" : "Mode: Liquid",
+      origin: "center",
       startToggled: false,
       onToggle: (on) => {
         this.mode = on ? "gas" : "liquid";
-        this.btnMode.text = on ? "Mode: Gas" : "Mode: Liquid";
+        this.btnMode.text = isMobile 
+          ? (on ? "Gas" : "Liquid")
+          : (on ? "Mode: Gas" : "Mode: Liquid");
       },
     });
     buttonRow.add(this.btnMode);
 
     this.btnGravity = new ToggleButton(this, {
-      width,
-      height,
-      text: "Gravity: On",
+      width: buttonWidth,
+      height: buttonHeight,
+      text: isMobile ? "Gravity" : "Gravity: On",
+      origin: "center",
       startToggled: true,
       onToggle: (on) => {
         this.gravityOn = on;
-        this.btnGravity.text = on ? "Gravity: On" : "Gravity: Off";
+        this.btnGravity.text = isMobile
+          ? "Gravity"
+          : (on ? "Gravity: On" : "Gravity: Off");
       },
     });
     buttonRow.add(this.btnGravity);
 
     this.btnReset = new Button(this, {
-      width,
-      height,
+      width: buttonWidth,
+      height: buttonHeight,
       text: "Reset",
+      origin: "center",
       onClick: () => this.fluid.reset(),
     });
     buttonRow.add(this.btnReset);
 
-    // Stepper row
+    // Stepper row - centered on mobile, above buttons on desktop
+    // Account for stepper height (label + controls + gaps)
+    const stepperTotalHeight = stepperHeight + 20; // Include label height
     const stepperRow = new HorizontalLayout(this, {
-      width: stepperRowWidth,
-      height: stepperHeight,
-      spacing: spacing + 8,
+      debug: true,
+      debugColor: "blue",
+      spacing: spacing + 4,
       padding: 0,
-      anchor: Position.BOTTOM_LEFT,
-      margin: margin,
-      anchorOffsetY: -(buttonRowHeight + spacing),
+      origin: "center",
+      anchor: isMobile ? Position.BOTTOM_CENTER : Position.BOTTOM_LEFT,
+      anchorMargin: margin,
+      anchorOffsetY: isMobile ? 0 : -(buttonHeight + spacing + stepperTotalHeight / 2 - 10),
     });
 
-    this.gravityStep = new Stepper(this, {
-      value: CONFIG.sim.gravity,
-      min: 0,
-      max: 500,
-      step: 25,
-      label: "Gravity",
-      valueWidth: 48,
-      buttonSize: 26,
-      height: 26,
-      onChange: (val) => {
-        this.fluid.config.gravity = val;
-      },
-    });
-    stepperRow.add(this.gravityStep);
+    // On mobile, show fewer steppers
+    if (!isMobile) {
+      this.gravityStep = new Stepper(this, {
+        value: CONFIG.sim.gravity,
+        min: 0,
+        max: 500,
+        step: 25,
+        label: "Gravity",
+        valueWidth: stepperValueWidth,
+        buttonSize: stepperButtonSize,
+        height: stepperInnerHeight,
+        origin: "center",
+        onChange: (val) => {
+          this.fluid.config.gravity = val;
+        },
+      });
+      stepperRow.add(this.gravityStep);
+    }
 
     this.viscosityStep = new Stepper(this, {
       value: CONFIG.fluid.viscosity * 1000,
@@ -357,9 +420,10 @@ class FluidGasGame extends Game {
       max: 100,
       step: 5,
       label: "Viscosity",
-      valueWidth: 48,
-      buttonSize: 26,
-      height: 26,
+      valueWidth: stepperValueWidth,
+      buttonSize: stepperButtonSize,
+      height: stepperInnerHeight,
+      origin: "center",
       formatValue: (v) => (v / 1000).toFixed(2),
       onChange: (val) => {
         this.fluid.config.fluid.viscosity = val / 1000;
@@ -373,9 +437,10 @@ class FluidGasGame extends Game {
       max: 500,
       step: 20,
       label: "Pressure",
-      valueWidth: 48,
-      buttonSize: 26,
-      height: 26,
+      valueWidth: stepperValueWidth,
+      buttonSize: stepperButtonSize,
+      height: stepperInnerHeight,
+      origin: "center",
       onChange: (val) => {
         this.fluid.config.fluid.pressureStiffness = val;
       },
@@ -388,9 +453,10 @@ class FluidGasGame extends Game {
       max: 100,
       step: 5,
       label: "Bounce",
-      valueWidth: 48,
-      buttonSize: 26,
-      height: 26,
+      valueWidth: stepperValueWidth,
+      buttonSize: stepperButtonSize,
+      height: stepperInnerHeight,
+      origin: "center",
       formatValue: (v) => `${v}%`,
       onChange: (val) => {
         this.fluid.config.bounce = val / 100;
@@ -404,7 +470,8 @@ class FluidGasGame extends Game {
     this.buttonRow = buttonRow;
     this.stepperRow = stepperRow;
     
-    this.pipeline.add(new FPSCounter(this, { anchor: "bottom-right" }));
+    this.fpsCounter = new FPSCounter(this, { anchor: "bottom-right", origin: "center" });
+    this.pipeline.add(this.fpsCounter);
     
     buttonRow.markBoundsDirty();
     stepperRow.markBoundsDirty();
@@ -484,12 +551,15 @@ class FluidGasGame extends Game {
   }
 
   _updateContainerBounds() {
-    const { marginX, marginY } = CONFIG.container;
+    // Responsive margins - leave more space at bottom for UI on mobile
+    const marginX = Screen.responsive(20, 40, CONFIG.container.marginX);
+    const marginTop = Screen.responsive(60, 80, CONFIG.container.marginY);
+    const marginBottom = Screen.responsive(140, 130, CONFIG.container.marginY); // Extra space for buttons/steppers
     this.bounds = {
       x: marginX,
-      y: marginY,
+      y: marginTop,
       w: this.width - marginX * 2,
-      h: this.height - marginY * 2,
+      h: this.height - marginTop - marginBottom,
     };
   }
 

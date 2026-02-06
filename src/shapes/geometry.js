@@ -23,10 +23,12 @@ import { Euclidian } from "./euclidian.js";
  * 3. **Change Tracking**: Automatically marks bounds as dirty when spatial props are modified
  * 4. **Tick Awareness**: Supports `update(dt)` to re-evaluate bounds when needed
  *
- * ### Coordinate System
+ * ### Coordinate System (v3.0)
  *
- * - The `x` and `y` properties refer to the **center** of the object.
- * - Use `getLocalPosition()` for top-left alignment in layout systems.
+ * - The `x` and `y` properties refer to the **origin point** of the object.
+ * - By default, origin is (0, 0) = top-left, so `x`, `y` is the top-left corner.
+ * - Set `origin: "center"` for center-based positioning (legacy behavior).
+ * - Use `getLocalPosition()` for position relative to parent.
  *
  * ### Subclassing Guidelines
  *
@@ -168,22 +170,31 @@ export class Geometry2d extends Euclidian {
    * Returns the object's top-left corner, taking into account group containment.
    * Useful for layouting or aligning objects to pixel grids.
    *
+   * With origin-based coordinates, this now returns the position directly
+   * when origin is (0, 0) = top-left.
+   *
    * @returns {{x: number, y: number}}
    */
   getLocalPosition() {
     // Get the parent group's position if it exists
     let parentX = 0;
     let parentY = 0;
-    
+
     // If this object is part of a group, adjust for the group's position
     if (this.parent) {
       parentX = this.parent.x;
       parentY = this.parent.y;
     }
 
+    // Calculate top-left based on origin
+    // For origin (0, 0), x, y IS the top-left, so no offset needed
+    // For origin (0.5, 0.5), need to offset by -width/2, -height/2
+    const originOffsetX = this.width * this.originX;
+    const originOffsetY = this.height * this.originY;
+
     return {
-      x: (this.x - parentX) - this.width / 2,
-      y: (this.y - parentY) - this.height / 2,
+      x: (this.x - parentX) - originOffsetX,
+      y: (this.y - parentY) - originOffsetY,
     };
   }
 
@@ -206,15 +217,65 @@ export class Geometry2d extends Euclidian {
     }
   }
 
+  /**
+   * Sets the object's position so its top-left corner is at (x, y).
+   * @deprecated With origin-based coordinates, this is often unnecessary.
+   *             Simply set origin to "top-left" (default) and use x, y directly.
+   * @param {number} x - X position for top-left corner
+   * @param {number} y - Y position for top-left corner
+   * @returns {this}
+   */
   setTopLeft(x, y) {
-    this.x = x + this.width / 2;
-    this.y = y + this.height / 2;
+    // Adjust position based on current origin
+    const originOffsetX = this.width * this.originX;
+    const originOffsetY = this.height * this.originY;
+    this.x = x + originOffsetX;
+    this.y = y + originOffsetY;
     return this;
   }
-  
+
+  /**
+   * Sets the object's position so its center is at (x, y).
+   * @param {number} x - X position for center
+   * @param {number} y - Y position for center
+   * @returns {this}
+   */
   setCenter(x, y) {
-    this.x = x;
-    this.y = y;
+    // Adjust position based on current origin
+    // For origin (0, 0), center is at (x + width/2, y + height/2)
+    // So we need to offset by the difference between center and origin
+    const originOffsetX = this.width * this.originX;
+    const originOffsetY = this.height * this.originY;
+    const centerOffsetX = this.width / 2;
+    const centerOffsetY = this.height / 2;
+    this.x = x - centerOffsetX + originOffsetX;
+    this.y = y - centerOffsetY + originOffsetY;
     return this;
+  }
+
+  /**
+   * Gets the center position of the object.
+   * @returns {{x: number, y: number}}
+   */
+  getCenter() {
+    const originOffsetX = this.width * this.originX;
+    const originOffsetY = this.height * this.originY;
+    return {
+      x: this.x - originOffsetX + this.width / 2,
+      y: this.y - originOffsetY + this.height / 2,
+    };
+  }
+
+  /**
+   * Gets the top-left position of the object.
+   * @returns {{x: number, y: number}}
+   */
+  getTopLeft() {
+    const originOffsetX = this.width * this.originX;
+    const originOffsetY = this.height * this.originY;
+    return {
+      x: this.x - originOffsetX,
+      y: this.y - originOffsetY,
+    };
   }
 }

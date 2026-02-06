@@ -442,6 +442,14 @@ export class FluentGO {
       delete normalized.stroke;
     }
 
+    // Fluent API shapes default to center origin for intuitive positioning
+    // The GO position (x, y) should be the center of the shape
+    if (normalized.origin === undefined && 
+        normalized.originX === undefined && 
+        normalized.originY === undefined) {
+      normalized.origin = 'center';
+    }
+
     return normalized;
   }
 

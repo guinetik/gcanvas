@@ -10,7 +10,7 @@
  * - Output is composited onto the main 2D canvas for easy trail accumulation
  */
 
-import { Game, Gesture, Screen, Attractors, Painter, WebGLDeJongRenderer } from "../../src/index.js";
+import { Game, Gesture, Screen, Attractors, Painter, WebGLDeJongRenderer, Keys, Tweenetik, Easing } from "../../src/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION
@@ -73,6 +73,12 @@ const CONFIG = {
     easing: 0.15,
     autoSpeed: 0.18, // radians/sec (continuous rotation)
   },
+
+  // Restart settings
+  restart: {
+    delay: 3,          // Delay before new simulation starts (seconds)
+    fadeDuration: 1.5, // Alpha fade-in duration (seconds)
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,7 +124,7 @@ class DeJongDemo extends Game {
       },
     });
 
-    // Double-click to reset
+    // Double-click to reset zoom/rotation
     this.canvas.addEventListener("dblclick", () => {
       this.targetZoom = this.defaultZoom;
       this.baseRotation = 0;
@@ -127,10 +133,15 @@ class DeJongDemo extends Game {
       this.renderer?.regenerateSeeds();
     });
 
+    // Keyboard input - press R to restart
+    Keys.init(this);
+    this.events.on(Keys.R, () => this.restart());
+
     this.time = 0;
 
     // Fade-clear state (first frame fills solid black)
     this._didFirstClear = false;
+    this.fadeAlpha = 1; // For fade-in effect on restart
 
     this.renderer = new WebGLDeJongRenderer(CONFIG.points.seedCount, {
       width: this.width,
@@ -173,6 +184,7 @@ class DeJongDemo extends Game {
   }
 
   update(dt) {
+    Tweenetik.updateAll(dt);
     this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoom.easing;
     this.time += dt;
 
@@ -231,12 +243,56 @@ class DeJongDemo extends Game {
       this.renderer.render(this.time);
 
       Painter.useCtx((ctx) => {
-        const prev = ctx.globalCompositeOperation;
+        const prevComp = ctx.globalCompositeOperation;
+        const prevAlpha = ctx.globalAlpha;
         ctx.globalCompositeOperation = CONFIG.points.compositeBlendMode;
+        ctx.globalAlpha = this.fadeAlpha;
         this.renderer.compositeOnto(ctx, 0, 0);
-        ctx.globalCompositeOperation = prev;
+        ctx.globalCompositeOperation = prevComp;
+        ctx.globalAlpha = prevAlpha;
       });
     }
+  }
+
+  /**
+   * Restart the simulation with fresh seeds and fade-in effect
+   */
+  restart() {
+    // Kill any existing fade tweens
+    Tweenetik.killTarget(this);
+
+    // Immediately go black
+    this.fadeAlpha = 0;
+    this._didFirstClear = false;
+
+    // After delay, reset and fade in
+    setTimeout(() => {
+      // Reset rotation
+      this.baseRotation = 0;
+      this.userRotation = 0;
+      this.targetUserRotation = 0;
+
+      // Reset zoom
+      this.zoom = this.defaultZoom;
+      this.targetZoom = this.defaultZoom;
+
+      // Reset time and clear state
+      this.time = 0;
+      this._didFirstClear = false;
+
+      // Regenerate GPU seeds
+      this.renderer?.regenerateSeeds();
+
+      // Start fade-in
+      Tweenetik.to(
+        this,
+        { fadeAlpha: 1 },
+        CONFIG.restart.fadeDuration,
+        Easing.easeOutCubic
+      );
+
+      console.log("De Jong attractor restarted");
+    }, CONFIG.restart.delay * 1000);
   }
 
   destroy() {

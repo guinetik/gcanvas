@@ -15,22 +15,25 @@ export class PowerUp extends GameObject {
     // Create 1-Up visual - pastel green life icon (cached for performance)
     this.shape = new Group({ cacheRendering: true });
 
-    // Glowing background
+    // Glowing background - centered
     const glow = new Circle(POWERUP_SIZE / 2 + 4, {
       color: "rgba(144, 238, 144, 0.4)",
+      origin: "center",
     });
 
-    // Main body - pastel green
+    // Main body - pastel green, centered
     const body = new Circle(POWERUP_SIZE / 2, {
       color: "#98fb98", // Pale green
+      origin: "center",
     });
 
-    // "1UP" text
+    // "1UP" text - centered via align/baseline
     this.label = new TextShape("1UP", {
       font: "bold 10px monospace",
       color: "#ffffff",
       align: "center",
       baseline: "middle",
+      origin: "center",
     });
 
     this.shape.add(glow);

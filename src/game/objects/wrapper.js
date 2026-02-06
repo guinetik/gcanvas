@@ -32,6 +32,10 @@ export class ShapeGOFactory {
       active: true,
       debug: shape?.debug ?? false,
       
+      // Origin from shape
+      originX: shape?.originX,
+      originY: shape?.originY,
+      
       // Shape-specific properties
       color: shape?.color ?? null,
       stroke: shape?.stroke ?? null,
@@ -68,11 +72,15 @@ export class GameObjectShapeWrapper extends GameObject {
    * @param {Object} options - Configuration options
    */
   constructor(game, shape, options = {}) {
-    // IMPORTANT: Strip 'anchor' from options passed to GameObject
-    // In shape context, 'anchor' means "image rendering anchor" (center, top-left, etc.)
-    // In GameObject, 'anchor' triggers applyAnchor mixin for auto-positioning
-    // These are different concepts - don't let shape anchor trigger positioning
-    const { anchor: _shapeAnchor, ...goOptions } = options;
+    // Extract anchor-related options for positioning (different from shape anchor)
+    const { 
+      anchor, 
+      anchorMargin, 
+      anchorOffsetX, 
+      anchorOffsetY, 
+      anchorRelative,
+      ...goOptions 
+    } = options;
 
     super(game, goOptions);
 
@@ -83,6 +91,17 @@ export class GameObjectShapeWrapper extends GameObject {
 
     // Store the shape
     this.shape = shape;
+    
+    // Apply anchor positioning if specified
+    if (anchor) {
+      applyAnchor(this, { 
+        anchor, 
+        anchorMargin, 
+        anchorOffsetX, 
+        anchorOffsetY, 
+        anchorRelative 
+      });
+    }
     
     // Apply Shape-specific properties directly to the shape
     if (options.color !== undefined) shape.color = options.color;

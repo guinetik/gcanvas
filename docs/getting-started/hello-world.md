@@ -251,10 +251,13 @@ Here's a complete example with multiple animated shapes:
 | `Painter.init(ctx)` | Initialize the drawing system with canvas context |
 | `Painter.clear()` | Clear the entire canvas |
 | `shape.draw()` | Draw a shape at its current position |
-| `shape.x`, `shape.y` | Position (center of shape) |
-| `shape.rotation` | Rotation in radians |
+| `shape.x`, `shape.y` | Position (top-left by default, or origin point if set) |
+| `shape.origin` | Origin point: `"top-left"` (default), `"center"`, etc. |
+| `shape.rotation` | Rotation in radians (pivots around origin) |
 | `shape.opacity` | Transparency (0 to 1) |
 | `Group` | Container for multiple shapes |
+
+> **Note:** By default, `x` and `y` position the top-left corner of shapes. For center-based positioning (useful for rotation/scaling), add `origin: "center"` to your shape options. See [Coordinate System](../concepts/coordinate-system.md) for details.
 
 ## Next Steps
 

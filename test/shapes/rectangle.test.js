@@ -31,8 +31,8 @@ describe("Rectangle", () => {
       color: "red",
     });
     rectangle.drawRect();
-    // painter should translate to the rectangle's center
-    expect(Painter.shapes.rect).toHaveBeenCalledWith(-50, -100, 100, 200, "red");
+    // With origin-based coordinates, rectangle draws at (0, 0)
+    expect(Painter.shapes.rect).toHaveBeenCalledWith(0, 0, 100, 200, "red");
   });
 
   it("should draw an outlined rectangle correctly using Painter.", () => {
@@ -50,15 +50,15 @@ describe("Rectangle", () => {
       lineWidth: 2,
     });
     rectangle.drawRect();
-    // painter should translate to the rectangle's center
+    // With origin-based coordinates, rectangle draws at (0, 0)
     expect(Painter.shapes.outlineRect).toHaveBeenCalledWith(
-      -50,
-      -100,
+      0,
+      0,
       100,
       200,
       "blue",
       2
     );
-    expect(Painter.shapes.rect).toHaveBeenCalledWith(-50, -100, 100, 200, "red");
+    expect(Painter.shapes.rect).toHaveBeenCalledWith(0, 0, 100, 200, "red");
   });
 });

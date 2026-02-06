@@ -62,6 +62,8 @@ export class Text extends GameObjectShapeWrapper {
       strokeColor: options.strokeColor || "#000",
       lineWidth: options.lineWidth || 1,
       debugColor: options.debugColor || "yellow",
+      origin: options.origin,
+      debug: options.debug,
     });
     // Pass the shape to the parent GameObjectShapeWrapper
     super(game, textShape, options);
@@ -206,16 +208,35 @@ export class Text extends GameObjectShapeWrapper {
   }
 
   /**
+   * Get debug bounds in local space, accounting for origin.
+   * @returns {{x: number, y: number, width: number, height: number}} Debug bounds
+   */
+  getDebugBounds() {
+    // Delegate to the shape's debug bounds if available
+    if (this.shape && this.shape.getDebugBounds) {
+      return this.shape.getDebugBounds();
+    }
+    // Fallback to parent implementation
+    return super.getDebugBounds();
+  }
+
+  /**
    * Updates the GameObject and the wrapped TextShape
    * @param {number} dt - Delta time in seconds
    */
   update(dt) {
     super.update(dt);
 
-    // Sync dimensions from the text shape
+    // Sync dimensions from the text shape only if not explicitly set
+    // Check if width/height were set via options (they would be non-zero)
     if (this.shape) {
-      this.width = this.shape.width || this.measureWidth();
-      this.height = this.shape.height || this.measureHeight();
+      // Only auto-size if width/height are 0 or not set
+      if (!this._width || this._width === 0) {
+        this._width = this.shape.width || this.measureWidth();
+      }
+      if (!this._height || this._height === 0) {
+        this._height = this.shape.height || this.measureHeight();
+      }
     }
   }
 }

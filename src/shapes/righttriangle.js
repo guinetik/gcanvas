@@ -7,35 +7,24 @@ import { Painter } from "../painter/painter.js";
  *
  * A right isoceles triangle shape, commonly used in tangram puzzles.
  *
+ * With the origin-based coordinate system (v3.0):
+ * - Draws relative to bounding box at (0, 0)
+ * - Right angle at (0, 0), legs along +x and +y axes
+ *
  * The triangle has:
  * - Two equal legs of length `leg`
  * - A right angle (90°) at one corner
  * - Hypotenuse = leg × √2
  *
- * ### Positioning
- *
- * The triangle is centered at its centroid (center of mass).
- * Before rotation, the right angle points toward the bottom-left (-135° from center).
- *
  * ```
- *        ●────────● (leg, 0)
- *       /|
- *      / |
- *     /  |  centroid at (leg/3, leg/3)
- *    /   |
- *   ●────┘ right angle at origin
- * (0, leg)
+ * (0,0) ●────────● (leg, 0)
+ *       |       /
+ *       |      /
+ *       |     /
+ *       |    /
+ *       |   /
+ *       ●  / (0, leg)
  * ```
- *
- * ### Rotation Reference
- *
- * To orient the right angle toward a specific direction:
- * - Right angle pointing RIGHT: rotation = 0°
- * - Right angle pointing DOWN: rotation = 90°
- * - Right angle pointing LEFT: rotation = 180°
- * - Right angle pointing UP: rotation = 270°
- *
- * Add 135° to these values since the default right angle is at -135° from centroid.
  *
  * @extends Shape
  */
@@ -67,27 +56,24 @@ export class RightTriangle extends Shape {
   }
 
   _updateDimensions() {
-    // Bounding box of the centered triangle
+    // Bounding box of the triangle
     this._width = this._leg;
     this._height = this._leg;
   }
 
   /**
-   * Get the vertices of the triangle, centered at origin.
-   * Right angle is at the adjusted (0,0) before centering.
+   * Get the vertices of the triangle, relative to bounding box at (0, 0).
+   * Right angle is at (0, 0).
    * @returns {Array<{x: number, y: number}>}
    */
   getVertices() {
     const leg = this._leg;
-    // Original vertices: right angle at (0,0), legs along +x and +y
-    // Centroid at (leg/3, leg/3)
-    const cx = leg / 3;
-    const cy = leg / 3;
 
+    // Vertices relative to bounding box at (0, 0)
     return [
-      { x: -cx, y: -cy },           // Right angle corner
-      { x: leg - cx, y: -cy },      // End of horizontal leg
-      { x: -cx, y: leg - cy },      // End of vertical leg
+      { x: 0, y: 0 },         // Right angle corner (top-left)
+      { x: leg, y: 0 },       // End of horizontal leg (top-right)
+      { x: 0, y: leg },       // End of vertical leg (bottom-left)
     ];
   }
 

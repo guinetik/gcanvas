@@ -8,7 +8,7 @@
  * where rs = 2GM/c² is the Schwarzschild radius
  */
 
-import { Game, Painter, Camera3D } from "../../src/index.js";
+import { Game, Painter, Camera3D, Screen, Gesture } from "../../src/index.js";
 import { GameObject } from "../../src/game/objects/go.js";
 import { Rectangle } from "../../src/shapes/rect.js";
 import { TextShape } from "../../src/shapes/text.js";
@@ -58,6 +58,13 @@ const CONFIG = {
   orbitSpeed: 0.5, // Base orbital angular velocity
   precessionFactor: 0.15, // GR precession rate
 
+  // Zoom
+  minZoom: 0.3,
+  maxZoom: 3.0,
+  zoomSpeed: 0.5,
+  zoomEasing: 0.12,
+  baseScreenSize: 600,
+
   // Black hole visualization - mass-proportional sizing (rubber sheet analogy)
   // "Heavier objects dent the fabric more" - intuitive for users
   blackHoleSizeBase: 8, // Base size of black hole sphere
@@ -91,14 +98,18 @@ class MetricPanelGO extends GameObject {
       ...options,
       width: panelWidth,
       height: panelHeight,
+      originX: 0.5,
+      originY: 0.5,
       anchor: Position.BOTTOM_LEFT,
+      anchorMargin: 20,
     });
 
-    // Background
+    // Background with center origin
     this.bgRect = new Rectangle({
       width: panelWidth,
       height: panelHeight,
       color: "rgba(0, 0, 0, 0.7)",
+      origin: "center",
     });
 
     // Define all features as data with descriptions for tooltips
@@ -310,6 +321,18 @@ class SchwarzschildDemo extends Game {
     super.init();
     this.time = 0;
 
+    // Initialize Screen for responsive handling
+    Screen.init(this);
+
+    // Calculate initial zoom based on screen size
+    const initialZoom = Math.min(
+      CONFIG.maxZoom,
+      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
+    );
+    this.zoom = initialZoom;
+    this.targetZoom = initialZoom;
+    this.defaultZoom = initialZoom;
+
     // Mass (in geometrized units where G = c = 1)
     this.mass = 1.0;
     this.rs = 2 * this.mass; // Schwarzschild radius
@@ -332,6 +355,21 @@ class SchwarzschildDemo extends Game {
       velocityScale: 2.0,
     });
     this.camera.enableMouseControl(this.canvas);
+
+    // Enable zoom via mouse wheel and pinch gesture
+    this.gesture = new Gesture(this.canvas, {
+      onZoom: (delta) => {
+        this.targetZoom *= 1 + delta * CONFIG.zoomSpeed;
+        this.targetZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, this.targetZoom));
+      },
+      onPan: null, // Camera3D handles rotation via drag
+    });
+
+    // Double-click to reset zoom and camera
+    this.canvas.addEventListener("dblclick", () => {
+      this.targetZoom = this.defaultZoom;
+      this.camera.reset();
+    });
 
     // Orbital state (using r, phi in equatorial plane)
     this.orbitR = CONFIG.orbitSemiMajor;
@@ -370,22 +408,22 @@ class SchwarzschildDemo extends Game {
     this.canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e));
     this.canvas.addEventListener("mouseleave", () => this.tooltip.hide());
 
-    // Button to shuffle parameters (positioned below the chart, same width)
+    // Button to shuffle parameters - positioned above the metric panel
     const isMobile = this.width < CONFIG.mobileWidth;
-    const graphW = isMobile ? 120 : 160;
-    const graphH = isMobile ? 70 : 100;
-    const graphX = this.width - graphW - (isMobile ? 15 : 20);
-    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
+    const btnWidth = isMobile ? 120 : 140;
+    const btnHeight = isMobile ? 30 : 36;
 
     this.shuffleBtn = new Button(this, {
-      width: graphW,
-      height: isMobile ? 30 : 36,
+      width: btnWidth,
+      height: btnHeight,
       anchor: Position.TOP_LEFT,
       anchorRelative: this.metricPanel,
-      anchorOffsetX: -10,
-      anchorOffsetY: -60,
+      anchorMargin: 0,
+      anchorOffsetX: 0,
+      anchorOffsetY: -btnHeight - 10,
       text: "Shuffle Mass",
       font: `${isMobile ? 10 : 12}px monospace`,
+      origin: "center",
       colorDefaultBg: "rgba(20, 20, 40, 0.8)",
       colorDefaultStroke: "#7af",
       colorDefaultText: "#8af",
@@ -480,6 +518,27 @@ class SchwarzschildDemo extends Game {
   }
 
   /**
+   * 3D projection with zoom applied
+   */
+  project3D(x, y, z) {
+    const proj = this.camera.project(x, y, z);
+    return {
+      x: proj.x * this.zoom,
+      y: proj.y * this.zoom,
+      z: proj.z,
+      scale: proj.scale * this.zoom,
+    };
+  }
+
+  onResize() {
+    // Recalculate default zoom for new screen size
+    this.defaultZoom = Math.min(
+      CONFIG.maxZoom,
+      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
+    );
+  }
+
+  /**
    * Flamm's paraboloid embedding using shared gr.js module.
    * Inverted so it looks like a gravity well going DOWN.
    */
@@ -546,6 +605,10 @@ class SchwarzschildDemo extends Game {
     this.time += dt;
 
     this.camera.update(dt);
+    
+    // Ease zoom towards target
+    this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoomEasing;
+    
     this.updateGeodesic(dt);
 
     // Update grid with Flamm's paraboloid embedding
@@ -611,7 +674,7 @@ class SchwarzschildDemo extends Game {
           const z = Math.sin(angle) * r;
           const y = this.getEmbeddingHeight(r);
 
-          const p = this.camera.project(
+          const p = this.project3D(
             x * this.gridScale,
             y,
             z * this.gridScale,
@@ -635,7 +698,7 @@ class SchwarzschildDemo extends Game {
 
     const projected = this.gridVertices.map((row) =>
       row.map((v) => {
-        const p = this.camera.project(v.x * gridScale, v.y, v.z * gridScale);
+        const p = this.project3D(v.x * gridScale, v.y, v.z * gridScale);
         return { x: cx + p.x, y: cy + p.y, z: p.z };
       }),
     );
@@ -679,7 +742,7 @@ class SchwarzschildDemo extends Game {
     const y = this.getEmbeddingHeight(r + 0.1);
 
     // Project center for black hole body
-    const centerP = this.camera.project(0, y + 10, 0);
+    const centerP = this.project3D(0, y + 10, 0);
     const centerX = cx + centerP.x;
     const centerY = cy + centerP.y;
 
@@ -732,7 +795,7 @@ class SchwarzschildDemo extends Game {
         const x = Math.cos(angle) * r;
         const z = Math.sin(angle) * r;
 
-        const p = this.camera.project(
+        const p = this.project3D(
           x * this.gridScale,
           y,
           z * this.gridScale,
@@ -755,7 +818,7 @@ class SchwarzschildDemo extends Game {
     const orbiterZ = Math.sin(totalAngle) * this.orbitR;
     const orbiterY = this.getEmbeddingHeight(this.orbitR);
 
-    const p = this.camera.project(
+    const p = this.project3D(
       orbiterX * this.gridScale,
       orbiterY,
       orbiterZ * this.gridScale,
@@ -833,7 +896,7 @@ class SchwarzschildDemo extends Game {
         const z = Math.sin(angle) * r;
         const y = this.getEmbeddingHeight(r);
 
-        const p = this.camera.project(
+        const p = this.project3D(
           x * this.gridScale,
           y,
           z * this.gridScale,
@@ -865,13 +928,13 @@ class SchwarzschildDemo extends Game {
         const trailY = this.getEmbeddingHeight(point.r);
         const prevY = this.getEmbeddingHeight(prevPoint.r);
 
-        const p = this.camera.project(
+        const p = this.project3D(
           point.x * this.gridScale,
           trailY,
           point.z * this.gridScale,
         );
 
-        const prevP = this.camera.project(
+        const prevP = this.project3D(
           prevPoint.x * this.gridScale,
           prevY,
           prevPoint.z * this.gridScale,
@@ -979,25 +1042,29 @@ class SchwarzschildDemo extends Game {
   drawControls(w, h) {
     const isMobile = w < CONFIG.mobileWidth;
     const fontSize = isMobile ? 8 : 10;
-    const margin = isMobile ? 10 : 15;
+    const margin = isMobile ? 15 : 20;
 
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = "#445";
+      ctx.fillStyle = "#999";
       ctx.font = `${fontSize}px monospace`;
       ctx.textAlign = "right";
 
       if (isMobile) {
-        ctx.fillText("drag to rotate", w - margin, h - 25);
-        ctx.fillStyle = "#553";
+        ctx.fillText("drag to rotate | pinch to zoom", w - margin, h - 25);
+        ctx.fillStyle = "#777";
         ctx.fillText("Curvature exaggerated", w - margin, h - 10);
       } else {
-        ctx.fillText("drag to rotate", w - margin, h - 45);
+        ctx.fillText(
+          "drag to rotate | scroll to zoom | double-click to reset",
+          w - margin,
+          h - 45,
+        );
         ctx.fillText(
           "Flamm's paraboloid embedding  |  Geodesic precession",
           w - margin,
           h - 30,
         );
-        ctx.fillStyle = "#553";
+        ctx.fillStyle = "#777";
         ctx.fillText(
           "Curvature exaggerated for visibility (rubber sheet analogy)",
           w - margin,

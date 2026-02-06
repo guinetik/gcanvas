@@ -8,6 +8,10 @@ import { Painter } from "../painter/painter.js";
  * A four-sided shape with opposite sides parallel. The shape is defined by
  * its width, height, and slant offset.
  *
+ * With the origin-based coordinate system (v3.0):
+ * - Draws relative to bounding box at (0, 0)
+ * - Shape fills the bounding box width (pgWidth + |slant|) and height
+ *
  * ### Geometry
  *
  * ```
@@ -23,10 +27,6 @@ import { Painter } from "../painter/painter.js";
  * - `width`: Length of the top and bottom edges
  * - `height`: Perpendicular distance between top and bottom
  * - `slant`: Horizontal offset of top edge relative to bottom (positive = right, negative = left)
- *
- * ### Positioning
- *
- * The shape is centered at its geometric center (centroid).
  *
  * @extends Shape
  */
@@ -97,7 +97,7 @@ export class Parallelogram extends Shape {
   }
 
   /**
-   * Get the vertices of the parallelogram, centered at origin.
+   * Get the vertices of the parallelogram, relative to bounding box at (0, 0).
    * @returns {Array<{x: number, y: number}>}
    */
   getVertices() {
@@ -109,17 +109,16 @@ export class Parallelogram extends Shape {
       slant = -slant;
     }
 
-    // Calculate total width for centering
-    const totalWidth = w + Math.abs(slant);
-    const offsetX = -totalWidth / 2 + (slant < 0 ? -slant : 0);
+    // Calculate offset based on slant direction
+    const offsetX = slant < 0 ? -slant : 0;
 
     // Vertices: bottom-left, bottom-right, top-right, top-left
-    // Bottom edge at y = h/2, top edge at y = -h/2
+    // Relative to bounding box at (0, 0)
     return [
-      { x: offsetX, y: h / 2 },                    // Bottom-left
-      { x: offsetX + w, y: h / 2 },                // Bottom-right
-      { x: offsetX + w + slant, y: -h / 2 },       // Top-right
-      { x: offsetX + slant, y: -h / 2 },           // Top-left
+      { x: offsetX, y: h },                       // Bottom-left
+      { x: offsetX + w, y: h },                   // Bottom-right
+      { x: offsetX + w + slant, y: 0 },           // Top-right
+      { x: offsetX + slant, y: 0 },               // Top-left
     ];
   }
 
