@@ -156,6 +156,24 @@ export class LayoutScene extends Scene {
   getLayoutOffset() {
     return { offsetX: 0, offsetY: 0 };
   }
+  
+  /**
+   * Returns debug bounds that account for both origin AND layout offset.
+   * This ensures the debug box surrounds the actual content position.
+   */
+  getDebugBounds() {
+    const layoutOffset = this.getLayoutOffset();
+    const contentW = this._contentWidth ?? this.width;
+    const contentH = this._contentHeight ?? this.height;
+    
+    // Start with layout offset (where content is positioned)
+    return {
+      x: layoutOffset.offsetX,
+      y: layoutOffset.offsetY,
+      width: contentW,
+      height: contentH,
+    };
+  }
 
   // Override to mark layout dirty when children change
   add(go) {
@@ -431,6 +449,63 @@ export class LayoutScene extends Scene {
     this._scrollOffset = { x: 0, y: 0 };
     this._scrollVelocity = { x: 0, y: 0 };
   }
+
+  /**
+   * Returns scroll offset for hit testing coordinate transformation.
+   * @returns {{x: number, y: number}} Scroll offset to apply
+   */
+  getHitTestOffset() {
+    if (!this.scrollable) {
+      return { x: 0, y: 0 };
+    }
+    return {
+      x: this._scrollOffset?.x || 0,
+      y: this._scrollOffset?.y || 0,
+    };
+  }
+
+  /**
+   * Checks if a child is within the visible viewport and should be hittable.
+   * @param {GameObject} child - The child to check
+   * @returns {boolean} True if child is within viewport
+   */
+  isChildHittable(child) {
+    // If not scrollable or doesn't need scrolling, all children are hittable
+    if (!this.scrollable || !this._needsScrolling()) {
+      return true;
+    }
+
+    const axis = this.getScrollAxis();
+    const vpW = this._viewportWidth ?? this.width;
+    const vpH = this._viewportHeight ?? this.height;
+    const scrollX = this._scrollOffset?.x || 0;
+    const scrollY = this._scrollOffset?.y || 0;
+
+    // Child position with scroll applied (relative to viewport center)
+    const childScrolledX = child.x + scrollX;
+    const childScrolledY = child.y + scrollY;
+
+    // Get child dimensions (use half for centered bounds check)
+    const childHalfW = (child.width || 0) / 2;
+    const childHalfH = (child.height || 0) / 2;
+
+    // Check if child overlaps with viewport
+    if (axis.horizontal) {
+      // Child right edge must be past viewport left, child left edge must be before viewport right
+      if (childScrolledX + childHalfW < -vpW / 2 || childScrolledX - childHalfW > vpW / 2) {
+        return false;
+      }
+    }
+
+    if (axis.vertical) {
+      // Child bottom edge must be past viewport top, child top edge must be before viewport bottom
+      if (childScrolledY + childHalfH < -vpH / 2 || childScrolledY - childHalfH > vpH / 2) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 }
 
 // HorizontalLayout with clean implementation
@@ -451,11 +526,54 @@ export class HorizontalLayout extends LayoutScene {
   }
 
   getLayoutOffset() {
-    // Use content width (full size) not visible width (capped to viewport)
+    // Use content size (full size) not visible size (capped to viewport)
     const w = this._contentWidth ?? this.width;
+    const h = this._contentHeight ?? this.height;
     return {
       offsetX: -w / 2,
-      offsetY: 0,
+      offsetY: -h / 2,
+    };
+  }
+
+  /**
+   * Override getDebugBounds to calculate from actual children positions.
+   * Children with origin="center" are drawn centered at their positions.
+   */
+  getDebugBounds() {
+    if (!this.children?.length) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const child of this.children) {
+      const childX = child.x;
+      const childY = child.y;
+      const childWidth = child.width || 0;
+      const childHeight = child.height || 0;
+      const childOriginX = child.originX ?? 0;
+      const childOriginY = child.originY ?? 0;
+
+      // Calculate child's actual bounds based on its origin
+      const childLeft = childX - childWidth * childOriginX;
+      const childRight = childX + childWidth * (1 - childOriginX);
+      const childTop = childY - childHeight * childOriginY;
+      const childBottom = childY + childHeight * (1 - childOriginY);
+
+      minX = Math.min(minX, childLeft);
+      maxX = Math.max(maxX, childRight);
+      minY = Math.min(minY, childTop);
+      maxY = Math.max(maxY, childBottom);
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
     };
   }
 }
@@ -478,6 +596,48 @@ export class VerticalLayout extends LayoutScene {
     return {
       offsetX: 0,
       offsetY: -h / 2,
+    };
+  }
+
+  /**
+   * Override getDebugBounds to calculate from actual children positions.
+   * Children with origin="center" are drawn centered at their positions.
+   */
+  getDebugBounds() {
+    if (!this.children?.length) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const child of this.children) {
+      const childX = child.x;
+      const childY = child.y;
+      const childWidth = child.width || 0;
+      const childHeight = child.height || 0;
+      const childOriginX = child.originX ?? 0;
+      const childOriginY = child.originY ?? 0;
+
+      // Calculate child's actual bounds based on its origin
+      const childLeft = childX - childWidth * childOriginX;
+      const childRight = childX + childWidth * (1 - childOriginX);
+      const childTop = childY - childHeight * childOriginY;
+      const childBottom = childY + childHeight * (1 - childOriginY);
+
+      minX = Math.min(minX, childLeft);
+      maxX = Math.max(maxX, childRight);
+      minY = Math.min(minY, childTop);
+      maxY = Math.max(maxY, childBottom);
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
     };
   }
 }
@@ -509,6 +669,48 @@ export class TileLayout extends LayoutScene {
     return {
       offsetX: -w / 2,
       offsetY: -h / 2,
+    };
+  }
+
+  /**
+   * Override getDebugBounds to calculate from actual children positions.
+   * Children with origin="center" are drawn centered at their positions.
+   */
+  getDebugBounds() {
+    if (!this.children?.length) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const child of this.children) {
+      const childX = child.x;
+      const childY = child.y;
+      const childWidth = child.width || 0;
+      const childHeight = child.height || 0;
+      const childOriginX = child.originX ?? 0;
+      const childOriginY = child.originY ?? 0;
+
+      // Calculate child's actual bounds based on its origin
+      const childLeft = childX - childWidth * childOriginX;
+      const childRight = childX + childWidth * (1 - childOriginX);
+      const childTop = childY - childHeight * childOriginY;
+      const childBottom = childY + childHeight * (1 - childOriginY);
+
+      minX = Math.min(minX, childLeft);
+      maxX = Math.max(maxX, childRight);
+      minY = Math.min(minY, childTop);
+      maxY = Math.max(maxY, childBottom);
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
     };
   }
 }
@@ -544,6 +746,48 @@ export class GridLayout extends LayoutScene {
     return {
       offsetX: -w / 2,
       offsetY: -h / 2,
+    };
+  }
+
+  /**
+   * Override getDebugBounds to calculate from actual children positions.
+   * Children with origin="center" are drawn centered at their positions.
+   */
+  getDebugBounds() {
+    if (!this.children?.length) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const child of this.children) {
+      const childX = child.x;
+      const childY = child.y;
+      const childWidth = child.width || 0;
+      const childHeight = child.height || 0;
+      const childOriginX = child.originX ?? 0;
+      const childOriginY = child.originY ?? 0;
+
+      // Calculate child's actual bounds based on its origin
+      const childLeft = childX - childWidth * childOriginX;
+      const childRight = childX + childWidth * (1 - childOriginX);
+      const childTop = childY - childHeight * childOriginY;
+      const childBottom = childY + childHeight * (1 - childOriginY);
+
+      minX = Math.min(minX, childLeft);
+      maxX = Math.max(maxX, childRight);
+      minY = Math.min(minY, childTop);
+      maxY = Math.max(maxY, childBottom);
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
     };
   }
 }

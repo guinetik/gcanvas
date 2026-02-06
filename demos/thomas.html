@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thomas Attractor 3D</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Thomas' Cyclically Symmetric Attractor</strong> (1999)<br/>
+    <span style="color:#CCC">
+      <li>dx/dt = sin(y) - bx</li>
+      <li>dy/dt = sin(z) - by</li>
+      <li>dz/dt = sin(x) - bz</li>
+      <li>b = 0.208186</li>
+      <li>Elegant three-fold symmetry</li>
+      <li>Blue = slow, Green = fast</li>
+      <li>Drag to rotate</li>
+      <li>Scroll/pinch to zoom</li>
+      <li>Double-click to reset zoom</li>
+      <li>Press R to restart</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/thomas.js"></script>
+</body>
+</html>

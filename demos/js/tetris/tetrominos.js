@@ -7,8 +7,8 @@ import { CONFIG, SHAPES, PIECE_TYPES } from "./config.js";
 /**
  * TetrisPiece - Represents a falling tetromino in 3D space
  *
- * The piece exists on the XZ plane and falls along the Y axis.
- * Rotation happens around the Y axis (horizontal plane rotation).
+ * Uses a voxel-based representation for true 3D rotation.
+ * Pieces can rotate around X, Y, and Z axes.
  */
 export class TetrisPiece {
     /**
@@ -19,8 +19,8 @@ export class TetrisPiece {
         this.type = type;
         this.color = SHAPES[type].color;
 
-        // Deep copy the shape matrix so we can rotate it
-        this.matrix = SHAPES[type].matrix.map((row) => [...row]);
+        // Convert 2D matrix to 3D voxels (relative positions)
+        this.voxels = this._matrixToVoxels(SHAPES[type].matrix);
 
         // Position in grid coordinates
         // Y = 0 is top of well, Y increases downward
@@ -33,17 +33,49 @@ export class TetrisPiece {
     }
 
     /**
+     * Convert 2D matrix to 3D voxel array
+     * @param {number[][]} matrix - 2D shape matrix
+     * @returns {Array<{x: number, y: number, z: number}>}
+     * @private
+     */
+    _matrixToVoxels(matrix) {
+        const voxels = [];
+        for (let z = 0; z < matrix.length; z++) {
+            for (let x = 0; x < matrix[z].length; x++) {
+                if (matrix[z][x]) {
+                    voxels.push({ x, y: 0, z }); // y=0 since pieces start flat
+                }
+            }
+        }
+        return voxels;
+    }
+
+    /**
      * Center the piece at the top of the well
      * @private
      */
     _centerPiece() {
         const { width, depth } = CONFIG.grid;
-        const pieceWidth = this.matrix[0].length; // X dimension
-        const pieceDepth = this.matrix.length; // Z dimension
+        const bounds = this.getBounds();
 
-        this.x = Math.floor((width - pieceWidth) / 2);
-        this.z = Math.floor((depth - pieceDepth) / 2);
+        this.x = Math.floor((width - bounds.width) / 2);
+        this.z = Math.floor((depth - bounds.depth) / 2);
         this.y = 0; // Start at top
+    }
+
+    /**
+     * Get bounding box dimensions of the piece
+     * @returns {{width: number, height: number, depth: number}}
+     */
+    getBounds() {
+        if (this.voxels.length === 0) {
+            return { width: 0, height: 0, depth: 0 };
+        }
+        return {
+            width: Math.max(...this.voxels.map((v) => v.x)) + 1,
+            height: Math.max(...this.voxels.map((v) => v.y)) + 1,
+            depth: Math.max(...this.voxels.map((v) => v.z)) + 1,
+        };
     }
 
     /**
@@ -51,21 +83,11 @@ export class TetrisPiece {
      * @returns {Array<{x: number, y: number, z: number}>}
      */
     getWorldPositions() {
-        const positions = [];
-
-        for (let z = 0; z < this.matrix.length; z++) {
-            for (let x = 0; x < this.matrix[z].length; x++) {
-                if (this.matrix[z][x]) {
-                    positions.push({
-                        x: this.x + x,
-                        y: this.y,
-                        z: this.z + z,
-                    });
-                }
-            }
-        }
-
-        return positions;
+        return this.voxels.map((v) => ({
+            x: this.x + v.x,
+            y: this.y + v.y,
+            z: this.z + v.z,
+        }));
     }
 
     /**
@@ -81,47 +103,63 @@ export class TetrisPiece {
     }
 
     /**
-     * Rotate the piece around the Y axis (horizontal plane)
+     * Rotate the piece around the specified axis
+     * @param {string} axis - 'x', 'y', or 'z'
      * @param {number} direction - 1 for clockwise, -1 for counter-clockwise
      */
-    rotate(direction = 1) {
+    rotate(axis = "y", direction = 1) {
         // O piece doesn't rotate
         if (this.type === "O") return;
 
-        const oldMatrix = this.matrix;
-        const rows = oldMatrix.length;
-        const cols = oldMatrix[0].length;
+        this.voxels = this.voxels.map((v) => {
+            switch (axis) {
+                case "y": // Horizontal rotation (around Y axis)
+                    return direction === 1
+                        ? { x: -v.z, y: v.y, z: v.x }
+                        : { x: v.z, y: v.y, z: -v.x };
+                case "x": // Pitch rotation (around X axis)
+                    return direction === 1
+                        ? { x: v.x, y: -v.z, z: v.y }
+                        : { x: v.x, y: v.z, z: -v.y };
+                case "z": // Roll rotation (around Z axis)
+                    return direction === 1
+                        ? { x: -v.y, y: v.x, z: v.z }
+                        : { x: v.y, y: -v.x, z: v.z };
+                default:
+                    return v;
+            }
+        });
 
-        // Create new rotated matrix
-        if (direction === 1) {
-            // Clockwise: transpose then reverse each row
-            this.matrix = [];
-            for (let x = 0; x < cols; x++) {
-                const newRow = [];
-                for (let z = rows - 1; z >= 0; z--) {
-                    newRow.push(oldMatrix[z][x]);
-                }
-                this.matrix.push(newRow);
-            }
-        } else {
-            // Counter-clockwise: transpose then reverse each column
-            this.matrix = [];
-            for (let x = cols - 1; x >= 0; x--) {
-                const newRow = [];
-                for (let z = 0; z < rows; z++) {
-                    newRow.push(oldMatrix[z][x]);
-                }
-                this.matrix.push(newRow);
-            }
-        }
+        // Normalize to keep piece grounded (min coords = 0)
+        this._normalizeVoxels();
+    }
+
+    /**
+     * Normalize voxels so minimum x/y/z is 0
+     * This keeps the piece properly bounded after rotation
+     * @private
+     */
+    _normalizeVoxels() {
+        if (this.voxels.length === 0) return;
+
+        const minX = Math.min(...this.voxels.map((v) => v.x));
+        const minY = Math.min(...this.voxels.map((v) => v.y));
+        const minZ = Math.min(...this.voxels.map((v) => v.z));
+
+        this.voxels = this.voxels.map((v) => ({
+            x: v.x - minX,
+            y: v.y - minY,
+            z: v.z - minZ,
+        }));
     }
 
     /**
      * Undo a rotation (for wall kick failure)
+     * @param {string} axis - 'x', 'y', or 'z'
      * @param {number} direction - Original rotation direction to undo
      */
-    undoRotate(direction = 1) {
-        this.rotate(-direction);
+    undoRotate(axis = "y", direction = 1) {
+        this.rotate(axis, -direction);
     }
 
     /**
@@ -129,7 +167,7 @@ export class TetrisPiece {
      * @returns {number}
      */
     getWidth() {
-        return this.matrix[0].length;
+        return this.getBounds().width;
     }
 
     /**
@@ -137,7 +175,7 @@ export class TetrisPiece {
      * @returns {number}
      */
     getDepth() {
-        return this.matrix.length;
+        return this.getBounds().depth;
     }
 
     /**
@@ -146,7 +184,7 @@ export class TetrisPiece {
      */
     clone() {
         const cloned = new TetrisPiece(this.type);
-        cloned.matrix = this.matrix.map((row) => [...row]);
+        cloned.voxels = this.voxels.map((v) => ({ ...v }));
         cloned.x = this.x;
         cloned.y = this.y;
         cloned.z = this.z;

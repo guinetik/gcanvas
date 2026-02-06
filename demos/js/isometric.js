@@ -99,12 +99,17 @@ class IsometricBox extends GameObject {
   }
   
   /**
-   * Custom depth value for sorting - uses front corner for proper overlap
+   * Custom depth value for sorting - uses rotated front corner for proper overlap at all camera angles
    */
   get isoDepth() {
-    // Use the front-most corner (x+w, y+d) plus height
-    // Height factor matches ball's z factor for consistent sorting
-    return (this.x + this.w) + (this.y + this.d) + this.h * 0.5;
+    // Use the scene's helper to get depth based on rotated coordinates
+    const corners = [
+      { x: this.x, y: this.y },
+      { x: this.x + this.w, y: this.y },
+      { x: this.x, y: this.y + this.d },
+      { x: this.x + this.w, y: this.y + this.d },
+    ];
+    return this.isoScene.getRotatedDepth(corners, this.h);
   }
 
   /**
@@ -150,15 +155,7 @@ class IsometricBox extends GameObject {
   render() {
     const scene = this.isoScene;
     
-    // Get camera angle (direction camera is looking FROM)
-    const cameraAngle = scene.camera ? scene.camera.angle : 0;
-    
-    // Camera view direction (where camera is looking TOWARD)
-    // In isometric, default view looks toward +X +Y direction (angle π/4 from +X axis)
-    // Camera rotation rotates around Z axis
-    const viewDirection = Math.PI / 4 + cameraAngle;
-    
-    // Get all 8 corners of the box
+    // Get all 8 corners of the box (camera rotation is applied inside toIsometric)
     const topNW = scene.toIsometric(this.x, this.y, this.h);
     const topNE = scene.toIsometric(this.x + this.w, this.y, this.h);
     const topSE = scene.toIsometric(this.x + this.w, this.y + this.d, this.h);
@@ -192,21 +189,11 @@ class IsometricBox extends GameObject {
       }
     ];
 
-    // Calculate shading and visibility for each face
+    // Calculate screen-space center Y for depth sorting, and lighting for shading
     for (const face of faces) {
-      // Rotate the face normal by camera angle
-      const rotatedNormal = face.normalAngle + cameraAngle;
-      
-      // Face visibility: a face is visible if its rotated normal
-      // has a component pointing toward the camera (away from view direction)
-      // In isometric, visible faces are those facing generally toward -Y screen direction
-      const normalToView = rotatedNormal - viewDirection;
-      face.facingCamera = Math.cos(normalToView) < 0;
-      
-      // For depth sorting: faces with normals pointing more toward +Y screen 
-      // (into the screen in isometric) should be drawn first
-      face.depth = Math.sin(rotatedNormal);
-      
+      // Screen Y for depth sorting (lower Y = further back = draw first)
+      face.screenY = face.verts.reduce((sum, v) => sum + v.y, 0) / 4;
+
       // Lighting: based on angle between world-space normal and light
       const lightDiff = face.normalAngle - lightAngle;
       const lightFactor = (Math.cos(lightDiff) + 1) / 2; // 0 to 1
@@ -214,16 +201,9 @@ class IsometricBox extends GameObject {
       face.color = this.shadeColor(this.baseColor, shadeFactor);
     }
 
-    // Sort faces: draw back-facing first, then front-facing
-    // Within each group, sort by depth
-    faces.sort((a, b) => {
-      // Back-facing faces drawn first
-      if (a.facingCamera !== b.facingCamera) {
-        return a.facingCamera ? 1 : -1;
-      }
-      // Then by depth (lower depth = further back = draw first)
-      return a.depth - b.depth;
-    });
+    // Sort all faces by screen Y (back to front: lower Y drawn first)
+    // This is the correct approach - no visibility culling needed
+    faces.sort((a, b) => a.screenY - b.screenY);
 
     // Draw faces in order: back faces first (with strokes), then front faces (fill covers back strokes)
     Painter.useCtx((ctx) => {
@@ -364,22 +344,30 @@ class Ball extends GameObject {
   }
   
   /**
-   * Custom depth value for sorting - ensures ball renders on top of platforms
+   * Custom depth value for sorting - ensures ball renders on top of platforms.
+   * Uses rotated coordinates for correct sorting at all camera angles.
    */
   get isoDepth() {
-    // Find the platform we're over (if any) and use its front corner as base
-    let baseDepth = this.x + this.y;
-    
+    const angle = this.isoScene.camera ? this.isoScene.camera.angle : 0;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+
+    // Rotate ball position
+    const rotatedBallX = this.x * cos - this.y * sin;
+    const rotatedBallY = this.x * sin + this.y * cos;
+    let baseDepth = rotatedBallX + rotatedBallY;
+
+    // Find the platform we're over and use its rotated front corner
     for (const platform of this.platforms) {
       if (platform.containsPoint(this.x, this.y, 0)) {
-        // Use the platform's front corner as our base depth
-        const platformFront = (platform.x + platform.w) + (platform.y + platform.d);
-        if (platformFront > baseDepth) {
-          baseDepth = platformFront;
+        // Get platform's rotated depth (max corner)
+        const platformDepth = platform.isoDepth - platform.h * 0.01; // Remove height factor
+        if (platformDepth > baseDepth) {
+          baseDepth = platformDepth;
         }
       }
     }
-    
+
     // Add height plus small offset to ensure we render on top of platforms
     return baseDepth + this.z * 0.5 + 1;
   }

@@ -57,8 +57,13 @@ class Player extends GameObject {
     // Movement speed (pixels per second)
     this.speed = 300;
 
-    // Enable mouse/touch input on this shape
-    this.enableInteractivity(this.shape);
+    // Enable interactivity
+    this.interactive = true;
+    
+    // Listen for input events
+    this.on('inputdown', (e) => {
+      console.log('Player clicked!');
+    });
   }
 
   update(dt) {
@@ -85,11 +90,6 @@ class Player extends GameObject {
 
   render() {
     this.shape.draw();
-  }
-
-  // Called when player is clicked
-  onPointerDown(e) {
-    console.log('Player clicked!');
   }
 }
 ```
@@ -315,7 +315,7 @@ window.addEventListener('load', () => {
 | `Game` | Main class managing loop, canvas, input |
 | `Scene` | Container for GameObjects |
 | `GameObject` | Interactive entity with update/render |
-| `enableInteractivity(shape)` | Enable click/hover on a shape |
+| `interactive = true` | Enable click/hover on a GameObject |
 | `dt` | Delta time in seconds |
 | `game.input.isKeyDown(key)` | Check if key is pressed |
 | `Motion.*` | Animation helper functions |
@@ -333,12 +333,13 @@ game.input.isKeyDown('Space')
 game.mouse.x
 game.mouse.y
 
-// GameObject events
-onPointerDown(e) { }
-onPointerUp(e) { }
-onPointerMove(e) { }
-onMouseOver() { }
-onMouseOut() { }
+// GameObject events (use event emitter pattern)
+this.on('inputdown', (e) => { })
+this.on('inputup', (e) => { })
+this.on('inputmove', (e) => { })
+this.on('mouseover', () => { })
+this.on('mouseout', () => { })
+this.on('click', (e) => { })
 ```
 
 ## Next Steps

@@ -266,18 +266,12 @@ export class Grid {
 
         while (true) {
             testY++;
-            const positions = [];
-            for (let z = 0; z < piece.matrix.length; z++) {
-                for (let x = 0; x < piece.matrix[z].length; x++) {
-                    if (piece.matrix[z][x]) {
-                        positions.push({
-                            x: piece.x + x,
-                            y: testY,
-                            z: piece.z + z,
-                        });
-                    }
-                }
-            }
+            // Use voxels to calculate positions at testY
+            const positions = piece.voxels.map((v) => ({
+                x: piece.x + v.x,
+                y: testY + v.y,
+                z: piece.z + v.z,
+            }));
 
             if (!this.canPlace(positions)) {
                 return testY - 1;

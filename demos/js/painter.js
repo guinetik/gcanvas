@@ -289,7 +289,7 @@ class PaintScene extends GameObject {
     // First check total point count
     this.totalPoints = this.strokes.reduce(
       (sum, stroke) => sum + stroke.points.length,
-      0
+      0,
     );
 
     // If too many points, start removing oldest strokes
@@ -310,7 +310,7 @@ class PaintScene extends GameObject {
       this.totalPoints -= pointsToRemove;
 
       console.log(
-        `Removed ${this.REMOVE_BATCH} oldest strokes. ${this.strokes.length} strokes remaining.`
+        `Removed ${this.REMOVE_BATCH} oldest strokes. ${this.strokes.length} strokes remaining.`,
       );
     }
   }
@@ -324,14 +324,17 @@ class PaintScene extends GameObject {
 class UIScene extends Scene {
   constructor(game, paintScene, options = {}) {
     super(game, options);
-    this.debug = true;
-    this.debugColor = "yellow";
+    // Don't override debug from options
+    this.debugColor = options.debugColor || "yellow";
     this.paintScene = paintScene;
     this.layout = new HorizontalLayout(game, {
       x: 0,
       y: 0,
       spacing: 8,
       padding: 0,
+      origin: "center",
+      debug: true,
+      debugColor: "magenta",
     });
     this.toolPencil = this.layout.add(
       new ToggleButton(game, {
@@ -352,7 +355,7 @@ class UIScene extends Scene {
             currentTool = this.toolPencil;
           }
         },
-      })
+      }),
     );
     this.toolEraser = this.layout.add(
       new ToggleButton(game, {
@@ -372,7 +375,7 @@ class UIScene extends Scene {
             currentTool = this.toolEraser;
           }
         },
-      })
+      }),
     );
     this.toolLine = this.layout.add(
       new ToggleButton(game, {
@@ -392,7 +395,7 @@ class UIScene extends Scene {
             paintScene.setTool("line");
           }
         },
-      })
+      }),
     );
     this.layout.add(
       new Button(game, {
@@ -408,7 +411,7 @@ class UIScene extends Scene {
           this.paintScene.activeStroke = null;
           this.paintScene.lineStart = null;
         },
-      })
+      }),
     );
     let currentTool = this.toolPencil;
     this.add(this.layout);
@@ -433,7 +436,7 @@ class DemoGame extends Game {
         anchor: "bottom-right",
         width: 20,
         height: 20,
-      })
+      }),
     );
   }
 
@@ -442,8 +445,9 @@ class DemoGame extends Game {
     this.uiScene = new UIScene(this, this.paintScene, {
       debug: true,
       debugColor: "yellow",
+      origin: "center",
       anchor: Position.BOTTOM_CENTER,
-      anchorRelative: this.paintScene,
+      anchorMargin: 30,
       width: 80 + 80 + 80 + 80 + 32,
       height: 40,
     });
@@ -453,7 +457,7 @@ class DemoGame extends Game {
   init() {
     super.init();
     // Create the paint scene
-    this.paintScene = new PaintScene(this, { debug: true, anchor: "center" });
+    this.paintScene = new PaintScene(this, { debug: true, origin: "center" });
     this.pipeline.add(this.paintScene);
     // Add them to the pipeline
     this.createUI();

@@ -15,7 +15,14 @@ class Player extends GameObject {
   constructor(game) {
     super(game);
     this.shape = new Circle(30, { color: 'blue' });
-    this.enableInteractivity(this.shape);
+    
+    // Enable interactivity
+    this.interactive = true;
+    
+    // Listen for click events
+    this.on('inputdown', (e) => {
+      console.log('Player clicked!');
+    });
   }
 
   update(dt) {
@@ -143,8 +150,19 @@ class Enemy extends GameObject {
   constructor(game) {
     super(game);
     this.shape = new Rectangle({ width: 40, height: 40, color: 'red' });
-    this.enableInteractivity(this.shape);
     this.speed = 100;
+    
+    // Enable interactivity
+    this.interactive = true;
+    
+    // Listen for input events using event emitter pattern
+    this.on('inputdown', (e) => { 
+      console.log('Enemy clicked!');
+    });
+    this.on('inputup', (e) => { });
+    this.on('inputmove', (e) => { });
+    this.on('mouseover', () => { });
+    this.on('mouseout', () => { });
   }
 
   update(dt) {
@@ -154,13 +172,6 @@ class Enemy extends GameObject {
   render() {
     this.shape.draw();
   }
-
-  // Input events
-  onPointerDown(e) { }
-  onPointerUp(e) { }
-  onPointerMove(e) { }
-  onMouseOver() { }
-  onMouseOut() { }
 }
 ```
 
@@ -172,15 +183,26 @@ class Enemy extends GameObject {
 | `render()` | Every frame (if visible) |
 | `destroy()` | When removed from pipeline |
 
-### Input Methods
+### Input Events
 
-| Method | Event |
+GameObjects use the event emitter pattern for input handling. First, set `interactive = true`, then use `.on(eventName, callback)`:
+
+| Event | When Fired |
 |--------|-------|
-| `onPointerDown(e)` | Click/tap start |
-| `onPointerUp(e)` | Click/tap end |
-| `onPointerMove(e)` | Pointer movement |
-| `onMouseOver()` | Hover enter |
-| `onMouseOut()` | Hover leave |
+| `inputdown` | Click/tap start |
+| `inputup` | Click/tap end |
+| `inputmove` | Pointer movement over the object |
+| `mouseover` | Hover enter |
+| `mouseout` | Hover leave |
+| `click` | Click/tap (after inputup) |
+
+**Example:**
+```js
+this.interactive = true;
+this.on('inputdown', (e) => {
+  console.log('Clicked at', e.x, e.y);
+});
+```
 
 ## Scene Class
 

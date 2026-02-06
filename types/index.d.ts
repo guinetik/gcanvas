@@ -438,11 +438,39 @@ export {
 } from './particle';
 
 // ==========================================================================
+// Physics Module
+// ==========================================================================
+
+export {
+  Physics,
+  PhysicsUpdaters,
+  CollisionResult,
+  ForceResult,
+  VelocityResult,
+  ElasticCollisionResult,
+  Bounds3D,
+  Sphere as PhysicsSphere,
+  Position3D,
+  PhysicsParticle
+} from './physics';
+
+// ==========================================================================
 // WebGL Module (Optional)
 // ==========================================================================
 
 export {
   WebGLRenderer,
-  WebGLRendererOptions,
-  SPHERE_SHADERS
+  WebGLParticleRenderer,
+  WebGLLineRenderer,
+  WebGLDeJongRenderer,
+  WebGLCliffordRenderer,
+  DEJONG_MAX_ITERATIONS,
+  DEJONG_POINT_VERTEX,
+  DEJONG_POINT_FRAGMENTS,
+  CLIFFORD_MAX_ITERATIONS,
+  CLIFFORD_POINT_VERTEX,
+  CLIFFORD_POINT_FRAGMENTS,
+  SPHERE_SHADERS,
+  WebGLBlendMode,
+  PointSpriteShape
 } from './webgl';

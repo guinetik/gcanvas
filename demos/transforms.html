@@ -89,7 +89,8 @@
           width: this.width - 20,
           height: this.height - 20,
           debug: false,
-          anchor: "center"
+          anchor: "center",
+          origin: "center",
         });
 
         this.pipeline.add(this.scene);
@@ -118,17 +119,16 @@
           width: 80,
           height: 60,
           color: "#e94560",
-          stroke: "#fff",
-          lineWidth: 2,
           debug: false,
-          debugColor: "#ff00ff"
+          debugColor: "#ff00ff",
+          origin: "center",
         });
         allShapes.push(this.rect);
 
         // Use fluent API to set initial position
         this.rect.transform
           .x(-200)
-          .y(-120);
+          .y(-100);
 
         // Label
         this.label = new TextShape("Fluent API", {
@@ -136,7 +136,8 @@
           y: -170,
           font: "bold 14px monospace",
           color: "#fff",
-          align: "center"
+          align: "center",
+          origin: "center",
         });
 
         this.elapsed = 0;
@@ -169,7 +170,7 @@
         super(game);
 
         // Create a group with multiple shapes
-        this.group = new Group({ debug: false, debugColor: "#ff00ff" });
+        this.group = new Group({ debug: false, debugColor: "#ff00ff", origin: "center" });
         allShapes.push(this.group);
 
         // Add shapes to group using transform API
@@ -179,7 +180,8 @@
             stroke: "#fff",
             lineWidth: 1,
             debug: false,
-            debugColor: "#ff00ff"
+            debugColor: "#ff00ff",
+            origin: "center",
           });
           allShapes.push(circle);
           // Position using transform
@@ -188,7 +190,7 @@
         }
 
         // Position the group
-        this.group.transform.position(0, -120);
+        this.group.transform.position(0, -100);
 
         // Label
         this.label = new TextShape("Group Transforms", {
@@ -196,7 +198,8 @@
           y: -170,
           font: "bold 14px monospace",
           color: "#fff",
-          align: "center"
+          align: "center",
+          origin: "center",
         });
 
         this.elapsed = 0;
@@ -206,16 +209,10 @@
         super.update(dt);
         this.elapsed += dt;
 
-        // Animate group transform
+        // Animate group transform - all children rotate together as a unit
         this.group.transform
           .rotation(this.elapsed * 30)
           .scale(0.9 + Math.sin(this.elapsed * 1.5) * 0.2);
-
-        // Animate individual children using forEachTransform
-        this.group.forEachTransform((t, child, i) => {
-          // Each child rotates at different speed
-          t.rotation(-this.elapsed * (60 + i * 30));
-        });
       }
 
       draw() {
@@ -238,14 +235,15 @@
           stroke: "#fff",
           lineWidth: 2,
           debug: false,
-          debugColor: "#ff00ff"
+          debugColor: "#ff00ff",
+          origin: "center",
         });
         allShapes.push(this.star);
 
         // Use batch set for initial state
         this.star.transform.set({
           x: 200,
-          y: -120,
+          y: -100,
           rotation: 0,
           scaleX: 1,
           scaleY: 1
@@ -257,7 +255,8 @@
           y: -170,
           font: "bold 14px monospace",
           color: "#fff",
-          align: "center"
+          align: "center",
+          origin: "center",
         });
 
         this.elapsed = 0;
@@ -299,15 +298,15 @@
         // Create shapes for demonstrating animated transforms
         this.shapes = [];
         const positions = [
-          { x: -200, y: 80 },
-          { x: 0, y: 80 },
-          { x: 200, y: 80 }
+          { x: -200, y: 100 },
+          { x: 0, y: 100 },
+          { x: 200, y: 100 }
         ];
 
         const types = [
-          { name: "position", shape: new Rectangle({ width: 50, height: 50, color: "#00d9ff", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) },
-          { name: "rotation", shape: new Triangle(40, { color: "#ff6b6b", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) },
-          { name: "scale", shape: new Circle(25, { color: "#7bed9f", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff" }) }
+          { name: "position", shape: new Rectangle({ width: 50, height: 50, color: "#00d9ff", debug: false, debugColor: "#ff00ff", origin: "center" }) },
+          { name: "rotation", shape: new Triangle(40, { color: "#ff6b6b", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff", origin: "center" }) },
+          { name: "scale", shape: new Circle(25, { color: "#7bed9f", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff", origin: "center" }) }
         ];
 
         types.forEach((type, i) => {
@@ -318,7 +317,8 @@
             y: 30,
             font: "bold 14px monospace",
             color: "#fff",
-            align: "center"
+            align: "center",
+            origin: "center",
           });
           type.baseX = positions[i].x;
           type.baseY = positions[i].y;

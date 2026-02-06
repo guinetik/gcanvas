@@ -91,9 +91,12 @@ Assign `p.temperature` or `p.custom.temperature` each frame (e.g., via `heat.zon
 - Keep `smoothingRadius` proportional to particle spacing (roughly 2–3× average spacing).
 - Clamp velocities in the consumer if you target 10k–20k particles to keep the frame budget.
 - For gases, favor lower `pressure` and higher `diffusion` to avoid jitter.
-- The math never allocates inside the hot path besides output arrays; reuse them between frames if you need fewer allocations (pass your own particles array). 
+- The math never allocates inside the hot path besides output arrays; reuse them between frames if you need fewer allocations (pass your own particles array).
 
+## See Also
 
-
-
+- [Heat Module](./modules/math/heat.md) - Zone-based temperature, buoyancy, heat transfer
+- [Particle Module](./modules/particle/README.md) - ParticleSystem integration
+- [Physics Module](./modules/physics/README.md) - Collision detection and forces
+- [WebGL Module](./modules/webgl/README.md) - GPU-accelerated particle rendering
 

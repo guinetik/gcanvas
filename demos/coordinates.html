@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GCanvas Coordinate System Documentation</title>
+  <title>GCanvas Origin System Documentation</title>
   <!-- Prism.js - base theme then override -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.css">
   <style>
@@ -169,6 +169,14 @@
       color: #7fff7f;
     }
 
+    .warning {
+      background-color: #1a1a0a;
+      padding: 15px;
+      border-left: 2px solid #ff0;
+      margin: 20px 0;
+      color: #ffa;
+    }
+
     .example {
       background-color: #0a0a0a;
       border: 1px solid #1a1a1a;
@@ -193,7 +201,7 @@
 
     .canvas-demo {
       width: 100%;
-      height: 250px;
+      height: 280px;
       background-color: #050505;
       border-top: 1px solid #1a1a1a;
       position: relative;
@@ -270,6 +278,26 @@
       white-space: pre;
     }
 
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .comparison-box {
+      background-color: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      padding: 15px;
+    }
+
+    .comparison-box h4 {
+      margin-top: 0;
+      color: #0f0;
+      border-bottom: 1px solid #1a1a1a;
+      padding-bottom: 10px;
+    }
+
     @media (max-width: 768px) {
       body {
         padding: 10px;
@@ -284,7 +312,11 @@
       }
 
       .canvas-demo {
-        height: 200px;
+        height: 220px;
+      }
+
+      .comparison {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -292,389 +324,443 @@
 
 <body>
   <header>
-    <h1>GCanvas Coordinate System</h1>
-    <p>Understanding how positioning works throughout the library</p>
+    <h1>GCanvas Origin System</h1>
+    <p>Understanding the configurable origin-based coordinate system</p>
   </header>
 
   <section>
     <h2>Overview</h2>
     <p>
-      GCanvas uses a <strong>center-based coordinate system</strong> where <code>x</code> and <code>y</code>
-      refer to an object's center point, not its top-left corner. This makes rotation and scaling more
-      intuitive since transforms happen around the object's center.
+      GCanvas uses a <strong>top-left based coordinate system</strong> by default, matching web conventions
+      (CSS, DOM, and standard Canvas API). The <code>origin</code> property allows you to configure the
+      pivot point for positioning, rotation, and scaling.
     </p>
 
     <div class="tldr-box">
       <h3>TL;DR - Quick Reference</h3>
       <table>
         <tr>
-          <th>Situation</th>
-          <th>How It Works</th>
+          <th>Origin</th>
+          <th>Behavior</th>
+          <th>Use Case</th>
         </tr>
         <tr>
-          <td>Object at <code>(100, 100)</code></td>
-          <td>Center is at screen position (100, 100)</td>
+          <td><code>origin: "top-left"</code> (default)</td>
+          <td>(x, y) = top-left corner</td>
+          <td>UI elements, layouts, web-style positioning</td>
         </tr>
         <tr>
-          <td>Child at <code>(10, 20)</code> in Scene at <code>(100, 100)</code></td>
-          <td>Child center is at screen (110, 120)</td>
+          <td><code>origin: "center"</code></td>
+          <td>(x, y) = center point</td>
+          <td>Game objects, rotation, scaling</td>
         </tr>
         <tr>
-          <td>Camera3D <code>project()</code> returns <code>(0, 0)</code></td>
-          <td>Object is at the center of the 3D view</td>
+          <td><code>originX: 0.5, originY: 1</code></td>
+          <td>Bottom-center</td>
+          <td>Sprites standing on ground</td>
         </tr>
         <tr>
-          <td>Scene3D at <code>(width/2, height/2)</code></td>
-          <td>3D origin appears at canvas center</td>
+          <td><code>originX: 1, originY: 0</code></td>
+          <td>Top-right corner</td>
+          <td>Right-aligned elements</td>
         </tr>
       </table>
     </div>
   </section>
 
   <section>
-    <h2>1. Center-Based Positioning</h2>
+    <h2>1. The Origin Property</h2>
     <p>
-      Unlike many graphics libraries that use top-left corners, GCanvas positions objects by their
-      <strong>center point</strong>. When you set <code>x: 100, y: 100</code>, the object's center
-      is at that position.
+      The <code>origin</code> property defines the pivot point of a shape. It accepts either a string
+      shorthand or explicit <code>originX</code>/<code>originY</code> values (0-1 normalized).
     </p>
 
-    <h4>Why Center-Based?</h4>
-    <ul class="feature-list">
-      <li>Rotation happens around the center naturally</li>
-      <li>Scaling expands/contracts from the center</li>
-      <li>No need to manually adjust pivot points</li>
-      <li>More intuitive for game development</li>
-    </ul>
-
-    <div class="example">
-      <div class="example-title">Interactive Demo: Center vs Bounds</div>
-      <pre><code class="language-javascript">// This circle's CENTER is at (100, 100)
-const circle = new Circle(50, { x: 100, y: 100, color: "#0f0" });
-
-// The circle extends from:
-// - Left edge: 50 (100 - radius)
-// - Right edge: 150 (100 + radius)
-// - Top edge: 50 (100 - radius)
-// - Bottom edge: 150 (100 + radius)</code></pre>
-      <div class="canvas-demo">
-        <canvas id="center-based-canvas"></canvas>
-        <div class="canvas-label">Drag to move - watch center point</div>
-      </div>
-    </div>
-
+    <h4>String Values:</h4>
     <table>
       <tr>
-        <th>System</th>
-        <th><code>x: 100, y: 100</code> means...</th>
-        <th>Rotation pivot</th>
+        <th>Value</th>
+        <th>originX</th>
+        <th>originY</th>
+        <th>Description</th>
       </tr>
       <tr>
-        <td><strong>GCanvas (center)</strong></td>
-        <td>Center at (100, 100)</td>
-        <td>Around center</td>
+        <td><code>"top-left"</code></td>
+        <td>0</td>
+        <td>0</td>
+        <td>Default - position is top-left corner</td>
       </tr>
       <tr>
-        <td>Top-left systems</td>
-        <td>Top-left at (100, 100)</td>
-        <td>Around top-left corner</td>
+        <td><code>"center"</code></td>
+        <td>0.5</td>
+        <td>0.5</td>
+        <td>Position is center point</td>
+      </tr>
+      <tr>
+        <td><code>"top-center"</code></td>
+        <td>0.5</td>
+        <td>0</td>
+        <td>Top edge, horizontally centered</td>
+      </tr>
+      <tr>
+        <td><code>"bottom-center"</code></td>
+        <td>0.5</td>
+        <td>1</td>
+        <td>Bottom edge, horizontally centered</td>
+      </tr>
+      <tr>
+        <td><code>"top-right"</code></td>
+        <td>1</td>
+        <td>0</td>
+        <td>Top-right corner</td>
+      </tr>
+      <tr>
+        <td><code>"bottom-left"</code></td>
+        <td>0</td>
+        <td>1</td>
+        <td>Bottom-left corner</td>
+      </tr>
+      <tr>
+        <td><code>"bottom-right"</code></td>
+        <td>1</td>
+        <td>1</td>
+        <td>Bottom-right corner</td>
       </tr>
     </table>
-  </section>
-
-  <section>
-    <h2>2. Basic Positioning</h2>
-    <p>
-      When you add an object directly to the pipeline, its coordinates are <strong>absolute screen
-      coordinates</strong>. Canvas origin <code>(0, 0)</code> is the top-left corner.
-    </p>
 
     <div class="example">
-      <div class="example-title">Interactive Demo: Screen Coordinates</div>
-      <pre><code class="language-javascript">// Circle centered at screen position (200, 150)
-const circle = new Circle(30, { x: 200, y: 150, color: "#0ff" });
-this.pipeline.add(circle);
+      <div class="example-title">Interactive Demo: Origin Positions</div>
+      <pre><code class="language-javascript">// Top-left origin (default) - x,y is the top-left corner
+const rect1 = new Rectangle({
+  x: 100, y: 100,
+  width: 80, height: 60,
+  color: "#0f0"
+  // origin defaults to "top-left" (originX: 0, originY: 0)
+});
 
-// X increases going right
-// Y increases going down</code></pre>
+// Center origin - x,y is the center point
+const rect2 = new Rectangle({
+  x: 100, y: 100,
+  width: 80, height: 60,
+  color: "#0ff",
+  origin: "center"  // shorthand for originX: 0.5, originY: 0.5
+});
+
+// Custom origin - bottom-center for sprites
+const sprite = new Rectangle({
+  x: 100, y: groundY,
+  width: 32, height: 48,
+  originX: 0.5,
+  originY: 1  // feet at x,y position
+});</code></pre>
       <div class="canvas-demo">
-        <canvas id="basic-position-canvas"></canvas>
-        <div class="canvas-label">Click anywhere to place shapes</div>
+        <canvas id="origin-positions-canvas"></canvas>
+        <div class="canvas-label">Click to cycle through origins</div>
       </div>
     </div>
   </section>
 
   <section>
-    <h2>3. Parent-Child Relationships</h2>
+    <h2>2. How Origin Affects Transforms</h2>
     <p>
-      When you add objects to a <strong>Scene</strong>, their coordinates become
-      <strong>relative to the parent's center</strong>. This is the key to understanding
-      hierarchical positioning.
+      The origin point is the pivot for all transformations: positioning, rotation, and scaling
+      all happen relative to the origin.
     </p>
 
     <div class="ascii-diagram">
-Canvas (0,0)────────────────────────────────►X
-    │
-    │      Scene at (200, 150)
-    │      ┌─────────────────────┐
-    │      │    Scene's local    │
-    │      │    origin (0, 0)    │
-    │      │         ●───────────┼──► Scene's X
-    │      │         │           │
-    │      │         │  Child at │
-    │      │         │  (50, 30) │
-    │      │         ▼     ◉     │
-    │      │    Scene's Y        │
-    │      └─────────────────────┘
-    │
-    ▼
-    Y
+originX: 0, originY: 0 (top-left)    originX: 0.5, originY: 0.5 (center)
+┌─────────────────┐                  ┌─────────────────┐
+│●                │                  │                 │
+│  (x,y) here     │                  │        ●        │
+│                 │                  │   (x,y) here    │
+│                 │                  │                 │
+└─────────────────┘                  └─────────────────┘
+  Rotation around                      Rotation around
+  top-left corner                      center point
 
-Child screen position = Scene position + Child local position
-                      = (200, 150) + (50, 30)
-                      = (250, 180)</div>
-
-    <div class="example">
-      <div class="example-title">Interactive Demo: Parent-Child Coordinates</div>
-      <pre><code class="language-javascript">// Scene centered at (200, 150)
-const scene = new Scene(this, { x: 200, y: 150 });
-
-// Child at (50, 30) relative to scene
-const child = new Circle(20, { x: 50, y: 30, color: "#0f0" });
-scene.add(child);
-
-// Child's screen position: (200 + 50, 150 + 30) = (250, 180)</code></pre>
-      <div class="canvas-demo">
-        <canvas id="parent-child-canvas"></canvas>
-        <div class="canvas-label">Drag the scene (green box) - children follow</div>
-      </div>
-    </div>
-
-    <h3>Nested Scenes</h3>
-    <p>Coordinates stack through the hierarchy:</p>
+originX: 1, originY: 0 (top-right)   originX: 0.5, originY: 1 (bottom-center)
+┌─────────────────┐                  ┌─────────────────┐
+│                ●│                  │                 │
+│      (x,y) here │                  │                 │
+│                 │                  │                 │
+│                 │                  │        ●        │
+└─────────────────┘                  └───(x,y) here────┘
+  Good for right-                      Good for sprites
+  aligned elements                     standing on ground</div>
 
     <div class="example">
-      <div class="example-title">Interactive Demo: Nested Hierarchy</div>
-      <pre><code class="language-javascript">const outer = new Scene(this, { x: 100, y: 100 });
-const inner = new Scene(this, { x: 50, y: 50 });
-const shape = new Circle(10, { x: 25, y: 25, color: "#ff0" });
+      <div class="example-title">Interactive Demo: Rotation with Different Origins</div>
+      <pre><code class="language-javascript">// Same position, different origins = different rotation behavior
 
-inner.add(shape);
-outer.add(inner);
-this.pipeline.add(outer);
+// Rotates around top-left corner
+const rect1 = new Rectangle({
+  x: 150, y: 100,
+  width: 60, height: 40,
+  rotation: Math.PI / 4,
+  origin: "top-left"
+});
 
-// Screen position: 100 + 50 + 25 = 175 for both X and Y</code></pre>
+// Rotates around center
+const rect2 = new Rectangle({
+  x: 300, y: 100,
+  width: 60, height: 40,
+  rotation: Math.PI / 4,
+  origin: "center"
+});
+
+// Rotates around bottom-center
+const rect3 = new Rectangle({
+  x: 450, y: 100,
+  width: 60, height: 40,
+  rotation: Math.PI / 4,
+  origin: "bottom-center"
+});</code></pre>
       <div class="canvas-demo">
-        <canvas id="nested-canvas"></canvas>
-        <div class="canvas-label">Drag any level - nested items follow</div>
+        <canvas id="rotation-origins-canvas"></canvas>
+        <div class="canvas-label">Watch rotation pivot points</div>
       </div>
     </div>
   </section>
 
   <section>
-    <h2>4. Camera3D and Scene3D</h2>
+    <h2>3. Scaling with Origin</h2>
     <p>
-      When using 3D projection, an additional coordinate transformation layer is introduced.
-      <code>Camera3D.project()</code> transforms 3D world positions to 2D screen coordinates
-      <strong>centered at the origin</strong>.
+      Scaling expands or contracts from the origin point. This is especially important for
+      animations and hover effects.
     </p>
 
-    <div class="note">
-      <strong>Key Insight:</strong> Camera3D returns coordinates centered at (0, 0). That's why
-      Scene3D must be positioned at canvas center - so the 3D origin appears in the middle of
-      the screen.
+    <div class="example">
+      <div class="example-title">Interactive Demo: Scaling with Different Origins</div>
+      <pre><code class="language-javascript">// Hover effect: scale from center (natural feel)
+button.on('hover', () => {
+  button.scaleX = 1.1;
+  button.scaleY = 1.1;
+});
+// With origin: "center", button grows equally in all directions
+
+// Scale from bottom (character jumping)
+character.originY = 1;  // bottom-center
+character.scaleY = 0.8; // squash
+// Character compresses toward the ground</code></pre>
+      <div class="canvas-demo">
+        <canvas id="scaling-origins-canvas"></canvas>
+        <div class="canvas-label">Hover over shapes to see scaling</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Migration: Center to Top-Left</h2>
+    <p>
+      GCanvas originally used center-based positioning. The new top-left default matches web
+      conventions better. Here's how to migrate:
+    </p>
+
+    <div class="warning">
+      <strong>Breaking Change:</strong> If upgrading from older GCanvas versions, add
+      <code>origin: "center"</code> to shapes that need center-based positioning.
     </div>
 
-    <div class="example">
-      <div class="example-title">Interactive Demo: 3D Projection</div>
-      <pre><code class="language-javascript">const camera = new Camera3D({ perspective: 800 });
-
-// Scene3D MUST be centered for 3D projection to work correctly
-const scene = new Scene3D(this, {
-  x: this.width / 2,
-  y: this.height / 2,
-  camera: camera
+    <div class="comparison">
+      <div class="comparison-box">
+        <h4>Old (Center-based)</h4>
+        <pre><code class="language-javascript">// x,y was the center
+const rect = new Rectangle({
+  x: 100, y: 100,
+  width: 80, height: 60
 });
-
-// Object at 3D origin (0, 0, 0) appears at screen center
-// Object at (100, 0, 0) appears right of center</code></pre>
-      <div class="canvas-demo" style="height: 300px;">
-        <canvas id="camera3d-canvas"></canvas>
-        <div class="canvas-label">Drag to rotate camera - watch projection</div>
+// Center was at (100, 100)
+// Corners at (60,70) to (140,130)</code></pre>
+      </div>
+      <div class="comparison-box">
+        <h4>New (Top-left default)</h4>
+        <pre><code class="language-javascript">// x,y is now the top-left
+const rect = new Rectangle({
+  x: 100, y: 100,
+  width: 80, height: 60,
+  origin: "center"  // Add this!
+});
+// Now behaves like old version</code></pre>
       </div>
     </div>
 
-    <h3>The Projection Formula</h3>
+    <h3>Quick Migration Guide</h3>
     <table>
       <tr>
-        <th>Step</th>
-        <th>What Happens</th>
+        <th>Old Code</th>
+        <th>New Code</th>
       </tr>
       <tr>
-        <td>1. World Position</td>
-        <td>Object at 3D coordinates (x, y, z)</td>
+        <td><code>new Circle(50, { x: 100, y: 100 })</code></td>
+        <td><code>new Circle(50, { x: 100, y: 100, origin: "center" })</code></td>
       </tr>
       <tr>
-        <td>2. Camera Transform</td>
-        <td>Subtract camera position, apply rotation</td>
+        <td><code>new Rectangle({ x: 100, y: 100, ... })</code></td>
+        <td><code>new Rectangle({ x: 100, y: 100, ..., origin: "center" })</code></td>
       </tr>
       <tr>
-        <td>3. Perspective</td>
-        <td><code>scale = perspective / (perspective + z)</code></td>
-      </tr>
-      <tr>
-        <td>4. Screen Offset</td>
-        <td>Returns (screenX, screenY) relative to origin</td>
-      </tr>
-      <tr>
-        <td>5. Scene3D Centering</td>
-        <td>Adds (width/2, height/2) to get final position</td>
+        <td>Shapes in Groups</td>
+        <td>Add <code>origin: "center"</code> to each shape</td>
       </tr>
     </table>
-
-    <h3>Common Gotcha: Manual Centering</h3>
-    <p>
-      If you're rendering 3D-projected content <strong>outside</strong> of Scene3D, you must
-      manually center:
-    </p>
-
-    <div class="example">
-      <div class="example-title">Manual Centering Pattern</div>
-      <pre><code class="language-javascript">// When NOT inside a Scene3D, you must translate to center yourself
-Painter.useCtx((ctx) => {
-  ctx.save();
-  ctx.translate(this.game.width / 2, this.game.height / 2);
-
-  // Now draw at projected coordinates
-  const projected = camera.project(x, y, z);
-  ctx.fillRect(projected.x - 5, projected.y - 5, 10, 10);
-
-  ctx.restore();
-});</code></pre>
-    </div>
   </section>
 
   <section>
-    <h2>5. Anchoring and Layouts</h2>
+    <h2>5. Text Alignment (Independent)</h2>
     <p>
-      The <code>applyAnchor</code> mixin and layout utilities help position objects relative
-      to the canvas edges or other containers.
+      <code>TextShape</code> uses the standard <code>align</code> and <code>baseline</code> properties
+      which work independently from the origin system.
     </p>
 
     <div class="example">
-      <div class="example-title">Interactive Demo: Anchor Positions</div>
-      <pre><code class="language-javascript">import { applyAnchor, Position } from "gcanvas";
-
-// Anchor text to top-center of canvas
-const title = new Text(this, "Game Title", { font: "24px sans-serif" });
-applyAnchor(title, {
-  anchor: Position.TOP_CENTER,
-  anchorMargin: 20  // 20px from top edge
+      <div class="example-title">Interactive Demo: Text Alignment</div>
+      <pre><code class="language-javascript">// Text alignment is controlled separately
+const text = new TextShape("Hello World", {
+  x: 200, y: 100,
+  color: "#0f0",
+  font: "16px monospace",
+  align: "center",     // horizontal: left, center, right
+  baseline: "middle"   // vertical: top, middle, bottom
 });
 
-// Available positions:
-// TOP_LEFT, TOP_CENTER, TOP_RIGHT
-// CENTER_LEFT, CENTER, CENTER_RIGHT
-// BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT</code></pre>
+// Origin still affects transforms (rotation, scale)
+text.origin = "center";
+text.rotation = 0.1;  // Rotates around text center</code></pre>
       <div class="canvas-demo">
-        <canvas id="anchor-canvas"></canvas>
-        <div class="canvas-label">Resize window to see anchors adjust</div>
-      </div>
-    </div>
-
-    <h3>Layouts</h3>
-    <p>Layouts automatically position multiple items:</p>
-
-    <div class="example">
-      <div class="example-title">Interactive Demo: Vertical Layout</div>
-      <pre><code class="language-javascript">import { verticalLayout, applyLayout } from "gcanvas";
-
-const items = [
-  new Text(this, "Option 1", {}),
-  new Text(this, "Option 2", {}),
-  new Text(this, "Option 3", {})
-];
-
-// Compute vertical layout
-const layout = verticalLayout(items, {
-  spacing: 15,
-  padding: 10,
-  align: "center"
-});
-
-// Apply positions to items
-applyLayout(items, layout.positions);</code></pre>
-      <div class="canvas-demo">
-        <canvas id="layout-canvas"></canvas>
-        <div class="canvas-label">Click buttons to add/remove items</div>
+        <canvas id="text-alignment-canvas"></canvas>
+        <div class="canvas-label">Click to cycle alignments</div>
       </div>
     </div>
   </section>
 
   <section>
-    <h2>6. Practical Tips</h2>
+    <h2>6. Circles and Bounding Boxes</h2>
+    <p>
+      For circles, the origin is based on the bounding box, not the visual circle. This ensures
+      consistent behavior with other shapes.
+    </p>
 
-    <h3>Quick Reference</h3>
-    <table>
-      <tr>
-        <th>I want to...</th>
-        <th>Do this</th>
-      </tr>
-      <tr>
-        <td>Place object at screen position</td>
-        <td>Set <code>x</code>, <code>y</code> directly, add to pipeline</td>
-      </tr>
-      <tr>
-        <td>Place object relative to parent</td>
-        <td>Add to Scene, set local <code>x</code>, <code>y</code></td>
-      </tr>
-      <tr>
-        <td>Center object on screen</td>
-        <td><code>x: game.width / 2, y: game.height / 2</code></td>
-      </tr>
-      <tr>
-        <td>Anchor to screen edge</td>
-        <td>Use <code>applyAnchor</code> with <code>Position</code> constant</td>
-      </tr>
-      <tr>
-        <td>Use 3D projection</td>
-        <td>Use <code>Scene3D</code> centered at canvas center</td>
-      </tr>
-    </table>
-
-    <h3>Common Mistakes</h3>
+    <div class="ascii-diagram">
+Circle with origin: "top-left"       Circle with origin: "center"
+┌─────────────────┐                  ┌─────────────────┐
+│● ╭─────╮        │                  │    ╭─────╮      │
+│  │     │        │                  │    │  ●  │      │
+│  │     │        │                  │    │     │      │
+│  ╰─────╯        │                  │    ╰─────╯      │
+└─────────────────┘                  └─────────────────┘
+  (x,y) at top-left                    (x,y) at center
+  of bounding box                      of bounding box</div>
 
     <div class="example">
-      <div class="example-title">Mistake 1: Forgetting to center Scene3D</div>
-      <pre><code class="language-javascript">// WRONG - 3D origin appears at top-left
-const scene = new Scene3D(this, { x: 0, y: 0, camera });
+      <div class="example-title">Interactive Demo: Circle Origins</div>
+      <pre><code class="language-javascript">// Circle origin uses bounding box
+const circle = new Circle(30, {
+  x: 100, y: 100,
+  color: "#0f0",
+  origin: "center"  // Center of bounding box = center of circle
+});
 
-// CORRECT - 3D origin appears at canvas center
-const scene = new Scene3D(this, {
+// For top-left origin:
+// (x,y) is top-left of the bounding box
+// Circle center is at (x + radius, y + radius)</code></pre>
+      <div class="canvas-demo">
+        <canvas id="circle-origins-canvas"></canvas>
+        <div class="canvas-label">Click to toggle origin</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>7. Practical Examples</h2>
+
+    <h3>Game Character (Bottom-Center Origin)</h3>
+    <pre><code class="language-javascript">// Character sprite standing on ground
+const player = new Sprite(this, {
+  x: groundX,
+  y: groundY,
+  originX: 0.5,
+  originY: 1  // Feet at position
+});
+
+// Jump animation - position is always feet location
+player.y = groundY - jumpHeight;</code></pre>
+
+    <h3>UI Button (Center Origin)</h3>
+    <pre><code class="language-javascript">// Button centered on screen
+const button = new Button(this, {
   x: this.width / 2,
   y: this.height / 2,
-  camera
+  origin: "center"
+});
+
+// Hover scale effect works naturally
+button.on('hover', () => {
+  button.scaleX = button.scaleY = 1.1;
 });</code></pre>
-    </div>
+
+    <h3>HUD Elements (Corner Origins)</h3>
+    <pre><code class="language-javascript">// Score at top-left
+const score = new Text(this, "Score: 0", {
+  x: 10, y: 10,
+  origin: "top-left"  // Default
+});
+
+// Lives at top-right
+const lives = new Text(this, "Lives: 3", {
+  x: this.width - 10,
+  y: 10,
+  origin: "top-right"
+});</code></pre>
+  </section>
+
+  <section>
+    <h2>8. Complete Origin Reference</h2>
 
     <div class="example">
-      <div class="example-title">Mistake 2: Confusing local and screen coordinates</div>
-      <pre><code class="language-javascript">const scene = new Scene(this, { x: 100, y: 100 });
-const child = new Circle(20, { x: 50, y: 50 });
-scene.add(child);
-
-// WRONG assumption: child is at screen (50, 50)
-// CORRECT: child is at screen (150, 150)</code></pre>
+      <div class="example-title">Interactive Demo: All Origin Positions</div>
+      <div class="canvas-demo" style="height: 350px;">
+        <canvas id="all-origins-canvas"></canvas>
+        <div class="canvas-label">All 9 origin positions</div>
+      </div>
     </div>
 
-    <div class="example">
-      <div class="example-title">Mistake 3: Not updating Camera3D in game loop</div>
-      <pre><code class="language-javascript">update(dt) {
-  super.update(dt);
-  // If using auto-rotation or inertia, camera needs update
-  this.camera.update(dt);
-}</code></pre>
-    </div>
+    <h3>Quick Reference Table</h3>
+    <table>
+      <tr>
+        <th>Use Case</th>
+        <th>Recommended Origin</th>
+        <th>Why</th>
+      </tr>
+      <tr>
+        <td>UI layouts</td>
+        <td><code>"top-left"</code></td>
+        <td>Matches CSS/web conventions</td>
+      </tr>
+      <tr>
+        <td>Game objects</td>
+        <td><code>"center"</code></td>
+        <td>Natural rotation/scaling pivot</td>
+      </tr>
+      <tr>
+        <td>Characters</td>
+        <td><code>originX: 0.5, originY: 1</code></td>
+        <td>Feet stay on ground</td>
+      </tr>
+      <tr>
+        <td>Buttons/hover effects</td>
+        <td><code>"center"</code></td>
+        <td>Scale grows in all directions</td>
+      </tr>
+      <tr>
+        <td>Right-aligned UI</td>
+        <td><code>"top-right"</code></td>
+        <td>Easy to anchor to right edge</td>
+      </tr>
+      <tr>
+        <td>3D objects</td>
+        <td><code>"center"</code></td>
+        <td>Rotation around center</td>
+      </tr>
+    </table>
   </section>
 
   <section>
@@ -682,7 +768,7 @@ scene.add(child);
     <ul class="feature-list">
       <li><a href="pipeline.html" style="color: #0f0;">Rendering Pipeline</a> - How objects are rendered each frame</li>
       <li><a href="gameobjects.html" style="color: #0f0;">Game Objects</a> - Understanding the object hierarchy</li>
-      <li><a href="scene.html" style="color: #0f0;">Scene Demo</a> - Interactive scene examples</li>
+      <li><a href="transforms.html" style="color: #0f0;">Transforms Demo</a> - Interactive transform examples</li>
       <li><a href="layouts.html" style="color: #0f0;">Layout Demo</a> - Layout system in action</li>
     </ul>
   </section>

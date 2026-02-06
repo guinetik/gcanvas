@@ -69,27 +69,32 @@ class EasingBox extends GameObject {
     this.bg = new Rectangle({
       width: 100,
       height: 100,
+      origin: "center",
       color: "rgba(0, 0, 0, 0.1)",
       stroke: "rgba(255, 255, 255, 0.3)",
       lineWidth: 1,
     });
 
-    // Label
+    // Label - centered horizontally, at bottom
     this.labelText = new TextShape(this.label, {
       x: 0,
       y: 44,
       font: "11px monospace",
       color: "white",
+      origin: "center",
+      align: "center",
     });
 
     // Glow circle
     this.glowCircle = new Circle(8, {
       color: "rgba(0, 255, 0, 0.3)",
+      origin: "center",
     });
 
     // Animated circle
     this.animCircle = new Circle(4, {
       color: "#0f0",
+      origin: "center",
     });
 
     // Cache scale values
@@ -351,7 +356,7 @@ class EasingDemo extends TileLayout {
         def.fn,
         formula,
         this.tooltip,
-        { width: 100, height: 100 }
+        { width: 100, height: 100, origin: "center" }
       );
       box.transform.size(100, 100);
       this.add(box);
@@ -437,7 +442,8 @@ export class MyGame extends Game {
     );
 
     this.easingDemo = new EasingDemo(this, this.tooltip, {
-      debug: false,
+      debug: true,
+      origin: "center",
       anchor: "center",
       spacing: 20,
       columns: initialColumns,

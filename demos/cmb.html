@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cosmic Microwave Background</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Cosmic Microwave Background</strong> — 3D visualization of CMB temperature fluctuations.<br/>
+    <span style="color:#CCC">
+      <li>Particles represent temperature anisotropies from the early universe</li>
+      <li>Colors: Blue (cold spots) → Red (hot spots)</li>
+      <li>Drag to rotate, scroll to zoom</li>
+      <li>WebGL GPU-accelerated particle rendering</li>
+      <li>Physics: particles drift with thermal motion</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/cmb.js"></script>
+</body>
+</html>

@@ -153,6 +153,8 @@ export class FluidSystem extends ParticleSystem {
       y: options.y ?? (boundsY + boundsH / 2),
       width: boundsW,
       height: boundsH,
+      originX: 0.5,
+      originY: 0.5,
       debug: options.debug ?? false,
       debugColor: options.debugColor ?? "#0f0",
     });

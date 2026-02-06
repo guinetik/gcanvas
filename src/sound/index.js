@@ -15,3 +15,16 @@ export { SynthEnvelope } from "./synth.envelope.js";
 export { SynthNoise } from "./synth.noise.js";
 export { SynthMusical } from "./synth.musical.js";
 export { SynthAnalyzer } from "./synth.analyzer.js";
+
+// Audio effect primitives
+export {
+  Flanger,
+  DJFilter,
+  EQFilterBank,
+  HighShelf,
+  AdvancedDelay,
+  AdvancedDistortion,
+  AdvancedTremolo,
+  Limiter,
+  MasterGain,
+} from "./effects.js";

@@ -13,6 +13,7 @@ import {
   Button,
   ToggleButton,
   HorizontalLayout,
+  Screen,
 } from "../../src/index.js";
 
 const PARTICLE_SIZE = 32;
@@ -53,6 +54,9 @@ class FluidSimpleDemo extends Game {
 
   init() {
     super.init();
+    
+    // Initialize Screen for responsive handling
+    Screen.init(this);
 
     // Create container bounds
     this._updateBounds();
@@ -75,80 +79,98 @@ class FluidSimpleDemo extends Game {
     this.fluid.spawn(CONFIG.maxParticles);
 
     this.pipeline.add(this.fluid);
+    
+    // Ensure bounds are set after fluid system is ready
+    this.fluid.setBounds(this.bounds);
 
     // Build UI controls
     this._buildUI();
 
     // FPS counter
-    this.pipeline.add(
-      new FPSCounter(this, { color: "#6af", anchor: "top-right" })
-    );
+    this.fpsCounter = new FPSCounter(this, { color: "#6af", anchor: "top-right", origin: "center" });
+    this.pipeline.add(this.fpsCounter);
 
     // Mouse interaction
     this._setupInteraction();
+    
+    // Listen for device type changes to rebuild UI
+    this.events.on("devicechange", () => this._rebuildUI());
   }
 
   /**
    * Build the UI control bar.
    */
   _buildUI() {
-    const { margin, width, height, spacing } = CONFIG.ui;
+    const isMobile = Screen.isMobile;
+    
+    // Responsive sizing
+    const margin = Screen.responsive(8, 10, CONFIG.ui.margin);
+    const buttonWidth = Screen.responsive(90, 110, CONFIG.ui.width);
+    const buttonHeight = Screen.responsive(28, 30, CONFIG.ui.height);
+    const spacing = Screen.responsive(4, 5, CONFIG.ui.spacing);
 
-    // Create horizontal layout for buttons, anchored to bottom left
-    const uiPanel = new HorizontalLayout(this, {
-      width: width * 3 + spacing * 2,
-      height: height,
+    // Create horizontal layout for buttons
+    this.uiPanel = new HorizontalLayout(this, {
       spacing,
       padding: 0,
       align: "center",
-    });
-    applyAnchor(uiPanel, {
-      anchor: Position.BOTTOM_LEFT,
+      origin: "center",
+      anchor: isMobile ? Position.BOTTOM_CENTER : Position.BOTTOM_LEFT,
       anchorMargin: margin,
     });
 
     this.btnMode = new ToggleButton(this, {
-      width,
-      height,
-      text: "Mode: Liquid",
+      width: buttonWidth,
+      height: buttonHeight,
+      text: isMobile ? "Liquid" : "Mode: Liquid",
+      origin: "center",
       startToggled: false,
       onToggle: (on) => {
         this.fluid.setPhysicsMode(on ? "gas" : "liquid");
-        this.btnMode.text = on ? "Mode: Gas" : "Mode: Liquid";
+        this.btnMode.text = isMobile 
+          ? (on ? "Gas" : "Liquid")
+          : (on ? "Mode: Gas" : "Mode: Liquid");
       },
     });
-    uiPanel.add(this.btnMode);
+    this.uiPanel.add(this.btnMode);
 
     this.btnGravity = new ToggleButton(this, {
-      width,
-      height,
-      text: "Gravity: On",
+      width: buttonWidth,
+      height: buttonHeight,
+      text: isMobile ? "Gravity" : "Gravity: On",
+      origin: "center",
       startToggled: true,
       onToggle: (on) => {
         this.fluid.gravityEnabled = on;
-        this.btnGravity.text = on ? "Gravity: On" : "Gravity: Off";
+        this.btnGravity.text = isMobile
+          ? "Gravity"
+          : (on ? "Gravity: On" : "Gravity: Off");
       },
     });
-    uiPanel.add(this.btnGravity);
+    this.uiPanel.add(this.btnGravity);
 
     this.btnReset = new Button(this, {
-      width,
-      height,
+      width: buttonWidth,
+      height: buttonHeight,
       text: "Reset",
+      origin: "center",
       onClick: () => this.fluid.reset(),
     });
-    uiPanel.add(this.btnReset);
+    this.uiPanel.add(this.btnReset);
 
-    this.pipeline.add(uiPanel);
+    this.pipeline.add(this.uiPanel);
   }
 
   _updateBounds() {
-    const { marginX, marginY } = CONFIG.container;
+    // Responsive margins - more space at bottom for UI on mobile
+    const marginX = Screen.responsive(20, 40, CONFIG.container.marginX);
+    const marginTop = Screen.responsive(60, 80, 100);
+    const marginBottom = Screen.responsive(100, 90, CONFIG.container.marginY);
     this.bounds = {
       x: marginX,
-      y: marginY,
+      y: marginTop,
       w: this.width - marginX * 2,
-      h: this.height - marginY * 2,
+      h: this.height - marginTop - marginBottom,
     };
   }
 
@@ -156,7 +178,35 @@ class FluidSimpleDemo extends Game {
     this._updateBounds();
     if (this.fluid) {
       this.fluid.setBounds(this.bounds);
+      // Also update width/height for debug rendering
+      this.fluid.width = this.bounds.w;
+      this.fluid.height = this.bounds.h;
     }
+    if (this.uiPanel) {
+      this.uiPanel.markBoundsDirty();
+    }
+  }
+
+  /**
+   * Rebuild UI when device type changes (mobile <-> desktop)
+   */
+  _rebuildUI() {
+    // Remove old UI elements
+    if (this.uiPanel) {
+      this.pipeline.remove(this.uiPanel);
+    }
+    if (this.fpsCounter) {
+      this.pipeline.remove(this.fpsCounter);
+    }
+    
+    // Rebuild UI with new responsive values
+    this._buildUI();
+    this.fpsCounter = new FPSCounter(this, { color: "#6af", anchor: "top-right", origin: "center" });
+    this.pipeline.add(this.fpsCounter);
+    
+    // Update container bounds for new device type
+    this._updateBounds();
+    this.onResize();
   }
 
   _setupInteraction() {

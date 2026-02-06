@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dadras Attractor 3D</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Dadras Attractor</strong><br/>
+    <span style="color:#CCC">
+      <li>dx/dt = y - 3x + 2.7yz</li>
+      <li>dy/dt = 1.7y - xz + z</li>
+      <li>dz/dt = 2xy - 9z</li>
+      <li>Blue = slow, Red = fast</li>
+      <li>Drag to rotate</li>
+      <li>Scroll/pinch to zoom</li>
+      <li>Double-click to reset zoom</li>
+      <li>Press R to restart</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/dadras.js"></script>
+</body>
+</html>

@@ -4,106 +4,185 @@
  * @module webgl
  */
 
-// ==========================================================================
-// WebGL Renderer
-// ==========================================================================
-
-/** WebGL renderer options */
-export interface WebGLRendererOptions {
-  /** Canvas element */
-  canvas: HTMLCanvasElement;
-  /** Whether to preserve drawing buffer */
-  preserveDrawingBuffer?: boolean;
-  /** Enable antialiasing */
-  antialias?: boolean;
-  /** Enable alpha blending */
-  alpha?: boolean;
-  /** Enable depth testing */
-  depth?: boolean;
-  /** Enable stencil buffer */
-  stencil?: boolean;
-  /** Premultiplied alpha */
-  premultipliedAlpha?: boolean;
-}
-
 /**
  * WebGL renderer for enhanced visual effects.
  * Provides shader-based rendering for complex effects.
  */
 export class WebGLRenderer {
-  /** WebGL rendering context */
-  readonly gl: WebGLRenderingContext | WebGL2RenderingContext;
-  /** Canvas element */
-  readonly canvas: HTMLCanvasElement;
-  /** Whether WebGL is available */
-  readonly isAvailable: boolean;
+  constructor(width: number, height: number);
 
-  constructor(options: WebGLRendererOptions);
-
-  /**
-   * Create and compile a shader program.
-   * @param vertexSource - Vertex shader GLSL source
-   * @param fragmentSource - Fragment shader GLSL source
-   * @returns Compiled shader program
-   */
-  createProgram(vertexSource: string, fragmentSource: string): WebGLProgram;
-
-  /**
-   * Set uniform value.
-   * @param program - Shader program
-   * @param name - Uniform name
-   * @param value - Uniform value
-   */
-  setUniform(program: WebGLProgram, name: string, value: number | number[] | Float32Array): void;
-
-  /**
-   * Create a texture from an image or canvas.
-   * @param source - Image or canvas source
-   * @returns WebGL texture
-   */
-  createTexture(source: HTMLImageElement | HTMLCanvasElement | ImageData): WebGLTexture;
-
-  /**
-   * Render a full-screen quad with a shader.
-   * @param program - Shader program to use
-   */
-  renderFullscreenQuad(program: WebGLProgram): void;
-
-  /**
-   * Clear the canvas.
-   * @param r - Red (0-1)
-   * @param g - Green (0-1)
-   * @param b - Blue (0-1)
-   * @param a - Alpha (0-1)
-   */
+  isAvailable(): boolean;
+  resize(width: number, height: number): void;
+  useProgram(name: string, vertexSource: string, fragmentSource: string): WebGLProgram | null;
+  setUniforms(uniforms: Record<string, number | number[] | Float32Array>): void;
+  setColorUniform(name: string, color: string): void;
   clear(r?: number, g?: number, b?: number, a?: number): void;
-
-  /**
-   * Resize the renderer to match canvas size.
-   */
-  resize(): void;
-
-  /**
-   * Dispose of WebGL resources.
-   */
-  dispose(): void;
+  render(): void;
+  compositeOnto(ctx: CanvasRenderingContext2D, x: number, y: number, width?: number, height?: number): void;
+  getCanvas(): HTMLCanvasElement;
+  destroy(): void;
 }
 
-// ==========================================================================
-// Shader Collections
-// ==========================================================================
+export type WebGLBlendMode = "alpha" | "additive";
+export type PointSpriteShape = "circle" | "glow" | "square" | "softSquare";
 
-/**
- * Pre-built shaders for 3D sphere rendering.
- */
-export namespace SPHERE_SHADERS {
-  /** Basic sphere vertex shader */
-  const vertex: string;
-  /** Basic sphere fragment shader with lighting */
-  const fragment: string;
-  /** Glow effect fragment shader */
-  const glowFragment: string;
-  /** Atmosphere effect fragment shader */
-  const atmosphereFragment: string;
+export class WebGLParticleRenderer {
+  constructor(
+    maxParticles?: number,
+    options?: {
+      width?: number;
+      height?: number;
+      shape?: PointSpriteShape;
+      blendMode?: WebGLBlendMode;
+    }
+  );
+
+  isAvailable(): boolean;
+  setBlendMode(mode: WebGLBlendMode): void;
+  setShape(shape: PointSpriteShape): void;
+  resize(width: number, height: number): void;
+  updateParticles(particles: Array<{ x: number; y: number; size: number; color: { r: number; g: number; b: number; a: number } }>): number;
+  clear(r?: number, g?: number, b?: number, a?: number): void;
+  render(count: number): void;
+  compositeOnto(ctx: CanvasRenderingContext2D, x?: number, y?: number, width?: number, height?: number): void;
+  destroy(): void;
 }
+
+export class WebGLLineRenderer {
+  constructor(
+    maxSegments?: number,
+    options?: {
+      width?: number;
+      height?: number;
+      blendMode?: WebGLBlendMode;
+    }
+  );
+
+  isAvailable(): boolean;
+  setBlendMode(mode: WebGLBlendMode): void;
+  resize(width: number, height: number): void;
+  updateLines(segments: any[]): number;
+  clear(r?: number, g?: number, b?: number, a?: number): void;
+  render(count: number): void;
+  compositeOnto(ctx: CanvasRenderingContext2D, x?: number, y?: number): void;
+  destroy(): void;
+}
+
+export const DEJONG_MAX_ITERATIONS: number;
+export const DEJONG_POINT_VERTEX: string;
+export const DEJONG_POINT_FRAGMENTS: Record<PointSpriteShape, string>;
+
+export const CLIFFORD_MAX_ITERATIONS: number;
+export const CLIFFORD_POINT_VERTEX: string;
+export const CLIFFORD_POINT_FRAGMENTS: Record<PointSpriteShape, string>;
+
+export class WebGLDeJongRenderer {
+  constructor(
+    seedCount?: number,
+    options?: {
+      width?: number;
+      height?: number;
+      shape?: PointSpriteShape;
+      blendMode?: WebGLBlendMode;
+      pointSize?: number;
+      pointScale?: number;
+      iterations?: number;
+      params?: { a: number; b: number; c: number; d: number };
+      color?: { r: number; g: number; b: number; a: number };
+      colorMode?: 0 | 1;
+      hueRange?: { minHue: number; maxHue: number };
+      maxSpeed?: number;
+      saturation?: number; // 0..1
+      lightness?: number; // 0..1
+      alpha?: number; // 0..1
+      hueShiftSpeed?: number; // degrees/sec
+    }
+  );
+
+  static identityMat3(): Float32Array;
+  static rotationMat3(angle: number): Float32Array;
+
+  isAvailable(): boolean;
+  resize(width: number, height: number): void;
+  setSeedCount(seedCount: number): void;
+  regenerateSeeds(): void;
+  setShape(shape: PointSpriteShape): void;
+  setBlendMode(mode: WebGLBlendMode): void;
+  setParams(params: { a?: number; b?: number; c?: number; d?: number }): void;
+  setIterations(iterations: number): void;
+  setZoom(zoom: number): void;
+  setTransform(mat3: Float32Array): void;
+  setPointSize(size: number): void;
+  setColor(color: { r?: number; g?: number; b?: number; a?: number }): void;
+  setColorMode(mode: 0 | 1): void;
+  setColorRamp(options: {
+    minHue?: number;
+    maxHue?: number;
+    maxSpeed?: number;
+    saturation?: number;
+    lightness?: number;
+    alpha?: number;
+    hueShiftSpeed?: number;
+  }): void;
+  clear(r?: number, g?: number, b?: number, a?: number): void;
+  render(timeSeconds?: number): void;
+  compositeOnto(ctx: CanvasRenderingContext2D, x?: number, y?: number, width?: number, height?: number): void;
+  destroy(): void;
+}
+
+export class WebGLCliffordRenderer {
+  constructor(
+    seedCount?: number,
+    options?: {
+      width?: number;
+      height?: number;
+      shape?: PointSpriteShape;
+      blendMode?: WebGLBlendMode;
+      pointSize?: number;
+      pointScale?: number;
+      iterations?: number;
+      params?: { a: number; b: number; c: number; d: number };
+      color?: { r: number; g: number; b: number; a: number };
+      colorMode?: 0 | 1;
+      hueRange?: { minHue: number; maxHue: number };
+      maxSpeed?: number;
+      saturation?: number; // 0..1
+      lightness?: number; // 0..1
+      alpha?: number; // 0..1
+      hueShiftSpeed?: number; // degrees/sec
+    }
+  );
+
+  static identityMat3(): Float32Array;
+  static rotationMat3(angle: number): Float32Array;
+
+  isAvailable(): boolean;
+  resize(width: number, height: number): void;
+  setSeedCount(seedCount: number): void;
+  regenerateSeeds(): void;
+  setShape(shape: PointSpriteShape): void;
+  setBlendMode(mode: WebGLBlendMode): void;
+  setParams(params: { a?: number; b?: number; c?: number; d?: number }): void;
+  setIterations(iterations: number): void;
+  setZoom(zoom: number): void;
+  setTransform(mat3: Float32Array): void;
+  setPointSize(size: number): void;
+  setColor(color: { r?: number; g?: number; b?: number; a?: number }): void;
+  setColorMode(mode: 0 | 1): void;
+  setColorRamp(options: {
+    minHue?: number;
+    maxHue?: number;
+    maxSpeed?: number;
+    saturation?: number;
+    lightness?: number;
+    alpha?: number;
+    hueShiftSpeed?: number;
+  }): void;
+  clear(r?: number, g?: number, b?: number, a?: number): void;
+  render(timeSeconds?: number): void;
+  compositeOnto(ctx: CanvasRenderingContext2D, x?: number, y?: number, width?: number, height?: number): void;
+  destroy(): void;
+}
+
+export const SPHERE_SHADERS: any;
 

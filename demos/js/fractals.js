@@ -59,11 +59,12 @@ export class FractalDemo extends Game {
     // Create scenes
     this.mainScene = new Scene(this, {
       anchor: Position.CENTER,
+      origin: "center",
       debug: true
     });
     this.mainScene.width = this.width;
     this.mainScene.height = this.height;
-    this.ui = new Scene(this, { debug: true, anchor: Position.CENTER });
+    this.ui = new Scene(this, { debug: true, origin: "center", anchor: Position.CENTER });
     this.pipeline.add(this.mainScene);
     this.pipeline.add(this.ui);
 
@@ -75,6 +76,7 @@ export class FractalDemo extends Game {
       {
         debug: true,
         debugColor: "white",
+        origin: "center",
         width: this.mainScene.width,
         height: this.mainScene.height,
       }
@@ -202,12 +204,14 @@ export class FractalDemo extends Game {
 
     // Create UI layout
     const controlsLayout = new HorizontalLayout(this, {
-      anchor: Position.BOTTOM_LEFT,
+      anchor: Position.BOTTOM_CENTER,
+      anchorMargin: 20,
+      origin: "center",
       spacing: btnSpacing,
       padding: isMobile ? 4 : 10,
       height: btnHeight + 10,
-      width: this.width,
-      debug: false,
+      debug: true,
+      debugColor: "cyan",
     });
 
     // Fractal type selector
@@ -290,20 +294,6 @@ export class FractalDemo extends Game {
     // Add layout to UI
     this.ui.add(controlsLayout);
 
-    // Add title (hide on mobile)
-    if (!isMobile) {
-      const title = new Text(this, "GCanvas Fractal Explorer", {
-        font: "bold 24px Arial",
-        color: "#fff",
-        align: "center",
-        baseline: "middle",
-        width: 10,
-        anchor: Position.BOTTOM_RIGHT,
-        anchorRelative: this.ui,
-      });
-      this.ui.add(title);
-    }
-    this.ui.update(); //force update to the anchor
   }
 
   resetView() {

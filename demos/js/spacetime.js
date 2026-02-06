@@ -19,6 +19,8 @@ import {
   Scene,
   verticalLayout,
   applyLayout,
+  Screen,
+  Gesture,
 } from "../../src/index.js";
 
 // Configuration
@@ -74,6 +76,13 @@ const CONFIG = {
   wellPulseSpeed: 1.5, // Well breathing speed
   wellPulseAmount: 0.08, // How much the well pulses (0-1)
 
+  // Zoom
+  minZoom: 0.3,
+  maxZoom: 3.0,
+  zoomSpeed: 0.5,
+  zoomEasing: 0.12,
+  baseScreenSize: 600,
+
   // Orbiting body
   orbitRadiusMultiplier: 2.0, // Orbit at this multiple of well width (sigma)
   orbitSpeed: 0.8, // Base orbit speed (faster for heavier central mass)
@@ -93,6 +102,18 @@ class SpacetimeDemo extends Game {
     super.init();
     this.time = 0;
 
+    // Initialize Screen for responsive handling
+    Screen.init(this);
+
+    // Calculate initial zoom based on screen size
+    const initialZoom = Math.min(
+      CONFIG.maxZoom,
+      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
+    );
+    this.zoom = initialZoom;
+    this.targetZoom = initialZoom;
+    this.defaultZoom = initialZoom;
+
     // Create 3D camera with mouse controls and auto-rotate
     this.camera = new Camera3D({
       rotationX: CONFIG.rotationX,
@@ -103,8 +124,26 @@ class SpacetimeDemo extends Game {
       autoRotate: true,
       autoRotateSpeed: CONFIG.autoRotateSpeed,
       autoRotateAxis: "y",
+      inertia: true,
+      friction: 0.94,
+      velocityScale: 1.2,
     });
     this.camera.enableMouseControl(this.canvas);
+
+    // Enable zoom via mouse wheel and pinch gesture
+    this.gesture = new Gesture(this.canvas, {
+      onZoom: (delta) => {
+        this.targetZoom *= 1 + delta * CONFIG.zoomSpeed;
+        this.targetZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, this.targetZoom));
+      },
+      onPan: null, // Camera3D handles rotation via drag
+    });
+
+    // Double-click to reset
+    this.canvas.addEventListener("dblclick", () => {
+      this.targetZoom = this.defaultZoom;
+      this.camera.reset();
+    });
 
     // Initialize single stellar body
     this.body = {
@@ -126,7 +165,7 @@ class SpacetimeDemo extends Game {
   }
 
   setupInfoPanel() {
-    this.infoPanel = new Scene(this, { x: 0, y: 0 });
+    this.infoPanel = new Scene(this, { x: 0, y: 0, origin: "center" });
     applyAnchor(this.infoPanel, {
       anchor: Position.TOP_CENTER,
       anchorOffsetY: 150,
@@ -138,24 +177,27 @@ class SpacetimeDemo extends Game {
       color: "#7af",
       align: "center",
       baseline: "middle",
+      origin: "center",
     });
 
     this.equationText = new Text(
       this,
-      "g\u03BC\u03BD = \u03B7\u03BC\u03BD + h\u03BC\u03BD   |   R\u03BC\u03BD - \u00BDRg\u03BC\u03BD = 8\u03C0GT\u03BC\u03BD",
+      "gμν = ημν + hμν   |   Rμν - ½Rgμν = 8πGTμν",
       {
         font: "12px monospace",
         color: "#888",
         align: "center",
         baseline: "middle",
+        origin: "center",
       },
     );
 
-    this.statsText = new Text(this, "Blackhole | Mass: 3.0 M\u2609", {
+    this.statsText = new Text(this, "Blackhole | Mass: 3.0 M☉", {
       font: "12px monospace",
       color: "#6d8",
       align: "center",
       baseline: "middle",
+      origin: "center",
     });
 
     const textItems = [this.titleText, this.equationText, this.statsText];
@@ -232,12 +274,36 @@ class SpacetimeDemo extends Game {
     return amplitude * Math.exp(-rSquared / (2 * sigma * sigma));
   }
 
+  /**
+   * 3D projection with zoom applied
+   */
+  project3D(x, y, z) {
+    const proj = this.camera.project(x, y, z);
+    return {
+      x: proj.x * this.zoom,
+      y: proj.y * this.zoom,
+      z: proj.z,
+      scale: proj.scale * this.zoom,
+    };
+  }
+
+  onResize() {
+    // Recalculate default zoom for new screen size
+    this.defaultZoom = Math.min(
+      CONFIG.maxZoom,
+      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
+    );
+  }
+
   update(dt) {
     super.update(dt);
     this.time += dt;
 
     // Update camera (handles auto-rotate when not dragging)
     this.camera.update(dt);
+
+    // Ease zoom towards target
+    this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoomEasing;
 
     // Update grid vertices based on gravitational wells
     // Positive Y = wells curving DOWN (with current camera angle)
@@ -285,10 +351,10 @@ class SpacetimeDemo extends Game {
   drawGrid(cx, cy) {
     const { gridResolution, gridScale, gridColor, gridHighlight } = CONFIG;
 
-    // Project all vertices
+    // Project all vertices with zoom
     const projected = this.gridVertices.map((row) =>
       row.map((v) => {
-        const p = this.camera.project(v.x * gridScale, v.y, v.z * gridScale);
+        const p = this.project3D(v.x * gridScale, v.y, v.z * gridScale);
         return {
           x: cx + p.x,
           y: cy + p.y,
@@ -351,8 +417,8 @@ class SpacetimeDemo extends Game {
     // Get well depth at orbiter position (follows the curvature)
     const wellDepth = this.calculateWellDepth(orbiterX, orbiterZ);
 
-    // Project to screen
-    const p = this.camera.project(
+    // Project to screen with zoom
+    const p = this.project3D(
       orbiterX * CONFIG.gridScale,
       wellDepth,
       orbiterZ * CONFIG.gridScale,
@@ -424,7 +490,7 @@ class SpacetimeDemo extends Game {
         const trailZ = this.body.z + Math.sin(angle) * orbitRadius;
         const wellDepth = this.calculateWellDepth(trailX, trailZ);
 
-        const p = this.camera.project(
+        const p = this.project3D(
           trailX * CONFIG.gridScale,
           wellDepth,
           trailZ * CONFIG.gridScale,
@@ -437,7 +503,7 @@ class SpacetimeDemo extends Game {
         const prevX = this.body.x + Math.cos(prevAngle) * orbitRadius;
         const prevZ = this.body.z + Math.sin(prevAngle) * orbitRadius;
         const prevDepth = this.calculateWellDepth(prevX, prevZ);
-        const prevP = this.camera.project(
+        const prevP = this.project3D(
           prevX * CONFIG.gridScale,
           prevDepth,
           prevZ * CONFIG.gridScale,
@@ -459,7 +525,7 @@ class SpacetimeDemo extends Game {
     const typeConfig = CONFIG.bodyTypes[body.type];
 
     const wellDepth = this.calculateWellDepth(body.x, body.z);
-    const p = this.camera.project(
+    const p = this.project3D(
       body.x * CONFIG.gridScale,
       wellDepth * 0.7, // Place body in the well
       body.z * CONFIG.gridScale,
@@ -534,17 +600,17 @@ class SpacetimeDemo extends Game {
 
   drawControls(w, h) {
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = "#445";
+      ctx.fillStyle = "#999";
       ctx.font = "10px monospace";
       ctx.textAlign = "right";
       ctx.fillText(
-        "click to shuffle  |  drag to rotate  |  double-click to reset",
-        w - 15,
+        "click to shuffle  |  drag to rotate  |  scroll to zoom  |  double-click to reset",
+        w - 20,
         h - 30,
       );
       ctx.fillText(
         "Mass curves spacetime  |  Objects follow geodesics",
-        w - 15,
+        w - 20,
         h - 15,
       );
       ctx.textAlign = "left";

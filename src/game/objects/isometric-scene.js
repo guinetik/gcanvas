@@ -179,6 +179,46 @@ export class IsometricScene extends Scene {
   }
 
   /**
+   * Compute depth value for sorting, accounting for camera rotation.
+   * Use this when implementing custom isoDepth getters for box-like objects.
+   *
+   * For a rectangular object, pass all 4 corners and this will return
+   * the depth of the "front" corner (highest rotated x+y) at the current camera angle.
+   *
+   * @param {Array<{x: number, y: number}>} corners - Array of corner positions in grid coords
+   * @param {number} [height=0] - Height of object for z-ordering
+   * @returns {number} Depth value for sorting
+   *
+   * @example
+   * // In a custom GameObject with grid position and size:
+   * get isoDepth() {
+   *   const corners = [
+   *     { x: this.gridX, y: this.gridY },
+   *     { x: this.gridX + this.width, y: this.gridY },
+   *     { x: this.gridX, y: this.gridY + this.depth },
+   *     { x: this.gridX + this.width, y: this.gridY + this.depth },
+   *   ];
+   *   return this.isoScene.getRotatedDepth(corners, this.height);
+   * }
+   */
+  getRotatedDepth(corners, height = 0) {
+    const angle = this.camera ? this.camera.angle : 0;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+
+    let maxDepth = -Infinity;
+    for (const c of corners) {
+      const rotatedX = c.x * cos - c.y * sin;
+      const rotatedY = c.x * sin + c.y * cos;
+      const depth = rotatedX + rotatedY;
+      if (depth > maxDepth) maxDepth = depth;
+    }
+
+    // Height factor of 0.5 matches demo for proper depth sorting
+    return maxDepth + height * 0.5;
+  }
+
+  /**
    * Calculate scale factor based on Y position (for perspective effect).
    *
    * Objects further "back" (higher y in grid) appear smaller.
@@ -219,16 +259,26 @@ export class IsometricScene extends Scene {
     for (const child of this._collection.getSortedChildren()) {
       if (!child.visible) continue;
 
-      // Use custom isoDepth if available, otherwise calculate
+      // Use custom isoDepth if available, otherwise calculate using rotated coords
       let depth;
       if (child.isoDepth !== undefined) {
         depth = child.isoDepth;
       } else {
+        // Apply camera rotation to get correct depth at all angles
+        let rotatedX = child.x;
+        let rotatedY = child.y;
+        if (this.camera) {
+          const angle = this.camera.angle;
+          const cos = Math.cos(angle);
+          const sin = Math.sin(angle);
+          rotatedX = child.x * cos - child.y * sin;
+          rotatedY = child.x * sin + child.y * cos;
+        }
         // For moving objects, use z as height
         const height = child.z ?? 0;
-        // Higher (x + y) = closer to viewer = higher depth = render later
+        // Higher (rotatedX + rotatedY) = closer to viewer = higher depth = render later
         // Higher z = on top = higher depth = render later
-        depth = (child.x + child.y) + height * 0.05;
+        depth = (rotatedX + rotatedY) + height * 0.05;
       }
 
       renderList.push({

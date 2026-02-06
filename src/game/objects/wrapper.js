@@ -32,6 +32,10 @@ export class ShapeGOFactory {
       active: true,
       debug: shape?.debug ?? false,
       
+      // Origin from shape
+      originX: shape?.originX,
+      originY: shape?.originY,
+      
       // Shape-specific properties
       color: shape?.color ?? null,
       stroke: shape?.stroke ?? null,
@@ -68,7 +72,17 @@ export class GameObjectShapeWrapper extends GameObject {
    * @param {Object} options - Configuration options
    */
   constructor(game, shape, options = {}) {
-    super(game, options);
+    // Extract anchor-related options for positioning (different from shape anchor)
+    const { 
+      anchor, 
+      anchorMargin, 
+      anchorOffsetX, 
+      anchorOffsetY, 
+      anchorRelative,
+      ...goOptions 
+    } = options;
+
+    super(game, goOptions);
 
     // Validate shape
     if (!shape || shape == null || shape == undefined) {
@@ -77,6 +91,17 @@ export class GameObjectShapeWrapper extends GameObject {
 
     // Store the shape
     this.shape = shape;
+    
+    // Apply anchor positioning if specified
+    if (anchor) {
+      applyAnchor(this, { 
+        anchor, 
+        anchorMargin, 
+        anchorOffsetX, 
+        anchorOffsetY, 
+        anchorRelative 
+      });
+    }
     
     // Apply Shape-specific properties directly to the shape
     if (options.color !== undefined) shape.color = options.color;
@@ -224,9 +249,15 @@ export class GameObjectShapeWrapper extends GameObject {
 
   /**
    * Draw method to render the shape
+   *
+   * IMPORTANT: Call shape.draw() NOT shape.render()!
+   * The wrapper's render() has already translated to (this.x, this.y).
+   * Calling shape.render() would call Painter.translateTo(shape.x, shape.y)
+   * which OVERWRITES (not adds to) the current translation.
+   * By calling shape.draw() directly, we render at the wrapper's position.
    */
   draw() {
     super.draw();
-    this.shape.render();
+    this.shape.draw();
   }
 }

@@ -74,6 +74,13 @@ export class Button extends GameObject {
    * @param {...any} rest - Additional properties passed to the superclass.
    */
   constructor(game, options = {}) {
+    // UI elements like buttons default to center origin because:
+    // 1. Layout systems (HorizontalLayout, VerticalLayout) position items at cell centers
+    // 2. When added to a centered scene, buttons should appear centered
+    // 3. Center origin is more intuitive for rotation/scaling
+    // Users can override with origin: "top-left" for manual pixel-perfect positioning
+    options.origin = options.origin ?? "center";
+    
     // Pass options to the GameObject constructor
     super(game, options);
     
@@ -110,8 +117,9 @@ export class Button extends GameObject {
     // Basic position and sizing
     this.x = x;
     this.y = y;
-    this.width = width;
-    this.height = height;
+    // Ensure minimum touch target size (44x44px recommended for mobile)
+    this.width = Math.max(width, 44);
+    this.height = Math.max(height, 44);
     this.padding = padding;
     this.textAlign = textAlign;
     this.textBaseline = textBaseline;
@@ -174,7 +182,8 @@ export class Button extends GameObject {
       height: this.height,
       color: this.colors.default.bg,
       stroke: this.colors.default.stroke,
-      lineWidth: 2
+      lineWidth: 2,
+      origin: "center",
     });
   }
 
@@ -191,7 +200,8 @@ export class Button extends GameObject {
       font: font,
       color: textColor,
       align: this.textAlign,
-      baseline: this.textBaseline
+      baseline: this.textBaseline,
+      origin: "center",
     });
     
     this.alignText();
@@ -200,6 +210,10 @@ export class Button extends GameObject {
   /**
    * Update label position based on alignment and baseline settings
    * @private
+   *
+   * Note: TextShape now centers its bounding box at (x, y) regardless of textAlign.
+   * For non-center alignments, we adjust the position by half the text dimensions
+   * so that left-aligned text STARTS at the left edge, not centers there.
    */
   alignText() {
     if (!this.label) return;
@@ -207,13 +221,22 @@ export class Button extends GameObject {
     const halfWidth = this.width / 2;
     const halfHeight = this.height / 2;
 
-    // Horizontal alignment
+    // Get text dimensions (available after TextShape._calculateBounds)
+    const textHalfWidth = (this.label._width || 0) / 2;
+    const textHalfHeight = (this.label._height || 0) / 2;
+
+    // Horizontal alignment - position where text CENTER should be
+    // TextShape centers its bounding box at (x, y), so we adjust accordingly
     switch (this.textAlign) {
       case "left":
-        this.label.x = -halfWidth + this.padding;
+        // Text should START at left edge + padding
+        // So text CENTER should be at left edge + padding + half text width
+        this.label.x = -halfWidth + this.padding + textHalfWidth;
         break;
       case "right":
-        this.label.x = halfWidth - this.padding;
+        // Text should END at right edge - padding
+        // So text CENTER should be at right edge - padding - half text width
+        this.label.x = halfWidth - this.padding - textHalfWidth;
         break;
       case "center":
       default:
@@ -221,13 +244,15 @@ export class Button extends GameObject {
         break;
     }
 
-    // Vertical alignment
+    // Vertical alignment - position where text CENTER should be
     switch (this.textBaseline) {
       case "top":
-        this.label.y = -halfHeight + this.padding;
+        // Text should START at top edge + padding
+        this.label.y = -halfHeight + this.padding + textHalfHeight;
         break;
       case "bottom":
-        this.label.y = halfHeight - this.padding;
+        // Text should END at bottom edge - padding
+        this.label.y = halfHeight - this.padding - textHalfHeight;
         break;
       case "middle":
       default:
@@ -241,7 +266,7 @@ export class Button extends GameObject {
    * @private
    */
   initGroup() {
-    this.group = new Group();
+    this.group = new Group({ origin: "center" });
     this.group.add(this.bg);
     this.group.add(this.label);
   }
@@ -257,16 +282,85 @@ export class Button extends GameObject {
     this.onPressed = onPressed;
     this.onRelease = onRelease;
     
-    this.on("mouseover", this.setState.bind(this, "hover"));
-    this.on("mouseout", this.setState.bind(this, "default"));
-    this.on("inputdown", this.setState.bind(this, "pressed"));
-    this.on("inputup", () => {
-      // Fire onClick if user was in "pressed" state
-      if (this.state === "pressed" && typeof onClick === "function") {
+    // Track pointer state for proper hover handling
+    this._pointerOver = false;
+    this._isTouch = false;
+    
+    // Mouse hover events (desktop only)
+    this.on("mouseover", (e) => {
+      this._pointerOver = true;
+      if (!this._isTouch) {
+        this.setState("hover");
+      }
+    });
+    
+    this.on("mouseout", (e) => {
+      this._pointerOver = false;
+      if (!this._isTouch) {
+        this.setState("default");
+      }
+    });
+    
+    // Touch/pointer down - prevent default for mobile-friendly behavior
+    this.on("inputdown", (e) => {
+      // Detect touch input
+      if (e.touches || (e.nativeEvent && e.nativeEvent.type === 'touchstart')) {
+        this._isTouch = true;
+        // Prevent default touch behaviors (scrolling, zooming)
+        if (e.nativeEvent) {
+          e.nativeEvent.preventDefault();
+        }
+      }
+      this._pointerOver = true;
+      this.setState("pressed");
+    });
+    
+    // Touch/pointer up
+    this.on("inputup", (e) => {
+      const wasPressed = this.state === "pressed";
+      
+      // Prevent default touch behaviors
+      if (e.touches || (e.nativeEvent && e.nativeEvent.type === 'touchend')) {
+        if (e.nativeEvent) {
+          e.nativeEvent.preventDefault();
+        }
+        this._isTouch = true;
+      }
+      
+      // Verify pointer is still over button using hit test
+      const stillOver = this._hitTest && this._hitTest(e.x, e.y);
+      
+      // Fire onClick if user was in "pressed" state and pointer is still over
+      if (wasPressed && stillOver && typeof onClick === "function") {
         onClick();
       }
-      // Return to hover state if the pointer is still over the button
-      this.setState("hover");
+      
+      // Check if pointer is still over the button
+      // On touch devices, don't set hover state (no hover on touch)
+      if (stillOver && !this._isTouch) {
+        this.setState("hover");
+      } else {
+        this.setState("default");
+        // Reset touch flag after a delay to allow mouse hover to work
+        if (this._isTouch) {
+          setTimeout(() => {
+            this._isTouch = false;
+          }, 300);
+        }
+      }
+    });
+    
+    // Touch move - update pointer position
+    this.on("inputmove", (e) => {
+      // Check if pointer is still over button
+      if (this._hitTest && this._hitTest(e.x, e.y)) {
+        this._pointerOver = true;
+      } else {
+        this._pointerOver = false;
+        if (this.state === "hover" && !this._isTouch) {
+          this.setState("default");
+        }
+      }
     });
   }
 
@@ -402,6 +496,21 @@ export class Button extends GameObject {
     return {
       x: this.x,
       y: this.y,
+      width: this.width,
+      height: this.height,
+    };
+  }
+
+  /**
+   * Get debug bounds in local space, accounting for origin.
+   * @returns {{x: number, y: number, width: number, height: number}} Debug bounds
+   */
+  getDebugBounds() {
+    const offsetX = -this.width * this.originX || 0;
+    const offsetY = -this.height * this.originY || 0;
+    return {
+      x: offsetX,
+      y: offsetY,
       width: this.width,
       height: this.height,
     };

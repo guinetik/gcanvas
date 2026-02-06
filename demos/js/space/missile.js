@@ -54,6 +54,7 @@ export class Missile extends GameObject {
       width: bodyLength,
       height: MISSILE_HEIGHT,
       color: "#cc3300",
+      origin: "center",
     });
     // body stays at x=0 (centered)
 
@@ -62,6 +63,7 @@ export class Missile extends GameObject {
       width: bodyLength,
       height: MISSILE_HEIGHT / 3,
       color: "#ff4400",
+      origin: "center",
     });
     // stripe stays at x=0 (centered)
 
@@ -69,12 +71,14 @@ export class Missile extends GameObject {
     const nose = new Triangle(MISSILE_HEIGHT, {
       color: "#ff6600",
       rotation: 90,
+      origin: "center",
     });
     nose.x = halfBody + MISSILE_HEIGHT / 3; // Right edge of body + small offset
 
     // Engine exhaust at the LEFT end (back)
     this.engineGlow = new Circle(MISSILE_HEIGHT / 2, {
       color: "#ffaa00",
+      origin: "center",
     });
     this.engineGlow.x = -halfBody - MISSILE_HEIGHT / 3; // Left edge of body - small offset
 
@@ -183,6 +187,7 @@ export class Missile extends GameObject {
         const size = (MISSILE_HEIGHT / 2) * (i / this.trailPoints.length);
         const trail = new Circle(size, {
           color: `rgba(255, 100, 0, ${alpha})`,
+          origin: "center",
         });
         trail.x = point.x;
         trail.y = point.y;

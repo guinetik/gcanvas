@@ -10,6 +10,7 @@
  * - {@link Keys}: Keyboard input with logical key mapping and state tracking
  * - {@link Touch}: Touch input for mobile devices
  * - {@link Input}: Unified input system that normalizes mouse and touch events
+ * - {@link Screen}: Screen/device detection and responsive utilities
  * 
  * The IO module serves as the intermediary between raw browser events and your game logic,
  * providing consistent, normalized events regardless of input source.
@@ -84,3 +85,5 @@ export {Input} from "./input.js";
 export {Mouse} from "./mouse.js";
 export {Keys} from "./keys.js";
 export {Touch} from "./touch.js";
+export {Screen} from "./screen.js";
+export {Gesture} from "./gesture.js";

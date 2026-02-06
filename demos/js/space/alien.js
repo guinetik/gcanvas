@@ -19,30 +19,32 @@ export class Alien extends GameObject {
   }
 
   createShape() {
+    // Group for alien shape composition (cached for performance)
     const group = new Group({ cacheRendering: true });
 
     // Different alien designs based on row - classic Space Invaders style
+    // All shapes use origin:"center" so their x,y position is their center
     if (this.row === 0) {
       // Top row - Squid/UFO type (30 points) - magenta/pink
       this.points = 30;
 
       // Dome head
-      const head = new Circle(8, { y: -2, color: "#ff0088" });
+      const head = new Circle(8, { y: -2, color: "#ff0088", origin: "center" });
 
       // Body
-      const body = new Rectangle({ width: 20, height: 8, y: 4, color: "#ff0088" });
+      const body = new Rectangle({ width: 20, height: 8, y: 4, color: "#ff0088", origin: "center" });
 
       // Eyes
-      const leftEye = new Circle(2, { x: -4, y: -3, color: "#ffffff" });
-      const rightEye = new Circle(2, { x: 4, y: -3, color: "#ffffff" });
-      const leftPupil = new Circle(1, { x: -4, y: -3, color: "#000000" });
-      const rightPupil = new Circle(1, { x: 4, y: -3, color: "#000000" });
+      const leftEye = new Circle(2, { x: -4, y: -3, color: "#ffffff", origin: "center" });
+      const rightEye = new Circle(2, { x: 4, y: -3, color: "#ffffff", origin: "center" });
+      const leftPupil = new Circle(1, { x: -4, y: -3, color: "#000000", origin: "center" });
+      const rightPupil = new Circle(1, { x: 4, y: -3, color: "#000000", origin: "center" });
 
       // Tentacles
-      const tent1 = new Rectangle({ width: 3, height: 6, x: -8, y: 10, color: "#cc0066" });
-      const tent2 = new Rectangle({ width: 3, height: 8, x: -3, y: 11, color: "#cc0066" });
-      const tent3 = new Rectangle({ width: 3, height: 8, x: 3, y: 11, color: "#cc0066" });
-      const tent4 = new Rectangle({ width: 3, height: 6, x: 8, y: 10, color: "#cc0066" });
+      const tent1 = new Rectangle({ width: 3, height: 6, x: -8, y: 10, color: "#cc0066", origin: "center" });
+      const tent2 = new Rectangle({ width: 3, height: 8, x: -3, y: 11, color: "#cc0066", origin: "center" });
+      const tent3 = new Rectangle({ width: 3, height: 8, x: 3, y: 11, color: "#cc0066", origin: "center" });
+      const tent4 = new Rectangle({ width: 3, height: 6, x: 8, y: 10, color: "#cc0066", origin: "center" });
 
       group.add(head);
       group.add(body);
@@ -60,27 +62,27 @@ export class Alien extends GameObject {
       this.points = 20;
 
       // Main body
-      const body = new Rectangle({ width: 22, height: 10, color: "#00ddff" });
+      const body = new Rectangle({ width: 22, height: 10, color: "#00ddff", origin: "center" });
 
       // Head bump
-      const headBump = new Rectangle({ width: 10, height: 6, y: -6, color: "#00ddff" });
+      const headBump = new Rectangle({ width: 10, height: 6, y: -6, color: "#00ddff", origin: "center" });
 
       // Eyes
-      const leftEye = new Rectangle({ width: 4, height: 4, x: -6, y: -2, color: "#003344" });
-      const rightEye = new Rectangle({ width: 4, height: 4, x: 6, y: -2, color: "#003344" });
+      const leftEye = new Rectangle({ width: 4, height: 4, x: -6, y: -2, color: "#003344", origin: "center" });
+      const rightEye = new Rectangle({ width: 4, height: 4, x: 6, y: -2, color: "#003344", origin: "center" });
 
       // Claws - left
-      const leftArm = new Rectangle({ width: 4, height: 6, x: -14, y: -2, color: "#00aacc" });
-      const leftClaw = new Rectangle({ width: 6, height: 4, x: -16, y: -6, color: "#00aacc" });
+      const leftArm = new Rectangle({ width: 4, height: 6, x: -14, y: -2, color: "#00aacc", origin: "center" });
+      const leftClaw = new Rectangle({ width: 6, height: 4, x: -16, y: -6, color: "#00aacc", origin: "center" });
 
       // Claws - right
-      const rightArm = new Rectangle({ width: 4, height: 6, x: 14, y: -2, color: "#00aacc" });
-      const rightClaw = new Rectangle({ width: 6, height: 4, x: 16, y: -6, color: "#00aacc" });
+      const rightArm = new Rectangle({ width: 4, height: 6, x: 14, y: -2, color: "#00aacc", origin: "center" });
+      const rightClaw = new Rectangle({ width: 6, height: 4, x: 16, y: -6, color: "#00aacc", origin: "center" });
 
       // Legs
-      const leg1 = new Rectangle({ width: 3, height: 5, x: -8, y: 8, color: "#0088aa" });
-      const leg2 = new Rectangle({ width: 3, height: 5, x: 0, y: 8, color: "#0088aa" });
-      const leg3 = new Rectangle({ width: 3, height: 5, x: 8, y: 8, color: "#0088aa" });
+      const leg1 = new Rectangle({ width: 3, height: 5, x: -8, y: 8, color: "#0088aa", origin: "center" });
+      const leg2 = new Rectangle({ width: 3, height: 5, x: 0, y: 8, color: "#0088aa", origin: "center" });
+      const leg3 = new Rectangle({ width: 3, height: 5, x: 8, y: 8, color: "#0088aa", origin: "center" });
 
       group.add(body);
       group.add(headBump);
@@ -99,26 +101,26 @@ export class Alien extends GameObject {
       this.points = 10;
 
       // Round head
-      const head = new Circle(10, { y: -2, color: "#44ff44" });
+      const head = new Circle(10, { y: -2, color: "#44ff44", origin: "center" });
 
       // Body extension
-      const body = new Rectangle({ width: 16, height: 8, y: 6, color: "#44ff44" });
+      const body = new Rectangle({ width: 16, height: 8, y: 6, color: "#44ff44", origin: "center" });
 
       // Eyes
-      const leftEye = new Rectangle({ width: 4, height: 5, x: -4, y: -4, color: "#003300" });
-      const rightEye = new Rectangle({ width: 4, height: 5, x: 4, y: -4, color: "#003300" });
+      const leftEye = new Rectangle({ width: 4, height: 5, x: -4, y: -4, color: "#003300", origin: "center" });
+      const rightEye = new Rectangle({ width: 4, height: 5, x: 4, y: -4, color: "#003300", origin: "center" });
 
       // Antennae
-      const leftAntenna = new Rectangle({ width: 2, height: 6, x: -6, y: -12, color: "#22cc22" });
-      const rightAntenna = new Rectangle({ width: 2, height: 6, x: 6, y: -12, color: "#22cc22" });
-      const leftTip = new Circle(2, { x: -6, y: -16, color: "#88ff88" });
-      const rightTip = new Circle(2, { x: 6, y: -16, color: "#88ff88" });
+      const leftAntenna = new Rectangle({ width: 2, height: 6, x: -6, y: -12, color: "#22cc22", origin: "center" });
+      const rightAntenna = new Rectangle({ width: 2, height: 6, x: 6, y: -12, color: "#22cc22", origin: "center" });
+      const leftTip = new Circle(2, { x: -6, y: -16, color: "#88ff88", origin: "center" });
+      const rightTip = new Circle(2, { x: 6, y: -16, color: "#88ff88", origin: "center" });
 
       // Tentacle legs
-      const leg1 = new Rectangle({ width: 3, height: 6, x: -10, y: 12, color: "#22aa22" });
-      const leg2 = new Rectangle({ width: 3, height: 8, x: -4, y: 13, color: "#22aa22" });
-      const leg3 = new Rectangle({ width: 3, height: 8, x: 4, y: 13, color: "#22aa22" });
-      const leg4 = new Rectangle({ width: 3, height: 6, x: 10, y: 12, color: "#22aa22" });
+      const leg1 = new Rectangle({ width: 3, height: 6, x: -10, y: 12, color: "#22aa22", origin: "center" });
+      const leg2 = new Rectangle({ width: 3, height: 8, x: -4, y: 13, color: "#22aa22", origin: "center" });
+      const leg3 = new Rectangle({ width: 3, height: 8, x: 4, y: 13, color: "#22aa22", origin: "center" });
+      const leg4 = new Rectangle({ width: 3, height: 6, x: 10, y: 12, color: "#22aa22", origin: "center" });
 
       group.add(head);
       group.add(body);

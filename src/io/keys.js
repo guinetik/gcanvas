@@ -32,6 +32,14 @@ export class Keys {
   static D = "D";
   static Q = "Q";
   static E = "E";
+  static R = "R";
+  static F = "F";
+  static G = "G";
+  static J = "J";
+  static K = "K";
+  static L = "L";
+  static Z = "Z";
+  static C = "C";
   static UP = "UP";
   static DOWN = "DOWN";
   static LEFT = "LEFT";
@@ -46,13 +54,21 @@ export class Keys {
    * Customize this list as needed for your game.
    */
   static _codeMap = {
-    // WASD + QE
+    // WASD + QE + RFZC + GJKL
     KeyW: Keys.W,
     KeyA: Keys.A,
     KeyS: Keys.S,
     KeyD: Keys.D,
     KeyQ: Keys.Q,
     KeyE: Keys.E,
+    KeyR: Keys.R,
+    KeyF: Keys.F,
+    KeyG: Keys.G,
+    KeyJ: Keys.J,
+    KeyK: Keys.K,
+    KeyL: Keys.L,
+    KeyZ: Keys.Z,
+    KeyC: Keys.C,
 
     // Arrows
     ArrowUp: Keys.UP,

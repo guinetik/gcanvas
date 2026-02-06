@@ -56,13 +56,15 @@ export class Tooltip extends GameObject {
     this._lines = [];
     this._visible = false;
 
-    // Create background shape
+    // Create background shape with top-left origin for consistent positioning
     this.bg = new Rectangle({
       width: 100,
       height: 30,
       color: this.bgColor,
       stroke: this.borderColor,
       lineWidth: 1,
+      originX: 0,
+      originY: 0,
     });
 
     // Line shapes will be created dynamically
@@ -151,7 +153,7 @@ export class Tooltip extends GameObject {
       this.group.remove(shape);
     }
 
-    // Create new line shapes
+    // Create new line shapes with top-left origin for proper positioning
     this.lineShapes = this._lines.map(
       (line) =>
         new TextShape(line, {
@@ -159,6 +161,8 @@ export class Tooltip extends GameObject {
           color: this.textColor,
           align: "left",
           baseline: "top",
+          originX: 0,
+          originY: 0,
         })
     );
 
@@ -186,28 +190,28 @@ export class Tooltip extends GameObject {
     const height = this.bg.height;
 
     // Position so top-left corner is at cursor + offset
-    // (since tooltip renders centered, add half width/height)
-    let x = mouseX + this.offsetX + width / 2;
-    let y = mouseY + this.offsetY + height / 2;
+    // (tooltip now uses top-left origin)
+    let x = mouseX + this.offsetX;
+    let y = mouseY + this.offsetY;
 
     // Keep tooltip on screen - adjust if going off right edge
-    if (x + width / 2 > this.game.width) {
-      x = mouseX - this.offsetX - width / 2;
+    if (x + width > this.game.width) {
+      x = mouseX - this.offsetX - width;
     }
 
     // Adjust if going off bottom edge
-    if (y + height / 2 > this.game.height) {
-      y = mouseY - this.offsetY - height / 2;
+    if (y + height > this.game.height) {
+      y = mouseY - this.offsetY - height;
     }
 
     // Adjust if going off left edge
-    if (x - width / 2 < 0) {
-      x = width / 2 + 5;
+    if (x < 0) {
+      x = 5;
     }
 
     // Adjust if going off top edge
-    if (y - height / 2 < 0) {
-      y = height / 2 + 5;
+    if (y < 0) {
+      y = 5;
     }
 
     this.x = x;
@@ -236,13 +240,16 @@ export class Tooltip extends GameObject {
     this.bg.width = textWidth + this.padding * 2;
     this.bg.height = textHeight + this.padding * 2;
 
-    // Position each line inside bg
-    const startX = -this.bg.width / 2 + this.padding;
-    const startY = -this.bg.height / 2 + this.padding;
+    // Position bg at origin (0,0) - it uses top-left origin
+    this.bg.x = 0;
+    this.bg.y = 0;
 
+    // Position each line inside bg
+    // Both bg and text use top-left origin, so positioning is straightforward
     for (let i = 0; i < this.lineShapes.length; i++) {
-      this.lineShapes[i].x = startX;
-      this.lineShapes[i].y = startY + i * lineHeight;
+      const shape = this.lineShapes[i];
+      shape.x = this.padding;
+      shape.y = this.padding + i * lineHeight;
     }
   }
 

@@ -50,7 +50,8 @@ export class Transformable extends Renderable {
    */
   constructor(options = {}) {
     super(options);
-    this._rotation = options.rotation * Math.PI / 180 ?? 0;
+    // Fix: wrap in parentheses to ensure ?? applies to the full expression
+    this._rotation = (options.rotation ?? 0) * Math.PI / 180;
     this._scaleX = options.scaleX ?? 1;
     this._scaleY = options.scaleY ?? 1;
 
@@ -65,20 +66,39 @@ export class Transformable extends Renderable {
 
   /**
    * The main rendering method.
-   * Applies transforms and draws debug bounding box.
+   * Applies pivot-based transforms and draws debug bounding box.
    * Subclasses should call super.draw() before their drawing logic.
+   *
+   * The transform sequence:
+   * 1. Translate to pivot point (based on origin)
+   * 2. Apply rotation and scale
+   * 3. Translate back so drawing starts at (0, 0)
    */
   draw() {
     this.applyTransforms();
+    // Flush any stale canvas fill state before shape draws
+    // This prevents color bleeding between consecutive shape renders
+    const ctx = Painter.ctx;
+    ctx.beginPath();
+    ctx.fill();
     this.drawDebug();
   }
 
   /**
    * Applies canvas transform context.
-   * Order: rotate → scale
+   * Transforms are applied around local (0, 0) which is the origin point.
+   * The shape's draw() method handles offset so its origin aligns with (0, 0).
+   * 
+   * This means:
+   * - For center origin: rotate/scale around the shape's center
+   * - For top-left origin: rotate/scale around the shape's top-left corner
    */
   applyTransforms() {
     if (this._isCaching) return;
+
+    // Apply rotation and scale around local (0, 0)
+    // After render() translates to (x, y), local (0, 0) is at (x, y) in world space
+    // The shape's draw() offsets itself so its origin point is at (0, 0)
     Painter.rotate(this._rotation);
     Painter.scale(this._scaleX, this._scaleY);
   }
@@ -124,6 +144,7 @@ export class Transformable extends Renderable {
 
   /**
    * Calculates the bounding box *after* applying rotation and scale.
+   * Uses origin-based pivot for rotation calculations.
    * Used by Geometry2d → getBounds().
    *
    * @override
@@ -131,26 +152,37 @@ export class Transformable extends Renderable {
    * @returns {{x: number, y: number, width: number, height: number}}
    */
   calculateBounds() {
-    const halfW = this.width / 2;
-    const halfH = this.height / 2;
+    // Calculate pivot point based on origin (in local space)
+    const pivotX = this.width * this.originX;
+    const pivotY = this.height * this.originY;
 
+    // Define corners relative to shape's top-left (0, 0)
     const corners = [
-      { x: -halfW, y: -halfH },
-      { x: halfW, y: -halfH },
-      { x: halfW, y: halfH },
-      { x: -halfW, y: halfH },
+      { x: 0, y: 0 },                         // top-left
+      { x: this.width, y: 0 },                // top-right
+      { x: this.width, y: this.height },      // bottom-right
+      { x: 0, y: this.height },               // bottom-left
     ];
 
     const cos = Math.cos(this._rotation);
     const sin = Math.sin(this._rotation);
 
     const transformed = corners.map(({ x, y }) => {
-      x *= this._scaleX;
-      y *= this._scaleY;
+      // Translate corner relative to pivot (center of rotation)
+      let cx = x - pivotX;
+      let cy = y - pivotY;
 
-      const rx = x * cos - y * sin;
-      const ry = x * sin + y * cos;
+      // Apply scale
+      cx *= this._scaleX;
+      cy *= this._scaleY;
 
+      // Apply rotation around pivot
+      const rx = cx * cos - cy * sin;
+      const ry = cx * sin + cy * cos;
+
+      // Translate back to world position
+      // this.x, this.y is where the origin (pivot) is positioned in world space
+      // So we add the rotated offset to the world position
       return { x: rx + this.x, y: ry + this.y };
     });
 
@@ -162,9 +194,10 @@ export class Transformable extends Renderable {
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
 
+    // Return bounds with top-left based x, y
     return {
-      x: (minX + maxX) / 2,
-      y: (minY + maxY) / 2,
+      x: minX,
+      y: minY,
       width: maxX - minX,
       height: maxY - minY,
     };

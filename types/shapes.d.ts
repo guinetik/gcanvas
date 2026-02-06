@@ -685,6 +685,14 @@ export class BezierShape extends Shape {
  */
 export class SVGShape extends Shape {
   /**
+   * Load an SVG file from a URL and create an SVGShape
+   * @param url - URL to the SVG file
+   * @param options - Shape options
+   * @returns Promise that resolves to the SVGShape instance
+   */
+  static fromURL(url: string, options?: ShapeOptions): Promise<SVGShape>;
+
+  /**
    * @param svgPath - SVG path string (d attribute)
    * @param options - Shape options
    */

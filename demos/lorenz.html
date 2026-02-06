@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lorenz Attractor 3D</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Lorenz Attractor</strong> — The Butterfly Effect (1963)<br/>
+    <span style="color:#CCC">
+      <li>dx/dt = σ(y - x)</li>
+      <li>dy/dt = x(ρ - z) - y</li>
+      <li>dz/dt = xy - βz</li>
+      <li>σ=10, ρ=28, β=8/3</li>
+      <li>Blue = slow, Red = fast</li>
+      <li>Drag to rotate</li>
+      <li>Scroll/pinch to zoom</li>
+      <li>Double-click to reset zoom</li>
+      <li>Press R to restart</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/lorenz.js"></script>
+</body>
+</html>

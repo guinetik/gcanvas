@@ -43,7 +43,13 @@ export class ToggleButton extends Button {
         }
 
         // Update our visual style for toggled vs. not
+        // Store current state before refresh
+        const currentState = this.state;
         this.refreshToggleVisual();
+        // Re-apply current state after refresh to ensure proper colors
+        if (currentState) {
+          this.setState(currentState);
+        }
       },
     });
     // Terminal × Vercel theme for toggled state
@@ -59,8 +65,13 @@ export class ToggleButton extends Button {
 
   toggle(v) {
     // Toggle the button state and refresh visuals
+    const currentState = this.state;
     this.toggled = v;
     this.refreshToggleVisual();
+    // Re-apply current state after refresh to ensure proper colors
+    if (currentState) {
+      this.setState(currentState);
+    }
   }
 
   /**
@@ -68,32 +79,32 @@ export class ToggleButton extends Button {
    */
   refreshToggleVisual() {
     if (this.toggled) {
-      // E.g. "active" styling
-      this.bg.fillColor = this.colorActiveBg;
-      this.bg.strokeColor = this.colorActiveStroke;
+      // Active/toggled styling - use correct property names
+      this.bg.color = this.colorActiveBg;
+      this.bg.stroke = this.colorActiveStroke;
       this.label.color = this.colorActiveText;
     } else {
-      // Revert to normal styling
-      this.bg.fillColor = this.colors.default.bg;
-      this.bg.strokeColor = this.colors.default.stroke;
+      // Revert to normal styling - use correct property names
+      this.bg.color = this.colors.default.bg;
+      this.bg.stroke = this.colors.default.stroke;
       this.label.color = this.colors.default.text;
     }
   }
 
   /**
-   * If we want ephemeral states (hover, pressed) to remain visible briefly,
-   * we can let parent setState run, then immediately re-apply toggled style
-   * so we don't lose the "toggled" color. This is optional.
+   * Override setState to properly handle toggled state.
+   * When toggled, always use active colors. When not toggled, use normal button behavior.
    */
   setState(state) {
+    // Always call parent first to handle cursor and callbacks
     super.setState(state);
-
-    // If we're toggled on, ensure it stays in the toggled visuals
-    // after the parent sets hover/pressed colors.
+    
+    // If toggled, override colors with active colors (ignore hover/pressed colors)
     if (this.toggled) {
-      this.bg.fillColor = this.colorActiveBg;
-      this.bg.strokeColor = this.colorActiveStroke;
+      this.bg.color = this.colorActiveBg;
+      this.bg.stroke = this.colorActiveStroke;
       this.label.color = this.colorActiveText;
     }
+    // If not toggled, parent's setState already set the correct colors
   }
 }

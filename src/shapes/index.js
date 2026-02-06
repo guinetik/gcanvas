@@ -95,6 +95,8 @@ export { Cylinder } from "./cylinder.js";
 export { Diamond } from "./diamond.js";
 export { Line } from "./line.js";
 export { Triangle } from "./triangle.js";
+export { RightTriangle } from "./righttriangle.js";
+export { Parallelogram } from "./parallelogram.js";
 export { Star } from "./star.js";
 export { Sphere } from "./sphere.js";
 export { Sphere3D } from "./sphere3d.js";

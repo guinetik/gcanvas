@@ -138,6 +138,7 @@ class RubiksCubeDemo extends Game {
             width: 100,
             height: 40,
             font: "bold 14px monospace",
+            origin: "center",
             onClick: () => this._startShuffle(),
         });
 
@@ -146,6 +147,7 @@ class RubiksCubeDemo extends Game {
             width: 100,
             height: 40,
             font: "bold 14px monospace",
+            origin: "center",
             onClick: () => this._startSolve(),
         });
 
@@ -155,10 +157,12 @@ class RubiksCubeDemo extends Game {
         applyLayout(buttons, layout.positions);
 
         this.buttonPanel = new Scene(this, {
-            anchor: "bottom-left",
-            width: 100,
-            height: 100,
-            anchorOffsetY: -50,
+            anchor: Position.BOTTOM_LEFT,
+            anchorMargin: 20,
+            anchorOffsetY: -20,
+            origin: "center",
+            width: 120,
+            height: 110,
         });
         buttons.forEach(btn => this.buttonPanel.add(btn));
         this.pipeline.add(this.buttonPanel);

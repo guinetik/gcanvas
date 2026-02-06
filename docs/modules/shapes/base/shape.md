@@ -30,6 +30,9 @@ new Shape(options)
 | `lineJoin` | `string` | `"miter"` | Line join style |
 | `lineCap` | `string` | `"butt"` | Line cap style |
 | `miterLimit` | `number` | `10` | Maximum miter length |
+| `origin` | `string` | `"top-left"` | Origin point (`"top-left"`, `"center"`, etc.) |
+| `originX` | `number` | `0` | Normalized X origin (0-1) |
+| `originY` | `number` | `0` | Normalized Y origin (0-1) |
 
 Plus all options from [Transformable](./transformable.md).
 
@@ -37,13 +40,23 @@ Plus all options from [Transformable](./transformable.md).
 
 ### Inherited
 
-From Euclidian: `x`, `y`, `width`, `height`, `debug`, `debugColor`
+From Euclidian: `x`, `y`, `width`, `height`, `originX`, `originY`, `origin`, `debug`, `debugColor`
 
 From Geometry2d: `minX`, `maxX`, `minY`, `maxY`, `crisp`
 
 From Renderable: `visible`, `opacity`, `active`, `zIndex`, `shadowColor`, `shadowBlur`, `shadowOffsetX`, `shadowOffsetY`
 
 From Transformable: `rotation`, `scaleX`, `scaleY`
+
+### Origin Properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `originX` | `number` | `0` | Normalized X origin (0 = left, 0.5 = center, 1 = right) |
+| `originY` | `number` | `0` | Normalized Y origin (0 = top, 0.5 = center, 1 = bottom) |
+| `origin` | `string` | `"top-left"` | Shorthand for originX/originY (`"top-left"`, `"center"`, etc.) |
+
+The origin determines where `(x, y)` positions the shape and the pivot point for rotation/scaling. See [Coordinate System](../../../concepts/coordinate-system.md) for details.
 
 ### Own Properties
 
@@ -210,6 +223,9 @@ const shape = new Circle(50, {
   // Position (Euclidian)
   x: 400,
   y: 300,
+
+  // Origin (Euclidian) - pivot point for position/rotation/scale
+  origin: 'center',  // or use originX: 0.5, originY: 0.5
 
   // Constraints (Geometry2d)
   minX: 50,
