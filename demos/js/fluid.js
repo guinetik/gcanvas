@@ -333,6 +333,8 @@ class FluidGasGame extends Game {
     // Button row - centered on mobile, bottom-left on desktop
     const buttonRow = new HorizontalLayout(this, {
       spacing,
+      debug: true,
+      debugColor: "red",
       padding: 0,
       origin: "center",
       anchor: isMobile ? Position.BOTTOM_CENTER : Position.BOTTOM_LEFT,
@@ -383,6 +385,8 @@ class FluidGasGame extends Game {
     // Account for stepper height (label + controls + gaps)
     const stepperTotalHeight = stepperHeight + 20; // Include label height
     const stepperRow = new HorizontalLayout(this, {
+      debug: true,
+      debugColor: "blue",
       spacing: spacing + 4,
       padding: 0,
       origin: "center",

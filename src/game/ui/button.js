@@ -74,7 +74,11 @@ export class Button extends GameObject {
    * @param {...any} rest - Additional properties passed to the superclass.
    */
   constructor(game, options = {}) {
-    // Force origin to center since button internals use center-based positioning
+    // UI elements like buttons default to center origin because:
+    // 1. Layout systems (HorizontalLayout, VerticalLayout) position items at cell centers
+    // 2. When added to a centered scene, buttons should appear centered
+    // 3. Center origin is more intuitive for rotation/scaling
+    // Users can override with origin: "top-left" for manual pixel-perfect positioning
     options.origin = options.origin ?? "center";
     
     // Pass options to the GameObject constructor

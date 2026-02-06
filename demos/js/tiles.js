@@ -25,7 +25,7 @@ const CONFIG = {
 
 export class TileDemo extends Scene {
   constructor(game, options = {}) {
-    super(game, { ...options, origin: "center" });
+    super(game, { ...options, origin: "center", debug: true, debugColor: "magenta" });
     this.elapsedTime = this.lastChangeTime = 0;
   }
 
@@ -61,7 +61,8 @@ export class TileDemo extends Scene {
       spacing: CONFIG.tileSpacing,
       padding: CONFIG.tilePadding,
       autoSize: true,
-      debug: false,
+      debug: true,
+      debugColor: "yellow",
       origin: "center",
       // Enable scrolling
       scrollable: true,
@@ -89,7 +90,8 @@ export class TileDemo extends Scene {
       anchorOffsetY: -15,
       spacing: isMobile ? 5 : 10,
       padding: 10,
-      debug: false,
+      debug: true,
+      debugColor: "magenta",
       origin: "center",
       align: "center",
     });

@@ -61,6 +61,8 @@ export class Stepper extends GameObject {
    * @param {string} [options.label=""] - Optional label text above the stepper.
    */
   constructor(game, options = {}) {
+    // UI elements like steppers default to center origin for layout compatibility
+    options.origin = options.origin ?? "center";
     super(game, options);
 
     const {

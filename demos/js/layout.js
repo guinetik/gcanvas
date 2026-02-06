@@ -162,7 +162,8 @@ export class LayoutDemo extends Game {
 
     // Create UI
     this.ui = new Scene(this, {
-      debug: false,
+      debug: true,
+      debugColor: "blue",
       origin: "center",
       anchor: Position.CENTER,
     });
@@ -175,7 +176,8 @@ export class LayoutDemo extends Game {
 
     // Create bottom navigation - layout type selection (at very bottom)
     this.layoutNav = new HorizontalLayout(this, {
-      debug: false,
+      debug: true,
+      debugColor: "red",
       origin: "center",
       anchor: Position.BOTTOM_CENTER,
       anchorOffsetY: -30,
@@ -198,7 +200,8 @@ export class LayoutDemo extends Game {
     // Create action buttons (add/remove) - positioned above layout nav
     this.actionNav = new HorizontalLayout(this, {
       anchor: Position.BOTTOM_CENTER,
-      debug: false,
+      debug: true,
+      debugColor: "cyan",
       origin: "center",
       anchorOffsetY: -100, // Space above the layout nav
       padding: 10,
