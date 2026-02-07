@@ -363,6 +363,7 @@ class DinoShapeFactory {
         width: p.w * px,
         height: p.h * px,
         color: color,
+        origin: "center",
       });
       group.add(rect);
     });
@@ -549,6 +550,7 @@ class Obstacle extends GameObject {
       width: w * 0.6,
       height: h,
       color: c,
+      origin: "center",
     }));
 
     // Left arm (if tall enough)
@@ -559,6 +561,7 @@ class Obstacle extends GameObject {
         width: w * 0.4,
         height: h * 0.3,
         color: c,
+        origin: "center",
       }));
       this.group.add(new Rectangle({
         x: -w * 0.5,
@@ -566,6 +569,7 @@ class Obstacle extends GameObject {
         width: w * 0.4,
         height: w * 0.4,
         color: c,
+        origin: "center",
       }));
     }
 
@@ -577,6 +581,7 @@ class Obstacle extends GameObject {
         width: w * 0.4,
         height: h * 0.25,
         color: c,
+        origin: "center",
       }));
       this.group.add(new Rectangle({
         x: w * 0.5,
@@ -584,6 +589,7 @@ class Obstacle extends GameObject {
         width: w * 0.4,
         height: w * 0.4,
         color: c,
+        origin: "center",
       }));
     }
   }
@@ -606,6 +612,7 @@ class Obstacle extends GameObject {
         width: trunkWidth,
         height: segH,
         color: trunkColor,
+        origin: "center",
       }));
     }
 
@@ -621,6 +628,7 @@ class Obstacle extends GameObject {
       width: leafLength,
       height: leafWidth,
       color: leafColor,
+      origin: "center",
     }));
     this.group.add(new Rectangle({
       x: -leafLength * 0.3,
@@ -628,6 +636,7 @@ class Obstacle extends GameObject {
       width: leafLength * 0.8,
       height: leafWidth,
       color: leafColor,
+      origin: "center",
     }));
 
     // Right fronds
@@ -637,6 +646,7 @@ class Obstacle extends GameObject {
       width: leafLength,
       height: leafWidth,
       color: leafColor,
+      origin: "center",
     }));
     this.group.add(new Rectangle({
       x: leafLength * 0.3,
@@ -644,6 +654,7 @@ class Obstacle extends GameObject {
       width: leafLength * 0.8,
       height: leafWidth,
       color: leafColor,
+      origin: "center",
     }));
 
     // Center/top fronds
@@ -653,6 +664,7 @@ class Obstacle extends GameObject {
       width: leafLength * 0.6,
       height: leafWidth,
       color: leafColor,
+      origin: "center",
     }));
 
     // Coconuts (small circles near top)
@@ -662,12 +674,14 @@ class Obstacle extends GameObject {
       y: topY + 3,
       radius: 4,
       color: coconutColor,
+      origin: "center",
     }));
     this.group.add(new Circle({
       x: 4,
       y: topY + 5,
       radius: 4,
       color: coconutColor,
+      origin: "center",
     }));
   }
 
@@ -706,6 +720,7 @@ class Ground extends GameObject {
       width: this.groundWidth,
       height: CONFIG.groundHeight,
       color: this._theme.groundLine,
+      origin: "center",
     });
 
     // Generate ground texture marks (will scroll)
@@ -1163,6 +1178,15 @@ class DinoGame extends Game {
     this.events.on(Keys.SPACE, () => this.handleJump());
     this.events.on(Keys.UP, () => this.handleJump());
     this.events.on(Keys.W, () => this.handleJump());
+
+    // Mobile touch support - tap anywhere to jump
+    this.canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      this.handleJump();
+    }, { passive: false });
+
+    // Also support mouse click for accessibility
+    this.canvas.addEventListener("click", () => this.handleJump());
   }
 
   async handleJump() {

@@ -18,6 +18,10 @@ export class VisibilityDemo extends Scene {
     this.squaresLayout = new HorizontalLayout(game, {
       spacing: 1,
       padding: 4,
+      debug: true,
+      debugColor: "magenta",
+      origin: "center",
+      align: "center",  // Vertically center items in layout
     });
     this.add(this.squaresLayout);
     // Create a few colored squares and add them to the layout
@@ -25,22 +29,14 @@ export class VisibilityDemo extends Scene {
     for (let i = 0; i < colors.length; i++) {
       const rect = new Square(100, {
         color: colors[i],
+        origin: "center",
       });
-      const squareGO = ShapeGOFactory.create(game, rect);
+      const squareGO = ShapeGOFactory.create(game, rect, {
+        origin: "center",
+      });
       this.squaresLayout.add(squareGO);
     }
-    // 2) A UI scene that holds the buttons
-    this.uiScene = new Scene(game, {
-      name: "UI Scene",
-      width: 120,
-      height: 40,
-      anchor: Position.BOTTOM_CENTER,
-      anchorMargin: 20,
-    });
-    this.uiScene.width = 150;
-    this.uiScene.height = 50;
-    this.add(this.uiScene);
-    // A button that toggles visibility of a random square
+    // 2) A button that toggles visibility of a random square
     let currentSquare = null;
     const pickOne = () => {
       if (currentSquare) {
@@ -57,14 +53,15 @@ export class VisibilityDemo extends Scene {
       currentSquare = square;
       currentSquare.visible = !currentSquare.visible;
     };
-    const toggleBtn = new Button(game, {
+    this.toggleBtn = new Button(game, {
       text: "Toggle Random",
       width: 120,
+      origin: "center",
       onClick: () => {
         pickOne();
       },
     });
-    this.uiScene.add(toggleBtn);
+    this.add(this.toggleBtn);
   }
 
   update(dt) {
@@ -74,6 +71,8 @@ export class VisibilityDemo extends Scene {
     // Center the scene in the game
     this.x = this.game.width / 2;
     this.y = this.game.height / 2;
+    // Position button at bottom center (relative to this scene's center)
+    this.toggleBtn.y = this.height / 2 - 40;
     super.update(dt);
   }
 }

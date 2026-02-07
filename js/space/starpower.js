@@ -16,19 +16,22 @@ export class StarPowerUp extends GameObject {
     // Create star visual using the Star shape
     this.shape = new Group({});
 
-    // Glowing background
+    // Glowing background - centered
     const glow = new Circle(POWERUP_SIZE / 2 + 6, {
       color: "rgba(255, 215, 0, 0.4)",
+      origin: "center",
     });
 
-    // Main star - golden
+    // Main star - golden, centered
     this.star = new Star(POWERUP_SIZE / 2, 5, 0.5, {
       color: "#ffd700", // Gold
+      origin: "center",
     });
 
-    // Inner highlight
+    // Inner highlight - centered
     const innerStar = new Star(POWERUP_SIZE / 4, 5, 0.5, {
       color: "#ffec8b", // Light gold
+      origin: "center",
     });
 
     this.shape.add(glow);

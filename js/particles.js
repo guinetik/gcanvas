@@ -33,32 +33,45 @@ class ParticlesGame extends Game {
     this.particleScene = new Scene(this, {
       width: this.width - this.MARGIN * 2,
       height: this.height - this.MARGIN * 2,
-      debug: true,
+      debug: false,
       debugColor: "#0f0",
+      origin: "center",
     });
     this.pipeline.add(this.particleScene);
     // Create UI scene (above particles)
     this.uiScene = new Scene(this, {
-      debug: true,
+      debug: false,
       debugColor: "#0f0",
-      width: 150,
-      height: 140,
+      width: 160,
+      height: 150,
     });
     this.pipeline.add(this.uiScene);
-    this.uiScene.add(ShapeGOFactory.create(this, new Rectangle({ width: 148, height: 130, color: Painter.colors.rgba(0, 0, 0, 0.5) })))
-    this.buttons = new VerticalLayout(this);
-    this.buttons.y = 10;
+    // Background rectangle
+    const bgRect = ShapeGOFactory.create(this, new Rectangle({ width: 148, height: 130, color: Painter.colors.rgba(0, 0, 0, 0.5) }));
+    bgRect.x = 75;
+    bgRect.y = 65;
+    this.uiScene.add(bgRect);
+    // Buttons layout - centered in UI scene
+    this.buttons = new VerticalLayout(this, { padding: 10, spacing: 8, origin: "center", align: "center", debug: true, debugColor: "magenta" });
+    this.buttons.x = 75;
+    this.buttons.y = 75;
     this.uiScene.add(this.buttons);
     // Add buttons
     this.buttons.add(
       new Button(this, {
         text: "Clear",
+        width: 120,
+        debug: true,
+        debugColor: "yellow",
         onClick: this.clearParticles.bind(this),
       })
     );
     this.buttons.add(
       new Button(this, {
         text: "Reset",
+        width: 120,
+        debug: true,
+        debugColor: "yellow",
         onClick: () => {
           Painter.clear();
           this.clearParticles();
@@ -68,15 +81,20 @@ class ParticlesGame extends Game {
     );
     this.particlesCounter = this.buttons.add(
       new Text(this, "Particles", {
-        height: 20,
+        width: 120,
+        height: 24,
         color: "white",
         align: "center",
         baseline: "middle",
+        origin: "center",
+        debug: true,
+        debugColor: "cyan",
       })
     );
     // Anchor UI to bottom-left
     applyAnchor(this.uiScene, {
       anchor: Position.BOTTOM_LEFT,
+      anchorMargin: 10,
     });
     // Input logic...
     this.freeToCreate = true;
@@ -189,7 +207,7 @@ class Particle extends GameObject {
 
   createRandomShape() {
     const r = Math.random();
-    const options = { color: this.color, cacheRendering: true };
+    const options = { color: this.color, cacheRendering: true, origin: "center" };
     if (r < 0.5) {
       return new Circle(this.size, options);
     } else if (r < 0.66) {

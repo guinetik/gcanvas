@@ -47,26 +47,30 @@ export class GroupDemo extends GameObject {
   constructor(game) {
     super(game);
     // Create a Group and set dimensions using Transform API
-    this.group = new Group({ debug: true });
+    this.group = new Group({ debug: true, origin: "center" });
     this.group.transform.size(450, 450);
 
-    // 1) A central rectangle
+    // 1) A central rectangle - positioned at center of group
     const centerRect = new Rectangle({
-      width: 145,
-      height: 60,
+      width: 200,
+      height: 40,
       color: "#222",
       debug: true,
+      origin: "center",
     });
+    centerRect.transform.position(0, 0);
     this.group.add(centerRect);
 
-    // 2) Some text in the middle
+    // 2) Some text in the middle - positioned at center of group
     const centerText = new TextShape("Transform API Demo!", {
-      font: "18px sans-serif",
+      font: "16px sans-serif",
       color: "#FFF",
       align: "center",
       baseline: "middle",
       opacity: 0.5,
+      origin: "center",
     });
+    centerText.transform.position(0, 0);
     this.group.add(centerText);
 
     // 3) Create a radial pattern of circles around the origin
@@ -84,6 +88,7 @@ export class GroupDemo extends GameObject {
         stroke: "#FFF",
         lineWidth: 2,
         visible: true,
+        origin: "center",
       });
 
       // Use Transform API to position the circle

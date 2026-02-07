@@ -24,6 +24,7 @@ export class AbsorbEffect extends GameObject {
         size: size,
         shape: new Circle(size, {
           color: this.color,
+          origin: "center",
         }),
       });
     }

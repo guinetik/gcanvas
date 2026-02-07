@@ -24,6 +24,7 @@ export class Starfield extends GameObject {
         speed: 15 + Math.random() * 30,
         shape: new Circle(size, {
           color: `rgba(255,255,255,${0.4 + Math.random() * 0.5})`,
+          origin: "center",
         }),
       });
     }

@@ -230,7 +230,7 @@ class ShapeGalleryGame extends Game {
           color: Painter.colors.randomColorHSL(),
           stroke: "black",
           lineWidth: 2,
-          y: -35,
+          y: -10,
         },
       },
       {
@@ -415,21 +415,6 @@ class ShapeGalleryGame extends Game {
     this.pipeline.add(
       new FPSCounter(this, { color: "black", anchor: "bottom-right" })
     );
-    // Title
-    this.pipeline.add(
-      applyAnchor(new Text(this, "GCanvas Shape Gallery", {
-        font: "bold 24px monospace",
-        color: "#222",
-      }), { anchor: Position.TOP_CENTER, anchorOffsetY: 30 })
-    );
-
-    // Subtitle
-    this.pipeline.add(
-      applyAnchor(new Text(this, "Mouse over any shape to rotate or animate it", {
-        font: "16px monospace",
-        color: "#666",
-      }), { anchor: Position.TOP_CENTER, anchorOffsetY: 60 })
-    );
     this.events.on("click", (e) => {
       this.gallery.children.forEach((go) => {
         go.entry.shape.color = Painter.colors.randomColorHSL();
@@ -507,6 +492,7 @@ class ShapeGalleryGame extends Game {
       anchor: Position.CENTER,
       anchorOffsetY: CONFIG.headerHeight / 2 + 20, // Position below header with spacing
       autoSize: true,
+      origin: "center",
     });
 
     this.shapeEntries.forEach((entry, index) => {
@@ -515,7 +501,7 @@ class ShapeGalleryGame extends Game {
       //const x = originX + col * (cellSize + spacing) + cellSize / 2;
       //const y = originY + row * (cellSize + spacing) + cellSize / 2;
       //
-      const group = new Group();
+      const group = new Group({ origin: "center" });
       // Use Transform API to set group dimensions
       group.transform.size(cellSize, cellSize);
       const bg = new Rectangle({
@@ -523,8 +509,13 @@ class ShapeGalleryGame extends Game {
         height: cellSize - 10,
         stroke: "rgba(0,0,0,0.1)",
         lineWidth: 1,
+        origin: "center",
       });
-      const shape = new entry.class(...entry.args, entry.options);
+      // Create shape with origin: "center" so shapes are centered in their cells
+      // 3D shapes handle their own coordinate system, so don't override their options
+      const is3DShape = ["Cube", "Sphere", "Cone", "Cylinder", "Prism"].includes(entry.name);
+      const shapeOpts = is3DShape ? entry.options : { ...entry.options, origin: "center" };
+      const shape = new entry.class(...entry.args, shapeOpts);
       entry.shape = shape;
       const label = new TextShape(entry.name, {
         x: 0,
@@ -533,6 +524,7 @@ class ShapeGalleryGame extends Game {
         color: "#333",
         align: "center",
         baseline: "bottom",
+        origin: "center",
       });
       group.add(bg);
       group.add(shape);
@@ -546,6 +538,7 @@ class ShapeGalleryGame extends Game {
         height: cellSize,
         scaleX: 1,
         scaleY: 1,
+        origin: "center",  // Center origin so layout positions correctly
       });
       go.entry = entry;
       // Use Transform API for initial state

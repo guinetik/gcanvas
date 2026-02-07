@@ -36,11 +36,13 @@ export class DemoGame extends Game {
     const config = this.getResponsiveConfig();
     this.currentButtonWidth = config.buttonWidth;
 
-    this.scene = new Scene(this, { debug: true, debugColor: "black" });
+    this.scene = new Scene(this, { debug: true, debugColor: "black", origin: "center" });
     this.ui = new Scene(this, {
       debug: true,
+      debugColor: "blue",
+      origin: "center",
       anchor: Position.BOTTOM_LEFT,
-      anchorRelative: this.scene,
+      anchorMargin: 10,
     });
     this.pipeline.add(this.scene); // scene below
     this.pipeline.add(this.ui); // UI on top
@@ -50,7 +52,8 @@ export class DemoGame extends Game {
     this.buttons = this.ui.add(
       new VerticalLayout(this, {
         debug: true,
-        debugColor: "black",
+        debugColor: "magenta",
+        origin: "center",
         spacing: 10,
         padding: 10,
       })
@@ -96,6 +99,7 @@ export class DemoGame extends Game {
       text: text,
       width: this.currentButtonWidth,
       textAlign: "left",
+      origin: "center",
       onClick: onClick,
     });
   }
@@ -161,8 +165,8 @@ export class DemoGame extends Game {
 // LayerBox class
 class LayerBox extends GameObjectShapeWrapper {
   constructor(game, scene, options, random = Random.symmetric) {
-    const group = new Group();
-    super(game, group, options);
+    const group = new Group({ origin: "center" });
+    super(game, group, { ...options, originX: 0.5, originY: 0.5 });
     this.interactive = true;
     this.scene = scene;
     this.random = random;
@@ -180,6 +184,7 @@ class LayerBox extends GameObjectShapeWrapper {
       color: color,
       stroke: "white",
       lineWidth: 2,
+      origin: "center",
     });
     this.width = size;
     this.height = size;

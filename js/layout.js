@@ -163,7 +163,8 @@ export class LayoutDemo extends Game {
     // Create UI
     this.ui = new Scene(this, {
       debug: true,
-      debugColor: "pink",
+      debugColor: "blue",
+      origin: "center",
       anchor: Position.CENTER,
     });
     this.pipeline.add(this.ui);
@@ -176,13 +177,13 @@ export class LayoutDemo extends Game {
     // Create bottom navigation - layout type selection (at very bottom)
     this.layoutNav = new HorizontalLayout(this, {
       debug: true,
-      debugColor: "purple",
+      debugColor: "red",
+      origin: "center",
       anchor: Position.BOTTOM_CENTER,
       anchorOffsetY: -30,
       padding: 10,
       spacing: 10,
     });
-    this.ui.add(this.layoutNav);
 
     // Add layout type buttons
     const layoutModes = this.getLayoutModes();
@@ -190,6 +191,7 @@ export class LayoutDemo extends Game {
       this.layoutNav.add(
         new Button(this, {
           text: mode.charAt(0).toUpperCase() + mode.slice(1),
+          origin: "center",
           onClick: () => this.setLayout(mode),
         })
       );
@@ -200,6 +202,7 @@ export class LayoutDemo extends Game {
       anchor: Position.BOTTOM_CENTER,
       debug: true,
       debugColor: "cyan",
+      origin: "center",
       anchorOffsetY: -100, // Space above the layout nav
       padding: 10,
       spacing: 10,
@@ -207,24 +210,29 @@ export class LayoutDemo extends Game {
     this.actionNav.add(
       new Button(this, {
         text: "ADD",
+        origin: "center",
         onClick: this.addItem.bind(this),
       })
     );
     this.actionNav.add(
       new Button(this, {
         text: "REMOVE",
+        origin: "center",
         onClick: () => this.removeItem(),
       })
     );
-    this.ui.add(this.actionNav);
 
-    // Create initial layout
+    // Create initial layout FIRST (renders below)
     this.createLayout();
 
     // Add enough items to enable scrolling
     for (let i = 0; i < 5; i++) {
       this.addItem(i);
     }
+
+    // Add nav bars to pipeline AFTER layout (renders on top)
+    this.pipeline.add(this.actionNav);
+    this.pipeline.add(this.layoutNav);
   }
 
   createLayout() {
@@ -242,9 +250,9 @@ export class LayoutDemo extends Game {
       anchorOffsetY: this.getLayoutYOffset(),
       spacing: 10,
       padding: 10,
-      debug: true,
+      debug: false,
       autoSize: true,
-      debugColor: Painter.colors.randomColorHSL(),
+      origin: "center",
       // Enable scrolling with responsive viewport
       scrollable: true,
       viewportWidth: viewport.width,
@@ -307,6 +315,7 @@ export class LayoutDemo extends Game {
       color: Painter.colors.randomColorHSL(),
       stroke: "white",
       lineWidth: 2,
+      origin: "center",
     });
     const go = ShapeGOFactory.create(this, rect);
     go.name = "item " + i;

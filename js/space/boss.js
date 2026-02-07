@@ -116,11 +116,13 @@ export class Boss extends GameObject {
       width: width,
       height: 8,
       color: "#333333",
+      origin: "center",
     });
     this.healthBarFg = new Rectangle({
       width: width,
       height: 8,
       color: "#ff0000",
+      origin: "center",
     });
   }
 
@@ -322,8 +324,9 @@ export class Boss extends GameObject {
     this.healthBarBg.y = -this.height / 2 - 40;
     this.healthBarBg.render();
 
+    // With center origin, position the foreground bar so it shrinks from the right
     this.healthBarFg.width = this.width * healthPercent;
-    this.healthBarFg.x = -(this.width * (1 - healthPercent)) / 2;
+    this.healthBarFg.x = -this.width / 2 + (this.width * healthPercent) / 2;
     this.healthBarFg.y = -this.height / 2 - 40;
 
     // Color based on health

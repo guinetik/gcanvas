@@ -25,11 +25,13 @@
         import { Game, Scene, GameObject, FPSCounter, Painter, Circle } from "/gcanvas.es.min.js";
         class BouncingBall extends GameObject {
             constructor(game) {
-                super(game);
+                super(game, { origin: "center" });  // GameObject uses center origin
                 this.radius = 20;
+                // Circle stays at (0, 0) relative to GameObject - with center origin
                 this.circle = new Circle(this.radius, {
                     color: "#0f0",
-                    debug: false
+                    debug: false,
+                    origin: "center"
                 });
                 this.x = game.width / 2;
                 this.y = game.height / 2;
@@ -42,11 +44,13 @@
                 this.y += this.vy * dt;
                 const w = this.game.width;
                 const h = this.game.height;
+                // With center origin, this.x/y is the ball's center
                 if (this.x - this.radius < 0 || this.x + this.radius > w) this.vx *= -1;
                 if (this.y - this.radius < 0 || this.y + this.radius > h) this.vy *= -1;
-                // Clamp and update shape position
+                // Clamp position
                 this.x = Math.max(this.radius, Math.min(w - this.radius, this.x));
                 this.y = Math.max(this.radius, Math.min(h - this.radius, this.y));
+                // Circle stays at (0,0) - GameObject handles positioning
                 super.update(dt);
             }
 

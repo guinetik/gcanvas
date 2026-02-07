@@ -13,25 +13,27 @@ import {
 export class TweenDemo extends Scene {
   constructor(game, options = {}) {
     super(game, options);
-    const bg = new Rectangle({ width: 100, height: 100, color: "#0f0" });
-    const frame = new Rectangle({ width: 80, height: 80, color: "#000" });
+    const bg = new Rectangle({ width: 100, height: 100, color: "#0f0", origin: "center" });
+    const frame = new Rectangle({ width: 80, height: 80, color: "#000", origin: "center" });
     this.label = new TextShape("1%", {
       font: "18px monospace",
       color: "#F0F",
       align: "center",
       baseline: "middle",
+      origin: "center",
     });
-    const group = new Group();
+    const group = new Group({ origin: "center" });
     group.add(bg);
     group.add(frame);
     group.add(this.label);
     group.scaleX = group.scaleY = 2; // add individual scale to this group to test if the outer group scales it too
     //
-    const wrapper = new Group();
+    const wrapper = new Group({ origin: "center" });
     wrapper.add(group);
     //
     this.box = ShapeGOFactory.create(game, wrapper);
-    this.box.anchor = "center";
+    this.box.originX = 0.5;
+    this.box.originY = 0.5;
     this.add(this.box);
     this.growing = false;
     this.tween();
@@ -69,7 +71,7 @@ export class MyGame extends Game {
 
   init() {
     super.init();
-    this.pipeline.add(new TweenDemo(this, {debug: true, anchor: "center"}));
+    this.pipeline.add(new TweenDemo(this, {debug: true, origin: "center", anchor: "center"}));
     this.pipeline.add(
       new FPSCounter(this, {
         anchor: "bottom-right",

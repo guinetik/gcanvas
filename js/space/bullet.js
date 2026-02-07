@@ -27,16 +27,19 @@ export class Bullet extends GameObject {
         width: BULLET_WIDTH + 4,
         height: BULLET_HEIGHT + 2,
         color: "rgba(255, 255, 0, 0.3)",
+        origin: "center",
       });
       const core = new Rectangle({
         width: BULLET_WIDTH,
         height: BULLET_HEIGHT,
         color: "#ffff00",
+        origin: "center",
       });
       const center = new Rectangle({
         width: 2,
         height: BULLET_HEIGHT - 2,
         color: "#ffffff",
+        origin: "center",
       });
       this.shape.add(glow);
       this.shape.add(core);
@@ -47,16 +50,19 @@ export class Bullet extends GameObject {
         width: BULLET_WIDTH + 4,
         height: BULLET_HEIGHT + 2,
         color: "rgba(255, 0, 0, 0.3)",
+        origin: "center",
       });
       const core = new Rectangle({
         width: BULLET_WIDTH,
         height: BULLET_HEIGHT,
         color: "#ff3333",
+        origin: "center",
       });
       const center = new Rectangle({
         width: 2,
         height: BULLET_HEIGHT - 2,
         color: "#ff8888",
+        origin: "center",
       });
       this.shape.add(glow);
       this.shape.add(core);

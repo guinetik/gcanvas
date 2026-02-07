@@ -28,7 +28,7 @@ export class Explosion extends GameObject {
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         size: size,
-        shape: new Circle(size, { color: color }),
+        shape: new Circle(size, { color: color, origin: "center" }),
         rotSpeed: (Math.random() - 0.5) * 10,
       });
     }
@@ -46,7 +46,7 @@ export class Explosion extends GameObject {
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         size: size,
-        shape: new Rectangle({ width: size, height: size, color: color }),
+        shape: new Rectangle({ width: size, height: size, color: color, origin: "center" }),
         rotSpeed: (Math.random() - 0.5) * 15,
         rotation: 0,
       });

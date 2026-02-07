@@ -40,6 +40,7 @@ export class PatternDemo extends Scene {
       padding: 20,
       autoSize: true,
       debug: true,
+      origin: "center",
     });
 
     // Add Title & Subtitle
@@ -318,18 +319,19 @@ export class PatternDemo extends Scene {
     for (let i = 0; i < patternSources.length; i++) {
       const pattern = patternSources[i % patternSources.length];
 
-      const group = new Group({ width: 100, height: 130 });
+      const group = new Group({ width: 100, height: 130, origin: "center" });
       const rect = new PatternRectangle(null, "repeat", {
         width: 100,
         height: 100,
         color: Painter.colors.randomColorHSL(),
         debug: true,
-        debugColor: "gray"
+        debugColor: "gray",
+        origin: "center",
       });
       const label = new TextShape(pattern.name, {
         font: "12px monospace",
         color: "white",
-        y: 100
+        origin: "center",
       });
       label.y = 60;
       group.add(rect);

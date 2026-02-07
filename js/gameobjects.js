@@ -31,13 +31,13 @@ class ShapesDemo extends Game {
     const centerY = this.canvas.height / 2;
 
     // Create shapes - spread across canvas
-    const circle = new Circle(35, { x: this.canvas.width * 0.2, y: centerY, color: "#0f0" });
-    const rect = new Rectangle({ x: this.canvas.width * 0.5, y: centerY, width: 80, height: 50, color: "#0ff" });
+    const circle = new Circle(35, { x: this.canvas.width * 0.2, y: centerY, color: "#0f0", origin: "center" });
+    const rect = new Rectangle({ x: this.canvas.width * 0.5, y: centerY, width: 80, height: 50, color: "#0ff", origin: "center" });
 
     // Group with rotation
     const group = new Group({ x: this.canvas.width * 0.8, y: centerY, rotation: Math.PI / 4 });
-    group.add(new Circle(20, { color: "#f0f" }));
-    group.add(new Rectangle({ y: 30, width: 40, height: 20, color: "#ff0" }));
+    group.add(new Circle(20, { color: "#f0f", origin: "center" }));
+    group.add(new Rectangle({ y: 30, width: 40, height: 20, color: "#ff0", origin: "center" }));
 
     // Render directly - calling render() on shapes, not using pipeline
     circle.render();
@@ -81,7 +81,7 @@ class GameObjectsDemo extends Game {
     const colors = ["#0f0", "#0ff", "#0f0", "#ff0", "#0f0"];
     const sizes = [20, 25, 30, 25, 20];
     colors.forEach((color, i) => {
-      this.player.addFrame(new Circle(sizes[i], { color, stroke: "#fff", lineWidth: 2 }));
+      this.player.addFrame(new Circle(sizes[i], { color, stroke: "#fff", lineWidth: 2, origin: "center" }));
     });
 
     // Add to scene
@@ -120,8 +120,8 @@ class BridgingDemo extends Game {
 
     // Create a Group of shapes (like a simple avatar)
     const avatar = new Group();
-    avatar.add(new Circle(25, { y: -30, color: "#0f0", stroke: "#0a0", lineWidth: 2 })); // head
-    avatar.add(new Rectangle({ y: 20, width: 40, height: 50, color: "#0f0", stroke: "#0a0", lineWidth: 2 })); // body
+    avatar.add(new Circle(25, { y: -30, color: "#0f0", stroke: "#0a0", lineWidth: 2, origin: "center" })); // head
+    avatar.add(new Rectangle({ y: 20, width: 40, height: 50, color: "#0f0", stroke: "#0a0", lineWidth: 2, origin: "center" })); // body
 
     // Wrap it as a GameObject so it can join the pipeline
     const avatarGO = ShapeGOFactory.create(this, avatar, {
@@ -134,8 +134,8 @@ class BridgingDemo extends Game {
 
     // Add a second avatar to show multiple instances
     const avatar2 = new Group();
-    avatar2.add(new Circle(20, { y: -25, color: "#0ff", stroke: "#0aa", lineWidth: 2 }));
-    avatar2.add(new Rectangle({ y: 15, width: 30, height: 40, color: "#0ff", stroke: "#0aa", lineWidth: 2 }));
+    avatar2.add(new Circle(20, { y: -25, color: "#0ff", stroke: "#0aa", lineWidth: 2, origin: "center" }));
+    avatar2.add(new Rectangle({ y: 15, width: 30, height: 40, color: "#0ff", stroke: "#0aa", lineWidth: 2, origin: "center" }));
 
     const avatar2GO = ShapeGOFactory.create(this, avatar2, {
       x: centerX + 100,
@@ -145,8 +145,8 @@ class BridgingDemo extends Game {
 
     // Third one with rotation
     const avatar3 = new Group({ rotation: 0.2 });
-    avatar3.add(new Circle(18, { y: -22, color: "#f0f", stroke: "#a0a", lineWidth: 2 }));
-    avatar3.add(new Rectangle({ y: 12, width: 25, height: 35, color: "#f0f", stroke: "#a0a", lineWidth: 2 }));
+    avatar3.add(new Circle(18, { y: -22, color: "#f0f", stroke: "#a0a", lineWidth: 2, origin: "center" }));
+    avatar3.add(new Rectangle({ y: 12, width: 25, height: 35, color: "#f0f", stroke: "#a0a", lineWidth: 2, origin: "center" }));
 
     const avatar3GO = ShapeGOFactory.create(this, avatar3, {
       x: centerX - 100,

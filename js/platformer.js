@@ -350,6 +350,7 @@ class HackerShapeFactory {
         width: p.w * px,
         height: p.h * px,
         color: color,
+        origin: "center",
       }));
     });
 
@@ -361,6 +362,7 @@ class HackerShapeFactory {
         width: p.w * px,
         height: p.h * px,
         color: CONFIG.theme.orb, // Cyan visor
+        origin: "center",
       }));
     });
 
@@ -423,6 +425,7 @@ class HackerShapeFactory {
         width: p.w * px,
         height: p.h * px,
         color: color,
+        origin: "center",
       }));
     });
 
@@ -434,6 +437,7 @@ class HackerShapeFactory {
         width: p.w * px,
         height: p.h * px,
         color: CONFIG.theme.enemy, // Red when dying
+        origin: "center",
       }));
     });
 
@@ -665,6 +669,7 @@ class GlitchShapeFactory {
         width: p.w * px,
         height: p.h * px,
         color: color,
+        origin: "center",
       }));
     });
 
@@ -676,6 +681,7 @@ class GlitchShapeFactory {
         width: p.w * px,
         height: p.h * px,
         color: "#ffffff",
+        origin: "center",
       }));
     });
 
@@ -1067,10 +1073,18 @@ class Level extends PlatformerScene {
     const controlMult = grounded ? 1.0 : CONFIG.airControl;
 
     let inputDir = 0;
+    // Keyboard input
     if (Keys.isDown(Keys.LEFT) || Keys.isDown(Keys.A)) {
       inputDir = -1;
     }
     if (Keys.isDown(Keys.RIGHT) || Keys.isDown(Keys.D)) {
+      inputDir = 1;
+    }
+    // Touch input (from game instance)
+    if (this.game.touchLeft) {
+      inputDir = -1;
+    }
+    if (this.game.touchRight) {
       inputDir = 1;
     }
 
@@ -1451,6 +1465,49 @@ class PlatformerGame extends Game {
     this.events.on(Keys.SPACE, () => this.handleAction());
     this.events.on(Keys.UP, () => this.handleAction());
     this.events.on(Keys.W, () => this.handleAction());
+
+    // Mobile touch support
+    this.touchLeft = false;
+    this.touchRight = false;
+
+    this.canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      this.handleTouchStart(e);
+    }, { passive: false });
+
+    this.canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      this.handleTouchMove(e);
+    }, { passive: false });
+
+    this.canvas.addEventListener("touchend", (e) => {
+      this.touchLeft = false;
+      this.touchRight = false;
+    });
+
+    // Click to start/restart/jump
+    this.canvas.addEventListener("click", () => this.handleAction());
+  }
+
+  handleTouchStart(e) {
+    // Tap to jump
+    this.handleAction();
+    
+    // Also track position for movement
+    this.handleTouchMove(e);
+  }
+
+  handleTouchMove(e) {
+    if (e.touches.length === 0) return;
+    
+    const touch = e.touches[0];
+    const rect = this.canvas.getBoundingClientRect();
+    const touchX = touch.clientX - rect.left;
+    const screenThird = this.width / 3;
+    
+    // Left third = move left, Right third = move right, Middle = no movement
+    this.touchLeft = touchX < screenThird;
+    this.touchRight = touchX > screenThird * 2;
   }
 
   async handleAction() {

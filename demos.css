@@ -100,7 +100,7 @@ code {
   background: #0f0;
 }
 
-/* #info overlay (optional) */
+/* #info overlay (optional) - hidden by default to spark curiosity */
 #info {
   position: absolute;
   font-family: monospace;
@@ -109,17 +109,28 @@ code {
   right: 0;
   background: rgba(0, 0, 0, 0.8);
   color: #0f0;
-  padding: 12px 20px;
+  max-height: 0;
+  padding: 0 20px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
   font-size: 14px;
   line-height: 1.4;
   border-bottom: 1px solid #333;
   z-index: 10;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
-/* Info toggle button for mobile */
+#info.open {
+  max-height: 300px;
+  padding: 12px 20px;
+  padding-right: 48px;
+}
+
+/* Info toggle button - always visible on desktop and mobile */
 #info-toggle {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: absolute;
   top: 8px;
   right: 8px;
@@ -136,31 +147,12 @@ code {
   z-index: 11;
   pointer-events: auto;
   line-height: 1;
+  padding: 0;
+  margin: 0;
 }
 
 #info-toggle:hover {
   background: rgba(0, 0, 0, 0.9);
-}
-
-/* Mobile info styles */
-@media (max-width: 768px) {
-  #info-toggle {
-    display: block;
-  }
-
-  #info {
-    max-height: 0;
-    padding: 0 20px;
-    overflow: hidden;
-    transition: max-height 0.3s ease, padding 0.3s ease;
-    pointer-events: auto;
-  }
-
-  #info.open {
-    max-height: 300px;
-    padding: 12px 20px;
-    padding-right: 48px;
-  }
 }
 
 strong {

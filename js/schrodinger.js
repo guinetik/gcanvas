@@ -687,13 +687,13 @@ class SchrodingerDemo extends Game {
   drawInfo(w, h) {
     Painter.useCtx((ctx) => {
       // Controls hint (bottom right)
-      ctx.fillStyle = "#445";
+      ctx.fillStyle = "#999";
       ctx.font = "10px monospace";
       ctx.textAlign = "right";
-      ctx.fillText("drag to rotate  |  scroll to zoom  |  hold to collapse  |  double-click to reset", w - 15, h - 30);
+      ctx.fillText("drag to rotate  |  scroll to zoom  |  hold to collapse  |  double-click to reset", w - 20, h - 30);
 
       // Legend
-      ctx.fillText("Helix = \u03A8  |  Blue = Re(\u03A8)  |  Red = |\u03A8|\u00B2", w - 15, h - 15);
+      ctx.fillText("Helix = Ψ  |  Blue = Re(Ψ)  |  Red = |Ψ|²", w - 20, h - 15);
       ctx.textAlign = "left";
     });
   }

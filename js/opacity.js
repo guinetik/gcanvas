@@ -28,17 +28,22 @@ class BouncingSquare extends GameObject {
 
     // Square size (side length)
     this.size = options.size || 50;
+    this.width = this.size;
+    this.height = this.size;
 
     // Create the square shape
     this.square = new Square(this.size, {
       color: options.color || "#0f0",
       debug: options.debug || false,
       debugColor: options.debugColor || "#fff",
+      origin: "center",
     });
 
-    // Set initial position
+    // Set initial position (center-based)
     this.x = options.x || 0;
     this.y = options.y || 0;
+    this.originX = 0.5;
+    this.originY = 0.5;
 
     // Set velocity
     this.vx = options.vx !== undefined ? options.vx : Math.random() * 300 - 150;
@@ -207,6 +212,9 @@ export class OpacityDemo extends Scene {
       this.height = this.game.height;
       this.y = this.game.height / 2;
     }
+    // Scene is positioned at center, so use center origin
+    this.originX = 0.5;
+    this.originY = 0.5;
 
     // Animate the scene's opacity
     this.elapsed += dt;

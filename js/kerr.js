@@ -7,7 +7,7 @@
  * Key difference from Schwarzschild: g_tφ ≠ 0 (frame dragging term)
  */
 
-import { Game, Painter, Camera3D } from "/gcanvas.es.min.js";
+import { Game, Painter, Camera3D, Screen, Gesture } from "/gcanvas.es.min.js";
 import { GameObject } from "/gcanvas.es.min.js";
 import { Rectangle } from "/gcanvas.es.min.js";
 import { TextShape } from "/gcanvas.es.min.js";
@@ -59,6 +59,13 @@ const CONFIG = {
   precessionFactor: 0.15,
   frameDraggingAmplification: 3.0, // Visual enhancement
 
+  // Zoom
+  minZoom: 0.3,
+  maxZoom: 3.0,
+  zoomSpeed: 0.5,
+  zoomEasing: 0.12,
+  baseScreenSize: 600,
+
   // Formation animation (λ: 0→1 interpolation from flat to Kerr)
   // Slow enough for users to notice the transformation
   formationDuration: 6.0, // Seconds to form the black hole
@@ -102,13 +109,19 @@ class KerrMetricPanelGO extends GameObject {
       ...options,
       width: panelWidth,
       height: panelHeight,
+      originX: 0.5,
+      originY: 0.5,
+      debug: true,
+      debugColor: "red",
       anchor: Position.BOTTOM_LEFT,
+      anchorMargin: 20,
     });
 
     this.bgRect = new Rectangle({
       width: panelWidth,
       height: panelHeight,
       color: "rgba(0, 0, 0, 0.7)",
+      origin: "center",
     });
 
     // Define features with descriptions for tooltips
@@ -237,6 +250,7 @@ class KerrMetricPanelGO extends GameObject {
         align: "left",
         baseline: "top",
         height: config.height,
+        origin: "top-left",
       });
       rowItems.push(config.shape);
 
@@ -246,6 +260,7 @@ class KerrMetricPanelGO extends GameObject {
           color: "#fff",
           align: "left",
           baseline: "top",
+          origin: "top-left",
         });
       }
     }
@@ -357,6 +372,18 @@ class KerrDemo extends Game {
     super.init();
     this.time = 0;
 
+    // Initialize Screen for responsive handling
+    Screen.init(this);
+
+    // Calculate initial zoom based on screen size
+    const initialZoom = Math.min(
+      CONFIG.maxZoom,
+      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
+    );
+    this.zoom = initialZoom;
+    this.targetZoom = initialZoom;
+    this.defaultZoom = initialZoom;
+
     // Mass and spin
     this.mass = CONFIG.defaultMass;
     this.spin = CONFIG.defaultSpin * this.mass;
@@ -379,6 +406,21 @@ class KerrDemo extends Game {
       velocityScale: 2.0,
     });
     this.camera.enableMouseControl(this.canvas);
+
+    // Enable zoom via mouse wheel and pinch gesture
+    this.gesture = new Gesture(this.canvas, {
+      onZoom: (delta) => {
+        this.targetZoom *= 1 + delta * CONFIG.zoomSpeed;
+        this.targetZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, this.targetZoom));
+      },
+      onPan: null, // Camera3D handles rotation via drag
+    });
+
+    // Double-click to reset zoom and camera
+    this.canvas.addEventListener("dblclick", () => {
+      this.targetZoom = this.defaultZoom;
+      this.camera.reset();
+    });
 
     // Orbital state
     this.orbitR = CONFIG.orbitSemiMajor;
@@ -418,22 +460,23 @@ class KerrDemo extends Game {
     this.canvas.addEventListener("mouseleave", () => this.tooltip.hide());
     this.initControls();
 
-    // Button to form new black hole (positioned below the chart, same width)
+    // Button to form new black hole (positioned at bottom-left)
     const isMobile = this.width < CONFIG.mobileWidth;
-    const graphW = isMobile ? 120 : 160;
-    const graphH = isMobile ? 70 : 100;
-    const graphX = this.width - graphW - (isMobile ? 15 : 20);
-    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
 
+    // Position button above the metric panel using relative anchoring
+    const btnWidth = isMobile ? 120 : 140;
+    const btnHeight = isMobile ? 30 : 36;
     this.newBlackHoleBtn = new Button(this, {
       anchor: Position.TOP_LEFT,
       anchorRelative: this.metricPanel,
-      anchorOffsetX: -10,
-      anchorOffsetY: -60,
-      width: graphW,
-      height: isMobile ? 30 : 36,
+      anchorMargin: 0,
+      anchorOffsetX: 0, // Align with panel's left edge
+      anchorOffsetY: -btnHeight - 16, // Position above panel with spacing
+      width: btnWidth,
+      height: btnHeight,
       text: "New Black Hole",
       font: `${isMobile ? 10 : 12}px monospace`,
+      origin: "center",
       colorDefaultBg: "rgba(20, 20, 40, 0.8)",
       colorDefaultStroke: "#f80",
       colorDefaultText: "#fa8",
@@ -451,18 +494,19 @@ class KerrDemo extends Game {
   initControls() {
     // Instructions (drag to rotate)
     this.controlsText = new TextShape(
-      "drag to rotate",
+      "drag to rotate | scroll to zoom | double-click to reset",
       {
         font: "10px monospace",
-        color: "#aaa",
+        color: "#ccc",
         align: "right",
         baseline: "bottom",
+        origin: "center",
       }
     );
 
     // Explanatory text lines
     const explanationLines = [
-      "Geometric Demonstration: Flat Spacetime \u2192 Kerr Metric", // Top line
+      "Geometric Demonstration: Flat Spacetime → Kerr Metric", // Top line
       "Visualizes the structural contrast, not physical time evolution.",
       "Effects exaggerated for visibility.",
     ];
@@ -470,11 +514,33 @@ class KerrDemo extends Game {
     this.explanationShapes = explanationLines.map((line) => {
       return new TextShape(line, {
         font: "10px monospace",
-        color: "#aaa",
+        color: "#ccc",
         align: "right",
         baseline: "bottom",
+        origin: "center",
       });
     });
+  }
+
+  /**
+   * 3D projection with zoom applied
+   */
+  project3D(x, y, z) {
+    const proj = this.camera.project(x, y, z);
+    return {
+      x: proj.x * this.zoom,
+      y: proj.y * this.zoom,
+      z: proj.z,
+      scale: proj.scale * this.zoom,
+    };
+  }
+
+  onResize() {
+    // Recalculate default zoom for new screen size
+    this.defaultZoom = Math.min(
+      CONFIG.maxZoom,
+      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
+    );
   }
 
   handleMouseMove(e) {
@@ -681,6 +747,9 @@ class KerrDemo extends Game {
 
     this.camera.update(dt);
 
+    // Ease zoom towards target
+    this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoomEasing;
+
     // Only update geodesic motion after black hole has formed
     // The orbiter appears after formation completes
     if (this.formationProgress >= 1) {
@@ -813,7 +882,7 @@ class KerrDemo extends Game {
     const w = this.width;
     const h = this.height;
     const isMobile = w < CONFIG.mobileWidth;
-    const margin = isMobile ? 10 : 15;
+    const margin = isMobile ? 12 : 20;
     const lineSpacing = isMobile ? 12 : 15;
 
     // On mobile, use shorter text
@@ -942,7 +1011,7 @@ class KerrDemo extends Game {
           const z = Math.sin(angle) * r;
           const y = this.getEmbeddingHeight(r);
 
-          const p = this.camera.project(
+          const p = this.project3D(
             x * this.gridScale,
             y,
             z * this.gridScale,
@@ -985,7 +1054,7 @@ class KerrDemo extends Game {
         const z = Math.sin(angle) * rErgo;
         const y = this.getEmbeddingHeight(rErgo);
 
-        const p = this.camera.project(
+        const p = this.project3D(
           x * this.gridScale,
           y,
           z * this.gridScale,
@@ -1002,7 +1071,7 @@ class KerrDemo extends Game {
         const z = Math.sin(angle) * rPlus;
         const y = this.getEmbeddingHeight(rPlus + 0.1);
 
-        const p = this.camera.project(
+        const p = this.project3D(
           x * this.gridScale,
           y,
           z * this.gridScale,
@@ -1025,7 +1094,7 @@ class KerrDemo extends Game {
             const z = Math.sin(p.angle) * p.r;
             const y = this.getEmbeddingHeight(p.r);
 
-            const proj = this.camera.project(
+            const proj = this.project3D(
               x * this.gridScale,
               y,
               z * this.gridScale,
@@ -1042,7 +1111,7 @@ class KerrDemo extends Game {
             const trailAngle = p.angle - 0.3;
             const trailX = Math.cos(trailAngle) * p.r;
             const trailZ = Math.sin(trailAngle) * p.r;
-            const trailProj = this.camera.project(
+            const trailProj = this.project3D(
               trailX * this.gridScale,
               y,
               trailZ * this.gridScale,
@@ -1066,7 +1135,7 @@ class KerrDemo extends Game {
 
     const projected = this.gridVertices.map((row) =>
       row.map((v) => {
-        const p = this.camera.project(v.x * gridScale, v.y, v.z * gridScale);
+        const p = this.project3D(v.x * gridScale, v.y, v.z * gridScale);
         return { x: cx + p.x, y: cy + p.y, z: p.z };
       }),
     );
@@ -1115,7 +1184,7 @@ class KerrDemo extends Game {
     const finalY = this.getEmbeddingHeight(rPlus + 0.1);
     const y = finalY * lambda; // Interpolate from 0 to final depth
 
-    const centerP = this.camera.project(0, y + 10, 0);
+    const centerP = this.project3D(0, y + 10, 0);
     const centerX = cx + centerP.x;
     const centerY = cy + centerP.y;
 
@@ -1278,7 +1347,7 @@ class KerrDemo extends Game {
         const x = Math.cos(angle) * rPlus;
         const z = Math.sin(angle) * rPlus;
 
-        const p = this.camera.project(
+        const p = this.project3D(
           x * this.gridScale,
           y,
           z * this.gridScale,
@@ -1308,7 +1377,7 @@ class KerrDemo extends Game {
     const orbiterZ = Math.sin(totalAngle) * this.orbitR;
     const orbiterY = this.getEmbeddingHeight(this.orbitR);
 
-    const p = this.camera.project(
+    const p = this.project3D(
       orbiterX * this.gridScale,
       orbiterY,
       orbiterZ * this.gridScale,
@@ -1383,7 +1452,7 @@ class KerrDemo extends Game {
         const z = Math.sin(angle) * r;
         const y = this.getEmbeddingHeight(r);
 
-        const p = this.camera.project(
+        const p = this.project3D(
           x * this.gridScale,
           y,
           z * this.gridScale,
@@ -1413,13 +1482,13 @@ class KerrDemo extends Game {
         const trailY = this.getEmbeddingHeight(point.r);
         const prevY = this.getEmbeddingHeight(prevPoint.r);
 
-        const p = this.camera.project(
+        const p = this.project3D(
           point.x * this.gridScale,
           trailY,
           point.z * this.gridScale,
         );
 
-        const prevP = this.camera.project(
+        const prevP = this.project3D(
           prevPoint.x * this.gridScale,
           prevY,
           prevPoint.z * this.gridScale,
