@@ -15,7 +15,7 @@ import { Attractor3DDemo } from "./attractor-3d-demo.js";
 
 Attractor3DDemo.run("rossler", {
   attractor: {
-    dt: 0.05,   // Large dt — Rössler is slow-moving
+    dt: 0.075,   // Large dt — Rössler is slow-moving
     scale: 15,
   },
 
@@ -55,7 +55,9 @@ Attractor3DDemo.run("rossler", {
 
   // XZY with inverted screen-Y for best visual orientation
   axisMapping: { x: "x", y: "z", z: "y", sx: 1, sy: -1, sz: 1 },
-  warmupSteps: 2000,
+  warmupSteps: 0,
   // Each particle gets unique params (±2%) to prevent sync
   paramVariation: { params: { a: 0.2, b: 0.2, c: 5.7 }, range: 0.02 },
+
+  respawnChance: 0.01,
 });

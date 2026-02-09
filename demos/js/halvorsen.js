@@ -16,8 +16,8 @@ Attractor3DDemo.run("halvorsen", {
   },
 
   particles: {
-    count: 420,
-    trailLength: 280,
+    count: 700,
+    trailLength: 150,
     spawnRange: 1,
   },
 
@@ -40,7 +40,7 @@ Attractor3DDemo.run("halvorsen", {
   },
 
   blink: {
-    chance: 0.02,
+    chance: 0.08,
     minDuration: 0.04,
     maxDuration: 0.18,
     intensityBoost: 1.5,
@@ -52,4 +52,6 @@ Attractor3DDemo.run("halvorsen", {
 
   // Swap Y/Z so vertical mouse drag rotates naturally
   axisMapping: "yz-swap",
+
+  respawnChance: 0.002,
 });

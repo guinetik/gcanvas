@@ -17,7 +17,7 @@ Attractor3DDemo.run("aizawa", {
   },
 
   particles: {
-    count: 350,
+    count: 500,
     trailLength: 220,
     spawnRange: 0.5,
   },
@@ -56,4 +56,6 @@ Attractor3DDemo.run("aizawa", {
   // Inverted mouse controls feel more natural with this orientation
   mouseControl: { invertX: true, invertY: true },
   normalizeRotation: true,
+
+  respawnChance: 0.001,
 });

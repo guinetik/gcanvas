@@ -48,4 +48,6 @@ Attractor3DDemo.run("dadras", {
   },
 
   zoom: { min: 0.3, max: 3.0 },
+
+  respawnChance: 0,
 });

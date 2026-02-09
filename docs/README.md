@@ -1,6 +1,6 @@
 # GCanvas Documentation
 
-> A minimalist 2D canvas rendering library built for learning, expression, and creative coding.
+> Pragmatic canvas primitives for 2D graphics, interactive demos, games, and creative coding.
 
 GCanvas is a modular 2D rendering and game framework built on top of the HTML5 Canvas API. Inspired by the simplicity of p5.js and the composability of game engines.
 
@@ -153,10 +153,13 @@ npm run dev
 
   class HelloWorld extends Game {
     init() {
+      super.init();
       this.enableFluidSize();
       this.backgroundColor = 'black';
 
-      const box = new Rectangle(200, 80, {
+      const box = new Rectangle({
+        width: 200,
+        height: 80,
         color: '#111',
         stroke: '#0f0',
         lineWidth: 2
@@ -169,7 +172,7 @@ npm run dev
         baseline: 'middle'
       });
 
-      const group = new Group({ x: this.width / 2, y: this.height / 2 });
+      const group = new Group({ x: this.width / 2, y: this.height / 2, origin: "center" });
       group.add(box);
       group.add(label);
 
