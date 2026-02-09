@@ -8,7 +8,7 @@
  * @see {@link https://en.wikipedia.org/wiki/Aizawa_attractor}
  */
 
-import { Attractor3DDemo } from "./attractor-3d-demo.js";
+import { Attractor3DDemo, Screen } from "./attractor-3d-demo.js";
 
 Attractor3DDemo.run("aizawa", {
   attractor: {
@@ -17,8 +17,8 @@ Attractor3DDemo.run("aizawa", {
   },
 
   particles: {
-    count: 500,
-    trailLength: 220,
+    count: Screen.responsive(250, 375, 500),
+    trailLength: Screen.responsive(130, 175, 220),
     spawnRange: 0.5,
   },
 
@@ -58,4 +58,6 @@ Attractor3DDemo.run("aizawa", {
   normalizeRotation: true,
 
   respawnChance: 0.001,
+
+  autoRotation: { enabled: true, speed: 0.15, axis: "y" },
 });

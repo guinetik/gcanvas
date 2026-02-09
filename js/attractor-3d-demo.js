@@ -133,6 +133,9 @@ const DEFAULTS = {
   /** Max distance from center before a particle is culled and respawned (0 = no limit) */
   maxDistance: 0,
 
+  /** Screen-space offset as fraction of canvas size, e.g. { x: 0, y: 0.1 } shifts down 10% */
+  screenOffset: { x: 0, y: 0 },
+
   /** Normalize camera rotationY to [0, 2π) each frame */
   normalizeRotation: false,
 
@@ -729,8 +732,9 @@ class Attractor3DDemo extends Game {
     super.render();
     if (!this.particles) return;
 
-    const cx = this.width / 2;
-    const cy = this.height / 2;
+    const { screenOffset } = this.config;
+    const cx = this.width / 2 + screenOffset.x * this.width;
+    const cy = this.height / 2 + screenOffset.y * this.height;
 
     // Fade alpha for restart transition
     const prevAlpha = this.ctx.globalAlpha;
@@ -821,5 +825,5 @@ class Attractor3DDemo extends Game {
   }
 }
 
-export { Attractor3DDemo, AttractorParticle, DEFAULTS, hslToRgb, deepMerge };
+export { Attractor3DDemo, AttractorParticle, DEFAULTS, hslToRgb, deepMerge, Screen };
 export default Attractor3DDemo;

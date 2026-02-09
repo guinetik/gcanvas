@@ -7,7 +7,7 @@
  * @see {@link https://www.dynamicmath.xyz/strange-attractors/}
  */
 
-import { Attractor3DDemo } from "./attractor-3d-demo.js";
+import { Attractor3DDemo, Screen } from "./attractor-3d-demo.js";
 
 Attractor3DDemo.run("halvorsen", {
   attractor: {
@@ -16,8 +16,8 @@ Attractor3DDemo.run("halvorsen", {
   },
 
   particles: {
-    count: 700,
-    trailLength: 150,
+    count: Screen.responsive(350, 500, 700),
+    trailLength: Screen.responsive(100, 125, 150),
     spawnRange: 1,
   },
 
@@ -54,4 +54,6 @@ Attractor3DDemo.run("halvorsen", {
   axisMapping: "yz-swap",
 
   respawnChance: 0.002,
+
+  autoRotation: { enabled: true, speed: 0.15, axis: "y" },
 });

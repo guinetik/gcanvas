@@ -11,7 +11,7 @@
  * @see {@link https://en.wikipedia.org/wiki/R%C3%B6ssler_attractor}
  */
 
-import { Attractor3DDemo } from "./attractor-3d-demo.js";
+import { Attractor3DDemo, Screen } from "./attractor-3d-demo.js";
 
 Attractor3DDemo.run("rossler", {
   attractor: {
@@ -20,8 +20,8 @@ Attractor3DDemo.run("rossler", {
   },
 
   particles: {
-    count: 400,
-    trailLength: 250,
+    count: Screen.responsive(200, 300, 400),
+    trailLength: Screen.responsive(150, 200, 250),
     spawnRange: 4,
   },
 
@@ -60,4 +60,6 @@ Attractor3DDemo.run("rossler", {
   paramVariation: { params: { a: 0.2, b: 0.2, c: 5.7 }, range: 0.02 },
 
   respawnChance: 0.01,
+
+  autoRotation: { enabled: true, speed: 0.15, axis: "y" },
 });
