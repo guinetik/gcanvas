@@ -8,7 +8,7 @@
  * @see {@link https://www.dynamicmath.xyz/strange-attractors/}
  */
 
-import { Attractor3DDemo } from "./attractor-3d-demo.js";
+import { Attractor3DDemo, Screen } from "./attractor-3d-demo.js";
 
 Attractor3DDemo.run("dadras", {
   attractor: {
@@ -17,8 +17,8 @@ Attractor3DDemo.run("dadras", {
   },
 
   particles: {
-    count: 500,
-    trailLength: 200,
+    count: Screen.responsive(250, 375, 500),
+    trailLength: Screen.responsive(100, 150, 200),
     spawnRange: 5,
   },
 
@@ -47,7 +47,10 @@ Attractor3DDemo.run("dadras", {
     alphaBoost: 1.3,
   },
 
-  zoom: { min: 0.3, max: 3.0 },
+  zoom: { min: 0.3, max: 3.0, baseScreenSize: 900 },
+  screenOffset: { x: 0, y: 0.01 },
 
   respawnChance: 0,
+
+  autoRotation: { enabled: true, speed: 0.15, axis: "y" },
 });

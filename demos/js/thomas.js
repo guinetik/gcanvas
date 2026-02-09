@@ -8,7 +8,7 @@
  * @see {@link https://en.wikipedia.org/wiki/Thomas%27_cyclically_symmetric_attractor}
  */
 
-import { Attractor3DDemo } from "./attractor-3d-demo.js";
+import { Attractor3DDemo, Screen } from "./attractor-3d-demo.js";
 
 Attractor3DDemo.run("thomas", {
   attractor: {
@@ -17,8 +17,8 @@ Attractor3DDemo.run("thomas", {
   },
 
   particles: {
-    count: 500,
-    trailLength: 500,
+    count: Screen.responsive(250, 375, 500),
+    trailLength: Screen.responsive(300, 400, 500),
     spawnRange: 2,
   },
 

@@ -8,7 +8,7 @@
  * @see {@link https://en.wikipedia.org/wiki/Lorenz_system}
  */
 
-import { Attractor3DDemo } from "./attractor-3d-demo.js";
+import { Attractor3DDemo, Screen } from "./attractor-3d-demo.js";
 
 Attractor3DDemo.run("lorenz", {
   attractor: {
@@ -17,8 +17,8 @@ Attractor3DDemo.run("lorenz", {
   },
 
   particles: {
-    count: 600,
-    trailLength: 250,
+    count: Screen.responsive(300, 450, 600),
+    trailLength: Screen.responsive(150, 200, 250),
     spawnRange: 5,
   },
 
@@ -56,4 +56,6 @@ Attractor3DDemo.run("lorenz", {
 
   // Disable respawn — let all particles maintain full-length trails
   respawnChance: 0.001,
+
+  autoRotation: { enabled: true, speed: 0.15, axis: "y" },
 });
