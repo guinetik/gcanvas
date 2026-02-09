@@ -130,6 +130,9 @@ const DEFAULTS = {
    */
   paramVariation: null,
 
+  /** Max distance from center before a particle is culled and respawned (0 = no limit) */
+  maxDistance: 0,
+
   /** Normalize camera rotationY to [0, 2π) each frame */
   normalizeRotation: false,
 
@@ -235,6 +238,7 @@ class AttractorParticle {
    * @param {number}   opts.respawnChance - Per-frame probability of random respawn
    * @param {number}   opts.warmupSteps  - Max random warmup integration steps
    * @param {number}   opts.dt           - Integration timestep (used for warmup)
+   * @param {number}   opts.maxDistance  - Max distance from center before respawn (0 = no limit)
    */
   constructor({
     stepFn,
@@ -246,22 +250,21 @@ class AttractorParticle {
     blink,
     respawnChance,
     warmupSteps,
+    maxDistance,
     dt,
   }) {
     this.stepFn = stepFn;
     this.spawnRange = spawnRange;
+    this.spawnOffset = spawnOffset;
     this.center = center;
+    this.maxDistance = maxDistance;
     this.axisMapping = axisMapping;
     this.trailLength = trailLength;
     this.blink = blink;
     this.respawnChance = respawnChance;
+    this.warmupSteps = warmupSteps;
+    this.dt = dt;
 
-    // Initial position (with optional offset, e.g. Lorenz starts near z≈27)
-    this.position = {
-      x: (Math.random() - 0.5) * spawnRange + (spawnOffset?.x || 0),
-      y: (Math.random() - 0.5) * spawnRange + (spawnOffset?.y || 0),
-      z: (Math.random() - 0.5) * spawnRange + (spawnOffset?.z || 0),
-    };
     this.trail = [];
     this.speed = 0;
 
@@ -269,12 +272,27 @@ class AttractorParticle {
     this.blinkTime = 0;
     this.blinkIntensity = 0;
 
-    // Warmup: run particle forward a random number of steps to spread
-    // particles across the attractor cycle (e.g. Rössler)
-    if (warmupSteps > 0) {
-      const steps = Math.floor(Math.random() * warmupSteps);
+    // Place particle and run warmup
+    this.respawn();
+  }
+
+  /**
+   * Reset particle to a random position near the spawn origin,
+   * then run warmup steps so it settles onto the attractor
+   * (distributing across different wells/lobes).
+   */
+  respawn() {
+    this.position = {
+      x: (Math.random() - 0.5) * this.spawnRange + (this.spawnOffset?.x || 0),
+      y: (Math.random() - 0.5) * this.spawnRange + (this.spawnOffset?.y || 0),
+      z: (Math.random() - 0.5) * this.spawnRange + (this.spawnOffset?.z || 0),
+    };
+    this.trail = [];
+
+    if (this.warmupSteps > 0) {
+      const steps = Math.floor(Math.random() * this.warmupSteps);
       for (let i = 0; i < steps; i++) {
-        const result = this.stepFn(this.position, dt);
+        const result = this.stepFn(this.position, this.dt);
         this.position = result.position;
       }
     }
@@ -318,14 +336,20 @@ class AttractorParticle {
     this.position = result.position;
     this.speed = result.speed;
 
+    // Cull particles that escape too far from center
+    if (this.maxDistance > 0) {
+      const dx = this.position.x - this.center.x;
+      const dy = this.position.y - this.center.y;
+      const dz = this.position.z - this.center.z;
+      if (dx * dx + dy * dy + dz * dz > this.maxDistance * this.maxDistance) {
+        this.respawn();
+        return;
+      }
+    }
+
     // Optional random respawn to maintain transient visual thickness
     if (this.respawnChance > 0 && Math.random() < this.respawnChance) {
-      this.position = {
-        x: (Math.random() - 0.5) * this.spawnRange,
-        y: (Math.random() - 0.5) * this.spawnRange,
-        z: (Math.random() - 0.5) * this.spawnRange,
-      };
-      this.trail = [];
+      this.respawn();
     }
 
     // Centre-subtract, then apply axis mapping
@@ -512,6 +536,7 @@ class Attractor3DDemo extends Game {
       blink: cfg.blink,
       respawnChance: cfg.respawnChance,
       warmupSteps: cfg.warmupSteps,
+      maxDistance: cfg.maxDistance,
       dt: cfg.attractor.dt,
     });
   }

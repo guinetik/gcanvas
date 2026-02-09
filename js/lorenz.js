@@ -17,9 +17,9 @@ Attractor3DDemo.run("lorenz", {
   },
 
   particles: {
-    count: 400,
+    count: 600,
     trailLength: 250,
-    spawnRange: 2,
+    spawnRange: 5,
   },
 
   // Lorenz orbits around z ≈ 27 (ρ − 1)
@@ -28,7 +28,7 @@ Attractor3DDemo.run("lorenz", {
   // Angled to show the butterfly shape
   camera: {
     perspective: 800,
-    rotationX: -2,
+    rotationX: -1.8,
     rotationY: -3,
   },
 
@@ -53,4 +53,7 @@ Attractor3DDemo.run("lorenz", {
   // Start particles near the attractor centre
   spawnOffset: { z: 27 },
   normalizeRotation: true,
+
+  // Disable respawn — let all particles maintain full-length trails
+  respawnChance: 0.001,
 });
