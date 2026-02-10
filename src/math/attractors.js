@@ -540,6 +540,104 @@ const halvorsen = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// RABINOVICH-FABRIKANT ATTRACTOR
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Rabinovich-Fabrikant Attractor
+ *
+ * Discovered by Mikhail Rabinovich and Anatoly Fabrikant (1979).
+ * Models the stochasticity arising from modulation instability
+ * in a non-equilibrium dissipative medium. Produces wild, spiky
+ * trajectories with rapid folding.
+ *
+ * Uses 4th-order Runge-Kutta integration — this system is numerically
+ * stiff and diverges with simple Euler stepping.
+ *
+ * Equations:
+ *   dx/dt = y(z - 1 + x²) + γx
+ *   dy/dt = x(3z + 1 - x²) + γy
+ *   dz/dt = -2z(α + xy)
+ *
+ * Default parameters: α = 1.1, γ = 0.87
+ *
+ * @see {@link https://en.wikipedia.org/wiki/Rabinovich%E2%80%93Fabrikant_equations}
+ */
+const rabinovichFabrikant = {
+  name: "Rabinovich-Fabrikant",
+  type: AttractorType.CONTINUOUS,
+  dimension: AttractorDimension.THREE_D,
+
+  equations: [
+    "dx/dt = y(z - 1 + x²) + γx",
+    "dy/dt = x(3z + 1 - x²) + γy",
+    "dz/dt = -2z(α + xy)",
+  ],
+
+  defaultParams: {
+    alpha: 0.14,
+    gamma: 0.10,
+  },
+
+  defaultDt: 0.005,
+
+  derivatives(point, params = this.defaultParams) {
+    const { alpha, gamma } = { ...this.defaultParams, ...params };
+    const { x, y, z } = point;
+
+    return {
+      dx: y * (z - 1 + x * x) + gamma * x,
+      dy: x * (3 * z + 1 - x * x) + gamma * y,
+      dz: -2 * z * (alpha + x * y),
+    };
+  },
+
+  /**
+   * RK4 integration step — required for this stiff system.
+   */
+  step(point, dt = this.defaultDt, params = this.defaultParams) {
+    const { x, y, z } = point;
+
+    const k1 = this.derivatives({ x, y, z }, params);
+    const k2 = this.derivatives({
+      x: x + k1.dx * dt * 0.5,
+      y: y + k1.dy * dt * 0.5,
+      z: z + k1.dz * dt * 0.5,
+    }, params);
+    const k3 = this.derivatives({
+      x: x + k2.dx * dt * 0.5,
+      y: y + k2.dy * dt * 0.5,
+      z: z + k2.dz * dt * 0.5,
+    }, params);
+    const k4 = this.derivatives({
+      x: x + k3.dx * dt,
+      y: y + k3.dy * dt,
+      z: z + k3.dz * dt,
+    }, params);
+
+    const dx = (k1.dx + 2 * k2.dx + 2 * k3.dx + k4.dx) / 6;
+    const dy = (k1.dy + 2 * k2.dy + 2 * k3.dy + k4.dy) / 6;
+    const dz = (k1.dz + 2 * k2.dz + 2 * k3.dz + k4.dz) / 6;
+    const speed = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    return {
+      position: {
+        x: x + dx * dt,
+        y: y + dy * dt,
+        z: z + dz * dt,
+      },
+      velocity: { dx, dy, dz },
+      speed,
+    };
+  },
+
+  createStepper(params = this.defaultParams) {
+    const mergedParams = { ...this.defaultParams, ...params };
+    return (point, dt = this.defaultDt) => this.step(point, dt, mergedParams);
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // DE JONG ATTRACTOR
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -616,6 +714,7 @@ export const Attractors = {
   clifford,
   rossler,
   halvorsen,
+  rabinovichFabrikant,
   deJong,
 };
 

@@ -10,6 +10,8 @@ export { WebGLParticleRenderer } from "./webgl-particle-renderer.js";
 export { WebGLLineRenderer } from "./webgl-line-renderer.js";
 export { WebGLDeJongRenderer } from "./webgl-dejong-renderer.js";
 export { WebGLCliffordRenderer } from "./webgl-clifford-renderer.js";
+export { WebGLFBO } from "./webgl-fbo.js";
+export { WebGLAttractorPipeline } from "./webgl-attractor-pipeline.js";
 export { SPHERE_SHADERS } from "./shaders/sphere-shaders.js";
 export * from "./shaders/point-sprite-shaders.js";
 export * from "./shaders/dejong-point-shaders.js";

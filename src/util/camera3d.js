@@ -51,6 +51,7 @@ export class Camera3D {
     this.rotationX = options.rotationX ?? 0;
     this.rotationY = options.rotationY ?? 0;
     this.rotationZ = options.rotationZ ?? 0;
+    this.screenRotation = options.screenRotation ?? 0; // post-camera screen-plane spin
 
     // Position state (camera location in world space)
     this.x = options.x ?? 0;
@@ -61,6 +62,7 @@ export class Camera3D {
     this._initialRotationX = this.rotationX;
     this._initialRotationY = this.rotationY;
     this._initialRotationZ = this.rotationZ;
+    this._initialScreenRotation = this.screenRotation;
     this._initialX = this.x;
     this._initialY = this.y;
     this._initialZ = this.z;
@@ -90,6 +92,10 @@ export class Camera3D {
     this._lastDeltaX = 0;
     this._lastDeltaY = 0;
     this._lastMoveTime = 0;
+
+    // Mouse-to-rotation axis mapping (configurable via enableMouseControl)
+    this._hAxis = 'rotationY';  // horizontal drag controls this property
+    this._vAxis = 'rotationX';  // vertical drag controls this property
 
     // Internal state for mouse control
     this._isDragging = false;
@@ -149,10 +155,19 @@ export class Camera3D {
     const y1 = y * cosX - z1 * sinX;
     const z2 = y * sinX + z1 * cosX;
 
+    // Screen-plane rotation (clock-like spin, applied after all camera rotations)
+    let finalX = x1, finalY = y1;
+    if (this.screenRotation !== 0) {
+      const cosS = Math.cos(this.screenRotation);
+      const sinS = Math.sin(this.screenRotation);
+      finalX = x1 * cosS - y1 * sinS;
+      finalY = x1 * sinS + y1 * cosS;
+    }
+
     // Perspective projection
     const scale = this.perspective / (this.perspective + z2);
-    const screenX = x1 * scale;
-    const screenY = y1 * scale;
+    const screenX = finalX * scale;
+    const screenY = finalY * scale;
 
     return {
       x: screenX,
@@ -246,8 +261,8 @@ export class Camera3D {
     if (this.inertia && !this._isDragging && !this._followTarget) {
       // Apply velocity to rotation
       if (Math.abs(this._velocityX) > 0.0001 || Math.abs(this._velocityY) > 0.0001) {
-        this.rotationY += this._velocityY;
-        this.rotationX += this._velocityX;
+        this[this._hAxis] += this._velocityY;
+        this[this._vAxis] += this._velocityX;
 
         // Clamp X rotation
         if (this.clampX) {
@@ -301,6 +316,8 @@ export class Camera3D {
    * @param {object} [options] - Control options
    * @param {boolean} [options.invertX=false] - Invert horizontal rotation
    * @param {boolean} [options.invertY=false] - Invert vertical rotation
+   * @param {string} [options.horizontalAxis='rotationY'] - Rotation property controlled by horizontal drag
+   * @param {string} [options.verticalAxis='rotationX'] - Rotation property controlled by vertical drag
    * @returns {Camera3D} Returns this for chaining
    */
   enableMouseControl(canvas, options = {}) {
@@ -311,6 +328,8 @@ export class Camera3D {
     this._canvas = canvas;
     const invertX = options.invertX ? -1 : 1;
     const invertY = options.invertY ? -1 : 1;
+    this._hAxis = options.horizontalAxis || 'rotationY';
+    this._vAxis = options.verticalAxis || 'rotationX';
 
     // Create bound handlers so we can remove them later
     this._boundHandlers = {
@@ -333,8 +352,8 @@ export class Camera3D {
         const scaledDeltaX = deltaX * this.sensitivity * invertX;
         const scaledDeltaY = deltaY * this.sensitivity * invertY;
 
-        this.rotationY += scaledDeltaX;
-        this.rotationX += scaledDeltaY;
+        this[this._hAxis] += scaledDeltaX;
+        this[this._vAxis] += scaledDeltaY;
 
         if (this.clampX) {
           this.rotationX = Math.max(this.minRotationX, Math.min(this.maxRotationX, this.rotationX));
@@ -342,8 +361,8 @@ export class Camera3D {
 
         // Track velocity for inertia (store last delta)
         if (this.inertia) {
-          this._lastDeltaX = scaledDeltaY;  // X rotation from Y mouse movement
-          this._lastDeltaY = scaledDeltaX;  // Y rotation from X mouse movement
+          this._lastDeltaX = scaledDeltaY;
+          this._lastDeltaY = scaledDeltaX;
           this._lastMoveTime = performance.now();
         }
 
@@ -398,8 +417,8 @@ export class Camera3D {
         const scaledDeltaX = deltaX * this.sensitivity * invertX;
         const scaledDeltaY = deltaY * this.sensitivity * invertY;
 
-        this.rotationY += scaledDeltaX;
-        this.rotationX += scaledDeltaY;
+        this[this._hAxis] += scaledDeltaX;
+        this[this._vAxis] += scaledDeltaY;
 
         if (this.clampX) {
           this.rotationX = Math.max(this.minRotationX, Math.min(this.maxRotationX, this.rotationX));
@@ -475,6 +494,7 @@ export class Camera3D {
     this.rotationX = this._initialRotationX;
     this.rotationY = this._initialRotationY;
     this.rotationZ = this._initialRotationZ;
+    this.screenRotation = this._initialScreenRotation;
     this.x = this._initialX;
     this.y = this._initialY;
     this.z = this._initialZ;

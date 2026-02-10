@@ -25,8 +25,8 @@ Attractor3DDemo.run("rossler", {
     spawnRange: 4,
   },
 
-  // Rössler spirals in x-y, spikes in z
-  center: { x: 0, y: 5, z: 5 },
+  // Rössler spirals in x-y, spikes in z — centroid of trajectory
+  center: { x: 0.5, y: -2.5, z: 2.5 },
 
   camera: {
     perspective: 500,

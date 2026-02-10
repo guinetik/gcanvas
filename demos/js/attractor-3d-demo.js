@@ -36,7 +36,7 @@ import {
   Easing,
 } from "../../src/index.js";
 import { Camera3D } from "../../src/util/camera3d.js";
-import { WebGLLineRenderer } from "../../src/webgl/webgl-line-renderer.js";
+import { WebGLAttractorPipeline } from "../../src/webgl/webgl-attractor-pipeline.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEFAULT CONFIGURATION
@@ -87,6 +87,26 @@ const DEFAULTS = {
     intensityBoost: 1.8,
     saturationBoost: 1.5,
     alphaBoost: 1.5,
+  },
+
+  energyFlow: {
+    intensity: 0.4,
+    speed: 1.0,
+    sparkThreshold: 0.98,
+  },
+
+  background: {
+    fogDensity: 0.15,
+    noiseScale: 3.0,
+    animSpeed: 0.08,
+    baseColor: null, // auto-derived from visual hue if null
+  },
+
+  bloom: {
+    enabled: true,
+    threshold: 0.25,
+    strength: 0.35,
+    radius: 0.6,
   },
 
   zoom: {
@@ -488,23 +508,34 @@ class Attractor3DDemo extends Game {
       this.particles.push(this.createParticle());
     }
 
-    // ── WebGL line renderer ──────────────────────────────────────────────
+    // ── WebGL attractor pipeline ─────────────────────────────────────────
     const maxSegments = cfg.particles.count * cfg.particles.trailLength;
-    this.lineRenderer = new WebGLLineRenderer(maxSegments, {
-      width: this.width,
-      height: this.height,
-      blendMode: "additive",
-    });
+    this.attractorPipeline = new WebGLAttractorPipeline(
+      this.width,
+      this.height,
+      maxSegments,
+      {
+        bloom: cfg.bloom,
+        background: {
+          ...cfg.background,
+          baseColor: cfg.background.baseColor || this._computeBackgroundColor(),
+        },
+        visual: cfg.visual,
+        blink: cfg.blink,
+        energyFlow: cfg.energyFlow,
+      }
+    );
 
     this.segments = [];
     this.fadeAlpha = 1;
 
-    if (!this.lineRenderer.isAvailable()) {
+    const pipelineOk = this.attractorPipeline.init();
+    if (!pipelineOk) {
       console.warn("WebGL not available, falling back to Canvas 2D");
       this.useWebGL = false;
     } else {
       this.useWebGL = true;
-      console.log(`WebGL enabled, ${maxSegments} max segments`);
+      console.log(`WebGL attractor pipeline enabled, ${maxSegments} max segments`);
     }
 
     this.time = 0;
@@ -547,8 +578,8 @@ class Attractor3DDemo extends Game {
   /** @override */
   onResize() {
     if (!this.config) return; // guard: enableFluidSize fires before init
-    if (this.lineRenderer?.isAvailable()) {
-      this.lineRenderer.resize(this.width, this.height);
+    if (this.attractorPipeline?.isAvailable()) {
+      this.attractorPipeline.resize(this.width, this.height);
     }
     const { min, max, baseScreenSize } = this.config.zoom;
     this.defaultZoom = Math.min(
@@ -572,14 +603,24 @@ class Attractor3DDemo extends Game {
         this.camera.rotationY += speed * dt;
       } else if (axis === "x") {
         this.camera.rotationX += speed * dt;
+      } else if (axis === "z") {
+        this.camera.rotationZ += speed * dt;
+      } else if (axis === "screen") {
+        this.camera.screenRotation += speed * dt;
       }
     }
 
     // Optional rotation normalization to prevent unbounded values
     if (cfg.normalizeRotation) {
       const TAU = Math.PI * 2;
+      this.camera.rotationX =
+        ((this.camera.rotationX % TAU) + TAU) % TAU;
       this.camera.rotationY =
         ((this.camera.rotationY % TAU) + TAU) % TAU;
+      this.camera.rotationZ =
+        ((this.camera.rotationZ % TAU) + TAU) % TAU;
+      this.camera.screenRotation =
+        ((this.camera.screenRotation % TAU) + TAU) % TAU;
     }
 
     this.zoom += (this.targetZoom - this.zoom) * cfg.zoom.easing;
@@ -593,22 +634,13 @@ class Attractor3DDemo extends Game {
 
   /**
    * Project all particle trail segments into screen space for WebGL rendering.
+   * Color math is handled on the GPU — we only pass normalized metadata.
    * @param {number} cx - Screen centre X
    * @param {number} cy - Screen centre Y
    * @returns {number} Number of segments collected
    */
   collectSegments(cx, cy) {
-    const {
-      minHue,
-      maxHue,
-      maxSpeed,
-      saturation,
-      lightness,
-      maxAlpha,
-      hueShiftSpeed,
-    } = this.config.visual;
-    const { intensityBoost, saturationBoost, alphaBoost } = this.config.blink;
-    const hueOffset = (this.time * hueShiftSpeed) % 360;
+    const { maxSpeed } = this.config.visual;
 
     this.segments.length = 0;
 
@@ -625,34 +657,15 @@ class Attractor3DDemo extends Game {
         const p2 = this.camera.project(curr.x, curr.y, curr.z);
         if (p1.scale <= 0 || p2.scale <= 0) continue;
 
-        const age = i / particle.trail.length;
-        const speedNorm = Math.min(curr.speed / maxSpeed, 1);
-        const baseHue = maxHue - speedNorm * (maxHue - minHue);
-        const hue = ((baseHue + hueOffset) % 360 + 360) % 360;
-
-        const sat = Math.min(
-          100,
-          saturation * (1 + blink * (saturationBoost - 1))
-        );
-        const lit = Math.min(
-          100,
-          lightness * (1 + blink * (intensityBoost - 1))
-        );
-        const rgb = hslToRgb(hue, sat, lit);
-        const alpha = Math.min(
-          1,
-          (1 - age) * maxAlpha * (1 + blink * (alphaBoost - 1))
-        );
-
         this.segments.push({
           x1: cx + p1.x * this.zoom,
           y1: cy + p1.y * this.zoom,
           x2: cx + p2.x * this.zoom,
           y2: cy + p2.y * this.zoom,
-          r: rgb.r,
-          g: rgb.g,
-          b: rgb.b,
-          a: alpha,
+          speedNorm: Math.min(curr.speed / maxSpeed, 1),
+          age: i / particle.trail.length,
+          blink,
+          segIdx: i / particle.trail.length,
         });
       }
     }
@@ -740,13 +753,15 @@ class Attractor3DDemo extends Game {
     const prevAlpha = this.ctx.globalAlpha;
     this.ctx.globalAlpha = this.fadeAlpha;
 
-    if (this.useWebGL && this.lineRenderer.isAvailable()) {
+    if (this.useWebGL && this.attractorPipeline.isAvailable()) {
       const segmentCount = this.collectSegments(cx, cy);
       if (segmentCount > 0) {
-        this.lineRenderer.clear();
-        this.lineRenderer.updateLines(this.segments);
-        this.lineRenderer.render(segmentCount);
-        this.lineRenderer.compositeOnto(this.ctx, 0, 0);
+        const hueOffset = (this.time * this.config.visual.hueShiftSpeed) % 360;
+        this.attractorPipeline.beginFrame(this.time);
+        this.attractorPipeline.updateLines(this.segments);
+        this.attractorPipeline.renderLines(segmentCount, this.time, hueOffset);
+        this.attractorPipeline.endFrame();
+        this.attractorPipeline.compositeOnto(this.ctx, 0, 0);
       }
     } else {
       this.renderCanvas2D(cx, cy);
@@ -801,8 +816,20 @@ class Attractor3DDemo extends Game {
   /** @override */
   destroy() {
     this.gesture?.destroy();
-    this.lineRenderer?.destroy();
+    this.attractorPipeline?.destroy();
     super.destroy?.();
+  }
+
+  /**
+   * Derive a dark background base colour from the attractor's hue range.
+   * @private
+   * @returns {number[]} RGB triplet in [0,1] range
+   */
+  _computeBackgroundColor() {
+    const { minHue, maxHue } = this.config.visual;
+    const midHue = (minHue + maxHue) / 2;
+    const rgb = hslToRgb(midHue, 30, 8);
+    return [rgb.r / 255, rgb.g / 255, rgb.b / 255];
   }
 
   // ── Static launcher ──────────────────────────────────────────────────────
