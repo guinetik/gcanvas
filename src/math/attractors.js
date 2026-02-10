@@ -700,6 +700,77 @@ const deJong = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CHEN (CHEN-LEE) ATTRACTOR
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Chen (Chen-Lee) Attractor
+ *
+ * Discovered by Guanrong Chen and Jinhu Lü (1999).
+ * A chaotic system related to but distinct from Lorenz, producing
+ * a double-scroll butterfly with wider, more open lobes.
+ *
+ * Equations:
+ *   dx/dt = αx - yz
+ *   dy/dt = βy + xz
+ *   dz/dt = δz + xy/3
+ *
+ * Default parameters: α = 5, β = -10, δ = -0.38
+ *
+ * @see {@link https://www.dynamicmath.xyz/strange-attractors/}
+ */
+const chen = {
+  name: "Chen",
+  type: AttractorType.CONTINUOUS,
+  dimension: AttractorDimension.THREE_D,
+
+  equations: [
+    "dx/dt = αx - yz",
+    "dy/dt = βy + xz",
+    "dz/dt = δz + xy/3",
+  ],
+
+  defaultParams: {
+    alpha: 5,
+    beta: -10,
+    delta: -0.38,
+  },
+
+  defaultDt: 0.005,
+
+  derivatives(point, params = this.defaultParams) {
+    const { alpha, beta, delta } = { ...this.defaultParams, ...params };
+    const { x, y, z } = point;
+
+    return {
+      dx: alpha * x - y * z,
+      dy: beta * y + x * z,
+      dz: delta * z + x * y / 3,
+    };
+  },
+
+  step(point, dt = this.defaultDt, params = this.defaultParams) {
+    const d = this.derivatives(point, params);
+    const speed = Math.sqrt(d.dx * d.dx + d.dy * d.dy + d.dz * d.dz);
+
+    return {
+      position: {
+        x: point.x + d.dx * dt,
+        y: point.y + d.dy * dt,
+        z: point.z + d.dz * dt,
+      },
+      velocity: d,
+      speed,
+    };
+  },
+
+  createStepper(params = this.defaultParams) {
+    const mergedParams = { ...this.defaultParams, ...params };
+    return (point, dt = this.defaultDt) => this.step(point, dt, mergedParams);
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // EXPORTS
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -715,6 +786,7 @@ export const Attractors = {
   rossler,
   halvorsen,
   rabinovichFabrikant,
+  chen,
   deJong,
 };
 
