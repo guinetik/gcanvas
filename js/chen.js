@@ -41,6 +41,12 @@ Attractor3DDemo.run("chen", {
     hueShiftSpeed: 12,
   },
 
+  glow: {
+    enabled: true,
+    radius: 75,
+    intensity: 0.75,
+  },
+
   blink: {
     chance: 0.015,
     intensityBoost: 1.4,

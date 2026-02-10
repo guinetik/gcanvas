@@ -107,6 +107,13 @@ const DEFAULTS = {
     threshold: 0.25,
     strength: 0.35,
     radius: 0.6,
+    passes: 1,
+  },
+
+  glow: {
+    enabled: true,
+    radius: 50,
+    intensity: 0.5,
   },
 
   depthFog: {
@@ -555,6 +562,7 @@ class Attractor3DDemo extends Game {
         iridescence: cfg.iridescence,
         chromaticAberration: cfg.chromaticAberration,
         colorGrading: cfg.colorGrading,
+        glow: cfg.glow,
       }
     );
 

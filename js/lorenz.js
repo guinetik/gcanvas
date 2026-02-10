@@ -17,7 +17,7 @@ Attractor3DDemo.run("lorenz", {
   },
 
   particles: {
-    count: Screen.responsive(300, 450, 600),
+    count: Screen.responsive(300, 450, 500),
     trailLength: Screen.responsive(150, 200, 250),
     spawnRange: 5,
   },
@@ -30,6 +30,12 @@ Attractor3DDemo.run("lorenz", {
     perspective: 800,
     rotationX: -1.8,
     rotationY: -3,
+  },
+
+  glow: {
+    enabled: true,
+    radius: 25,
+    intensity: 0.25,
   },
 
   visual: {
