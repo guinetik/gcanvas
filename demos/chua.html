@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chua's Circuit Attractor 3D</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Chua's Circuit</strong> (1983)<br/>
+    <span style="color:#CCC">
+      <li>dx/dt = &alpha;(y - x - h(x))</li>
+      <li>dy/dt = x - y + z</li>
+      <li>dz/dt = -&gamma;y</li>
+      <li>G(x) = m<sub>1</sub>x + &frac12;(m<sub>0</sub> - m<sub>1</sub>)(|x+1| - |x-1|)</li>
+      <li>&alpha;=15.6, &gamma;=25.58, m<sub>0</sub>=-2, m<sub>1</sub>=0</li>
+      <li>Double-scroll attractor</li>
+      <li>Drag to rotate</li>
+      <li>Scroll/pinch to zoom</li>
+      <li>Double-click to reset zoom</li>
+      <li>Press R to restart</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/chua.js"></script>
+</body>
+</html>

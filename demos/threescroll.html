@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Three-Scroll Attractor 3D</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Three-Scroll Unified Chaotic System</strong><br/>
+    <span style="color:#CCC">
+      <li>dx/dt = a(y - x) + dxz</li>
+      <li>dy/dt = bx - xz + fy</li>
+      <li>dz/dt = cz + xy - ex&sup2;</li>
+      <li>a=32.48, b=45.84, c=1.18</li>
+      <li>d=0.13, e=0.57, f=14.7</li>
+      <li>Three intertwined scroll structures</li>
+      <li>Drag to rotate</li>
+      <li>Scroll/pinch to zoom</li>
+      <li>Double-click to reset zoom</li>
+      <li>Press R to restart</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/threescroll.js"></script>
+</body>
+</html>

@@ -771,6 +771,182 @@ const chen = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// THREE-SCROLL UNIFIED CHAOTIC SYSTEM (TSUCS)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Three-Scroll Unified Chaotic System (TSUCS)
+ *
+ * A six-parameter system that produces three intertwined scroll structures.
+ * Features dramatic sweeping arcs and nested loops.
+ *
+ * Equations:
+ *   dx/dt = a(y - x) + dxz
+ *   dy/dt = bx - xz + fy
+ *   dz/dt = cz + xy - ex²
+ *
+ * Default parameters: a=32.48, b=45.84, c=1.18, d=0.13, e=0.57, f=14.7
+ *
+ * @see {@link https://www.dynamicmath.xyz/strange-attractors/}
+ */
+const threeScroll = {
+  name: "Three-Scroll",
+  type: AttractorType.CONTINUOUS,
+  dimension: AttractorDimension.THREE_D,
+
+  equations: [
+    "dx/dt = a(y - x) + dxz",
+    "dy/dt = bx - xz + fy",
+    "dz/dt = cz + xy - ex²",
+  ],
+
+  defaultParams: {
+    a: 32.48,
+    b: 45.84,
+    c: 1.18,
+    d: 0.13,
+    e: 0.57,
+    f: 14.7,
+  },
+
+  defaultDt: 0.002,
+
+  derivatives(point, params = this.defaultParams) {
+    const { a, b, c, d, e, f } = { ...this.defaultParams, ...params };
+    const { x, y, z } = point;
+
+    return {
+      dx: a * (y - x) + d * x * z,
+      dy: b * x - x * z + f * y,
+      dz: c * z + x * y - e * x * x,
+    };
+  },
+
+  /**
+   * RK4 integration step — large parameters (a≈32, b≈46) produce
+   * big derivatives that make Euler unstable at usable timesteps.
+   */
+  step(point, dt = this.defaultDt, params = this.defaultParams) {
+    const { x, y, z } = point;
+
+    const k1 = this.derivatives({ x, y, z }, params);
+    const k2 = this.derivatives({
+      x: x + k1.dx * dt * 0.5,
+      y: y + k1.dy * dt * 0.5,
+      z: z + k1.dz * dt * 0.5,
+    }, params);
+    const k3 = this.derivatives({
+      x: x + k2.dx * dt * 0.5,
+      y: y + k2.dy * dt * 0.5,
+      z: z + k2.dz * dt * 0.5,
+    }, params);
+    const k4 = this.derivatives({
+      x: x + k3.dx * dt,
+      y: y + k3.dy * dt,
+      z: z + k3.dz * dt,
+    }, params);
+
+    const dx = (k1.dx + 2 * k2.dx + 2 * k3.dx + k4.dx) / 6;
+    const dy = (k1.dy + 2 * k2.dy + 2 * k3.dy + k4.dy) / 6;
+    const dz = (k1.dz + 2 * k2.dz + 2 * k3.dz + k4.dz) / 6;
+    const speed = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    return {
+      position: {
+        x: x + dx * dt,
+        y: y + dy * dt,
+        z: z + dz * dt,
+      },
+      velocity: { dx, dy, dz },
+      speed,
+    };
+  },
+
+  createStepper(params = this.defaultParams) {
+    const mergedParams = { ...this.defaultParams, ...params };
+    return (point, dt = this.defaultDt) => this.step(point, dt, mergedParams);
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHUA'S CIRCUIT ATTRACTOR
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Chua's Circuit Attractor (1983)
+ *
+ * The first physical electronic circuit proven to exhibit chaos.
+ * Designed by Leon Chua, it uses a piecewise-linear nonlinear resistor
+ * (Chua diode) to produce the iconic double-scroll attractor.
+ *
+ * Equations:
+ *   dx/dt = α(y - x - G(x))
+ *   dy/dt = x - y + z
+ *   dz/dt = -γy
+ *
+ *   G(x) = m₁x + ½(m₀ - m₁)(|x + 1| - |x - 1|)
+ *
+ * Default parameters: α=15.6, γ=25.58, m₀=-2, m₁=0
+ *
+ * @see {@link https://en.wikipedia.org/wiki/Chua%27s_circuit}
+ */
+const chua = {
+  name: "Chua",
+  type: AttractorType.CONTINUOUS,
+  dimension: AttractorDimension.THREE_D,
+
+  equations: [
+    "dx/dt = α(y - x - G(x))",
+    "dy/dt = x - y + z",
+    "dz/dt = -γy",
+    "G(x) = m₁x + ½(m₀ - m₁)(|x+1| - |x-1|)",
+  ],
+
+  defaultParams: {
+    alpha: 15.6,
+    gamma: 25.58,
+    m0: -2,
+    m1: 0,
+  },
+
+  defaultDt: 0.01,
+
+  derivatives(point, params = this.defaultParams) {
+    const { alpha, gamma, m0, m1 } = { ...this.defaultParams, ...params };
+    const { x, y, z } = point;
+
+    // Piecewise-linear Chua diode characteristic
+    const g = m1 * x + 0.5 * (m0 - m1) * (Math.abs(x + 1) - Math.abs(x - 1));
+
+    return {
+      dx: alpha * (y - x - g),
+      dy: x - y + z,
+      dz: -gamma * y,
+    };
+  },
+
+  step(point, dt = this.defaultDt, params = this.defaultParams) {
+    const d = this.derivatives(point, params);
+    const speed = Math.sqrt(d.dx * d.dx + d.dy * d.dy + d.dz * d.dz);
+
+    return {
+      position: {
+        x: point.x + d.dx * dt,
+        y: point.y + d.dy * dt,
+        z: point.z + d.dz * dt,
+      },
+      velocity: d,
+      speed,
+    };
+  },
+
+  createStepper(params = this.defaultParams) {
+    const mergedParams = { ...this.defaultParams, ...params };
+    return (point, dt = this.defaultDt) => this.step(point, dt, mergedParams);
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // EXPORTS
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -788,6 +964,8 @@ export const Attractors = {
   rabinovichFabrikant,
   chen,
   deJong,
+  threeScroll,
+  chua,
 };
 
 /**
