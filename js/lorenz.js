@@ -22,8 +22,8 @@ Attractor3DDemo.run("lorenz", {
     spawnRange: 5,
   },
 
-  // Lorenz orbits around z ≈ 27 (ρ − 1)
-  center: { x: 5, y: 0, z: 27 },
+  // Lorenz orbits around z ≈ 27 (ρ − 1), symmetric lobes average to x ≈ 0
+  center: { x: 0, y: 0, z: 27 },
 
   // Angled to show the butterfly shape
   camera: {
@@ -47,6 +47,9 @@ Attractor3DDemo.run("lorenz", {
     intensityBoost: 1.4,
   },
 
+  // Horizontal drag controls Z rotation (top-down camera)
+  mouseControl: { horizontalAxis: "rotationZ" },
+
   zoom: { min: 0.2, max: 2.5 },
   restart: { delay: 1 },
 
@@ -57,5 +60,5 @@ Attractor3DDemo.run("lorenz", {
   // Disable respawn — let all particles maintain full-length trails
   respawnChance: 0.001,
 
-  autoRotation: { enabled: true, speed: 0.15, axis: "y" },
+  autoRotation: { enabled: true, speed: 0.15, axis: "z" },
 });

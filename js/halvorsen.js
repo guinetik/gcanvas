@@ -16,8 +16,8 @@ Attractor3DDemo.run("halvorsen", {
   },
 
   particles: {
-    count: Screen.responsive(350, 500, 700),
-    trailLength: Screen.responsive(100, 125, 150),
+    count: Screen.responsive(350, 500, 800),
+    trailLength: Screen.responsive(100, 125, 200),
     spawnRange: 1,
   },
 
@@ -52,8 +52,12 @@ Attractor3DDemo.run("halvorsen", {
 
   // Swap Y/Z so vertical mouse drag rotates naturally
   axisMapping: "yz-swap",
+  // Horizontal drag controls screen-plane rotation (clock-like spin)
+  mouseControl: { horizontalAxis: "screenRotation" },
+  normalizeRotation: true,
 
+  maxDistance: 20,       // Cull particles that escape the attractor basin
   respawnChance: 0.002,
 
-  autoRotation: { enabled: true, speed: 0.15, axis: "y" },
+  autoRotation: { enabled: true, speed: 0.15, axis: "screen" },
 });

@@ -22,7 +22,7 @@ Attractor3DDemo.run("aizawa", {
     spawnRange: 0.5,
   },
 
-  center: { x: 0, y: 0, z: 0 },
+  center: { x: 0, y: 0, z: 0.65 },
 
   camera: {
     perspective: 800,
