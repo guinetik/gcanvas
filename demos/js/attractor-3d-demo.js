@@ -107,6 +107,41 @@ const DEFAULTS = {
     threshold: 0.25,
     strength: 0.35,
     radius: 0.6,
+    passes: 1,
+  },
+
+  glow: {
+    enabled: true,
+    radius: 50,
+    intensity: 0.5,
+  },
+
+  depthFog: {
+    enabled: true,
+    density: 0.5,
+    energyFalloff: 0.7,
+  },
+
+  iridescence: {
+    enabled: true,
+    intensity: 0.3,
+    speed: 0.5,
+    scale: 2.0,
+  },
+
+  chromaticAberration: {
+    enabled: false,
+    strength: 0.002,
+    falloff: 2.0,
+  },
+
+  colorGrading: {
+    enabled: false,
+    exposure: 1.4,
+    vignetteStrength: 0.15,
+    vignetteRadius: 0.85,
+    grainIntensity: 0.02,
+    warmth: 0.15,
   },
 
   zoom: {
@@ -523,6 +558,11 @@ class Attractor3DDemo extends Game {
         visual: cfg.visual,
         blink: cfg.blink,
         energyFlow: cfg.energyFlow,
+        depthFog: cfg.depthFog,
+        iridescence: cfg.iridescence,
+        chromaticAberration: cfg.chromaticAberration,
+        colorGrading: cfg.colorGrading,
+        glow: cfg.glow,
       }
     );
 
@@ -641,6 +681,7 @@ class Attractor3DDemo extends Game {
    */
   collectSegments(cx, cy) {
     const { maxSpeed } = this.config.visual;
+    const perspective = this.config.camera.perspective;
 
     this.segments.length = 0;
 
@@ -657,6 +698,10 @@ class Attractor3DDemo extends Game {
         const p2 = this.camera.project(curr.x, curr.y, curr.z);
         if (p1.scale <= 0 || p2.scale <= 0) continue;
 
+        // Normalize depth to [0,1] using perspective distance
+        const depth1 = Math.max(0, Math.min(1, p1.z / perspective));
+        const depth2 = Math.max(0, Math.min(1, p2.z / perspective));
+
         this.segments.push({
           x1: cx + p1.x * this.zoom,
           y1: cy + p1.y * this.zoom,
@@ -666,6 +711,8 @@ class Attractor3DDemo extends Game {
           age: i / particle.trail.length,
           blink,
           segIdx: i / particle.trail.length,
+          depth1,
+          depth2,
         });
       }
     }

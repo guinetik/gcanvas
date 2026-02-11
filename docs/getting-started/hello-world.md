@@ -42,7 +42,8 @@ Painter.init(canvas.getContext('2d'));
 const circle = new Circle(50, {
   x: 400,
   y: 300,
-  color: 'red'
+  color: 'red',
+  origin: "center"
 });
 
 // Draw it
@@ -63,7 +64,8 @@ Painter.init(canvas.getContext('2d'));
 const circle = new Circle(50, {
   x: 200,
   y: 300,
-  color: '#ff6b6b'
+  color: '#ff6b6b',
+  origin: "center"
 });
 
 // Rectangle
@@ -74,7 +76,8 @@ const rect = new Rectangle({
   height: 80,
   color: '#4ecdc4',
   stroke: '#fff',
-  lineWidth: 2
+  lineWidth: 2,
+  origin: "center"
 });
 
 // Star
@@ -82,7 +85,8 @@ const star = new Star(40, 5, {
   x: 600,
   y: 300,
   color: '#ffe66d',
-  rotation: Math.PI / 10
+  rotation: 18,
+  origin: "center"
 });
 
 // Draw all shapes
@@ -108,21 +112,23 @@ group.add(new Rectangle({
   height: 80,
   color: '#333',
   stroke: '#0f0',
-  lineWidth: 2
+  lineWidth: 2,
+  origin: "center"
 }));
 
 group.add(new TextShape('Hello World!', {
   font: '24px monospace',
   color: '#0f0',
   align: 'center',
-  baseline: 'middle'
+  baseline: 'middle',
+  origin: "center"
 }));
 
 // Draw the group
 group.draw();
 
 // Rotate the entire group
-group.rotation = Math.PI / 12;  // 15 degrees
+group.rotation = 15;  // degrees
 Painter.clear();
 group.draw();
 ```
@@ -142,7 +148,8 @@ Painter.init(ctx);
 const circle = new Circle(50, {
   x: 400,
   y: 300,
-  color: '#4ecdc4'
+  color: '#4ecdc4',
+  origin: "center"
 });
 
 // Animation variables
@@ -200,9 +207,9 @@ Here's a complete example with multiple animated shapes:
     const centerY = canvas.height / 2;
 
     // Create shapes
-    const circle = new Circle(60, { color: '#ff6b6b' });
-    const rect = new Rectangle({ width: 100, height: 60, color: '#4ecdc4' });
-    const star = new Star(40, 5, { color: '#ffe66d' });
+    const circle = new Circle(60, { color: '#ff6b6b', origin: "center" });
+    const rect = new Rectangle({ width: 100, height: 60, color: '#4ecdc4', origin: "center" });
+    const star = new Star(40, 5, { color: '#ffe66d', origin: "center" });
 
     let time = 0;
 
@@ -253,7 +260,7 @@ Here's a complete example with multiple animated shapes:
 | `shape.draw()` | Draw a shape at its current position |
 | `shape.x`, `shape.y` | Position (top-left by default, or origin point if set) |
 | `shape.origin` | Origin point: `"top-left"` (default), `"center"`, etc. |
-| `shape.rotation` | Rotation in radians (pivots around origin) |
+| `shape.rotation` | Rotation in degrees (pivots around origin) |
 | `shape.opacity` | Transparency (0 to 1) |
 | `Group` | Container for multiple shapes |
 
