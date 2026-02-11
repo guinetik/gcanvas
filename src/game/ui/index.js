@@ -4,4 +4,7 @@ export { ToggleButton } from "./togglebutton.js";
 export { Tooltip } from "./tooltip.js";
 export { FPSCounter } from "./fps.js";
 export { Stepper } from "./stepper.js";
+export { Slider } from "./slider.js";
+export { Dropdown } from "./dropdown.js";
+export { AccordionSection, AccordionGroup } from "./accordion.js";
 export { UI_THEME } from "./theme.js";

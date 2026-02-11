@@ -114,6 +114,61 @@ export const UI_THEME = {
     border: "rgba(0, 255, 0, 0.5)",
     text: "#0f0",
   },
+
+  /**
+   * Pre-configured dropdown styles
+   */
+  dropdown: {
+    trigger: {
+      bg: "rgba(0, 0, 0, 0.85)",
+      border: "rgba(0, 255, 0, 0.4)",
+      text: "#0f0",
+      placeholder: "rgba(0, 255, 0, 0.5)",
+      arrow: "rgba(0, 255, 0, 0.7)",
+      hoverBg: "rgba(0, 255, 0, 0.08)",
+      hoverBorder: "#0f0",
+    },
+    panel: {
+      bg: "rgba(0, 0, 0, 0.92)",
+      border: "rgba(0, 255, 0, 0.5)",
+    },
+    item: {
+      text: "rgba(0, 255, 0, 0.8)",
+      hoverBg: "#0f0",
+      hoverText: "#000",
+      selectedText: "#0f0",
+    },
+    scrollbar: {
+      track: "rgba(0, 255, 0, 0.1)",
+      thumb: "rgba(0, 255, 0, 0.4)",
+    },
+    label: {
+      text: "rgba(0, 255, 0, 0.7)",
+    },
+  },
+
+  /**
+   * Pre-configured slider styles
+   */
+  slider: {
+    track: {
+      bg: "rgba(0, 0, 0, 0.85)",
+      border: "rgba(0, 255, 0, 0.4)",
+      fill: "#0f0",
+      fillGlow: "rgba(0, 255, 0, 0.3)",
+    },
+    thumb: {
+      fill: "#0f0",
+      stroke: "#0f0",
+      glow: "rgba(0, 255, 0, 0.5)",
+      pulseGlow: "rgba(0, 255, 0, 0.25)",
+    },
+    label: {
+      text: "rgba(0, 255, 0, 0.7)",
+      value: "#0f0",
+      minMax: "rgba(0, 255, 0, 0.5)",
+    },
+  },
 };
 
 export default UI_THEME;
