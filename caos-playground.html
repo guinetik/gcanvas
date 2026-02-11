@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Caos Playground</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Caos Playground</strong> — A playground for strange attractors.
+  </div>
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { CaosPlayground } from "./js/caos-playground.js";
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new CaosPlayground(canvas);
+      game.enablePauseOnBlur(true);
+      game.setFPS(60);
+      game.start();
+    });
+  </script>
+</body>
+
+</html>
