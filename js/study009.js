@@ -32,7 +32,7 @@ function scaledMonadCount() {
   const area = Screen.width * Screen.height;
   const baseArea = 1920 * 1080;
   const scale = Math.sqrt(area / baseArea); // sqrt so it doesn't explode
-  return Math.min(100, Math.round(base * Math.max(1, scale)));
+  return Math.min(150, Math.round(base * Math.max(1, scale)));
 }
 
 // Configuration
@@ -117,7 +117,7 @@ const CONFIG = {
 
   // Spawn
   spawn: {
-    interval: 0.8,            // seconds between each new monad
+    interval: 0.4,            // seconds between each new monad
     entrySpeed: 4,            // how fast they drift inward from the edge
   },
 };
