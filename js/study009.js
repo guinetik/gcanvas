@@ -24,9 +24,20 @@ import { Screen } from "/gcanvas.es.min.js";
 import { Synth } from "/gcanvas.es.min.js";
 import { SynthNoise } from "/gcanvas.es.min.js";
 
+// Scale monad count by screen area — more particles on 2K/4K
+function scaledMonadCount() {
+  const base = Screen.responsive(40, 70, 120);
+  if (!Screen.isDesktop) return base;
+  // 1080p ≈ 2M px (baseline), 1440p ≈ 3.7M, 4K ≈ 8.3M
+  const area = Screen.width * Screen.height;
+  const baseArea = 1920 * 1080;
+  const scale = Math.sqrt(area / baseArea); // sqrt so it doesn't explode
+  return Math.min(100, Math.round(base * Math.max(1, scale)));
+}
+
 // Configuration
 const CONFIG = {
-  monadCount: Screen.responsive(40, 70, 120),
+  monadCount: scaledMonadCount(),
   baseRadius: Screen.responsive(4, 5, 5),
   orbitRadiusRange: Screen.responsive([50, 150], [65, 200], [80, 250]),
   freqRange: [0.2, 0.8],
@@ -99,9 +110,14 @@ const CONFIG = {
     radiusMultiplier: 4,      // glow expands to this * glowRadius
   },
 
+  // Sound-triggered white blink
+  blink: {
+    duration: 0.3,            // seconds to fade from white to target color
+  },
+
   // Spawn
   spawn: {
-    interval: 0.35,           // seconds between each new monad
+    interval: 0.8,            // seconds between each new monad
     entrySpeed: 4,            // how fast they drift inward from the edge
   },
 };
@@ -268,6 +284,10 @@ class Monad {
 
     this.communityId = -1;    // current Louvain community
     this.flashTime = -1;      // time when community changed (-1 = no flash)
+    this.blinkTime = -1;      // time when sound triggered (-1 = no blink)
+    this.pulseTime = -1;      // time when pulse started
+    this.pulseScale = 0;      // how much radius multiplies (set per trigger)
+    this.pulseDuration = 0;   // how long the pulse lasts
   }
 
   update(dt, gravityWells, canvasW, canvasH, time) {
@@ -498,7 +518,19 @@ window.addEventListener("load", () => {
           ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
+          // Sine wave along the edge
+          const segments = 12;
+          const nx = -(b.y - a.y) / dist; // perpendicular normal
+          const ny =  (b.x - a.x) / dist;
+          const amp = 6 + dist * 0.03;    // amplitude scales with distance
+          const freq = 3;                 // wave cycles along the edge
+          for (let s = 1; s <= segments; s++) {
+            const t = s / segments;
+            const lx = a.x + (b.x - a.x) * t;
+            const ly = a.y + (b.y - a.y) * t;
+            const wave = Math.sin(t * freq * Math.PI * 2 + time * 8) * amp * Math.sin(t * Math.PI);
+            ctx.lineTo(lx + nx * wave, ly + ny * wave);
+          }
           ctx.stroke();
         }
       }
@@ -518,16 +550,42 @@ window.addEventListener("load", () => {
       ctx.fill();
     }
 
-    // 4. Monad cores
+    // 4. Monad cores (blink white + radius pulse on sound trigger)
     for (const m of monads) {
-      ctx.fillStyle = `hsl(${m.hue}, ${m.sat}%, ${m.lit}%)`;
+      let sat = m.sat;
+      let lit = m.lit;
+      if (m.blinkTime >= 0) {
+        const elapsed = time - m.blinkTime;
+        if (elapsed > CONFIG.blink.duration) {
+          m.blinkTime = -1;
+        } else {
+          const t = 1 - elapsed / CONFIG.blink.duration; // 1→0
+          sat = m.sat * (1 - t);
+          lit = m.lit + (100 - m.lit) * t;
+        }
+      }
+
+      // Radius pulse: sharp attack, smooth decay
+      let r = m.radius;
+      if (m.pulseTime >= 0) {
+        const elapsed = time - m.pulseTime;
+        if (elapsed > m.pulseDuration) {
+          m.pulseTime = -1;
+        } else {
+          const t = elapsed / m.pulseDuration;
+          const ease = 1 - t * t; // fast attack, smooth falloff
+          r *= 1 + (m.pulseScale - 1) * ease;
+        }
+      }
+
+      ctx.fillStyle = `hsl(${m.hue}, ${sat}%, ${lit}%)`;
       ctx.beginPath();
-      ctx.arc(m.x, m.y, m.radius, 0, TWO_PI);
+      ctx.arc(m.x, m.y, r, 0, TWO_PI);
       ctx.fill();
 
-      ctx.fillStyle = `hsl(${m.hue}, ${m.sat + 10}%, ${m.lit + 25}%)`;
+      ctx.fillStyle = `hsl(${m.hue}, ${Math.max(0, sat - 10)}%, ${Math.min(100, lit + 25)}%)`;
       ctx.beginPath();
-      ctx.arc(m.x, m.y, m.radius * 0.4, 0, TWO_PI);
+      ctx.arc(m.x, m.y, r * 0.4, 0, TWO_PI);
       ctx.fill();
     }
 
@@ -578,6 +636,7 @@ window.addEventListener("load", () => {
   function setup() {
     monads = [];
     spawnTimer = 0;
+    lastTouchSoundTime = 0;
     louvainTimer = CONFIG.louvain.interval; // run immediately on first frame
   }
 
@@ -630,6 +689,11 @@ window.addEventListener("load", () => {
           const dy = a.y - b.y;
           if (dx * dx + dy * dy < touchDistSq) {
             playTouchBlip((a.hue + b.hue) / 2, (a.x + b.x) / 2);
+            a.blinkTime = time;
+            b.blinkTime = time;
+            // High note → quick sharp pop
+            a.pulseTime = time; a.pulseScale = 2.5; a.pulseDuration = 0.12;
+            b.pulseTime = time; b.pulseScale = 2.5; b.pulseDuration = 0.12;
             lastTouchSoundTime = time;
             i = monads.length; // break both loops
             break;
@@ -654,6 +718,11 @@ window.addEventListener("load", () => {
           // Detect community change → flash + chime
           if (monads[i].communityId !== -1 && monads[i].communityId !== communities[i]) {
             monads[i].flashTime = time;
+            monads[i].blinkTime = time;
+            // Lower note → slow gentle swell
+            monads[i].pulseTime = time;
+            monads[i].pulseScale = 1.8;
+            monads[i].pulseDuration = 0.4;
             if (!chimed) {
               playCommunityChime(color.h, monads[i].x);
               chimed = true; // one chime per detection pass
