@@ -1,27 +1,43 @@
 /**
- * Study 009 - Monad Network
+ * Study 009 - Monad Melody
  *
- * Purple glowing orbs ("monads") orbit in Lissajous-like paths,
- * forming a dynamic network graph. Nearby monads connect with
- * fading lines. Louvain community detection colors monads by
- * cluster. Click creates a temporary gravity well.
+ * Glowing orbs ("monads") drift in from the edges, orbiting along
+ * Lissajous paths and weaving a luminous network. As they cluster,
+ * Louvain community detection recolors them — each shift punctuated
+ * by a stereo chime. Close encounters trigger pentatonic blips;
+ * clicks scatter the swarm with a windy burst. The canvas hums.
  *
  * Features:
- * - Lissajous orbital dynamics
- * - Distance-based network graph connections
- * - Louvain community detection with smooth color transitions
- * - Additive glow halos
- * - Click gravity wells with expanding ring pulse
- * - Motion trail effect via semi-transparent clear
- * - Fully responsive
+ * - Staggered spawn from offscreen edges
+ * - Lissajous orbital dynamics with anchor drift
+ * - Distance-based network graph with hue-blended connections
+ * - Louvain community detection with flash + chime on reassignment
+ * - Stereo-panned procedural audio (touch blips, community chimes, woosh)
+ * - Click repulsion with wind-noise burst
+ * - Motion trails, additive glow halos
+ * - Fully responsive (Screen.responsive)
+ * - Press R to reset
  */
 
 import { gcanvas } from "../../src/index.js";
 import { Screen } from "../../src/io/screen.js";
+import { Synth } from "../../src/sound/synth.js";
+import { SynthNoise } from "../../src/sound/synth.noise.js";
+
+// Scale monad count by screen area — more particles on 2K/4K
+function scaledMonadCount() {
+  const base = Screen.responsive(40, 70, 120);
+  if (!Screen.isDesktop) return base;
+  // 1080p ≈ 2M px (baseline), 1440p ≈ 3.7M, 4K ≈ 8.3M
+  const area = Screen.width * Screen.height;
+  const baseArea = 1920 * 1080;
+  const scale = Math.sqrt(area / baseArea); // sqrt so it doesn't explode
+  return Math.min(150, Math.round(base * Math.max(1, scale)));
+}
 
 // Configuration
 const CONFIG = {
-  monadCount: Screen.responsive(40, 70, 120),
+  monadCount: scaledMonadCount(),
   baseRadius: Screen.responsive(4, 5, 5),
   orbitRadiusRange: Screen.responsive([50, 150], [65, 200], [80, 250]),
   freqRange: [0.2, 0.8],
@@ -72,10 +88,37 @@ const CONFIG = {
   },
 
   gravityWell: {
-    strength: 8000,
-    duration: 2.0,
+    strength: -80000,
+    duration: 1.2,
     ringSpeed: 200,
     ringMaxRadius: 300,
+  },
+
+  // Sound
+  sound: {
+    touchDistance: 25,         // monads "touching" threshold
+    touchCooldown: 0.08,      // min seconds between touch blips
+    touchBaseFreq: 600,       // base frequency for touch blip
+    touchVolume: 0.06,
+    communityFreq: 440,       // base freq for community chime
+    communityVolume: 0.08,
+  },
+
+  // Community flash
+  flash: {
+    duration: 0.6,            // seconds
+    radiusMultiplier: 4,      // glow expands to this * glowRadius
+  },
+
+  // Sound-triggered white blink
+  blink: {
+    duration: 0.3,            // seconds to fade from white to target color
+  },
+
+  // Spawn
+  spawn: {
+    interval: 0.4,            // seconds between each new monad
+    entrySpeed: 4,            // how fast they drift inward from the edge
   },
 };
 
@@ -185,14 +228,32 @@ function communityDegreeExcluding(comm, deg, c, exclude, n) {
 // ─── Monad class ────────────────────────────────────────────
 
 class Monad {
-  constructor(canvasW, canvasH) {
-    this.reset(canvasW, canvasH);
+  constructor(canvasW, canvasH, fromEdge = false) {
+    this.reset(canvasW, canvasH, fromEdge);
   }
 
-  reset(canvasW, canvasH) {
+  reset(canvasW, canvasH, fromEdge = false) {
     const pad = 60;
-    this.anchorX = pad + Math.random() * (canvasW - pad * 2);
-    this.anchorY = pad + Math.random() * (canvasH - pad * 2);
+    // Final destination anchor somewhere inside the canvas
+    const destX = pad + Math.random() * (canvasW - pad * 2);
+    const destY = pad + Math.random() * (canvasH - pad * 2);
+
+    if (fromEdge) {
+      // Start offscreen from a random edge
+      const edge = Math.floor(Math.random() * 4);
+      const offset = 80;
+      if (edge === 0)      { this.anchorX = -offset;          this.anchorY = Math.random() * canvasH; }
+      else if (edge === 1) { this.anchorX = canvasW + offset;  this.anchorY = Math.random() * canvasH; }
+      else if (edge === 2) { this.anchorX = Math.random() * canvasW; this.anchorY = -offset; }
+      else                 { this.anchorX = Math.random() * canvasW; this.anchorY = canvasH + offset; }
+      this.destX = destX;
+      this.destY = destY;
+      this.entering = true;
+    } else {
+      this.anchorX = destX;
+      this.anchorY = destY;
+      this.entering = false;
+    }
 
     const [minR, maxR] = CONFIG.orbitRadiusRange;
     this.orbitA = minR + Math.random() * (maxR - minR);
@@ -220,10 +281,33 @@ class Monad {
     this.x = this.anchorX;
     this.y = this.anchorY;
     this.radius = CONFIG.baseRadius;
+
+    this.communityId = -1;    // current Louvain community
+    this.flashTime = -1;      // time when community changed (-1 = no flash)
+    this.blinkTime = -1;      // time when sound triggered (-1 = no blink)
+    this.pulseTime = -1;      // time when pulse started
+    this.pulseScale = 0;      // how much radius multiplies (set per trigger)
+    this.pulseDuration = 0;   // how long the pulse lasts
   }
 
   update(dt, gravityWells, canvasW, canvasH, time) {
     this.phase += dt;
+
+    // Drift toward destination if entering from offscreen
+    if (this.entering) {
+      const dx = this.destX - this.anchorX;
+      const dy = this.destY - this.anchorY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 2) {
+        this.anchorX = this.destX;
+        this.anchorY = this.destY;
+        this.entering = false;
+      } else {
+        const speed = CONFIG.spawn.entrySpeed;
+        this.anchorX += (dx / dist) * speed * dt * 60;
+        this.anchorY += (dy / dist) * speed * dt * 60;
+      }
+    }
 
     const driftAmount = 30;
     const driftX = Math.sin(time / this.driftPeriodX + this.driftOffsetX) * driftAmount * CONFIG.anchorDriftSpeed;
@@ -243,8 +327,9 @@ class Monad {
       const force = CONFIG.gravityWell.strength / effectiveDistSq;
       const dist = Math.sqrt(effectiveDistSq);
       const wellLife = 1 - well.age / CONFIG.gravityWell.duration;
-      this.x += (dx / dist) * force * wellLife * dt * 60;
-      this.y += (dy / dist) * force * wellLife * dt * 60;
+      // Push the anchor so the effect persists across frames
+      this.anchorX += (dx / dist) * force * wellLife * dt * 60;
+      this.anchorY += (dy / dist) * force * wellLife * dt * 60;
     }
 
     this.radius = CONFIG.baseRadius + Math.sin(this.phase * CONFIG.pulseSpeed) * 2;
@@ -299,6 +384,107 @@ window.addEventListener("load", () => {
   let gravityWells = [];
   let time = 0;
   let louvainTimer = 0;
+  let soundEnabled = false;
+  let lastTouchSoundTime = 0;
+
+  // Initialize audio on first click
+  const initAudio = () => {
+    if (!Synth.isInitialized) {
+      Synth.init({ masterVolume: 0.3 });
+    }
+    Synth.resume();
+    soundEnabled = true;
+    gameInstance.canvas.removeEventListener("click", initAudio);
+  };
+  gameInstance.canvas.addEventListener("click", initAudio);
+
+  /** Map an x position to stereo pan (-1 left, +1 right) */
+  function panFor(x) {
+    const w = gameInstance.width;
+    if (w <= 0) return 0;
+    return Math.max(-1, Math.min(1, (x / w) * 2 - 1));
+  }
+
+  /** Create a StereoPannerNode routed to master */
+  function makePanner(pan) {
+    const ctx = Synth.ctx;
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = pan;
+    panner.connect(Synth.master);
+    return panner;
+  }
+
+  function playTouchBlip(hue, x) {
+    if (!soundEnabled) return;
+    const ctx = Synth.ctx;
+    const now = ctx.currentTime;
+    const scale = [1, 1.125, 1.25, 1.5, 1.667];
+    const normalizedHue = ((hue % 360) + 360) % 360;
+    const idx = Math.floor((normalizedHue / 360) * scale.length);
+    const freq = CONFIG.sound.touchBaseFreq * scale[idx];
+
+    const panner = makePanner(panFor(x));
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(CONFIG.sound.touchVolume, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.08);
+    osc.connect(gain);
+    gain.connect(panner);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
+  function playWoosh(x) {
+    if (!soundEnabled) return;
+    const ctx = Synth.ctx;
+    const now = ctx.currentTime;
+    const duration = 0.5;
+
+    const panner = makePanner(panFor(x));
+    const noise = SynthNoise.pink(ctx, duration);
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(800, now);
+    filter.frequency.exponentialRampToValueAtTime(200, now + duration);
+    filter.Q.value = 1.5;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.5, now + 0.06);
+    gain.gain.setValueAtTime(0.4, now + 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(panner);
+    noise.start(now);
+    noise.stop(now + duration);
+  }
+
+  function playCommunityChime(hue, x) {
+    if (!soundEnabled) return;
+    const ctx = Synth.ctx;
+    const now = ctx.currentTime;
+    const scale = [1, 1.2, 1.333, 1.5, 1.8];
+    const normalizedHue = ((hue % 360) + 360) % 360;
+    const idx = Math.floor((normalizedHue / 360) * scale.length);
+    const freq = CONFIG.sound.communityFreq * scale[idx];
+
+    const panner = makePanner(panFor(x));
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(CONFIG.sound.communityVolume, now);
+    gain.gain.linearRampToValueAtTime(CONFIG.sound.communityVolume * 0.4, now + 0.1);
+    gain.gain.linearRampToValueAtTime(0, now + 0.25);
+    osc.connect(gain);
+    gain.connect(panner);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  }
 
   // Override clear for trail effect + all custom rendering
   gameInstance.clear = function () {
@@ -328,11 +514,23 @@ window.addEventListener("load", () => {
           const alpha = CONFIG.connectionAlpha * (1 - dist / maxDist);
           // Blend connection color from the two monads' hues
           const midHue = (a.hue + b.hue) / 2;
-          ctx.strokeStyle = `hsla(${midHue}, 70%, 50%, ${alpha})`;
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = `hsla(${midHue}, 90%, 70%, ${alpha})`;
+          ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
+          // Sine wave along the edge
+          const segments = 16;
+          const nx = -(b.y - a.y) / dist; // perpendicular normal
+          const ny =  (b.x - a.x) / dist;
+          const amp = 6 + dist * 0.03;    // amplitude scales with distance
+          const freq = 3;                 // wave cycles along the edge
+          for (let s = 1; s <= segments; s++) {
+            const t = s / segments;
+            const lx = a.x + (b.x - a.x) * t;
+            const ly = a.y + (b.y - a.y) * t;
+            const wave = Math.sin(t * freq * Math.PI * 2 + time * 14) * amp * Math.sin(t * Math.PI);
+            ctx.lineTo(lx + nx * wave, ly + ny * wave);
+          }
           ctx.stroke();
         }
       }
@@ -352,20 +550,65 @@ window.addEventListener("load", () => {
       ctx.fill();
     }
 
-    // 4. Monad cores
+    // 4. Monad cores (blink white + radius pulse on sound trigger)
     for (const m of monads) {
-      ctx.fillStyle = `hsl(${m.hue}, ${m.sat}%, ${m.lit}%)`;
+      let sat = m.sat;
+      let lit = m.lit;
+      if (m.blinkTime >= 0) {
+        const elapsed = time - m.blinkTime;
+        if (elapsed > CONFIG.blink.duration) {
+          m.blinkTime = -1;
+        } else {
+          const t = 1 - elapsed / CONFIG.blink.duration; // 1→0
+          sat = m.sat * (1 - t);
+          lit = m.lit + (100 - m.lit) * t;
+        }
+      }
+
+      // Radius pulse: sharp attack, smooth decay
+      let r = m.radius;
+      if (m.pulseTime >= 0) {
+        const elapsed = time - m.pulseTime;
+        if (elapsed > m.pulseDuration) {
+          m.pulseTime = -1;
+        } else {
+          const t = elapsed / m.pulseDuration;
+          const ease = 1 - t * t; // fast attack, smooth falloff
+          r *= 1 + (m.pulseScale - 1) * ease;
+        }
+      }
+
+      ctx.fillStyle = `hsl(${m.hue}, ${sat}%, ${lit}%)`;
       ctx.beginPath();
-      ctx.arc(m.x, m.y, m.radius, 0, TWO_PI);
+      ctx.arc(m.x, m.y, r, 0, TWO_PI);
       ctx.fill();
 
-      ctx.fillStyle = `hsl(${m.hue}, ${m.sat + 10}%, ${m.lit + 25}%)`;
+      ctx.fillStyle = `hsl(${m.hue}, ${Math.max(0, sat - 10)}%, ${Math.min(100, lit + 25)}%)`;
       ctx.beginPath();
-      ctx.arc(m.x, m.y, m.radius * 0.4, 0, TWO_PI);
+      ctx.arc(m.x, m.y, r * 0.4, 0, TWO_PI);
       ctx.fill();
     }
 
-    // 5. Gravity well expanding rings
+    // 5. Community-change flash
+    for (const m of monads) {
+      if (m.flashTime < 0) continue;
+      const elapsed = time - m.flashTime;
+      const duration = CONFIG.flash.duration;
+      if (elapsed > duration) { m.flashTime = -1; continue; }
+      const progress = elapsed / duration;
+      const flashRadius = CONFIG.glowRadius * (1 + progress * (CONFIG.flash.radiusMultiplier - 1));
+      const alpha = (1 - progress) * 0.5;
+      const gradient = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, flashRadius);
+      gradient.addColorStop(0, `hsla(${m.targetHue}, 100%, 85%, ${alpha})`);
+      gradient.addColorStop(0.5, `hsla(${m.targetHue}, 90%, 65%, ${alpha * 0.4})`);
+      gradient.addColorStop(1, `hsla(${m.targetHue}, 80%, 50%, 0)`);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, flashRadius, 0, TWO_PI);
+      ctx.fill();
+    }
+
+    // 6. Gravity well expanding rings
     for (const well of gravityWells) {
       const progress = well.age / CONFIG.gravityWell.duration;
       const ringRadius = progress * CONFIG.gravityWell.ringMaxRadius;
@@ -388,13 +631,12 @@ window.addEventListener("load", () => {
 
   };
 
+  let spawnTimer = 0;
+
   function setup() {
-    const w = gameInstance.width;
-    const h = gameInstance.height;
     monads = [];
-    for (let i = 0; i < CONFIG.monadCount; i++) {
-      monads.push(new Monad(w, h));
-    }
+    spawnTimer = 0;
+    lastTouchSoundTime = 0;
     louvainTimer = CONFIG.louvain.interval; // run immediately on first frame
   }
 
@@ -407,6 +649,18 @@ window.addEventListener("load", () => {
     if (needsRebuild) {
       needsRebuild = false;
       setup();
+    }
+
+    // Spawn monads one at a time from offscreen
+    if (monads.length < CONFIG.monadCount) {
+      spawnTimer += dt;
+      if (spawnTimer >= CONFIG.spawn.interval) {
+        spawnTimer = 0;
+        const w = gameInstance.width;
+        const h = gameInstance.height;
+        const m = new Monad(w, h, true);
+        monads.push(m);
+      }
     }
 
     // Update gravity wells
@@ -424,6 +678,30 @@ window.addEventListener("load", () => {
       m.update(dt, gravityWells, w, h, time);
     }
 
+    // Touch detection — play blip when monads get very close
+    const touchDistSq = CONFIG.sound.touchDistance * CONFIG.sound.touchDistance;
+    if (time - lastTouchSoundTime > CONFIG.sound.touchCooldown) {
+      for (let i = 0; i < monads.length; i++) {
+        const a = monads[i];
+        for (let j = i + 1; j < monads.length; j++) {
+          const b = monads[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          if (dx * dx + dy * dy < touchDistSq) {
+            playTouchBlip((a.hue + b.hue) / 2, (a.x + b.x) / 2);
+            a.blinkTime = time;
+            b.blinkTime = time;
+            // High note → quick sharp pop
+            a.pulseTime = time; a.pulseScale = 2.5; a.pulseDuration = 0.12;
+            b.pulseTime = time; b.pulseScale = 2.5; b.pulseDuration = 0.12;
+            lastTouchSoundTime = time;
+            i = monads.length; // break both loops
+            break;
+          }
+        }
+      }
+    }
+
     // Louvain community detection on interval
     louvainTimer += dt;
     if (louvainTimer >= CONFIG.louvain.interval) {
@@ -433,9 +711,24 @@ window.addEventListener("load", () => {
         // Map community IDs → palette indices
         const uniqueComms = [...new Set(communities)];
         const palette = CONFIG.communityColors;
+        let chimed = false;
         for (let i = 0; i < monads.length; i++) {
           const commIndex = uniqueComms.indexOf(communities[i]);
           const color = palette[commIndex % palette.length];
+          // Detect community change → flash + chime
+          if (monads[i].communityId !== -1 && monads[i].communityId !== communities[i]) {
+            monads[i].flashTime = time;
+            monads[i].blinkTime = time;
+            // Lower note → slow gentle swell
+            monads[i].pulseTime = time;
+            monads[i].pulseScale = 1.8;
+            monads[i].pulseDuration = 0.4;
+            if (!chimed) {
+              playCommunityChime(color.h, monads[i].x);
+              chimed = true; // one chime per detection pass
+            }
+          }
+          monads[i].communityId = communities[i];
           monads[i].targetHue = color.h;
           monads[i].targetSat = color.s;
           monads[i].targetLit = color.l;
@@ -453,6 +746,19 @@ window.addEventListener("load", () => {
     const mx = (e.clientX - rect.left) * scaleX;
     const my = (e.clientY - rect.top) * scaleY;
     gravityWells.push({ x: mx, y: my, age: 0 });
+    playWoosh(mx);
+  });
+
+  // Press R to reset
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "r" || e.key === "R") {
+      gravityWells = [];
+      time = 0;
+      const ctx = gameInstance.ctx;
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, gameInstance.width, gameInstance.height);
+      setup();
+    }
   });
 
   game.start();
