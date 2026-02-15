@@ -243,8 +243,14 @@ class HydrogenOrbitalDemo extends Game {
       font: "bold 24px monospace",
       color: "#88ccff",
     });
+    this.equationText = new Text(this, "\u03C8(r,\u03B8,\u03C6) = R\u2099,\u2097(r) \u00B7 Y\u2097\u1D50(\u03B8,\u03C6)", {
+      font: "12px monospace",
+      color: "#668899",
+      y: 30,
+    });
 
     this.infoPanel.add(this.orbitalText);
+    this.infoPanel.add(this.equationText);
     this.pipeline.add(this.infoPanel);
   }
 
