@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { associatedLaguerre, associatedLegendre, radialWaveFunction, angularWaveFunction, probabilityDensity } from "../../src/math/hydrogen.js";
+import { associatedLaguerre, associatedLegendre, radialWaveFunction, angularWaveFunction, probabilityDensity, sampleOrbitalPositions, validateQuantumNumbers, orbitalLabel } from "../../src/math/hydrogen.js";
 
 describe("associatedLaguerre", () => {
   it("returns 1 for n=0", () => {
@@ -116,5 +116,72 @@ describe("probabilityDensity", () => {
 
   it("is zero at r=0 for 2p orbital", () => {
     expect(probabilityDensity(2, 1, 0, 0, Math.PI / 4)).toBeCloseTo(0);
+  });
+});
+
+describe("validateQuantumNumbers", () => {
+  it("passes valid quantum numbers through", () => {
+    expect(validateQuantumNumbers(3, 2, 1)).toEqual({ n: 3, l: 2, m: 1 });
+  });
+
+  it("clamps l to n-1", () => {
+    expect(validateQuantumNumbers(2, 5, 0)).toEqual({ n: 2, l: 1, m: 0 });
+  });
+
+  it("clamps m to [-l, l]", () => {
+    expect(validateQuantumNumbers(3, 1, 5)).toEqual({ n: 3, l: 1, m: 1 });
+    expect(validateQuantumNumbers(3, 1, -5)).toEqual({ n: 3, l: 1, m: -1 });
+  });
+
+  it("clamps n to minimum 1", () => {
+    expect(validateQuantumNumbers(0, 0, 0)).toEqual({ n: 1, l: 0, m: 0 });
+  });
+});
+
+describe("orbitalLabel", () => {
+  it("labels s orbital", () => {
+    expect(orbitalLabel(1, 0, 0)).toBe("1s");
+  });
+
+  it("labels p orbital with m", () => {
+    expect(orbitalLabel(2, 1, 0)).toBe("2p (m=0)");
+    expect(orbitalLabel(2, 1, 1)).toBe("2p (m=1)");
+  });
+
+  it("labels d orbital", () => {
+    expect(orbitalLabel(3, 2, -1)).toBe("3d (m=-1)");
+  });
+
+  it("labels f orbital", () => {
+    expect(orbitalLabel(4, 3, 0)).toBe("4f (m=0)");
+  });
+});
+
+describe("sampleOrbitalPositions", () => {
+  it("returns Float32Array with 4 values per particle", () => {
+    const result = sampleOrbitalPositions(1, 0, 0, 100);
+    expect(result).toBeInstanceOf(Float32Array);
+    expect(result.length).toBe(400);
+  });
+
+  it("places 1s orbital particles roughly spherically", () => {
+    const result = sampleOrbitalPositions(1, 0, 0, 1000);
+    let sumX = 0, sumY = 0, sumZ = 0;
+    for (let i = 0; i < result.length; i += 4) {
+      sumX += result[i];
+      sumY += result[i + 1];
+      sumZ += result[i + 2];
+    }
+    const count = result.length / 4;
+    expect(Math.abs(sumX / count)).toBeLessThan(1);
+    expect(Math.abs(sumY / count)).toBeLessThan(1);
+    expect(Math.abs(sumZ / count)).toBeLessThan(1);
+  });
+
+  it("returns positive probability values", () => {
+    const result = sampleOrbitalPositions(2, 1, 0, 100);
+    for (let i = 3; i < result.length; i += 4) {
+      expect(result[i]).toBeGreaterThanOrEqual(0);
+    }
   });
 });

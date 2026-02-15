@@ -109,3 +109,112 @@ function factorial(n) {
   for (let i = 2; i <= n; i++) result *= i;
   return result;
 }
+
+const ORBITAL_LETTERS = ["s", "p", "d", "f", "g", "h", "i"];
+
+/**
+ * Validate and clamp quantum numbers to valid ranges.
+ */
+export function validateQuantumNumbers(n, l, m) {
+  n = Math.max(1, Math.round(n));
+  l = Math.max(0, Math.min(n - 1, Math.round(l)));
+  m = Math.max(-l, Math.min(l, Math.round(m)));
+  return { n, l, m };
+}
+
+/**
+ * Human-readable orbital label like "3d (m=1)".
+ */
+export function orbitalLabel(n, l, m) {
+  const letter = ORBITAL_LETTERS[l] || l;
+  if (l === 0) return `${n}${letter}`;
+  return `${n}${letter} (m=${m})`;
+}
+
+/**
+ * Sample particle positions from the hydrogen orbital probability density.
+ * Uses CDF-based inverse transform sampling for r and theta, uniform phi.
+ * Returns Float32Array of [x, y, z, probability, ...]
+ */
+export function sampleOrbitalPositions(n, l, m, count) {
+  const result = new Float32Array(count * 4);
+
+  const rMax = n * n * 4 + 10;
+  const rSteps = 500;
+  const rDelta = rMax / rSteps;
+  const radialPdf = new Float64Array(rSteps);
+  const radialCdf = new Float64Array(rSteps);
+
+  for (let i = 0; i < rSteps; i++) {
+    const r = (i + 0.5) * rDelta;
+    const R = radialWaveFunction(n, l, r);
+    radialPdf[i] = r * r * R * R * rDelta;
+  }
+
+  radialCdf[0] = radialPdf[0];
+  for (let i = 1; i < rSteps; i++) {
+    radialCdf[i] = radialCdf[i - 1] + radialPdf[i];
+  }
+  const radialTotal = radialCdf[rSteps - 1];
+  for (let i = 0; i < rSteps; i++) {
+    radialCdf[i] /= radialTotal;
+  }
+
+  const thetaSteps = 200;
+  const thetaDelta = Math.PI / thetaSteps;
+  const angularPdf = new Float64Array(thetaSteps);
+  const angularCdf = new Float64Array(thetaSteps);
+
+  for (let i = 0; i < thetaSteps; i++) {
+    const theta = (i + 0.5) * thetaDelta;
+    const Y = angularWaveFunction(l, m, theta);
+    angularPdf[i] = Y * Y * Math.sin(theta) * thetaDelta;
+  }
+
+  angularCdf[0] = angularPdf[0];
+  for (let i = 1; i < thetaSteps; i++) {
+    angularCdf[i] = angularCdf[i - 1] + angularPdf[i];
+  }
+  const angularTotal = angularCdf[thetaSteps - 1];
+  for (let i = 0; i < thetaSteps; i++) {
+    angularCdf[i] /= angularTotal;
+  }
+
+  for (let p = 0; p < count; p++) {
+    const ur = Math.random();
+    let rIdx = binarySearch(radialCdf, ur);
+    const r = (rIdx + 0.5) * rDelta;
+
+    const ut = Math.random();
+    let tIdx = binarySearch(angularCdf, ut);
+    const theta = (tIdx + 0.5) * thetaDelta;
+
+    const phi = Math.random() * 2 * Math.PI;
+
+    const sinTheta = Math.sin(theta);
+    const x = r * sinTheta * Math.cos(phi);
+    const y = r * Math.cos(theta);
+    const z = r * sinTheta * Math.sin(phi);
+
+    const prob = probabilityDensity(n, l, m, r, theta);
+
+    const idx = p * 4;
+    result[idx] = x;
+    result[idx + 1] = y;
+    result[idx + 2] = z;
+    result[idx + 3] = prob;
+  }
+
+  return result;
+}
+
+function binarySearch(cdf, value) {
+  let lo = 0;
+  let hi = cdf.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (cdf[mid] < value) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
