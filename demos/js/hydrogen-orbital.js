@@ -6,8 +6,6 @@ import {
   applyAnchor,
   Position,
   Scene,
-  verticalLayout,
-  applyLayout,
   Screen,
   Gesture,
   FPSCounter,
@@ -235,29 +233,18 @@ class HydrogenOrbitalDemo extends Game {
   // --- Task 7: Info Panel ---
 
   _buildInfoPanel() {
-    this.infoPanel = new Scene(this, { x: 0, y: 0, origin: "center" });
+    this.infoPanel = new Scene(this, { x: 0, y: 0 });
     applyAnchor(this.infoPanel, {
-      anchor: Position.TOP_CENTER,
-      anchorOffsetY: 100,
+      anchor: Position.CENTER_LEFT,
+      anchorOffsetX: 30,
     });
 
-    this.titleText = new Text(this, "Hydrogen Orbitals", {
-      font: "bold 18px monospace",
-      color: "#ffffff",
-    });
     this.orbitalText = new Text(this, orbitalLabel(this.n, this.l, this.m), {
-      font: "14px monospace",
+      font: "bold 24px monospace",
       color: "#88ccff",
     });
-    this.equationText = new Text(this, "\u03C8(r,\u03B8,\u03C6) = R\u2099,\u2097(r) \u00B7 Y\u2097\u1D50(\u03B8,\u03C6)", {
-      font: "12px monospace",
-      color: "#668899",
-    });
 
-    const items = [this.titleText, this.orbitalText, this.equationText];
-    const layout = verticalLayout(items, { spacing: 6, align: "center" });
-    applyLayout(items, layout.positions);
-    items.forEach((item) => this.infoPanel.add(item));
+    this.infoPanel.add(this.orbitalText);
     this.pipeline.add(this.infoPanel);
   }
 
