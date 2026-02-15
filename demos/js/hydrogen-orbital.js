@@ -230,19 +230,21 @@ class HydrogenOrbitalDemo extends Game {
   // --- Task 7: Info Panel ---
 
   _buildInfoPanel() {
+    const leftEdge = -this.width / 2 + 30;
+
     this.orbitalText = new Text(this, orbitalLabel(this.n, this.l, this.m), {
       font: "bold 24px monospace",
       color: "#88ccff",
       align: "left",
-      x: 30,
-      y: this.height / 2 - 15,
+      x: leftEdge,
+      y: -15,
     });
     this.equationText = new Text(this, "\u03C8(r,\u03B8,\u03C6) = R\u2099,\u2097(r) \u00B7 Y\u2097\u1D50(\u03B8,\u03C6)", {
       font: "12px monospace",
       color: "#668899",
       align: "left",
-      x: 30,
-      y: this.height / 2 + 15,
+      x: leftEdge,
+      y: 15,
     });
 
     this.pipeline.add(this.orbitalText);
@@ -540,8 +542,9 @@ class HydrogenOrbitalDemo extends Game {
       this.panel.y = CONFIG.panel.marginTop;
     }
     if (this.orbitalText) {
-      this.orbitalText.y = this.height / 2 - 15;
-      this.equationText.y = this.height / 2 + 15;
+      const leftEdge = -this.width / 2 + 30;
+      this.orbitalText.x = leftEdge;
+      this.equationText.x = leftEdge;
     }
   }
 }
