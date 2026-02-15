@@ -544,7 +544,7 @@ class Attractor3DDemo extends Game {
     }
 
     // ── WebGL attractor pipeline ─────────────────────────────────────────
-    const maxSegments = cfg.particles.count * cfg.particles.trailLength;
+    const maxSegments = cfg.maxSegments || cfg.particles.count * cfg.particles.trailLength;
     this.attractorPipeline = new WebGLAttractorPipeline(
       this.width,
       this.height,
@@ -790,6 +790,15 @@ class Attractor3DDemo extends Game {
   /** @override */
   render() {
     super.render();
+    this._renderAttractor();
+  }
+
+  /**
+   * Render the attractor trails (WebGL or Canvas 2D fallback).
+   * Extracted so subclasses can control z-order (e.g. render UI on top).
+   * @protected
+   */
+  _renderAttractor() {
     if (!this.particles) return;
 
     const { screenOffset } = this.config;
@@ -815,6 +824,119 @@ class Attractor3DDemo extends Game {
     }
 
     this.ctx.globalAlpha = prevAlpha;
+  }
+
+  // ── Runtime update API (used by CaosPlayground, safe to ignore) ──────
+
+  /**
+   * Update attractor equation parameters at runtime.
+   * Recreates the stepper function and pushes to all particles.
+   * Handles paramVariation if configured.
+   * @param {Object} params - New attractor parameters (e.g. { sigma: 10, rho: 28 })
+   */
+  updateAttractorParams(params) {
+    this.stepFn = this.attractor.createStepper(params);
+    if (this.config.paramVariation) {
+      const { range } = this.config.paramVariation;
+      for (const p of this.particles) {
+        const varied = {};
+        for (const [k, v] of Object.entries(params)) {
+          varied[k] = v * (1 + (Math.random() - 0.5) * range);
+        }
+        p.stepFn = this.attractor.createStepper(varied);
+      }
+    } else {
+      for (const p of this.particles) p.stepFn = this.stepFn;
+    }
+  }
+
+  /**
+   * Update trail length at runtime. Trims excess trail points.
+   * @param {number} length - New trail length
+   */
+  updateTrailLength(length) {
+    this.config.particles.trailLength = length;
+    for (const p of this.particles) {
+      p.trailLength = length;
+      if (p.trail.length > length) {
+        p.trail.length = length;
+      }
+    }
+  }
+
+  /**
+   * Update particle count at runtime. Adds or removes particles.
+   * @param {number} count - New particle count
+   */
+  updateParticleCount(count) {
+    const current = this.particles.length;
+    this.config.particles.count = count;
+    if (count > current) {
+      for (let i = current; i < count; i++) {
+        this.particles.push(this.createParticle());
+      }
+    } else if (count < current) {
+      this.particles.length = count;
+    }
+  }
+
+  /**
+   * Switch to a different attractor with a full config swap.
+   * Rebuilds particles, resets camera, and pushes all pipeline configs.
+   * @param {string} name - Attractor key (e.g. "lorenz")
+   * @param {Object} newConfig - Full config to merge with DEFAULTS
+   */
+  switchAttractor(name, newConfig) {
+    this.config = deepMerge(DEFAULTS, newConfig);
+    this.attractorName = name;
+    this.attractor = Attractors[name];
+    if (!this.attractor) {
+      throw new Error(`Unknown attractor "${name}"`);
+    }
+
+    // Recreate stepper and axis mapping
+    this.stepFn = this.attractor.createStepper();
+    this.resolvedAxisMapping = resolveAxisMapping(this.config.axisMapping);
+
+    // Push all pipeline configs
+    if (this.attractorPipeline?.isAvailable()) {
+      const cfg = this.config;
+      this.attractorPipeline.setVisualConfig(cfg.visual);
+      this.attractorPipeline.setBloomConfig(cfg.bloom);
+      this.attractorPipeline.setGlowConfig(cfg.glow);
+      this.attractorPipeline.setBackgroundConfig({
+        ...cfg.background,
+        baseColor: cfg.background.baseColor || this._computeBackgroundColor(),
+      });
+      this.attractorPipeline.setEnergyConfig(cfg.energyFlow);
+      this.attractorPipeline.setDepthFogConfig(cfg.depthFog);
+      this.attractorPipeline.setIridescenceConfig(cfg.iridescence);
+      this.attractorPipeline.setChromaticAberrationConfig(cfg.chromaticAberration);
+      this.attractorPipeline.setColorGradingConfig(cfg.colorGrading);
+    }
+
+    // Rebuild particles
+    this.particles = [];
+    for (let i = 0; i < this.config.particles.count; i++) {
+      this.particles.push(this.createParticle());
+    }
+
+    // Reset camera
+    this.camera.rotationX = this.config.camera.rotationX;
+    this.camera.rotationY = this.config.camera.rotationY;
+    this.camera.velocityX = 0;
+    this.camera.velocityY = 0;
+
+    // Reset zoom and time
+    const { min, max, baseScreenSize } = this.config.zoom;
+    this.defaultZoom = Math.min(max, Math.max(min, Screen.minDimension() / baseScreenSize));
+    this.zoom = this.defaultZoom;
+    this.targetZoom = this.defaultZoom;
+    this.time = 0;
+
+    // Instant show (no fade delay)
+    Tweenetik.killTarget(this);
+    this.fadeAlpha = 1;
   }
 
   /**
@@ -899,5 +1021,5 @@ class Attractor3DDemo extends Game {
   }
 }
 
-export { Attractor3DDemo, AttractorParticle, DEFAULTS, hslToRgb, deepMerge, Screen };
+export { Attractor3DDemo, AttractorParticle, DEFAULTS, hslToRgb, deepMerge, resolveAxisMapping, Screen };
 export default Attractor3DDemo;

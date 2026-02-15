@@ -13,7 +13,7 @@ import { Attractor3DDemo, Screen } from "./attractor-3d-demo.js";
 Attractor3DDemo.run("lorenz", {
   attractor: {
     dt: 0.005,
-    scale: 12,
+    scale: 10,
   },
 
   particles: {
@@ -22,8 +22,10 @@ Attractor3DDemo.run("lorenz", {
     spawnRange: 5,
   },
 
+  warmupSteps: 0,
+
   // Lorenz orbits around z ≈ 27 (ρ − 1), symmetric lobes average to x ≈ 0
-  center: { x: 0, y: 0, z: 27 },
+  center: { x: 0, y: 2, z: 27 },
 
   // Angled to show the butterfly shape
   camera: {
@@ -39,8 +41,8 @@ Attractor3DDemo.run("lorenz", {
   },
 
   visual: {
-    minHue: 30,   // Orange-red (fast)
-    maxHue: 200,  // Cyan-blue (slow)
+    minHue: 30, // Orange-red (fast)
+    maxHue: 200, // Cyan-blue (slow)
     maxSpeed: 50,
     saturation: 85,
     lightness: 55,
