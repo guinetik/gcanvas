@@ -514,12 +514,12 @@ window.addEventListener("load", () => {
           const alpha = CONFIG.connectionAlpha * (1 - dist / maxDist);
           // Blend connection color from the two monads' hues
           const midHue = (a.hue + b.hue) / 2;
-          ctx.strokeStyle = `hsla(${midHue}, 70%, 50%, ${alpha})`;
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = `hsla(${midHue}, 90%, 70%, ${alpha})`;
+          ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           // Sine wave along the edge
-          const segments = 12;
+          const segments = 16;
           const nx = -(b.y - a.y) / dist; // perpendicular normal
           const ny =  (b.x - a.x) / dist;
           const amp = 6 + dist * 0.03;    // amplitude scales with distance
@@ -528,7 +528,7 @@ window.addEventListener("load", () => {
             const t = s / segments;
             const lx = a.x + (b.x - a.x) * t;
             const ly = a.y + (b.y - a.y) * t;
-            const wave = Math.sin(t * freq * Math.PI * 2 + time * 8) * amp * Math.sin(t * Math.PI);
+            const wave = Math.sin(t * freq * Math.PI * 2 + time * 14) * amp * Math.sin(t * Math.PI);
             ctx.lineTo(lx + nx * wave, ly + ny * wave);
           }
           ctx.stroke();

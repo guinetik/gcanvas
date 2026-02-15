@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quantum Manifold</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Quantum Manifold</strong> — 3D mesh surface deformed by quantum wave functions.<br />
+    <span style="color:#CCC">
+      <li>Drag to rotate, scroll to zoom</li>
+      <li>Use the panel to switch presets and tweak parameters</li>
+      <li>Double-click to reset view</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { QuantumManifoldPlayground } from "./js/quantum-manifold.js";
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new QuantumManifoldPlayground(canvas);
+      game.enablePauseOnBlur(true);
+      game.setFPS(60);
+      game.start();
+    });
+  </script>
+</body>
+
+</html>
