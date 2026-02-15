@@ -1,4 +1,13 @@
-const BOHR_RADIUS = 1; // natural units
+/** Bohr radius in natural units — all distances are measured in units of a0. */
+const BOHR_RADIUS = 1;
+
+/** Sampling resolution for CDF-based inverse transform sampling. */
+const SAMPLING = {
+  rSteps: 500,
+  thetaSteps: 200,
+  rMaxScale: 4,       // multiplied by n^2
+  rMaxPadding: 10,    // added to rMax
+};
 
 /**
  * Associated Laguerre polynomial L_n^alpha(x) via recurrence.
@@ -85,6 +94,7 @@ export function radialWaveFunction(n, l, r) {
 
 /**
  * Angular wave function (real spherical harmonic theta part).
+ * Uses |m| since the phi-dependent phase factor is handled separately in sampling.
  */
 export function angularWaveFunction(l, m, theta) {
   const absM = Math.abs(m);
@@ -104,6 +114,7 @@ export function probabilityDensity(n, l, m, r, theta) {
 }
 
 function factorial(n) {
+  if (n < 0) return NaN;
   if (n <= 1) return 1;
   let result = 1;
   for (let i = 2; i <= n; i++) result *= i;
@@ -139,8 +150,8 @@ export function orbitalLabel(n, l, m) {
 export function sampleOrbitalPositions(n, l, m, count) {
   const result = new Float32Array(count * 4);
 
-  const rMax = n * n * 4 + 10;
-  const rSteps = 500;
+  const rMax = n * n * SAMPLING.rMaxScale + SAMPLING.rMaxPadding;
+  const rSteps = SAMPLING.rSteps;
   const rDelta = rMax / rSteps;
   const radialPdf = new Float64Array(rSteps);
   const radialCdf = new Float64Array(rSteps);
@@ -156,11 +167,12 @@ export function sampleOrbitalPositions(n, l, m, count) {
     radialCdf[i] = radialCdf[i - 1] + radialPdf[i];
   }
   const radialTotal = radialCdf[rSteps - 1];
+  if (radialTotal === 0) return result;
   for (let i = 0; i < rSteps; i++) {
     radialCdf[i] /= radialTotal;
   }
 
-  const thetaSteps = 200;
+  const thetaSteps = SAMPLING.thetaSteps;
   const thetaDelta = Math.PI / thetaSteps;
   const angularPdf = new Float64Array(thetaSteps);
   const angularCdf = new Float64Array(thetaSteps);
@@ -176,6 +188,7 @@ export function sampleOrbitalPositions(n, l, m, count) {
     angularCdf[i] = angularCdf[i - 1] + angularPdf[i];
   }
   const angularTotal = angularCdf[thetaSteps - 1];
+  if (angularTotal === 0) return result;
   for (let i = 0; i < thetaSteps; i++) {
     angularCdf[i] /= angularTotal;
   }
