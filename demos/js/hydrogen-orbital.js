@@ -3,9 +3,6 @@ import {
   Painter,
   Camera3D,
   Text,
-  applyAnchor,
-  Position,
-  Scene,
   Screen,
   Gesture,
   FPSCounter,
@@ -233,27 +230,23 @@ class HydrogenOrbitalDemo extends Game {
   // --- Task 7: Info Panel ---
 
   _buildInfoPanel() {
-    this.infoPanel = new Scene(this, { x: 0, y: 0, width: 400, height: 60 });
-    applyAnchor(this.infoPanel, {
-      anchor: Position.CENTER_LEFT,
-      anchorOffsetX: 30,
-    });
-
     this.orbitalText = new Text(this, orbitalLabel(this.n, this.l, this.m), {
       font: "bold 24px monospace",
       color: "#88ccff",
-      width: 400,
+      align: "left",
+      x: 30,
+      y: this.height / 2 - 15,
     });
     this.equationText = new Text(this, "\u03C8(r,\u03B8,\u03C6) = R\u2099,\u2097(r) \u00B7 Y\u2097\u1D50(\u03B8,\u03C6)", {
       font: "12px monospace",
       color: "#668899",
-      width: 400,
-      y: 30,
+      align: "left",
+      x: 30,
+      y: this.height / 2 + 15,
     });
 
-    this.infoPanel.add(this.orbitalText);
-    this.infoPanel.add(this.equationText);
-    this.pipeline.add(this.infoPanel);
+    this.pipeline.add(this.orbitalText);
+    this.pipeline.add(this.equationText);
   }
 
   _updateInfoPanel() {
@@ -545,6 +538,10 @@ class HydrogenOrbitalDemo extends Game {
     if (this.panel) {
       this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
       this.panel.y = CONFIG.panel.marginTop;
+    }
+    if (this.orbitalText) {
+      this.orbitalText.y = this.height / 2 - 15;
+      this.equationText.y = this.height / 2 + 15;
     }
   }
 }
