@@ -14,3 +14,4 @@ export * from "./orbital.js";
 export * from "./quantum.js";
 export * from "./heat.js";
 export * from "./fluid.js";
+export * from "./hydrogen.js";
