@@ -247,8 +247,7 @@ class HydrogenOrbitalDemo extends Game {
       y: 15,
     });
 
-    this.pipeline.add(this.orbitalText);
-    this.pipeline.add(this.equationText);
+    // Text drawn manually in render() after WebGL composite, not via pipeline
   }
 
   _updateInfoPanel() {
@@ -530,6 +529,10 @@ class HydrogenOrbitalDemo extends Game {
     this.glRenderer.updateParticles(projected);
     this.glRenderer.render(projected.length);
     this.glRenderer.compositeOnto(ctx, 0, 0);
+
+    // Draw text on top of WebGL composite
+    if (this.orbitalText) this.orbitalText.draw(ctx);
+    if (this.equationText) this.equationText.draw(ctx);
   }
 
   onResize() {
