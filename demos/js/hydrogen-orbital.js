@@ -2,7 +2,6 @@ import {
   Game,
   Painter,
   Camera3D,
-  Text,
   Screen,
   Gesture,
   FPSCounter,
@@ -84,6 +83,77 @@ const COLORMAPS = {
     [148, 0, 211],
   ],
 };
+
+const ORBITAL_SHAPES = [
+  "Spherical cloud",          // l=0 (s)
+  "Dumbbell lobes",           // l=1 (p)
+  "Cloverleaf pattern",       // l=2 (d)
+  "Multi-lobed flower",       // l=3 (f)
+  "Complex nodal surface",    // l=4 (g)
+];
+
+const SHELL_NAMES = [
+  "", "K", "L", "M", "N", "O", "P", "Q",
+];
+
+const SUBSHELL_ELEMENTS = {
+  "1s": "H, He",
+  "2s": "Li, Be",
+  "2p": "B \u2192 Ne",
+  "3s": "Na, Mg",
+  "3p": "Al \u2192 Ar",
+  "3d": "Sc \u2192 Zn (transition metals)",
+  "4s": "K, Ca",
+  "4p": "Ga \u2192 Kr",
+  "4d": "Y \u2192 Cd (transition metals)",
+  "4f": "Ce \u2192 Lu (rare earths)",
+  "5s": "Rb, Sr",
+  "5p": "In \u2192 Xe",
+  "5d": "Hf \u2192 Hg (heavy transition metals)",
+  "5f": "Th \u2192 Lr (actinides)",
+  "6s": "Cs, Ba",
+  "6p": "Tl \u2192 Rn",
+  "7s": "Fr, Ra",
+};
+
+const ORIENTATION_LABELS = {
+  0: "aligned along z-axis",
+  1: "tilted toward xy-plane",
+  "-1": "tilted toward xy-plane",
+  2: "rotated 45\u00B0 in xy-plane",
+  "-2": "rotated 45\u00B0 in xy-plane",
+};
+
+function orbitalDescription(n, l, m) {
+  const letters = ["s", "p", "d", "f", "g", "h", "i"];
+  const letter = letters[l] || l;
+  const shape = ORBITAL_SHAPES[l] || "Higher-order orbital";
+  const shell = SHELL_NAMES[n] || "";
+  const subshell = `${n}${letter}`;
+  const nodes = n - l - 1;
+
+  const lines = [];
+
+  // Line 1: Shape + shell
+  let desc = shape;
+  if (shell) desc += ` \u00B7 ${shell}-shell`;
+  if (nodes > 0) desc += ` \u00B7 ${nodes} radial node${nodes > 1 ? "s" : ""}`;
+  lines.push(desc);
+
+  // Line 2: Orientation (for l > 0)
+  if (l > 0 && m !== undefined) {
+    const orient = ORIENTATION_LABELS[m] || `m=${m} orientation`;
+    lines.push(orient);
+  }
+
+  // Line 3: Elements
+  const elements = SUBSHELL_ELEMENTS[subshell];
+  if (elements) {
+    lines.push(`Filled by: ${elements}`);
+  }
+
+  return lines;
+}
 
 const PRESETS = {
   "1s":  { n: 1, l: 0, m: 0 },
@@ -230,30 +300,45 @@ class HydrogenOrbitalDemo extends Game {
   // --- Task 7: Info Panel ---
 
   _buildInfoPanel() {
-    const leftEdge = -this.width / 2 + 30;
-
-    this.orbitalText = new Text(this, orbitalLabel(this.n, this.l, this.m), {
-      font: "bold 24px monospace",
-      color: "#88ccff",
-      align: "left",
-      x: leftEdge,
-      y: -15,
-    });
-    this.equationText = new Text(this, "\u03C8(r,\u03B8,\u03C6) = R\u2099,\u2097(r) \u00B7 Y\u2097\u1D50(\u03B8,\u03C6)", {
-      font: "12px monospace",
-      color: "#668899",
-      align: "left",
-      x: leftEdge,
-      y: 15,
-    });
-
-    // Text drawn manually in render() after WebGL composite, not via pipeline
+    this._orbitalLabel = orbitalLabel(this.n, this.l, this.m);
+    this._equationLabel = "\u03C8(r,\u03B8,\u03C6) = R\u2099,\u2097(r) \u00B7 Y\u2097\u1D50(\u03B8,\u03C6)";
+    this._descriptionLines = orbitalDescription(this.n, this.l, this.m);
   }
 
   _updateInfoPanel() {
-    if (this.orbitalText) {
-      this.orbitalText.text = orbitalLabel(this.n, this.l, this.m);
+    this._orbitalLabel = orbitalLabel(this.n, this.l, this.m);
+    this._descriptionLines = orbitalDescription(this.n, this.l, this.m);
+  }
+
+  _drawInfoPanel(ctx) {
+    const x = 30;
+    const centerY = this.height / 2;
+    const lineCount = this._descriptionLines.length;
+    const blockHeight = 28 + 18 + lineCount * 16;
+    const startY = centerY - blockHeight / 2;
+
+    ctx.save();
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+
+    // Orbital label (e.g. "3d (m=0)")
+    ctx.font = "bold 24px monospace";
+    ctx.fillStyle = "#88ccff";
+    ctx.fillText(this._orbitalLabel, x, startY);
+
+    // Equation
+    ctx.font = "12px monospace";
+    ctx.fillStyle = "#668899";
+    ctx.fillText(this._equationLabel, x, startY + 30);
+
+    // Description lines
+    ctx.font = "11px monospace";
+    ctx.fillStyle = "#556677";
+    for (let i = 0; i < lineCount; i++) {
+      ctx.fillText(this._descriptionLines[i], x, startY + 48 + i * 16);
     }
+
+    ctx.restore();
   }
 
   // --- Task 8: UI Panel ---
@@ -530,9 +615,8 @@ class HydrogenOrbitalDemo extends Game {
     this.glRenderer.render(projected.length);
     this.glRenderer.compositeOnto(ctx, 0, 0);
 
-    // Draw text on top of WebGL composite
-    if (this.orbitalText) this.orbitalText.draw(ctx);
-    if (this.equationText) this.equationText.draw(ctx);
+    // Draw info text on top of WebGL composite
+    this._drawInfoPanel(ctx);
   }
 
   onResize() {
@@ -543,11 +627,6 @@ class HydrogenOrbitalDemo extends Game {
     if (this.panel) {
       this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
       this.panel.y = CONFIG.panel.marginTop;
-    }
-    if (this.orbitalText) {
-      const leftEdge = -this.width / 2 + 30;
-      this.orbitalText.x = leftEdge;
-      this.equationText.x = leftEdge;
     }
   }
 }
