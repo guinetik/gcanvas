@@ -64,3 +64,48 @@ function negMFactor(l, m) {
   }
   return factor;
 }
+
+/**
+ * Radial wave function R_{n,l}(r) for hydrogen atom.
+ */
+export function radialWaveFunction(n, l, r) {
+  const rho = (2 * r) / (n * BOHR_RADIUS);
+
+  const prefactor = Math.pow(2 / (n * BOHR_RADIUS), 3);
+  const num = factorial(n - l - 1);
+  const den = 2 * n * factorial(n + l);
+  const norm = Math.sqrt(prefactor * num / den);
+
+  const expPart = Math.exp(-rho / 2);
+  const rhoPart = Math.pow(rho, l);
+  const lagPart = associatedLaguerre(n - l - 1, 2 * l + 1, rho);
+
+  return norm * expPart * rhoPart * lagPart;
+}
+
+/**
+ * Angular wave function (real spherical harmonic theta part).
+ */
+export function angularWaveFunction(l, m, theta) {
+  const absM = Math.abs(m);
+  const norm = Math.sqrt(
+    ((2 * l + 1) / (4 * Math.PI)) * (factorial(l - absM) / factorial(l + absM))
+  );
+  return norm * associatedLegendre(l, absM, Math.cos(theta));
+}
+
+/**
+ * Probability density |psi(n,l,m,r,theta)|^2 = |R_{n,l}(r)|^2 * |Y_l^m(theta)|^2
+ */
+export function probabilityDensity(n, l, m, r, theta) {
+  const R = radialWaveFunction(n, l, r);
+  const Y = angularWaveFunction(l, m, theta);
+  return R * R * Y * Y;
+}
+
+function factorial(n) {
+  if (n <= 1) return 1;
+  let result = 1;
+  for (let i = 2; i <= n; i++) result *= i;
+  return result;
+}
