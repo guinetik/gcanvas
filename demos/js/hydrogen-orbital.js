@@ -129,7 +129,7 @@ class HydrogenOrbitalDemo extends Game {
     });
     this.camera.autoRotate = CONFIG.camera.autoRotate;
     this.camera.autoRotateSpeed = CONFIG.camera.rotateSpeed;
-    this.camera.bindMouse(this.canvas);
+    this.camera.enableMouseControl(this.canvas);
 
     // Zoom
     this.targetZoom = 1;
