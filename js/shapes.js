@@ -50,7 +50,7 @@ const CONFIG = {
 class ShapeGalleryGame extends Game {
   constructor(canvas) {
     super(canvas);
-    this.backgroundColor = "#fff";
+    this.backgroundColor = "black";
     this.enableFluidSize();
     this.cellSize = 120;
     this.maxColumns = 5;
@@ -88,7 +88,7 @@ class ShapeGalleryGame extends Game {
           faceFrontColor: Painter.colors.randomColorHSL(),
           faceBackColor: Painter.colors.randomColorHSL(),
           faceBottomColor: Painter.colors.randomColorHSL(),
-          strokeColor: "black",
+          strokeColor: "rgba(255,255,255,0.5)",
           lineWidth: 1,
         },
       },
@@ -122,7 +122,7 @@ class ShapeGalleryGame extends Game {
           bottomColor: "#FF00FF",
           sideColor: "#00FF00",
           segments: 16, // Higher for smoother appearance
-          stroke: "#333",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 1,
         },
       },
@@ -139,7 +139,7 @@ class ShapeGalleryGame extends Game {
           sideColor: Painter.colors.randomColorHSL(),
           rotationX: -45,
           segments: 16, // Higher number for smoother curve
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 1,
         },
       },
@@ -158,7 +158,7 @@ class ShapeGalleryGame extends Game {
           faceBottomColor: "#1E90FF",
           faceLeftColor: "#00BFFF",
           faceRightColor: "#87CEFA",
-          stroke: "#000",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 1,
         },
       },
@@ -166,7 +166,7 @@ class ShapeGalleryGame extends Game {
         name: "Line",
         class: Line,
         args: [40],
-        options: { stroke: "black", lineWidth: 3 },
+        options: { stroke: "white", lineWidth: 3 },
       },
       {
         name: "Bezier",
@@ -213,7 +213,7 @@ class ShapeGalleryGame extends Game {
         args: [16],
         options: {
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
           scaleX: 0.9,
           scaleY: 0.9,
@@ -228,7 +228,7 @@ class ShapeGalleryGame extends Game {
           width: 50,
           height: 50,
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
           y: -10,
         },
@@ -242,7 +242,7 @@ class ShapeGalleryGame extends Game {
           height: 50,
           y: -10,
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
           crisp: true,
         },
@@ -256,7 +256,7 @@ class ShapeGalleryGame extends Game {
           height: 50,
           y: -5,
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
           crisp: true,
         },
@@ -268,7 +268,7 @@ class ShapeGalleryGame extends Game {
         options: {
           y: -5,
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
           crisp: true,
         },
@@ -282,7 +282,7 @@ class ShapeGalleryGame extends Game {
           width: 60,
           height: 60,
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
         },
       },
@@ -294,7 +294,7 @@ class ShapeGalleryGame extends Game {
         options: {
           y: -10,
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
         },
       },
@@ -305,7 +305,7 @@ class ShapeGalleryGame extends Game {
         options: {
           y: -10,
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
         },
       },
@@ -316,7 +316,7 @@ class ShapeGalleryGame extends Game {
         options: {
           y: -10,
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
         },
       },
@@ -327,7 +327,7 @@ class ShapeGalleryGame extends Game {
         options: {
           y: -10,
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
         },
       },
@@ -337,7 +337,7 @@ class ShapeGalleryGame extends Game {
         args: [30],
         options: {
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
           y: -10,
         },
@@ -348,7 +348,7 @@ class ShapeGalleryGame extends Game {
         args: [30, 0, Math.PI * 1.5],
         options: {
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
           y: -10,
         },
@@ -380,7 +380,7 @@ class ShapeGalleryGame extends Game {
           width: 20,
           height: 25,
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
           x: -5,
           y: -10,
@@ -392,7 +392,7 @@ class ShapeGalleryGame extends Game {
         args: [50, 10],
         options: {
           color: Painter.colors.randomColorHSL(),
-          stroke: "black",
+          stroke: "rgba(255,255,255,0.5)",
           lineWidth: 2,
           y: -10,
         },
@@ -403,9 +403,9 @@ class ShapeGalleryGame extends Game {
         args: [0.5],
         options: {
           y: -10,
-          strokeColor: "#111",
+          strokeColor: "rgba(255,255,255,0.7)",
           headColor: Painter.colors.randomColorHSL(),
-          jointColor: "#111",
+          jointColor: "rgba(255,255,255,0.5)",
           lineWidth: 2,
           showJoints: false,
         },
@@ -413,7 +413,7 @@ class ShapeGalleryGame extends Game {
     ];
     // FPS Counter
     this.pipeline.add(
-      new FPSCounter(this, { color: "black", anchor: "bottom-right" })
+      new FPSCounter(this, { anchor: "bottom-right" })
     );
     this.events.on("click", (e) => {
       this.gallery.children.forEach((go) => {
@@ -507,7 +507,7 @@ class ShapeGalleryGame extends Game {
       const bg = new Rectangle({
         width: cellSize - 10,
         height: cellSize - 10,
-        stroke: "rgba(0,0,0,0.1)",
+        stroke: "rgba(255,255,255,0.2)",
         lineWidth: 1,
         origin: "center",
       });
@@ -521,7 +521,7 @@ class ShapeGalleryGame extends Game {
         x: 0,
         y: (cellSize - 10) / 2 - 12,
         font: "12px monospace",
-        color: "#333",
+        color: "white",
         align: "center",
         baseline: "bottom",
         origin: "center",
