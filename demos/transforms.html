@@ -1,400 +1,494 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Transform API Demo</title>
+        <link rel="stylesheet" href="demos.css" />
+        <script src="./js/info-toggle.js"></script>
+        <style>
+            #debug-toggle {
+                position: absolute;
+                bottom: 20px;
+                left: 20px;
+                z-index: 100;
+                padding: 10px 20px;
+                font-family: monospace;
+                font-size: 14px;
+                background: #333;
+                color: #ff00ff;
+                border: 2px solid #ff00ff;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            #debug-toggle:hover {
+                background: #ff00ff;
+                color: #000;
+            }
+            #debug-toggle.active {
+                background: #ff00ff;
+                color: #000;
+            }
+        </style>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Transform API Demo</title>
-  <link rel="stylesheet" href="demos.css" />
-  <script src="./js/info-toggle.js"></script>
-  <style>
-    #debug-toggle {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      z-index: 100;
-      padding: 10px 20px;
-      font-family: monospace;
-      font-size: 14px;
-      background: #333;
-      color: #ff00ff;
-      border: 2px solid #ff00ff;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    #debug-toggle:hover {
-      background: #ff00ff;
-      color: #000;
-    }
-    #debug-toggle.active {
-      background: #ff00ff;
-      color: #000;
-    }
-  </style>
-</head>
+        <!-- SEO:injected -->
+        <meta
+            name="description"
+            content="Transform API Demo - Transform API Demo — The Transform API provides a consistent, chainable interface for modifying shape properties. Use..."
+        />
+        <meta property="og:type" content="website" />
+        <meta
+            property="og:url"
+            content="https://gcanvas.guinetik.com/transforms.html"
+        />
+        <meta property="og:title" content="Transform API Demo" />
+        <meta
+            property="og:description"
+            content="Transform API Demo - Transform API Demo — The Transform API provides a consistent, chainable interface for modifying shape properties. Use..."
+        />
+        <meta
+            property="og:image"
+            content="https://gcanvas.guinetik.com/og_image.png"
+        />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Transform API Demo" />
+        <meta
+            name="twitter:description"
+            content="Transform API Demo - Transform API Demo — The Transform API provides a consistent, chainable interface for modifying shape properties. Use..."
+        />
+        <meta
+            name="twitter:image"
+            content="https://gcanvas.guinetik.com/og_image.png"
+        />
+        <meta name="twitter:creator" content="@guinetik" />
+        <link
+            rel="canonical"
+            href="https://gcanvas.guinetik.com/transforms.html"
+        />
+        <!-- Google Analytics -->
+        <script
+            async
+            src="https://www.googletagmanager.com/gtag/js?id=G-1GHJD0LM4Z"
+        ></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() {
+                dataLayer.push(arguments);
+            }
+            gtag("js", new Date());
+            gtag("config", "G-1GHJD0LM4Z");
+        </script>
+    </head>
 
-<body>
-  <div id="info" class="light">
-    <strong>Transform API Demo</strong> — The <code>Transform</code> API provides a consistent, chainable interface for modifying shape properties.
-    Use <code>shape.transform.x(100).y(200).rotation(45).scale(0.8)</code> for fluent chaining,
-    <code>shape.transform.set({ x: 100, rotation: 45 })</code> for batch updates, or
-    <code>shape.transform.translateBy(10, 20)</code> for relative transforms.
-    Click to randomize colors.
-  </div>
-  <button id="debug-toggle">Toggle Debug</button>
-  <canvas id="game"></canvas>
+    <body>
+        <div id="info" class="light">
+            <strong>Transform API Demo</strong> — The <code>Transform</code> API
+            provides a consistent, chainable interface for modifying shape
+            properties. Use
+            <code>shape.transform.x(100).y(200).rotation(45).scale(0.8)</code>
+            for fluent chaining,
+            <code>shape.transform.set({ x: 100, rotation: 45 })</code> for batch
+            updates, or <code>shape.transform.translateBy(10, 20)</code> for
+            relative transforms. Click to randomize colors.
+        </div>
+        <button id="debug-toggle">Toggle Debug</button>
+        <canvas id="game"></canvas>
 
-  <script type="module">
-    import {
-      Game,
-      Scene,
-      GameObject,
-      FPSCounter,
-      Rectangle,
-      Circle,
-      Star,
-      Triangle,
-      TextShape,
-      Group,
-      Transform,
-      Painter,
-      Easing
-    } from "../src/index";
+        <script type="module">
+            import {
+                Game,
+                Scene,
+                GameObject,
+                FPSCounter,
+                Rectangle,
+                Circle,
+                Star,
+                Triangle,
+                TextShape,
+                Group,
+                Transform,
+                Painter,
+                Easing,
+            } from "../src/index";
 
-    // Track all shapes for debug toggle
-    const allShapes = [];
+            // Track all shapes for debug toggle
+            const allShapes = [];
 
-    /**
-     * TransformDemo Game
-     * Showcases the new Transform API with animated shapes
-     */
-    class TransformDemoGame extends Game {
-      constructor(canvas) {
-        super(canvas);
-        this.enableFluidSize();
-        this.backgroundColor = "black";
-      }
+            /**
+             * TransformDemo Game
+             * Showcases the new Transform API with animated shapes
+             */
+            class TransformDemoGame extends Game {
+                constructor(canvas) {
+                    super(canvas);
+                    this.enableFluidSize();
+                    this.backgroundColor = "black";
+                }
 
-      onResize() {
-        if (this.scene) {
-          this.scene.width = this.width - 20;
-          this.scene.height = this.height - 20;
-        }
-      }
+                onResize() {
+                    if (this.scene) {
+                        this.scene.width = this.width - 20;
+                        this.scene.height = this.height - 20;
+                    }
+                }
 
-      init() {
-        super.init();
-        // Main scene
-        this.scene = new Scene(this, {
-          width: this.width - 20,
-          height: this.height - 20,
-          debug: false,
-          anchor: "center",
-          origin: "center",
-        });
+                init() {
+                    super.init();
+                    // Main scene
+                    this.scene = new Scene(this, {
+                        width: this.width - 20,
+                        height: this.height - 20,
+                        debug: false,
+                        anchor: "center",
+                        origin: "center",
+                    });
 
-        this.pipeline.add(this.scene);
+                    this.pipeline.add(this.scene);
 
-        // Add demos
-        this.scene.add(new FluentAPIDemo(this));
-        this.scene.add(new GroupTransformDemo(this));
-        this.scene.add(new BatchUpdateDemo(this));
-        this.scene.add(new RelativeTransformDemo(this));
+                    // Add demos
+                    this.scene.add(new FluentAPIDemo(this));
+                    this.scene.add(new GroupTransformDemo(this));
+                    this.scene.add(new BatchUpdateDemo(this));
+                    this.scene.add(new RelativeTransformDemo(this));
 
-        // FPS counter
-        this.pipeline.add(new FPSCounter(this, { anchor: "bottom-right" }));
-      }
-    }
+                    // FPS counter
+                    this.pipeline.add(
+                        new FPSCounter(this, { anchor: "bottom-right" }),
+                    );
+                }
+            }
 
-    /**
-     * Demo 1: Fluent API Chaining
-     * Shows basic chained transform calls
-     */
-    class FluentAPIDemo extends GameObject {
-      constructor(game) {
-        super(game);
+            /**
+             * Demo 1: Fluent API Chaining
+             * Shows basic chained transform calls
+             */
+            class FluentAPIDemo extends GameObject {
+                constructor(game) {
+                    super(game);
 
-        // Create a rectangle using the new Transform API
-        this.rect = new Rectangle({
-          width: 80,
-          height: 60,
-          color: "#e94560",
-          debug: false,
-          debugColor: "#ff00ff",
-          origin: "center",
-        });
-        allShapes.push(this.rect);
+                    // Create a rectangle using the new Transform API
+                    this.rect = new Rectangle({
+                        width: 80,
+                        height: 60,
+                        color: "green",
+                        debug: false,
+                        debugColor: "#ff00ff",
+                        origin: "center",
+                    });
+                    allShapes.push(this.rect);
 
-        // Use fluent API to set initial position
-        this.rect.transform
-          .x(-200)
-          .y(-100);
+                    // Use fluent API to set initial position
+                    this.rect.transform.x(-200).y(-100);
 
-        // Label
-        this.label = new TextShape("Fluent API", {
-          x: -200,
-          y: -170,
-          font: "bold 14px monospace",
-          color: "#fff",
-          align: "center",
-          origin: "center",
-        });
+                    // Label
+                    this.label = new TextShape("Fluent API", {
+                        x: -200,
+                        y: -170,
+                        font: "bold 14px monospace",
+                        color: "#fff",
+                        align: "center",
+                        origin: "center",
+                    });
 
-        this.elapsed = 0;
-      }
+                    this.elapsed = 0;
+                }
 
-      update(dt) {
-        super.update(dt);
-        this.elapsed += dt;
+                update(dt) {
+                    super.update(dt);
+                    this.elapsed += dt;
 
-        // Animate using the transform API
-        this.rect.transform
-          .rotation(this.elapsed * 45)
-          .scaleX(0.8 + Math.sin(this.elapsed * 2) * 0.3)
-          .scaleY(0.8 + Math.cos(this.elapsed * 2) * 0.3);
-      }
+                    // Animate using the transform API
+                    this.rect.transform
+                        .rotation(this.elapsed * 45)
+                        .scaleX(0.8 + Math.sin(this.elapsed * 2) * 0.3)
+                        .scaleY(0.8 + Math.cos(this.elapsed * 2) * 0.3);
+                }
 
-      draw() {
-        super.draw();
-        this.rect.render();
-        this.label.render();
-      }
-    }
+                draw() {
+                    super.draw();
+                    this.rect.render();
+                    this.label.render();
+                }
+            }
 
-    /**
-     * Demo 2: Group Transform Operations
-     * Shows group-wide transform operations
-     */
-    class GroupTransformDemo extends GameObject {
-      constructor(game) {
-        super(game);
+            /**
+             * Demo 2: Group Transform Operations
+             * Shows group-wide transform operations
+             */
+            class GroupTransformDemo extends GameObject {
+                constructor(game) {
+                    super(game);
 
-        // Create a group with multiple shapes
-        this.group = new Group({ debug: false, debugColor: "#ff00ff", origin: "center" });
-        allShapes.push(this.group);
+                    // Create a group with multiple shapes
+                    this.group = new Group({
+                        debug: false,
+                        debugColor: "#ff00ff",
+                        origin: "center",
+                    });
+                    allShapes.push(this.group);
 
-        // Add shapes to group using transform API
-        for (let i = 0; i < 3; i++) {
-          const circle = new Circle(15 + i * 5, {
-            color: Painter.colors.randomColorHSL(),
-            stroke: "#fff",
-            lineWidth: 1,
-            debug: false,
-            debugColor: "#ff00ff",
-            origin: "center",
-          });
-          allShapes.push(circle);
-          // Position using transform
-          circle.transform.position(i * 40 - 40, 0);
-          this.group.add(circle);
-        }
+                    // Add shapes to group using transform API
+                    for (let i = 0; i < 3; i++) {
+                        const circle = new Circle(15 + i * 5, {
+                            color: Painter.colors.randomColorHSL(),
+                            stroke: "#fff",
+                            lineWidth: 1,
+                            debug: false,
+                            debugColor: "#ff00ff",
+                            origin: "center",
+                        });
+                        allShapes.push(circle);
+                        // Position using transform
+                        circle.transform.position(i * 40 - 40, 0);
+                        this.group.add(circle);
+                    }
 
-        // Position the group
-        this.group.transform.position(0, -100);
+                    // Position the group
+                    this.group.transform.position(0, -100);
 
-        // Label
-        this.label = new TextShape("Group Transforms", {
-          x: 0,
-          y: -170,
-          font: "bold 14px monospace",
-          color: "#fff",
-          align: "center",
-          origin: "center",
-        });
+                    // Label
+                    this.label = new TextShape("Group Transforms", {
+                        x: 0,
+                        y: -170,
+                        font: "bold 14px monospace",
+                        color: "#fff",
+                        align: "center",
+                        origin: "center",
+                    });
 
-        this.elapsed = 0;
-      }
+                    this.elapsed = 0;
+                }
 
-      update(dt) {
-        super.update(dt);
-        this.elapsed += dt;
+                update(dt) {
+                    super.update(dt);
+                    this.elapsed += dt;
 
-        // Animate group transform - all children rotate together as a unit
-        this.group.transform
-          .rotation(this.elapsed * 30)
-          .scale(0.9 + Math.sin(this.elapsed * 1.5) * 0.2);
-      }
+                    // Animate group transform - all children rotate together as a unit
+                    this.group.transform
+                        .rotation(this.elapsed * 30)
+                        .scale(0.9 + Math.sin(this.elapsed * 1.5) * 0.2);
+                }
 
-      draw() {
-        super.draw();
-        this.group.render();
-        this.label.render();
-      }
-    }
+                draw() {
+                    super.draw();
+                    this.group.render();
+                    this.label.render();
+                }
+            }
 
-    /**
-     * Demo 3: Batch Updates
-     * Shows using set() for multiple properties at once
-     */
-    class BatchUpdateDemo extends GameObject {
-      constructor(game) {
-        super(game);
+            /**
+             * Demo 3: Batch Updates
+             * Shows using set() for multiple properties at once
+             */
+            class BatchUpdateDemo extends GameObject {
+                constructor(game) {
+                    super(game);
 
-        this.star = new Star(30, 5, 0.5, {
-          color: "#ffc107",
-          stroke: "#fff",
-          lineWidth: 2,
-          debug: false,
-          debugColor: "#ff00ff",
-          origin: "center",
-        });
-        allShapes.push(this.star);
+                    this.star = new Star(30, 5, 0.5, {
+                        color: "#ffc107",
+                        stroke: "#fff",
+                        lineWidth: 2,
+                        debug: false,
+                        debugColor: "#ff00ff",
+                        origin: "center",
+                    });
+                    allShapes.push(this.star);
 
-        // Use batch set for initial state
-        this.star.transform.set({
-          x: 200,
-          y: -100,
-          rotation: 0,
-          scaleX: 1,
-          scaleY: 1
-        });
+                    // Use batch set for initial state
+                    this.star.transform.set({
+                        x: 200,
+                        y: -100,
+                        rotation: 0,
+                        scaleX: 1,
+                        scaleY: 1,
+                    });
 
-        // Label
-        this.label = new TextShape("Batch set()", {
-          x: 200,
-          y: -170,
-          font: "bold 14px monospace",
-          color: "#fff",
-          align: "center",
-          origin: "center",
-        });
+                    // Label
+                    this.label = new TextShape("Batch set()", {
+                        x: 200,
+                        y: -170,
+                        font: "bold 14px monospace",
+                        color: "#fff",
+                        align: "center",
+                        origin: "center",
+                    });
 
-        this.elapsed = 0;
-      }
+                    this.elapsed = 0;
+                }
 
-      update(dt) {
-        super.update(dt);
-        this.elapsed += dt;
+                update(dt) {
+                    super.update(dt);
+                    this.elapsed += dt;
 
-        // Use batch update for animation
-        const pulse = Math.sin(this.elapsed * 3);
-        const wobble = Math.sin(this.elapsed * 5) * 5;
+                    // Use batch update for animation
+                    const pulse = Math.sin(this.elapsed * 3);
+                    const wobble = Math.sin(this.elapsed * 5) * 5;
 
-        this.star.transform.set({
-          rotation: this.elapsed * 60,
-          scaleX: 1 + pulse * 0.3,
-          scaleY: 1 - pulse * 0.3
-        });
+                    this.star.transform.set({
+                        rotation: this.elapsed * 60,
+                        scaleX: 1 + pulse * 0.3,
+                        scaleY: 1 - pulse * 0.3,
+                    });
 
-        // Also translate using relative method
-        this.star.transform.x(200 + wobble);
-      }
+                    // Also translate using relative method
+                    this.star.transform.x(200 + wobble);
+                }
 
-      draw() {
-        super.draw();
-        this.star.render();
-        this.label.render();
-      }
-    }
+                draw() {
+                    super.draw();
+                    this.star.render();
+                    this.label.render();
+                }
+            }
 
-    /**
-     * Demo 4: Animated Transforms
-     * Shows position, rotation, and scale animations
-     */
-    class RelativeTransformDemo extends GameObject {
-      constructor(game) {
-        super(game);
+            /**
+             * Demo 4: Animated Transforms
+             * Shows position, rotation, and scale animations
+             */
+            class RelativeTransformDemo extends GameObject {
+                constructor(game) {
+                    super(game);
 
-        // Create shapes for demonstrating animated transforms
-        this.shapes = [];
-        const positions = [
-          { x: -200, y: 100 },
-          { x: 0, y: 100 },
-          { x: 200, y: 100 }
-        ];
+                    // Create shapes for demonstrating animated transforms
+                    this.shapes = [];
+                    const positions = [
+                        { x: -200, y: 100 },
+                        { x: 0, y: 100 },
+                        { x: 200, y: 100 },
+                    ];
 
-        const types = [
-          { name: "position", shape: new Rectangle({ width: 50, height: 50, color: "#00d9ff", debug: false, debugColor: "#ff00ff", origin: "center" }) },
-          { name: "rotation", shape: new Triangle(40, { color: "#ff6b6b", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff", origin: "center" }) },
-          { name: "scale", shape: new Circle(25, { color: "#7bed9f", stroke: "#fff", lineWidth: 2, debug: false, debugColor: "#ff00ff", origin: "center" }) }
-        ];
+                    const types = [
+                        {
+                            name: "position",
+                            shape: new Rectangle({
+                                width: 50,
+                                height: 50,
+                                color: "#00d9ff",
+                                debug: false,
+                                debugColor: "#ff00ff",
+                                origin: "center",
+                            }),
+                        },
+                        {
+                            name: "rotation",
+                            shape: new Triangle(40, {
+                                color: "#ff6b6b",
+                                stroke: "#fff",
+                                lineWidth: 2,
+                                debug: false,
+                                debugColor: "#ff00ff",
+                                origin: "center",
+                            }),
+                        },
+                        {
+                            name: "scale",
+                            shape: new Circle(25, {
+                                color: "#7bed9f",
+                                stroke: "#fff",
+                                lineWidth: 2,
+                                debug: false,
+                                debugColor: "#ff00ff",
+                                origin: "center",
+                            }),
+                        },
+                    ];
 
-        types.forEach((type, i) => {
-          allShapes.push(type.shape);
-          type.shape.transform.position(positions[i].x, positions[i].y);
-          type.label = new TextShape(type.name + "()", {
-            x: positions[i].x,
-            y: 30,
-            font: "bold 14px monospace",
-            color: "#fff",
-            align: "center",
-            origin: "center",
-          });
-          type.baseX = positions[i].x;
-          type.baseY = positions[i].y;
-          this.shapes.push(type);
-        });
+                    types.forEach((type, i) => {
+                        allShapes.push(type.shape);
+                        type.shape.transform.position(
+                            positions[i].x,
+                            positions[i].y,
+                        );
+                        type.label = new TextShape(type.name + "()", {
+                            x: positions[i].x,
+                            y: 30,
+                            font: "bold 14px monospace",
+                            color: "#fff",
+                            align: "center",
+                            origin: "center",
+                        });
+                        type.baseX = positions[i].x;
+                        type.baseY = positions[i].y;
+                        this.shapes.push(type);
+                    });
 
-        this.elapsed = 0;
-        this.lastUpdate = 0;
-      }
+                    this.elapsed = 0;
+                    this.lastUpdate = 0;
+                }
 
-      update(dt) {
-        super.update(dt);
-        this.elapsed += dt;
+                update(dt) {
+                    super.update(dt);
+                    this.elapsed += dt;
 
-        // position demo - oscillate position
-        const tx = Math.sin(this.elapsed * 2) * 30;
-        const ty = Math.cos(this.elapsed * 3) * 15;
-        this.shapes[0].shape.transform.position(this.shapes[0].baseX + tx, this.shapes[0].baseY + ty);
+                    // position demo - oscillate position
+                    const tx = Math.sin(this.elapsed * 2) * 30;
+                    const ty = Math.cos(this.elapsed * 3) * 15;
+                    this.shapes[0].shape.transform.position(
+                        this.shapes[0].baseX + tx,
+                        this.shapes[0].baseY + ty,
+                    );
 
-        // rotation demo - continuous rotation
-        this.shapes[1].shape.transform.rotation(this.elapsed * 90);
+                    // rotation demo - continuous rotation
+                    this.shapes[1].shape.transform.rotation(this.elapsed * 90);
 
-        // scale demo - pulsing scale
-        const scale = 0.7 + Math.abs(Math.sin(this.elapsed * 2)) * 0.6;
-        this.shapes[2].shape.transform.scale(scale);
-      }
+                    // scale demo - pulsing scale
+                    const scale =
+                        0.7 + Math.abs(Math.sin(this.elapsed * 2)) * 0.6;
+                    this.shapes[2].shape.transform.scale(scale);
+                }
 
-      draw() {
-        super.draw();
-        this.shapes.forEach(s => {
-          s.shape.render();
-          s.label.render();
-        });
-      }
-    }
+                draw() {
+                    super.draw();
+                    this.shapes.forEach((s) => {
+                        s.shape.render();
+                        s.label.render();
+                    });
+                }
+            }
 
-    // Start the game
-    window.addEventListener("load", () => {
-      const canvas = document.getElementById("game");
-      const game = new TransformDemoGame(canvas);
-      game.start();
+            // Start the game
+            window.addEventListener("load", () => {
+                const canvas = document.getElementById("game");
+                const game = new TransformDemoGame(canvas);
+                game.start();
 
-      // Debug toggle button
-      let debugEnabled = false;
-      const debugBtn = document.getElementById("debug-toggle");
+                // Debug toggle button
+                let debugEnabled = false;
+                const debugBtn = document.getElementById("debug-toggle");
 
-      debugBtn.addEventListener("click", () => {
-        debugEnabled = !debugEnabled;
-        debugBtn.classList.toggle("active", debugEnabled);
-        debugBtn.textContent = debugEnabled ? "Debug: ON" : "Toggle Debug";
+                debugBtn.addEventListener("click", () => {
+                    debugEnabled = !debugEnabled;
+                    debugBtn.classList.toggle("active", debugEnabled);
+                    debugBtn.textContent = debugEnabled
+                        ? "Debug: ON"
+                        : "Toggle Debug";
 
-        // Toggle debug on all shapes
-        allShapes.forEach(shape => {
-          shape._debug = debugEnabled;
-        });
-      });
+                    // Toggle debug on all shapes
+                    allShapes.forEach((shape) => {
+                        shape._debug = debugEnabled;
+                    });
+                });
 
-      // Randomize colors on click
-      canvas.addEventListener("click", () => {
-        game.scene.children.forEach(child => {
-          if (child.rect) child.rect.color = Painter.colors.randomColorHSL();
-          if (child.star) child.star.color = Painter.colors.randomColorHSL();
-          if (child.group) {
-            child.group.children.forEach(c => {
-              c.color = Painter.colors.randomColorHSL();
+                // Randomize colors on click
+                canvas.addEventListener("click", () => {
+                    game.scene.children.forEach((child) => {
+                        if (child.rect)
+                            child.rect.color = Painter.colors.randomColorHSL();
+                        if (child.star)
+                            child.star.color = Painter.colors.randomColorHSL();
+                        if (child.group) {
+                            child.group.children.forEach((c) => {
+                                c.color = Painter.colors.randomColorHSL();
+                            });
+                        }
+                        if (child.shapes) {
+                            child.shapes.forEach((s) => {
+                                s.shape.color = Painter.colors.randomColorHSL();
+                            });
+                        }
+                    });
+                });
             });
-          }
-          if (child.shapes) {
-            child.shapes.forEach(s => {
-              s.shape.color = Painter.colors.randomColorHSL();
-            });
-          }
-        });
-      });
-    });
-  </script>
-</body>
-
+        </script>
+    </body>
 </html>

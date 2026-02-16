@@ -54,6 +54,9 @@ function run() {
   console.log("📦 Running build");
   execSync("npm run build", { stdio: "inherit" });
 
+  console.log("🔍 Injecting SEO meta tags (idempotent)...");
+  execSync("node scripts/inject-seo.js", { stdio: "inherit" });
+
   console.log("📁 Copying demos → public/");
   copyRecursive(DEMOS, PUBLIC);
 
