@@ -1,9 +1,9 @@
 /**
  * Fluid & Gas Explorer Demo
- * 
+ *
  * Advanced fluid simulation demo using FluidSystem with thermal physics.
  * Demonstrates gas mode with heat zones, thermal convection, and temperature coloring.
- * 
+ *
  * Features:
  * - Smooth Particle Hydrodynamics for liquid behavior
  * - Gas mode with thermal convection (hot rises, cold sinks)
@@ -34,7 +34,7 @@ const PARTICLE_SIZE = Math.PI * 10;
 
 const CONFIG = {
   particleSize: PARTICLE_SIZE,
-  
+
   sim: {
     maxParticles: Math.floor(PARTICLE_SIZE * 11),
     gravity: 200,
@@ -125,10 +125,10 @@ class FluidGasGame extends Game {
 
   init() {
     super.init();
-    
+
     // Initialize Screen for responsive handling
     Screen.init(this);
-    
+
     this.pointer.x = this.width * 0.5;
     this.pointer.y = this.height * 0.5;
 
@@ -186,7 +186,7 @@ class FluidGasGame extends Game {
 
     // Handle resize
     this.onResize = () => this._handleResize();
-    
+
     // Listen for device type changes to rebuild UI
     this.events.on("devicechange", () => this._rebuildUI());
   }
@@ -196,23 +196,26 @@ class FluidGasGame extends Game {
    */
   _handleResize() {
     this._updateContainerBounds();
-    
+
     if (this.containerRect) {
       this.containerRect.transform
-        .position(this.bounds.x + this.bounds.w / 2, this.bounds.y + this.bounds.h / 2)
+        .position(
+          this.bounds.x + this.bounds.w / 2,
+          this.bounds.y + this.bounds.h / 2,
+        )
         .size(this.bounds.w, this.bounds.h);
-      
+
       // Update the shape dimensions too
       if (this.containerRect.shape) {
         this.containerRect.shape.width = this.bounds.w;
         this.containerRect.shape.height = this.bounds.h;
       }
     }
-    
+
     if (this.fluid) {
       this.fluid.setBounds(this.bounds);
     }
-    
+
     if (this.buttonRow) this.buttonRow.markBoundsDirty();
     if (this.stepperRow) this.stepperRow.markBoundsDirty();
   }
@@ -231,10 +234,10 @@ class FluidGasGame extends Game {
     if (this.fpsCounter) {
       this.pipeline.remove(this.fpsCounter);
     }
-    
+
     // Rebuild UI with new responsive values
     this._buildUI();
-    
+
     // Update container bounds for new device type
     this._updateContainerBounds();
     this._handleResize();
@@ -242,7 +245,7 @@ class FluidGasGame extends Game {
 
   update(dt) {
     dt = Math.min(dt, 0.033);
-    
+
     // Update physics mode on FluidSystem
     this.fluid.setPhysicsMode(this.mode);
     this.fluid.gravityEnabled = this.gravityOn;
@@ -261,7 +264,7 @@ class FluidGasGame extends Game {
    */
   render() {
     super.render();
-    
+
     if (this.fluid.modeMix > 0.5 && this.bounds) {
       this._drawHeatZones();
     }
@@ -274,29 +277,29 @@ class FluidGasGame extends Game {
     const { heatZone, coolZone } = CONFIG.heat;
     const { x, y, w, h } = this.bounds;
     const ctx = this.ctx;
-    
+
     const coldZoneHeight = coolZone * h;
     const hotZoneStart = heatZone * h;
     const hotZoneHeight = h - hotZoneStart;
-    
+
     const alpha = Math.min(1, (this.fluid.modeMix - 0.5) * 4) * 0.25;
-    
+
     ctx.save();
-    
+
     // Cold zone at top
     const coldGrad = ctx.createLinearGradient(x, y, x, y + coldZoneHeight);
     coldGrad.addColorStop(0, `rgba(100, 150, 255, ${alpha})`);
     coldGrad.addColorStop(1, `rgba(100, 150, 255, 0)`);
     ctx.fillStyle = coldGrad;
     ctx.fillRect(x, y, w, coldZoneHeight);
-    
+
     // Hot zone at bottom
     const hotGrad = ctx.createLinearGradient(x, y + hotZoneStart, x, y + h);
     hotGrad.addColorStop(0, `rgba(255, 100, 50, 0)`);
     hotGrad.addColorStop(1, `rgba(255, 100, 50, ${alpha})`);
     ctx.fillStyle = hotGrad;
     ctx.fillRect(x, y + hotZoneStart, w, hotZoneHeight);
-    
+
     // Zone boundary lines
     ctx.strokeStyle = `rgba(100, 150, 255, ${alpha * 0.8})`;
     ctx.lineWidth = 1;
@@ -305,20 +308,20 @@ class FluidGasGame extends Game {
     ctx.moveTo(x, y + coldZoneHeight);
     ctx.lineTo(x + w, y + coldZoneHeight);
     ctx.stroke();
-    
+
     ctx.strokeStyle = `rgba(255, 100, 50, ${alpha * 0.8})`;
     ctx.beginPath();
     ctx.moveTo(x, y + hotZoneStart);
     ctx.lineTo(x + w, y + hotZoneStart);
     ctx.stroke();
     ctx.setLineDash([]);
-    
+
     ctx.restore();
   }
 
   _buildUI() {
     const isMobile = Screen.isMobile;
-    
+
     // Responsive sizing
     const margin = Screen.responsive(8, 12, 16);
     const buttonWidth = Screen.responsive(90, 110, 130);
@@ -333,7 +336,7 @@ class FluidGasGame extends Game {
     // Button row - centered on mobile, bottom-left on desktop
     const buttonRow = new HorizontalLayout(this, {
       spacing,
-      debug: true,
+      debug: false,
       debugColor: "red",
       padding: 0,
       origin: "center",
@@ -350,9 +353,13 @@ class FluidGasGame extends Game {
       startToggled: false,
       onToggle: (on) => {
         this.mode = on ? "gas" : "liquid";
-        this.btnMode.text = isMobile 
-          ? (on ? "Gas" : "Liquid")
-          : (on ? "Mode: Gas" : "Mode: Liquid");
+        this.btnMode.text = isMobile
+          ? on
+            ? "Gas"
+            : "Liquid"
+          : on
+            ? "Mode: Gas"
+            : "Mode: Liquid";
       },
     });
     buttonRow.add(this.btnMode);
@@ -367,7 +374,9 @@ class FluidGasGame extends Game {
         this.gravityOn = on;
         this.btnGravity.text = isMobile
           ? "Gravity"
-          : (on ? "Gravity: On" : "Gravity: Off");
+          : on
+            ? "Gravity: On"
+            : "Gravity: Off";
       },
     });
     buttonRow.add(this.btnGravity);
@@ -385,14 +394,16 @@ class FluidGasGame extends Game {
     // Account for stepper height (label + controls + gaps)
     const stepperTotalHeight = stepperHeight + 20; // Include label height
     const stepperRow = new HorizontalLayout(this, {
-      debug: true,
+      debug: false,
       debugColor: "blue",
       spacing: spacing + 4,
       padding: 0,
       origin: "center",
       anchor: isMobile ? Position.BOTTOM_CENTER : Position.BOTTOM_LEFT,
       anchorMargin: margin,
-      anchorOffsetY: isMobile ? 0 : -(buttonHeight + spacing + stepperTotalHeight / 2 - 10),
+      anchorOffsetY: isMobile
+        ? 0
+        : -(buttonHeight + spacing + stepperTotalHeight / 2 - 10),
     });
 
     // On mobile, show fewer steppers
@@ -466,13 +477,16 @@ class FluidGasGame extends Game {
 
     this.pipeline.add(buttonRow);
     this.pipeline.add(stepperRow);
-    
+
     this.buttonRow = buttonRow;
     this.stepperRow = stepperRow;
-    
-    this.fpsCounter = new FPSCounter(this, { anchor: "bottom-right", origin: "center" });
+
+    this.fpsCounter = new FPSCounter(this, {
+      anchor: "bottom-right",
+      origin: "center",
+    });
     this.pipeline.add(this.fpsCounter);
-    
+
     buttonRow.markBoundsDirty();
     stepperRow.markBoundsDirty();
   }
@@ -490,18 +504,22 @@ class FluidGasGame extends Game {
       const p = particles[i];
       const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
       const speedNorm = Math.min(1, speed / maxSpeed);
-      
+
       let hue, saturation, light;
-      
+
       if (this.fluid.modeMix < 0.5) {
         // LIQUID MODE: Blue water
         hue = liquid.baseHue - speedNorm * liquid.hueRange;
         saturation = liquid.saturation;
-        light = Easing.lerp(liquid.minLight, liquid.maxLight, 0.3 + speedNorm * 0.5);
+        light = Easing.lerp(
+          liquid.minLight,
+          liquid.maxLight,
+          0.3 + speedNorm * 0.5,
+        );
       } else {
         // GAS MODE: Temperature-based coloring
         const temp = p.custom.temperature ?? CONFIG.heat.neutralTemp;
-        
+
         // Blue -> Purple -> Magenta -> Red
         if (temp < 0.33) {
           hue = gas.coldHue + (280 - gas.coldHue) * (temp / 0.33);
@@ -538,11 +556,11 @@ class FluidGasGame extends Game {
       const dy = my - p.y;
       const dist2 = dx * dx + dy * dy;
       if (dist2 >= r2 || dist2 < 1) continue;
-      
+
       const dist = Math.sqrt(dist2);
       const t = 1 - dist / radius;
       const strength = (this.pointer.down ? -push : pull) * t * t;
-      
+
       // Apply directly to velocity (simpler than accumulating forces)
       const dt = 0.016; // Approximate frame time
       p.vx += (dx / dist) * strength * dt;

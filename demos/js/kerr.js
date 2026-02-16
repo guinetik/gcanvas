@@ -100,8 +100,8 @@ class KerrMetricPanelGO extends GameObject {
   constructor(game, options = {}) {
     // Responsive sizing
     const isMobile = game.width < CONFIG.mobileWidth;
-    const panelWidth = isMobile ? 260 : 260;
-    const panelHeight = isMobile ? 300 : 280;
+    const panelWidth = isMobile ? 280 : 280;
+    const panelHeight = isMobile ? 300 : 300;
     const lineHeight = isMobile ? 12 : 14;
     const valueOffset = isMobile ? 140 : 180;
 
@@ -112,7 +112,7 @@ class KerrMetricPanelGO extends GameObject {
       originX: 0.5,
       originY: 0.5,
       debug: true,
-      debugColor: "red",
+      debugColor: "gray",
       anchor: Position.BOTTOM_LEFT,
       anchorMargin: 20,
     });
@@ -128,28 +128,28 @@ class KerrMetricPanelGO extends GameObject {
     this.features = {
       title: {
         text: "Kerr Metric (Rotating Black Hole)",
-        font: "bold 12px monospace",
+        font: "bold 14px monospace",
         color: "#f7a",
         height: lineHeight + 4,
         desc: "The Kerr metric describes spacetime around a rotating black hole.\n\nKerr is STATIONARY - it doesn't evolve over time. This animation shows geometric interpolation from flat to Kerr.\n\nNOTE: Visual effects are EXAGGERATED (like rubber sheet analogy) to make curvature and frame dragging easier to see.",
       },
       equation: {
         text: "ds² = gμν dxμ dxν (Boyer-Lindquist)",
-        font: "12px monospace",
+        font: "14px monospace",
         color: "#888",
         height: lineHeight,
         desc: "Boyer-Lindquist coordinates (t, r, θ, φ) generalize Schwarzschild coordinates for rotating spacetime.",
       },
       mass: {
         text: "M = 1.00",
-        font: "11px monospace",
+        font: "12px monospace",
         color: "#888",
         height: lineHeight,
         desc: "Mass of the black hole in geometrized units (G = c = 1).",
       },
       spin: {
         text: "a = 0.70M (70%)",
-        font: "bold 11px monospace",
+        font: "bold 12px monospace",
         color: "#fa8",
         height: lineHeight + 4,
         desc: "Spin parameter a = J/Mc (angular momentum per unit mass).\n\n0 = Schwarzschild (no rotation)\nM = Extremal Kerr (maximum spin)\n\nClick to randomize!",
@@ -188,7 +188,7 @@ class KerrMetricPanelGO extends GameObject {
       },
       gtph: {
         text: "g_tφ = -2Mar sin²θ/Σ",
-        font: "bold 11px monospace",
+        font: "bold 12px monospace",
         color: "#ff0",
         height: lineHeight + 6,
         value: "= -0.180",
@@ -378,7 +378,7 @@ class KerrDemo extends Game {
     // Calculate initial zoom based on screen size
     const initialZoom = Math.min(
       CONFIG.maxZoom,
-      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
+      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize),
     );
     this.zoom = initialZoom;
     this.targetZoom = initialZoom;
@@ -411,7 +411,10 @@ class KerrDemo extends Game {
     this.gesture = new Gesture(this.canvas, {
       onZoom: (delta) => {
         this.targetZoom *= 1 + delta * CONFIG.zoomSpeed;
-        this.targetZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, this.targetZoom));
+        this.targetZoom = Math.max(
+          CONFIG.minZoom,
+          Math.min(CONFIG.maxZoom, this.targetZoom),
+        );
       },
       onPan: null, // Camera3D handles rotation via drag
     });
@@ -501,7 +504,7 @@ class KerrDemo extends Game {
         align: "right",
         baseline: "bottom",
         origin: "center",
-      }
+      },
     );
 
     // Explanatory text lines
@@ -539,7 +542,7 @@ class KerrDemo extends Game {
     // Recalculate default zoom for new screen size
     this.defaultZoom = Math.min(
       CONFIG.maxZoom,
-      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
+      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize),
     );
   }
 
@@ -893,7 +896,8 @@ class KerrDemo extends Game {
 
     // Position and render main controls text
     this.controlsText.x = w - margin;
-    this.controlsText.y = h - 25 - (isMobile ? 1 : this.explanationShapes.length) * lineSpacing;
+    this.controlsText.y =
+      h - 25 - (isMobile ? 1 : this.explanationShapes.length) * lineSpacing;
     this.controlsText.render();
 
     // Position and render explanation lines (hide most on mobile)
@@ -903,7 +907,7 @@ class KerrDemo extends Game {
       shape.font = isMobile ? "8px monospace" : "10px monospace";
       const lineIndexFromBottom = this.explanationShapes.length - 1 - i;
       shape.x = w - margin;
-      shape.y = h - 10 - (lineIndexFromBottom * lineSpacing);
+      shape.y = h - 10 - lineIndexFromBottom * lineSpacing;
       shape.render();
     });
   }
@@ -1011,11 +1015,7 @@ class KerrDemo extends Game {
           const z = Math.sin(angle) * r;
           const y = this.getEmbeddingHeight(r);
 
-          const p = this.project3D(
-            x * this.gridScale,
-            y,
-            z * this.gridScale,
-          );
+          const p = this.project3D(x * this.gridScale, y, z * this.gridScale);
 
           if (i === 0) ctx.moveTo(cx + p.x, cy + p.y);
           else ctx.lineTo(cx + p.x, cy + p.y);
@@ -1054,11 +1054,7 @@ class KerrDemo extends Game {
         const z = Math.sin(angle) * rErgo;
         const y = this.getEmbeddingHeight(rErgo);
 
-        const p = this.project3D(
-          x * this.gridScale,
-          y,
-          z * this.gridScale,
-        );
+        const p = this.project3D(x * this.gridScale, y, z * this.gridScale);
 
         if (i === 0) ctx.moveTo(cx + p.x, cy + p.y);
         else ctx.lineTo(cx + p.x, cy + p.y);
@@ -1071,11 +1067,7 @@ class KerrDemo extends Game {
         const z = Math.sin(angle) * rPlus;
         const y = this.getEmbeddingHeight(rPlus + 0.1);
 
-        const p = this.project3D(
-          x * this.gridScale,
-          y,
-          z * this.gridScale,
-        );
+        const p = this.project3D(x * this.gridScale, y, z * this.gridScale);
         ctx.lineTo(cx + p.x, cy + p.y);
       }
 
@@ -1347,11 +1339,7 @@ class KerrDemo extends Game {
         const x = Math.cos(angle) * rPlus;
         const z = Math.sin(angle) * rPlus;
 
-        const p = this.project3D(
-          x * this.gridScale,
-          y,
-          z * this.gridScale,
-        );
+        const p = this.project3D(x * this.gridScale, y, z * this.gridScale);
 
         if (i === 0) ctx.moveTo(cx + p.x, cy + p.y);
         else ctx.lineTo(cx + p.x, cy + p.y);
@@ -1367,9 +1355,10 @@ class KerrDemo extends Game {
     if (this.formationProgress < 1) return;
 
     // Fade in the orbiter over 0.5 seconds after formation completes
-    const timeSinceFormation = this.formationProgress >= 1
-      ? (this.time - this.formationCompleteTime || 0)
-      : 0;
+    const timeSinceFormation =
+      this.formationProgress >= 1
+        ? this.time - this.formationCompleteTime || 0
+        : 0;
     const orbiterAlpha = Math.min(1, timeSinceFormation * 2); // 0.5s fade-in
 
     const totalAngle = this.orbitPhi + this.precessionAngle;
@@ -1452,11 +1441,7 @@ class KerrDemo extends Game {
         const z = Math.sin(angle) * r;
         const y = this.getEmbeddingHeight(r);
 
-        const p = this.project3D(
-          x * this.gridScale,
-          y,
-          z * this.gridScale,
-        );
+        const p = this.project3D(x * this.gridScale, y, z * this.gridScale);
 
         if (i === 0) ctx.moveTo(cx + p.x, cy + p.y);
         else ctx.lineTo(cx + p.x, cy + p.y);

@@ -34,6 +34,7 @@ export class PatternDemo extends Scene {
       Math.max(1, Math.floor((game.width - margin) / this.cellSize))
     );
 
+    const headerHeight = 80;
     this.grid = new TileLayout(game, {
       columns: initialColumns,
       spacing: 12,
@@ -41,6 +42,8 @@ export class PatternDemo extends Scene {
       autoSize: true,
       debug: true,
       origin: "center",
+      scrollable: true,
+      viewportHeight: game.height - headerHeight,
     });
 
     // Add Title & Subtitle
@@ -352,6 +355,7 @@ export class PatternDemo extends Scene {
   onResize() {
     if (this.grid) {
       const margin = 40;
+      const headerHeight = 80;
       const availableWidth = this.game.width - margin;
       const columns = Math.min(
         this.maxColumns,
@@ -362,6 +366,10 @@ export class PatternDemo extends Scene {
         this.grid.columns = columns;
         this.grid.markBoundsDirty();
       }
+
+      // Update viewport height on resize
+      this.grid._viewportHeight = this.game.height - headerHeight;
+      this.grid.markBoundsDirty();
 
       // Center the grid
       this.grid.transform.position(

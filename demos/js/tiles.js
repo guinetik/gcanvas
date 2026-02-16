@@ -25,7 +25,12 @@ const CONFIG = {
 
 export class TileDemo extends Scene {
   constructor(game, options = {}) {
-    super(game, { ...options, origin: "center", debug: true, debugColor: "magenta" });
+    super(game, {
+      ...options,
+      origin: "center",
+      debug: false,
+      debugColor: "magenta",
+    });
     this.elapsedTime = this.lastChangeTime = 0;
   }
 
@@ -61,7 +66,7 @@ export class TileDemo extends Scene {
       spacing: CONFIG.tileSpacing,
       padding: CONFIG.tilePadding,
       autoSize: true,
-      debug: true,
+      debug: false,
       debugColor: "yellow",
       origin: "center",
       // Enable scrolling
@@ -90,7 +95,7 @@ export class TileDemo extends Scene {
       anchorOffsetY: -15,
       spacing: isMobile ? 5 : 10,
       padding: 10,
-      debug: true,
+      debug: false,
       debugColor: "magenta",
       origin: "center",
       align: "center",
@@ -98,55 +103,65 @@ export class TileDemo extends Scene {
     this.add(this.bottomUI);
 
     // "Add Tile" button
-    this.bottomUI.add(new Button(game, {
-      text: isMobile ? "+" : "Add",
-      width: isMobile ? 40 : buttonWidth,
-      origin: "center",
-      onClick: () => this.addTile(),
-    }));
+    this.bottomUI.add(
+      new Button(game, {
+        text: isMobile ? "+" : "Add",
+        width: isMobile ? 40 : buttonWidth,
+        origin: "center",
+        onClick: () => this.addTile(),
+      }),
+    );
 
     // "Remove Tile" button
-    this.bottomUI.add(new Button(game, {
-      text: isMobile ? "-" : "Remove",
-      width: isMobile ? 40 : buttonWidth,
-      origin: "center",
-      onClick: () => this.removeTile(),
-    }));
+    this.bottomUI.add(
+      new Button(game, {
+        text: isMobile ? "-" : "Remove",
+        width: isMobile ? 40 : buttonWidth,
+        origin: "center",
+        onClick: () => this.removeTile(),
+      }),
+    );
 
     // "Add Column" button
-    this.bottomUI.add(new Button(game, {
-      text: isMobile ? "+Col" : "+ Column",
-      width: isMobile ? 50 : buttonWidth,
-      origin: "center",
-      onClick: () => {
-        const maxColumns = this.getResponsiveColumns();
-        if (this.grid.columns < maxColumns) {
-          this.grid.columns++;
-          this.grid.markBoundsDirty();
-        }
-      },
-    }));
+    this.bottomUI.add(
+      new Button(game, {
+        text: isMobile ? "+Col" : "+ Column",
+        width: isMobile ? 50 : buttonWidth,
+        origin: "center",
+        onClick: () => {
+          const maxColumns = this.getResponsiveColumns();
+          if (this.grid.columns < maxColumns) {
+            this.grid.columns++;
+            this.grid.markBoundsDirty();
+          }
+        },
+      }),
+    );
 
     // "Remove Column" button
-    this.bottomUI.add(new Button(game, {
-      text: isMobile ? "-Col" : "- Column",
-      width: isMobile ? 50 : buttonWidth,
-      origin: "center",
-      onClick: () => {
-        this.grid.columns = Math.max(1, this.grid.columns - 1);
-        this.grid.markBoundsDirty();
-      },
-    }));
+    this.bottomUI.add(
+      new Button(game, {
+        text: isMobile ? "-Col" : "- Column",
+        width: isMobile ? 50 : buttonWidth,
+        origin: "center",
+        onClick: () => {
+          this.grid.columns = Math.max(1, this.grid.columns - 1);
+          this.grid.markBoundsDirty();
+        },
+      }),
+    );
 
     // Add 10 tiles button (for quickly testing scroll)
-    this.bottomUI.add(new Button(game, {
-      text: isMobile ? "+10" : "Add 10",
-      width: isMobile ? 45 : buttonWidth,
-      origin: "center",
-      onClick: () => {
-        for (let i = 0; i < 10; i++) this.addTile();
-      },
-    }));
+    this.bottomUI.add(
+      new Button(game, {
+        text: isMobile ? "+10" : "Add 10",
+        width: isMobile ? 45 : buttonWidth,
+        origin: "center",
+        onClick: () => {
+          for (let i = 0; i < 10; i++) this.addTile();
+        },
+      }),
+    );
   }
 
   addTile() {
@@ -199,38 +214,38 @@ export class TileDemo extends Scene {
       // Random number of tiles to change (between 1 and 10% of total tiles)
       const tilesToChange = Math.max(
         1,
-        Math.floor(this.grid.children.length * (0.1 + Math.random() * 0.1))
+        Math.floor(this.grid.children.length * (0.1 + Math.random() * 0.1)),
       );
 
       // Filter out tiles that are already tweening
       const availableTiles = this.grid.children.filter(
-        (tile) => !tile.isTweening
+        (tile) => !tile.isTweening,
       );
 
       // Shuffle and pick random tiles
       const shuffled = [...availableTiles].sort(() => 0.5 - Math.random());
       const selectedTiles = shuffled.slice(
         0,
-        Math.min(tilesToChange, availableTiles.length)
+        Math.min(tilesToChange, availableTiles.length),
       );
 
       // Start tweening on selected tiles
       for (const tile of selectedTiles) {
         tile.isTweening = true;
-        
+
         // Store RGB values directly instead of CSS string to avoid parsing issues
-        const rgb = tile.shape.color ? 
-          Painter.colors.parseColorString(tile.shape.color) : 
-          [255, 255, 255]; // Default to white if color is undefined
-        
+        const rgb = tile.shape.color
+          ? Painter.colors.parseColorString(tile.shape.color)
+          : [255, 255, 255]; // Default to white if color is undefined
+
         tile.startRGB = rgb;
-        
+
         // Generate vibrant random color in RGB directly
         const hue = Math.floor(Math.random() * 360);
         const saturation = 80 + Math.floor(Math.random() * 20); // 80-100%
         const lightness = 50 + Math.floor(Math.random() * 30); // 50-80%
         const targetRGB = Painter.colors.hslToRgb(hue, saturation, lightness);
-        
+
         tile.targetRGB = targetRGB;
         tile.tweenElapsed = 0;
         tile.tweenDuration = 0.5 + Math.random() * 0.5; // Random duration between 0.5-1.0 seconds
@@ -243,22 +258,25 @@ export class TileDemo extends Scene {
         try {
           // Update elapsed time
           tile.tweenElapsed += dt;
-          
+
           // Calculate progress with proper easing
-          const progress = Math.min(tile.tweenElapsed / tile.tweenDuration, 1.0);
+          const progress = Math.min(
+            tile.tweenElapsed / tile.tweenDuration,
+            1.0,
+          );
           const easedProgress = Easing.easeInOutQuad(progress);
-          
+
           // Use the stored RGB values directly
           if (tile.startRGB && tile.targetRGB) {
             const newRGB = Tween.tweenColor(
               tile.startRGB,
               tile.targetRGB,
-              easedProgress
+              easedProgress,
             );
-            
+
             // Convert interpolated RGB values to CSS color string
             tile.shape.color = Painter.colors.rgbArrayToCSS(newRGB);
-            
+
             // Check if tween is complete
             if (progress >= 1) {
               tile.isTweening = false;
@@ -268,12 +286,12 @@ export class TileDemo extends Scene {
             // Color missing, reset the tweening state
             console.warn("Missing color values for tweening");
             tile.isTweening = false;
-            
+
             // Set a fallback color
             const fallbackRGB = [
               Math.floor(Math.random() * 255),
               Math.floor(Math.random() * 255),
-              Math.floor(Math.random() * 255)
+              Math.floor(Math.random() * 255),
             ];
             tile.shape.color = Painter.colors.rgbArrayToCSS(fallbackRGB);
           }
@@ -281,12 +299,12 @@ export class TileDemo extends Scene {
           // Handle any errors in the color transition
           console.warn("Error during color tweening:", error);
           tile.isTweening = false;
-          
+
           // Set a fallback color
           const fallbackRGB = [
             Math.floor(Math.random() * 255),
             Math.floor(Math.random() * 255),
-            Math.floor(Math.random() * 255)
+            Math.floor(Math.random() * 255),
           ];
           tile.shape.color = Painter.colors.rgbArrayToCSS(fallbackRGB);
         }
@@ -310,7 +328,7 @@ export class MyGame extends Game {
     this.pipeline.add(
       new FPSCounter(this, {
         anchor: "bottom-right",
-      })
+      }),
     );
   }
 

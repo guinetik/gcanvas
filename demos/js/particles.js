@@ -47,12 +47,26 @@ class ParticlesGame extends Game {
     });
     this.pipeline.add(this.uiScene);
     // Background rectangle
-    const bgRect = ShapeGOFactory.create(this, new Rectangle({ width: 148, height: 130, color: Painter.colors.rgba(0, 0, 0, 0.5) }));
+    const bgRect = ShapeGOFactory.create(
+      this,
+      new Rectangle({
+        width: 148,
+        height: 130,
+        color: Painter.colors.rgba(0, 0, 0, 0.5),
+      }),
+    );
     bgRect.x = 75;
     bgRect.y = 65;
     this.uiScene.add(bgRect);
     // Buttons layout - centered in UI scene
-    this.buttons = new VerticalLayout(this, { padding: 10, spacing: 8, origin: "center", align: "center", debug: true, debugColor: "magenta" });
+    this.buttons = new VerticalLayout(this, {
+      padding: 10,
+      spacing: 8,
+      origin: "center",
+      align: "center",
+      debug: false,
+      debugColor: "magenta",
+    });
     this.buttons.x = 75;
     this.buttons.y = 75;
     this.uiScene.add(this.buttons);
@@ -61,23 +75,23 @@ class ParticlesGame extends Game {
       new Button(this, {
         text: "Clear",
         width: 120,
-        debug: true,
+        debug: false,
         debugColor: "yellow",
         onClick: this.clearParticles.bind(this),
-      })
+      }),
     );
     this.buttons.add(
       new Button(this, {
         text: "Reset",
         width: 120,
-        debug: true,
+        debug: false,
         debugColor: "yellow",
         onClick: () => {
           Painter.clear();
           this.clearParticles();
           this.spawnParticles();
         },
-      })
+      }),
     );
     this.particlesCounter = this.buttons.add(
       new Text(this, "Particles", {
@@ -87,9 +101,9 @@ class ParticlesGame extends Game {
         align: "center",
         baseline: "middle",
         origin: "center",
-        debug: true,
+        debug: false,
         debugColor: "cyan",
-      })
+      }),
     );
     // Anchor UI to bottom-left
     applyAnchor(this.uiScene, {
@@ -123,7 +137,7 @@ class ParticlesGame extends Game {
     this.spawnParticles();
     // Add FPS
     this.pipeline.add(
-      new FPSCounter(this, { color: "white", anchor: "bottom-right" })
+      new FPSCounter(this, { color: "white", anchor: "bottom-right" }),
     );
   }
 
@@ -207,7 +221,11 @@ class Particle extends GameObject {
 
   createRandomShape() {
     const r = Math.random();
-    const options = { color: this.color, cacheRendering: true, origin: "center" };
+    const options = {
+      color: this.color,
+      cacheRendering: true,
+      origin: "center",
+    };
     if (r < 0.5) {
       return new Circle(this.size, options);
     } else if (r < 0.66) {
@@ -304,7 +322,6 @@ class Particle extends GameObject {
     const moveY = this.y - prevY;
 
     this.rotation += this.spin * timeScale;
-
 
     super.update(dt);
   }
