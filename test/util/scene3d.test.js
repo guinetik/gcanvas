@@ -16,7 +16,16 @@ const createMockChild = (options = {}) => ({
   z: options.z ?? undefined,
   visible: options.visible ?? true,
   draw: vi.fn(),
+  render: vi.fn(),
 });
+
+// Helper to set up children on a scene (mocks _collection.getSortedChildren)
+function setChildren(scene, children) {
+  scene._collection = {
+    children,
+    getSortedChildren: () => children,
+  };
+}
 
 describe("Scene3D", () => {
   let mockGame;
@@ -26,10 +35,15 @@ describe("Scene3D", () => {
     mockGame = createMockGame();
     camera = new Camera3D({ perspective: 800 });
 
-    // Reset Painter mocks
-    if (Painter.save) Painter.save.mockClear?.();
-    if (Painter.restore) Painter.restore.mockClear?.();
-    if (Painter.translateTo) Painter.translateTo = vi.fn();
+    // Setup Painter mocks with all methods Scene3D.render() needs
+    Painter.save = vi.fn();
+    Painter.restore = vi.fn();
+    Painter.translateTo = vi.fn();
+    Painter.ctx = {
+      scale: vi.fn(),
+      beginPath: vi.fn(),
+      fill: vi.fn(),
+    };
   });
 
   describe("constructor", () => {
@@ -73,7 +87,7 @@ describe("Scene3D", () => {
     });
   });
 
-  describe("draw with depth sorting", () => {
+  describe("render with depth sorting", () => {
     it("should sort children back-to-front when depthSort is true", () => {
       const scene = new Scene3D(mockGame, {
         camera,
@@ -81,35 +95,24 @@ describe("Scene3D", () => {
         scaleByDepth: false,
       });
 
-      // Setup Painter mock
-      Painter.save = vi.fn();
-      Painter.restore = vi.fn();
-      Painter.translateTo = vi.fn();
-      Painter.ctx = { scale: vi.fn() };
-
       // Add children at different z depths
       const front = createMockChild({ x: 0, y: 0, z: -100 });
       const middle = createMockChild({ x: 0, y: 0, z: 0 });
       const back = createMockChild({ x: 0, y: 0, z: 100 });
 
-      scene._collection = {
-        children: [front, middle, back],
-      };
+      setChildren(scene, [front, middle, back]);
 
-      // Call draw
-      scene.draw();
+      scene.render();
 
-      // Children should be rendered back-to-front
-      // So 'back' should be called before 'front'
-      const callOrder = [];
-      if (back.draw.mock.calls.length) callOrder.push("back");
-      if (middle.draw.mock.calls.length) callOrder.push("middle");
-      if (front.draw.mock.calls.length) callOrder.push("front");
+      // All should be rendered
+      expect(back.render).toHaveBeenCalled();
+      expect(middle.render).toHaveBeenCalled();
+      expect(front.render).toHaveBeenCalled();
 
-      // All should be called
-      expect(back.draw).toHaveBeenCalled();
-      expect(middle.draw).toHaveBeenCalled();
-      expect(front.draw).toHaveBeenCalled();
+      // Back (z=100, further from camera) should render before front (z=-100, closer)
+      const backOrder = back.render.mock.invocationCallOrder[0];
+      const frontOrder = front.render.mock.invocationCallOrder[0];
+      expect(backOrder).toBeLessThan(frontOrder);
     });
 
     it("should not sort when depthSort is false", () => {
@@ -119,27 +122,20 @@ describe("Scene3D", () => {
         scaleByDepth: false,
       });
 
-      Painter.save = vi.fn();
-      Painter.restore = vi.fn();
-      Painter.translateTo = vi.fn();
-      Painter.ctx = { scale: vi.fn() };
-
       const child1 = createMockChild({ z: 100 });
       const child2 = createMockChild({ z: -100 });
 
-      scene._collection = {
-        children: [child1, child2],
-      };
+      setChildren(scene, [child1, child2]);
 
-      scene.draw();
+      scene.render();
 
       // Both should be drawn
-      expect(child1.draw).toHaveBeenCalled();
-      expect(child2.draw).toHaveBeenCalled();
+      expect(child1.render).toHaveBeenCalled();
+      expect(child2.render).toHaveBeenCalled();
     });
   });
 
-  describe("draw with perspective scaling", () => {
+  describe("render with perspective scaling", () => {
     it("should scale children by perspective when scaleByDepth is true", () => {
       const scene = new Scene3D(mockGame, {
         camera,
@@ -147,17 +143,10 @@ describe("Scene3D", () => {
         scaleByDepth: true,
       });
 
-      Painter.save = vi.fn();
-      Painter.restore = vi.fn();
-      Painter.translateTo = vi.fn();
-      Painter.ctx = { scale: vi.fn() };
-
       const child = createMockChild({ z: 0 });
-      scene._collection = {
-        children: [child],
-      };
+      setChildren(scene, [child]);
 
-      scene.draw();
+      scene.render();
 
       // Scale should be called
       expect(Painter.ctx.scale).toHaveBeenCalled();
@@ -170,46 +159,32 @@ describe("Scene3D", () => {
         scaleByDepth: false,
       });
 
-      Painter.save = vi.fn();
-      Painter.restore = vi.fn();
-      Painter.translateTo = vi.fn();
-      Painter.ctx = { scale: vi.fn() };
-
       const child = createMockChild({ z: 0 });
-      scene._collection = {
-        children: [child],
-      };
+      setChildren(scene, [child]);
 
-      scene.draw();
+      scene.render();
 
       // Scale should not be called
       expect(Painter.ctx.scale).not.toHaveBeenCalled();
     });
   });
 
-  describe("draw visibility and culling", () => {
+  describe("render visibility and culling", () => {
     it("should skip invisible children", () => {
       const scene = new Scene3D(mockGame, {
         camera,
         depthSort: false,
       });
 
-      Painter.save = vi.fn();
-      Painter.restore = vi.fn();
-      Painter.translateTo = vi.fn();
-      Painter.ctx = { scale: vi.fn() };
-
       const visible = createMockChild({ visible: true });
       const hidden = createMockChild({ visible: false });
 
-      scene._collection = {
-        children: [visible, hidden],
-      };
+      setChildren(scene, [visible, hidden]);
 
-      scene.draw();
+      scene.render();
 
-      expect(visible.draw).toHaveBeenCalled();
-      expect(hidden.draw).not.toHaveBeenCalled();
+      expect(visible.render).toHaveBeenCalled();
+      expect(hidden.render).not.toHaveBeenCalled();
     });
 
     it("should cull children behind camera", () => {
@@ -218,24 +193,17 @@ describe("Scene3D", () => {
         depthSort: false,
       });
 
-      Painter.save = vi.fn();
-      Painter.restore = vi.fn();
-      Painter.translateTo = vi.fn();
-      Painter.ctx = { scale: vi.fn() };
-
       // Child far behind camera (z = -200, camera.perspective = 100)
       // After projection: if z < -perspective + 10, cull it
       const farBehind = createMockChild({ z: 200 }); // After projection z will be positive
       const inFront = createMockChild({ z: -50 });
 
-      scene._collection = {
-        children: [farBehind, inFront],
-      };
+      setChildren(scene, [farBehind, inFront]);
 
-      scene.draw();
+      scene.render();
 
       // Both should be drawn as they're not behind camera
-      expect(inFront.draw).toHaveBeenCalled();
+      expect(inFront.render).toHaveBeenCalled();
     });
 
     it("should default z to 0 for children without z property", () => {
@@ -244,48 +212,34 @@ describe("Scene3D", () => {
         depthSort: false,
       });
 
-      Painter.save = vi.fn();
-      Painter.restore = vi.fn();
-      Painter.translateTo = vi.fn();
-      Painter.ctx = { scale: vi.fn() };
-
       const noZ = createMockChild({ x: 100, y: 100 });
       delete noZ.z; // No z property
 
-      scene._collection = {
-        children: [noZ],
-      };
+      setChildren(scene, [noZ]);
 
       // Should not throw
-      expect(() => scene.draw()).not.toThrow();
-      expect(noZ.draw).toHaveBeenCalled();
+      expect(() => scene.render()).not.toThrow();
+      expect(noZ.render).toHaveBeenCalled();
     });
   });
 
-  describe("draw transformations", () => {
+  describe("render transformations", () => {
     it("should save and restore for each child", () => {
       const scene = new Scene3D(mockGame, {
         camera,
         depthSort: false,
       });
 
-      Painter.save = vi.fn();
-      Painter.restore = vi.fn();
-      Painter.translateTo = vi.fn();
-      Painter.ctx = { scale: vi.fn() };
-
       const child1 = createMockChild();
       const child2 = createMockChild();
 
-      scene._collection = {
-        children: [child1, child2],
-      };
+      setChildren(scene, [child1, child2]);
 
-      scene.draw();
+      scene.render();
 
-      // Should call save/restore for each child
-      expect(Painter.save).toHaveBeenCalledTimes(2);
-      expect(Painter.restore).toHaveBeenCalledTimes(2);
+      // 1 save/restore for the scene itself + 1 per child = 3
+      expect(Painter.save).toHaveBeenCalledTimes(3);
+      expect(Painter.restore).toHaveBeenCalledTimes(3);
     });
 
     it("should translate to projected position", () => {
@@ -294,19 +248,13 @@ describe("Scene3D", () => {
         depthSort: false,
       });
 
-      Painter.save = vi.fn();
-      Painter.restore = vi.fn();
-      Painter.translateTo = vi.fn();
-      Painter.ctx = { scale: vi.fn() };
-
       const child = createMockChild({ x: 100, y: 50, z: 0 });
-      scene._collection = {
-        children: [child],
-      };
+      setChildren(scene, [child]);
 
-      scene.draw();
+      scene.render();
 
       // With no rotation and z=0, projected position should match input
+      // translateTo is called for: scene position, child projected pos, child offset
       expect(Painter.translateTo).toHaveBeenCalledWith(100, 50);
     });
   });
@@ -329,17 +277,10 @@ describe("Scene3D", () => {
         scaleByDepth: true,
       });
 
-      Painter.save = vi.fn();
-      Painter.restore = vi.fn();
-      Painter.translateTo = vi.fn();
-      Painter.ctx = { scale: vi.fn() };
-
       const child = createMockChild({ x: 100, y: 50, z: 25 });
-      scene._collection = {
-        children: [child],
-      };
+      setChildren(scene, [child]);
 
-      scene.draw();
+      scene.render();
 
       // Should call camera.project with child coordinates
       expect(mockCamera.project).toHaveBeenCalledWith(100, 50, 25);
