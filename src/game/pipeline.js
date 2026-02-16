@@ -74,7 +74,8 @@ export class Pipeline extends Loggable {
    * @private
    */
   _hoverScene(scene, e) {
-    // First check children
+    let consumed = false;
+    // First check children (topmost first)
     if (scene.children && scene.children.length > 0) {
       for (let i = scene.children.length - 1; i >= 0; i--) {
         const child = scene.children[i];
@@ -89,15 +90,41 @@ export class Pipeline extends Loggable {
           continue;
         }
 
+        if (consumed) {
+          // A higher child already consumed the hover — force mouseout on anything below
+          if (child._hovered) {
+            child._hovered = false;
+            child.events.emit("mouseout", e);
+          }
+          continue;
+        }
+
         if (child instanceof Scene) {
-          this._hoverScene(child, e); // recurse into nested scenes
+          if (this._hoverScene(child, e)) {
+            consumed = true;
+          }
         } else {
-          this._hoverObject(child, e); // hover actual objects
+          if (child.interactive && child._hitTest?.(e.x, e.y)) {
+            if (!child._hovered) {
+              child._hovered = true;
+              child.events.emit("mouseover", e);
+            }
+            consumed = true;
+          } else if (child._hovered) {
+            child._hovered = false;
+            child.events.emit("mouseout", e);
+          }
         }
       }
     }
     // Also check the Scene itself for hover state
-    this._hoverObject(scene, e);
+    if (!consumed) {
+      this._hoverObject(scene, e);
+    } else if (scene._hovered) {
+      scene._hovered = false;
+      scene.events.emit("mouseout", e);
+    }
+    return consumed;
   }
 
   /**
@@ -139,14 +166,59 @@ export class Pipeline extends Loggable {
    * @private
    */
   _dispatchHover(e) {
+    let consumed = false;
     // Check from topmost to bottommost for hover changes.
     for (let i = this.gameObjects.length - 1; i >= 0; i--) {
       const obj = this.gameObjects[i];
-      if (obj instanceof Scene) {
-        this._hoverScene(obj, e);
-      } else {
-        this._hoverObject(obj, e);
+      if (consumed) {
+        // Force mouseout on anything below the consumed object
+        if (obj instanceof Scene) {
+          this._unhoverScene(obj, e);
+        } else if (obj._hovered) {
+          obj._hovered = false;
+          obj.events.emit("mouseout", e);
+        }
+        continue;
       }
+      if (obj instanceof Scene) {
+        if (this._hoverScene(obj, e)) {
+          consumed = true;
+        }
+      } else {
+        if (obj.interactive && obj._hitTest?.(e.x, e.y)) {
+          if (!obj._hovered) {
+            obj._hovered = true;
+            obj.events.emit("mouseover", e);
+          }
+          consumed = true;
+        } else if (obj._hovered) {
+          obj._hovered = false;
+          obj.events.emit("mouseout", e);
+        }
+      }
+    }
+  }
+
+  /**
+   * Force mouseout on all children of a scene (used when hover is consumed by a higher object).
+   * @param {Scene} scene
+   * @param {object} e
+   * @private
+   */
+  _unhoverScene(scene, e) {
+    if (scene.children) {
+      for (const child of scene.children) {
+        if (child instanceof Scene) {
+          this._unhoverScene(child, e);
+        } else if (child._hovered) {
+          child._hovered = false;
+          child.events.emit("mouseout", e);
+        }
+      }
+    }
+    if (scene._hovered) {
+      scene._hovered = false;
+      scene.events.emit("mouseout", e);
     }
   }
 

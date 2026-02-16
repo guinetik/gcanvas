@@ -175,61 +175,38 @@ export class GameObject extends Transformable {
         localY -= offset.y || 0;
       }
 
-      // Get pivot point for rotation/scale (based on origin)
-      const pivotX = (obj.width || 0) * (obj.originX ?? 0);
-      const pivotY = (obj.height || 0) * (obj.originY ?? 0);
-
-      // Rotation: apply inverse rotation around pivot
+      // Inverse rotation around local (0, 0) — matches applyTransforms()
       if (obj.rotation) {
-        // Translate to pivot
-        localX -= pivotX;
-        localY -= pivotY;
-
         const cos = Math.cos(-obj.rotation);
         const sin = Math.sin(-obj.rotation);
         const tempX = localX;
         localX = tempX * cos - localY * sin;
         localY = tempX * sin + localY * cos;
-
-        // Translate back from pivot
-        localX += pivotX;
-        localY += pivotY;
       }
 
-      // Scale: apply inverse scale around pivot
+      // Inverse scale around local (0, 0) — matches applyTransforms()
       if ((obj.scaleX !== undefined && obj.scaleX !== 1) ||
           (obj.scaleY !== undefined && obj.scaleY !== 1)) {
-        // Translate to pivot
-        localX -= pivotX;
-        localY -= pivotY;
-
         if (obj.scaleX !== undefined && obj.scaleX !== 0) {
           localX /= obj.scaleX;
         }
         if (obj.scaleY !== undefined && obj.scaleY !== 0) {
           localY /= obj.scaleY;
         }
-
-        // Translate back from pivot
-        localX += pivotX;
-        localY += pivotY;
       }
     }
 
-    // Now check if the point is inside our local bounds
-    // With origin-based coordinates, bounds are offset from (0, 0) based on origin
-    // For center origin (0.5, 0.5): bounds from (-w/2, -h/2) to (w/2, h/2)
-    // For top-left origin (0, 0): bounds from (0, 0) to (w, h)
-    const w = bounds.width || this.width || 0;
-    const h = bounds.height || this.height || 0;
+    // Now check if the point is inside our local bounds (unscaled space)
+    // The shape draws from (-w * originX, -h * originY) to (w * (1-originX), h * (1-originY))
+    const w = this.width || 0;
+    const h = this.height || 0;
     const originX = this.originX ?? 0;
     const originY = this.originY ?? 0;
-    
-    // Calculate bounds offset (same as shapes use for drawing)
+
     const offsetX = -w * originX;
     const offsetY = -h * originY;
 
-    return localX >= offsetX && localX <= offsetX + w && 
+    return localX >= offsetX && localX <= offsetX + w &&
            localY >= offsetY && localY <= offsetY + h;
   }
 
