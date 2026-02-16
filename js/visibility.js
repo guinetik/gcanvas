@@ -19,9 +19,9 @@ export class VisibilityDemo extends Scene {
       spacing: 1,
       padding: 4,
       debug: true,
-      debugColor: "magenta",
+      debugColor: "gray",
       origin: "center",
-      align: "center",  // Vertically center items in layout
+      align: "center", // Vertically center items in layout
     });
     this.add(this.squaresLayout);
     // Create a few colored squares and add them to the layout
@@ -43,7 +43,7 @@ export class VisibilityDemo extends Scene {
         currentSquare.visible = !currentSquare.visible;
       }
       const index = Math.floor(
-        Math.random() * this.squaresLayout.children.length
+        Math.random() * this.squaresLayout.children.length,
       );
       const square = this.squaresLayout.children[index];
       if (currentSquare == square) {
@@ -95,7 +95,7 @@ export class MyGame extends Game {
     this.pipeline.add(
       new FPSCounter(this, {
         anchor: Position.BOTTOM_RIGHT,
-      })
+      }),
     );
   }
 }

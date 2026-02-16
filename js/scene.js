@@ -36,9 +36,13 @@ export class DemoGame extends Game {
     const config = this.getResponsiveConfig();
     this.currentButtonWidth = config.buttonWidth;
 
-    this.scene = new Scene(this, { debug: true, debugColor: "black", origin: "center" });
+    this.scene = new Scene(this, {
+      debug: false,
+      debugColor: "black",
+      origin: "center",
+    });
     this.ui = new Scene(this, {
-      debug: true,
+      debug: false,
       debugColor: "blue",
       origin: "center",
       anchor: Position.BOTTOM_LEFT,
@@ -47,16 +51,16 @@ export class DemoGame extends Game {
     this.pipeline.add(this.scene); // scene below
     this.pipeline.add(this.ui); // UI on top
     this.pipeline.add(
-      new FPSCounter(this, { anchor: "bottom-right", color: "black" })
+      new FPSCounter(this, { anchor: "bottom-right", color: "black" }),
     );
     this.buttons = this.ui.add(
       new VerticalLayout(this, {
-        debug: true,
+        debug: false,
         debugColor: "magenta",
         origin: "center",
         spacing: 10,
         padding: 10,
-      })
+      }),
     );
     this.buttons.width = config.buttonWidth;
     this.buttons.height = 200;
@@ -69,7 +73,7 @@ export class DemoGame extends Game {
       Random.radial,
     ];
     this.buttons.add(
-      this.createButton("➕ Add Layer", () => this.addLayer(random))
+      this.createButton("➕ Add Layer", () => this.addLayer(random)),
     );
     this.buttons.add(this.createButton("❎ Clear", () => this.scene.clear()));
     this.buttons.add(
@@ -79,7 +83,7 @@ export class DemoGame extends Game {
           layer.random = random;
           layer.randomize();
         });
-      })
+      }),
     );
     const rollBtn = this.createButton("🔄️" + random.name, () => {
       random = Random.pickOther(options, random);
@@ -259,7 +263,7 @@ class LayerBox extends GameObjectShapeWrapper {
       -this.parent.height / 2,
       this.parent.width,
       this.parent.height,
-      param[this.random.name]
+      param[this.random.name],
     );
     //  console.log(x, y);
     this.x = x;

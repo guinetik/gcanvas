@@ -28,7 +28,7 @@ export class LayoutDemo extends Game {
     const availableWidth = this.width - margin;
     return Math.min(
       this.maxColumns,
-      Math.max(1, Math.floor(availableWidth / this.cellSize))
+      Math.max(1, Math.floor(availableWidth / this.cellSize)),
     );
   }
 
@@ -162,7 +162,7 @@ export class LayoutDemo extends Game {
 
     // Create UI
     this.ui = new Scene(this, {
-      debug: true,
+      debug: false,
       debugColor: "blue",
       origin: "center",
       anchor: Position.CENTER,
@@ -171,12 +171,12 @@ export class LayoutDemo extends Game {
 
     // Add FPS Counter
     this.pipeline.add(
-      new FPSCounter(this, { color: "#00FF00", anchor: "bottom-right" })
+      new FPSCounter(this, { color: "#00FF00", anchor: "bottom-right" }),
     );
 
     // Create bottom navigation - layout type selection (at very bottom)
     this.layoutNav = new HorizontalLayout(this, {
-      debug: true,
+      debug: false,
       debugColor: "red",
       origin: "center",
       anchor: Position.BOTTOM_CENTER,
@@ -193,14 +193,14 @@ export class LayoutDemo extends Game {
           text: mode.charAt(0).toUpperCase() + mode.slice(1),
           origin: "center",
           onClick: () => this.setLayout(mode),
-        })
+        }),
       );
     });
 
     // Create action buttons (add/remove) - positioned above layout nav
     this.actionNav = new HorizontalLayout(this, {
       anchor: Position.BOTTOM_CENTER,
-      debug: true,
+      debug: false,
       debugColor: "cyan",
       origin: "center",
       anchorOffsetY: -100, // Space above the layout nav
@@ -212,14 +212,14 @@ export class LayoutDemo extends Game {
         text: "ADD",
         origin: "center",
         onClick: this.addItem.bind(this),
-      })
+      }),
     );
     this.actionNav.add(
       new Button(this, {
         text: "REMOVE",
         origin: "center",
         onClick: () => this.removeItem(),
-      })
+      }),
     );
 
     // Create initial layout FIRST (renders below)

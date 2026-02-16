@@ -39,7 +39,7 @@ export class FractalDemo extends Game {
     this.target = {
       zoom: 1,
       offsetX: 0,
-      offsetY: 0
+      offsetY: 0,
     };
     // Pan velocity for momentum
     this.panVelocity = { x: 0, y: 0 };
@@ -60,11 +60,15 @@ export class FractalDemo extends Game {
     this.mainScene = new Scene(this, {
       anchor: Position.CENTER,
       origin: "center",
-      debug: true
+      debug: false,
     });
     this.mainScene.width = this.width;
     this.mainScene.height = this.height;
-    this.ui = new Scene(this, { debug: true, origin: "center", anchor: Position.CENTER });
+    this.ui = new Scene(this, {
+      debug: false,
+      origin: "center",
+      anchor: Position.CENTER,
+    });
     this.pipeline.add(this.mainScene);
     this.pipeline.add(this.ui);
 
@@ -79,7 +83,7 @@ export class FractalDemo extends Game {
         origin: "center",
         width: this.mainScene.width,
         height: this.mainScene.height,
-      }
+      },
     );
     this.mainScene.add(this.fractal);
     // Add UI controls
@@ -89,7 +93,7 @@ export class FractalDemo extends Game {
       new FPSCounter(this, {
         anchor: "bottom-right",
         color: "#0f0",
-      })
+      }),
     );
     // Set up interactive controls
     this.setupInteraction();
@@ -133,7 +137,11 @@ export class FractalDemo extends Game {
     const wasAnimating = this.wasAnimating || false;
 
     // Apply pan momentum when not dragging
-    if (!this.settings.isDragging && (Math.abs(this.panVelocity.x) > 0.0001 || Math.abs(this.panVelocity.y) > 0.0001)) {
+    if (
+      !this.settings.isDragging &&
+      (Math.abs(this.panVelocity.x) > 0.0001 ||
+        Math.abs(this.panVelocity.y) > 0.0001)
+    ) {
       const scaleFactor = 0.005 / this.settings.zoom;
       this.target.offsetX -= this.panVelocity.x * scaleFactor;
       this.target.offsetY -= this.panVelocity.y * scaleFactor;
@@ -149,9 +157,21 @@ export class FractalDemo extends Game {
     const offsetYDiff = Math.abs(this.settings.offsetY - this.target.offsetY);
 
     if (zoomDiff > 0.001 || offsetXDiff > 0.00001 || offsetYDiff > 0.00001) {
-      this.settings.zoom = Easing.lerp(this.settings.zoom, this.target.zoom, lerpFactor);
-      this.settings.offsetX = Easing.lerp(this.settings.offsetX, this.target.offsetX, lerpFactor);
-      this.settings.offsetY = Easing.lerp(this.settings.offsetY, this.target.offsetY, lerpFactor);
+      this.settings.zoom = Easing.lerp(
+        this.settings.zoom,
+        this.target.zoom,
+        lerpFactor,
+      );
+      this.settings.offsetX = Easing.lerp(
+        this.settings.offsetX,
+        this.target.offsetX,
+        lerpFactor,
+      );
+      this.settings.offsetY = Easing.lerp(
+        this.settings.offsetY,
+        this.target.offsetY,
+        lerpFactor,
+      );
       needsRender = true;
     }
 
@@ -210,13 +230,15 @@ export class FractalDemo extends Game {
       spacing: btnSpacing,
       padding: isMobile ? 4 : 10,
       height: btnHeight + 10,
-      debug: true,
+      debug: false,
       debugColor: "cyan",
     });
 
     // Fractal type selector
     const typeBtn = new Button(this, {
-      text: isMobile ? this.settings.type.toUpperCase() : `Type: ${this.settings.type.toUpperCase()}`,
+      text: isMobile
+        ? this.settings.type.toUpperCase()
+        : `Type: ${this.settings.type.toUpperCase()}`,
       width: isMobile ? 90 : 180,
       height: btnHeight,
       fontSize,
@@ -225,7 +247,9 @@ export class FractalDemo extends Game {
 
     // Iteration controller
     const iterBtn = new Button(this, {
-      text: isMobile ? `${this.settings.iterations}` : `Iter: ${this.settings.iterations}`,
+      text: isMobile
+        ? `${this.settings.iterations}`
+        : `Iter: ${this.settings.iterations}`,
       width: isMobile ? 45 : 100,
       height: btnHeight,
       fontSize,
@@ -249,7 +273,11 @@ export class FractalDemo extends Game {
       fontSize,
       onClick: () => {
         this.settings.animating = !this.settings.animating;
-        animateBtn.text = this.settings.animating ? "Stop" : (isMobile ? "Anim" : "Animate");
+        animateBtn.text = this.settings.animating
+          ? "Stop"
+          : isMobile
+            ? "Anim"
+            : "Animate";
       },
     });
 
@@ -293,7 +321,6 @@ export class FractalDemo extends Game {
 
     // Add layout to UI
     this.ui.add(controlsLayout);
-
   }
 
   resetView() {
@@ -360,14 +387,17 @@ export class FractalDemo extends Game {
             this.updateFractalSettings(true);
           }
         }
-      }, 16)
+      }, 16),
     );
 
     // Mouse up to end panning - full quality render
     this.canvas.addEventListener("mouseup", () => {
       this.settings.isDragging = false;
       // If no significant momentum, re-render immediately at full quality
-      if (Math.abs(this.panVelocity.x) < 0.5 && Math.abs(this.panVelocity.y) < 0.5) {
+      if (
+        Math.abs(this.panVelocity.x) < 0.5 &&
+        Math.abs(this.panVelocity.y) < 0.5
+      ) {
         this.panVelocity.x = 0;
         this.panVelocity.y = 0;
         this.updateFractalSettings(false);
@@ -413,7 +443,7 @@ export class FractalDemo extends Game {
         this.target.offsetX = newPlaneX + 2.5 / newZoom;
         this.target.offsetY = newPlaneY + 1.5 / newZoom;
       },
-      { passive: false }
+      { passive: false },
     );
 
     // Touch support for mobile
@@ -421,75 +451,86 @@ export class FractalDemo extends Game {
     let lastTouchY = 0;
     let lastPinchDist = 0;
 
-    this.canvas.addEventListener("touchstart", (e) => {
-      if (e.touches.length === 1) {
-        lastTouchX = e.touches[0].clientX;
-        lastTouchY = e.touches[0].clientY;
-        this.settings.isDragging = true;
-        this.panVelocity.x = 0;
-        this.panVelocity.y = 0;
-      } else if (e.touches.length === 2) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        lastPinchDist = Math.sqrt(dx * dx + dy * dy);
-        this.settings.isDragging = false;
-      }
-      e.preventDefault();
-    }, { passive: false });
-
-    this.canvas.addEventListener("touchmove", throttle((e) => {
-      if (e.touches.length === 1 && this.settings.isDragging) {
-        const dx = e.touches[0].clientX - lastTouchX;
-        const dy = e.touches[0].clientY - lastTouchY;
-
-        this.panVelocity.x = dx * 0.8 + this.panVelocity.x * 0.2;
-        this.panVelocity.y = dy * 0.8 + this.panVelocity.y * 0.2;
-
-        const scaleFactor = 0.005 / this.settings.zoom;
-        const deltaX = dx * scaleFactor;
-        const deltaY = dy * scaleFactor;
-        this.settings.offsetX -= deltaX;
-        this.settings.offsetY -= deltaY;
-        this.target.offsetX -= deltaX;
-        this.target.offsetY -= deltaY;
-
-        lastTouchX = e.touches[0].clientX;
-        lastTouchY = e.touches[0].clientY;
-
-        // Throttled preview render during drag
-        const now = performance.now();
-        if (now - this.lastRenderTime > this.minRenderInterval) {
-          this.lastRenderTime = now;
-          this.updateFractalSettings(true);
+    this.canvas.addEventListener(
+      "touchstart",
+      (e) => {
+        if (e.touches.length === 1) {
+          lastTouchX = e.touches[0].clientX;
+          lastTouchY = e.touches[0].clientY;
+          this.settings.isDragging = true;
+          this.panVelocity.x = 0;
+          this.panVelocity.y = 0;
+        } else if (e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+          this.settings.isDragging = false;
         }
-      } else if (e.touches.length === 2) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        const pinchDist = Math.sqrt(dx * dx + dy * dy);
+        e.preventDefault();
+      },
+      { passive: false },
+    );
 
-        if (lastPinchDist > 0) {
-          const zoomFactor = pinchDist / lastPinchDist;
-          // Direct zoom for responsive feel during pinch
-          this.settings.zoom *= zoomFactor;
-          this.target.zoom *= zoomFactor;
-          // Throttled preview render during pinch
+    this.canvas.addEventListener(
+      "touchmove",
+      throttle((e) => {
+        if (e.touches.length === 1 && this.settings.isDragging) {
+          const dx = e.touches[0].clientX - lastTouchX;
+          const dy = e.touches[0].clientY - lastTouchY;
+
+          this.panVelocity.x = dx * 0.8 + this.panVelocity.x * 0.2;
+          this.panVelocity.y = dy * 0.8 + this.panVelocity.y * 0.2;
+
+          const scaleFactor = 0.005 / this.settings.zoom;
+          const deltaX = dx * scaleFactor;
+          const deltaY = dy * scaleFactor;
+          this.settings.offsetX -= deltaX;
+          this.settings.offsetY -= deltaY;
+          this.target.offsetX -= deltaX;
+          this.target.offsetY -= deltaY;
+
+          lastTouchX = e.touches[0].clientX;
+          lastTouchY = e.touches[0].clientY;
+
+          // Throttled preview render during drag
           const now = performance.now();
           if (now - this.lastRenderTime > this.minRenderInterval) {
             this.lastRenderTime = now;
             this.updateFractalSettings(true);
           }
-        }
+        } else if (e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const pinchDist = Math.sqrt(dx * dx + dy * dy);
 
-        lastPinchDist = pinchDist;
-      }
-      e.preventDefault();
-    }, 16), { passive: false });
+          if (lastPinchDist > 0) {
+            const zoomFactor = pinchDist / lastPinchDist;
+            // Direct zoom for responsive feel during pinch
+            this.settings.zoom *= zoomFactor;
+            this.target.zoom *= zoomFactor;
+            // Throttled preview render during pinch
+            const now = performance.now();
+            if (now - this.lastRenderTime > this.minRenderInterval) {
+              this.lastRenderTime = now;
+              this.updateFractalSettings(true);
+            }
+          }
+
+          lastPinchDist = pinchDist;
+        }
+        e.preventDefault();
+      }, 16),
+      { passive: false },
+    );
 
     this.canvas.addEventListener("touchend", () => {
       this.settings.isDragging = false;
       lastPinchDist = 0;
       // If no significant momentum, re-render immediately at full quality
-      if (Math.abs(this.panVelocity.x) < 0.5 && Math.abs(this.panVelocity.y) < 0.5) {
+      if (
+        Math.abs(this.panVelocity.x) < 0.5 &&
+        Math.abs(this.panVelocity.y) < 0.5
+      ) {
         this.panVelocity.x = 0;
         this.panVelocity.y = 0;
         this.updateFractalSettings(false);

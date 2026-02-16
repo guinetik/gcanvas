@@ -68,7 +68,7 @@ class BezierDemoGame extends Game {
     super.init();
     // Create the scenes
     this.bezierScene = new BezierScene(this, {
-      debug: true,
+      debug: false,
       debugColor: "yellow",
       origin: "center",
     });
@@ -76,7 +76,7 @@ class BezierDemoGame extends Game {
     const config = this.getResponsiveConfig();
 
     this.uiScene = new BezierUIScene(this, this.bezierScene, {
-      debug: true,
+      debug: false,
       debugColor: "magenta",
       origin: "center",
       width: config.layoutWidth,
@@ -597,7 +597,7 @@ class BezierUIScene extends Scene {
       height: config.layoutHeight,
       spacing: 5,
       origin: "center",
-      debug: true,
+      debug: false,
       debugColor: "cyan",
     });
 

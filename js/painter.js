@@ -333,7 +333,7 @@ class UIScene extends Scene {
       spacing: 8,
       padding: 0,
       origin: "center",
-      debug: true,
+      debug: false,
       debugColor: "magenta",
     });
     this.toolPencil = this.layout.add(
@@ -443,7 +443,7 @@ class DemoGame extends Game {
   createUI() {
     // Create the UI scene
     this.uiScene = new UIScene(this, this.paintScene, {
-      debug: true,
+      debug: false,
       debugColor: "yellow",
       origin: "center",
       anchor: Position.BOTTOM_CENTER,
@@ -457,7 +457,7 @@ class DemoGame extends Game {
   init() {
     super.init();
     // Create the paint scene
-    this.paintScene = new PaintScene(this, { debug: true, origin: "center" });
+    this.paintScene = new PaintScene(this, { debug: false, origin: "center" });
     this.pipeline.add(this.paintScene);
     // Add them to the pipeline
     this.createUI();
