@@ -325,23 +325,25 @@ export class CaosPlayground extends Attractor3DDemo {
   // ─── Panel Construction ─────────────────────────────────────────────
 
   _buildPanel() {
-    const { width, padding, debugColor, spacing } = CONFIG.panel;
+    const isMobile = Screen.isMobile;
+    const panelWidth = isMobile ? this.width - 20 : CONFIG.panel.width;
+    const padding = isMobile ? CONFIG.panel.mobilePadding : CONFIG.panel.padding;
+    const { debugColor, spacing } = CONFIG.panel;
     const cfg = this.config;
 
     // AccordionGroup handles layout, debug outline, and section management
     this.panel = new AccordionGroup(this, {
-      width,
+      width: panelWidth,
       padding,
       spacing,
       headerHeight: CONFIG.accordion.headerHeight,
       debug: true,
       debugColor,
     });
-    this.panel.x = this.width - width - CONFIG.panel.marginRight;
-    this.panel.y = CONFIG.panel.marginTop;
+    this._layoutPanel();
     this.pipeline.add(this.panel);
 
-    const sw = width - padding * 2; // usable item width
+    const sw = panelWidth - padding * 2; // usable item width
     this._controls = {};
 
     // ── Attractor Dropdown (always visible, not in a section) ─────
@@ -540,6 +542,13 @@ export class CaosPlayground extends Attractor3DDemo {
 
     // Commit all section items to the Scene and perform layout
     this.panel.layoutAll();
+
+    // After layout, adjust Y for bottom-sheet mode
+    if (Screen.isMobile) {
+      const maxH = this.height * CONFIG.panel.mobileMaxHeight;
+      const panelH = Math.min(this.panel._height || 400, maxH);
+      this.panel.y = this.height - panelH / 2 - 10;
+    }
   }
 
   // ─── Mobile Toggle Button ──────────────────────────────────────────
@@ -592,6 +601,20 @@ export class CaosPlayground extends Attractor3DDemo {
       this._panelFSM.setState("panel-visible");
     } else {
       this._panelFSM.setState("panel-hidden");
+    }
+  }
+
+  _layoutPanel() {
+    if (Screen.isMobile) {
+      // Bottom sheet: full width, anchored to bottom
+      this.panel.x = this.width / 2;
+      const maxH = this.height * CONFIG.panel.mobileMaxHeight;
+      const panelH = Math.min(this.panel._height || 400, maxH);
+      this.panel.y = this.height - panelH / 2 - 10;
+    } else {
+      // Desktop: right sidebar
+      this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
+      this.panel.y = CONFIG.panel.marginTop;
     }
   }
 
@@ -693,7 +716,20 @@ export class CaosPlayground extends Attractor3DDemo {
   onResize() {
     super.onResize(); // Attractor3DDemo resize (pipeline + zoom)
     if (!this.panel) return;
-    this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
-    this.panel.y = CONFIG.panel.marginTop;
+
+    this._layoutPanel();
+
+    // Update toggle button visibility based on new screen size
+    if (this._toggleBtn) {
+      this._toggleBtn.visible = Screen.isMobile;
+      this._toggleBtn.interactive = Screen.isMobile;
+    }
+
+    // On desktop, ensure panel is always visible; on mobile, hide by default
+    if (!Screen.isMobile && this._panelFSM) {
+      this._panelFSM.setState("panel-visible");
+    } else if (Screen.isMobile && this._panelFSM) {
+      this._panelFSM.setState("panel-hidden");
+    }
   }
 }
