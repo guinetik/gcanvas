@@ -21,7 +21,9 @@ import {
   Stepper,
   AccordionGroup,
   Painter,
+  Screen,
 } from "../../src/index";
+import { StateMachine } from "../../src/state/state-machine.js";
 import { Attractor3DDemo, DEFAULTS, deepMerge } from "./attractor-3d-demo.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -261,9 +263,16 @@ const CONFIG = {
     marginTop: 16,
     debugColor: "rgba(0, 255, 0, 0.18)",
     spacing: 10,
+    mobileMaxHeight: 0.75,
+    mobilePadding: 10,
   },
   accordion: {
     headerHeight: 28,
+  },
+  toggle: {
+    margin: 12,
+    width: 90,
+    height: 32,
   },
 };
 
