@@ -2,6 +2,7 @@ export {Random} from "./random.js";
 export {Complex} from "./complex.js";
 export {Fractals} from "./fractal.js";
 export {Patterns} from "./patterns.js";
+export {Dither} from "./dither.js";
 export {Noise} from "./noise.js";
 export {Tensor} from "./tensor.js";
 export {generatePenroseTilingPixels} from "./penrose.js";
