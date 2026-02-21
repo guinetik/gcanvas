@@ -305,6 +305,11 @@ export class CaosPlayground extends Attractor3DDemo {
     this._updatingSliders = false; // Guard against cascading onChange
 
     this._buildPanel();
+
+    // ─── Mobile: Screen detection + panel toggle ──────────────────────
+    Screen.init(this);
+    this._buildToggleButton();
+    this._initPanelStateMachine();
   }
 
   // ─── Render override: attractor behind, UI on top ───────────────────
@@ -535,6 +540,59 @@ export class CaosPlayground extends Attractor3DDemo {
 
     // Commit all section items to the Scene and perform layout
     this.panel.layoutAll();
+  }
+
+  // ─── Mobile Toggle Button ──────────────────────────────────────────
+
+  _buildToggleButton() {
+    this._toggleBtn = new Button(this, {
+      text: "\u2699 Settings",
+      width: CONFIG.toggle.width,
+      height: CONFIG.toggle.height,
+      onClick: () => this._togglePanel(),
+    });
+    this._toggleBtn.x = CONFIG.toggle.margin + CONFIG.toggle.width / 2;
+    this._toggleBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
+    this.pipeline.add(this._toggleBtn);
+
+    // Only show on mobile
+    this._toggleBtn.visible = Screen.isMobile;
+    this._toggleBtn.interactive = Screen.isMobile;
+  }
+
+  _initPanelStateMachine() {
+    this._panelFSM = new StateMachine({
+      initial: Screen.isMobile ? "panel-hidden" : "panel-visible",
+      context: this,
+      states: {
+        "panel-hidden": {
+          enter() {
+            this.panel.visible = false;
+            this.panel.interactive = false;
+            if (this._toggleBtn) {
+              this._toggleBtn.text = "\u2699 Settings";
+            }
+          },
+        },
+        "panel-visible": {
+          enter() {
+            this.panel.visible = true;
+            this.panel.interactive = true;
+            if (Screen.isMobile && this._toggleBtn) {
+              this._toggleBtn.text = "\u2716 Close";
+            }
+          },
+        },
+      },
+    });
+  }
+
+  _togglePanel() {
+    if (this._panelFSM.is("panel-hidden")) {
+      this._panelFSM.setState("panel-visible");
+    } else {
+      this._panelFSM.setState("panel-hidden");
+    }
   }
 
   // ─── Dynamic Parameter Sliders ─────────────────────────────────────
