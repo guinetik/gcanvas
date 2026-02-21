@@ -274,6 +274,7 @@ const CONFIG = {
     width: 90,
     height: 32,
   },
+  maxSegments: 250000,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -285,7 +286,7 @@ export class CaosPlayground extends Attractor3DDemo {
     // Bootstrap with Lorenz preset + over-allocated buffer for slider headroom
     const initialConfig = {
       ...ATTRACTOR_PRESETS.lorenz,
-      maxSegments: 250000,
+      maxSegments: CONFIG.maxSegments,
     };
     super(canvas, "lorenz", initialConfig);
   }
@@ -304,10 +305,10 @@ export class CaosPlayground extends Attractor3DDemo {
     this._uiParams = {}; // Accumulator for equation param slider values
     this._updatingSliders = false; // Guard against cascading onChange
 
-    this._buildPanel();
-
-    // ─── Mobile: Screen detection + panel toggle ──────────────────────
+    // ─── Mobile: Screen detection ─────────────────────────────────────
     Screen.init(this);
+
+    this._buildPanel();
     this._buildToggleButton();
     this._initPanelStateMachine();
   }
@@ -326,7 +327,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
   _buildPanel() {
     const isMobile = Screen.isMobile;
-    const panelWidth = isMobile ? this.width - 20 : CONFIG.panel.width;
+    const panelWidth = Screen.responsive(this.width - 20, this.width - 20, CONFIG.panel.width);
     const padding = isMobile ? CONFIG.panel.mobilePadding : CONFIG.panel.padding;
     const { debugColor, spacing } = CONFIG.panel;
     const cfg = this.config;
@@ -340,7 +341,7 @@ export class CaosPlayground extends Attractor3DDemo {
       debug: true,
       debugColor,
     });
-    this._layoutPanel();
+    // Position set after layoutAll() via _layoutPanel() when panel height is known
     this.pipeline.add(this.panel);
 
     const sw = panelWidth - padding * 2; // usable item width
@@ -546,7 +547,7 @@ export class CaosPlayground extends Attractor3DDemo {
         // Restart simulation with current slider values (don't reset to preset)
         this.switchAttractor(this._activePreset, {
           ...this.config,
-          maxSegments: 250000,
+          maxSegments: CONFIG.maxSegments,
         });
       },
     });
@@ -555,12 +556,8 @@ export class CaosPlayground extends Attractor3DDemo {
     // Commit all section items to the Scene and perform layout
     this.panel.layoutAll();
 
-    // After layout, adjust Y for bottom-sheet mode
-    if (Screen.isMobile) {
-      const maxH = this.height * CONFIG.panel.mobileMaxHeight;
-      const panelH = Math.min(this.panel._height || 400, maxH);
-      this.panel.y = this.height - panelH / 2 - 10;
-    }
+    // Position panel now that height is known
+    this._layoutPanel();
   }
 
   // ─── Mobile Toggle Button ──────────────────────────────────────────
@@ -694,7 +691,7 @@ export class CaosPlayground extends Attractor3DDemo {
     this._activePreset = key;
 
     // Full attractor swap via base class
-    this.switchAttractor(key, { ...preset, maxSegments: 250000 });
+    this.switchAttractor(key, { ...preset, maxSegments: CONFIG.maxSegments });
 
     // Update all UI controls from the new config (guard against cascading onChange)
     this._updatingSliders = true;
