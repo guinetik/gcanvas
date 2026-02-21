@@ -533,10 +533,22 @@ export class CaosPlayground extends Attractor3DDemo {
     });
     effects.addItem(this._controls.rotationSpeed);
 
-    // ── Restart button (always visible, not in a section) ───────────
+    // ── Reset + Restart buttons (always visible, not in a section) ────
+    this._controls.reset = new Button(this, {
+      text: "Reset Defaults", width: sw, height: 32,
+      onClick: () => this._resetToDefaults(),
+    });
+    this.panel.addItem(this._controls.reset);
+
     this._controls.restart = new Button(this, {
       text: "Restart", width: sw, height: 32,
-      onClick: () => this._onAttractorChange(this._activePreset),
+      onClick: () => {
+        // Restart simulation with current slider values (don't reset to preset)
+        this.switchAttractor(this._activePreset, {
+          ...this.config,
+          maxSegments: 250000,
+        });
+      },
     });
     this.panel.addItem(this._controls.restart);
 
@@ -708,6 +720,18 @@ export class CaosPlayground extends Attractor3DDemo {
     this._buildParamSliders(key);
 
     console.log(`Switched to ${preset.label}`);
+  }
+
+  // ─── Reset to Preset Defaults ─────────────────────────────────────
+
+  _resetToDefaults() {
+    const preset = ATTRACTOR_PRESETS[this._activePreset];
+    if (!preset) return;
+
+    // Re-apply the full preset (reloads from ATTRACTOR_PRESETS, resets all sliders)
+    this._onAttractorChange(this._activePreset);
+
+    console.log(`Reset ${preset.label} to defaults`);
   }
 
   // ─── Resize ─────────────────────────────────────────────────────────
