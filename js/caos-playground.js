@@ -21,7 +21,9 @@ import {
   Stepper,
   AccordionGroup,
   Painter,
+  Screen,
 } from "/gcanvas.es.min.js";
+import { StateMachine } from "/gcanvas.es.min.js";
 import { Attractor3DDemo, DEFAULTS, deepMerge } from "./attractor-3d-demo.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -261,10 +263,18 @@ const CONFIG = {
     marginTop: 16,
     debugColor: "rgba(0, 255, 0, 0.18)",
     spacing: 10,
+    mobileMaxHeight: 0.75,
+    mobilePadding: 10,
   },
   accordion: {
     headerHeight: 28,
   },
+  toggle: {
+    margin: 12,
+    width: 90,
+    height: 32,
+  },
+  maxSegments: 250000,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -276,7 +286,7 @@ export class CaosPlayground extends Attractor3DDemo {
     // Bootstrap with Lorenz preset + over-allocated buffer for slider headroom
     const initialConfig = {
       ...ATTRACTOR_PRESETS.lorenz,
-      maxSegments: 250000,
+      maxSegments: CONFIG.maxSegments,
     };
     super(canvas, "lorenz", initialConfig);
   }
@@ -287,7 +297,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
     this.fpsCounter = new FPSCounter(this, {
       color: "#00FF00",
-      anchor: "bottom-right",
+      anchor: Screen.isMobile ? "bottom-left" : "bottom-right",
     });
     this.pipeline.add(this.fpsCounter);
 
@@ -295,7 +305,12 @@ export class CaosPlayground extends Attractor3DDemo {
     this._uiParams = {}; // Accumulator for equation param slider values
     this._updatingSliders = false; // Guard against cascading onChange
 
+    // ─── Mobile: Screen detection ─────────────────────────────────────
+    Screen.init(this);
+
     this._buildPanel();
+    this._buildToggleButton();
+    this._initPanelStateMachine();
   }
 
   // ─── Render override: attractor behind, UI on top ───────────────────
@@ -311,23 +326,25 @@ export class CaosPlayground extends Attractor3DDemo {
   // ─── Panel Construction ─────────────────────────────────────────────
 
   _buildPanel() {
-    const { width, padding, debugColor, spacing } = CONFIG.panel;
+    const isMobile = Screen.isMobile;
+    const panelWidth = Screen.responsive(this.width - 20, this.width - 20, CONFIG.panel.width);
+    const padding = isMobile ? CONFIG.panel.mobilePadding : CONFIG.panel.padding;
+    const { debugColor, spacing } = CONFIG.panel;
     const cfg = this.config;
 
     // AccordionGroup handles layout, debug outline, and section management
     this.panel = new AccordionGroup(this, {
-      width,
+      width: panelWidth,
       padding,
       spacing,
       headerHeight: CONFIG.accordion.headerHeight,
       debug: true,
       debugColor,
     });
-    this.panel.x = this.width - width - CONFIG.panel.marginRight;
-    this.panel.y = CONFIG.panel.marginTop;
+    // Position set after layoutAll() via _layoutPanel() when panel height is known
     this.pipeline.add(this.panel);
 
-    const sw = width - padding * 2; // usable item width
+    const sw = panelWidth - padding * 2; // usable item width
     this._controls = {};
 
     // ── Attractor Dropdown (always visible, not in a section) ─────
@@ -345,12 +362,12 @@ export class CaosPlayground extends Attractor3DDemo {
     this.panel.addItem(this._controls.attractor);
 
     // ── Parameters (dynamic, rebuilt per attractor) ─────────────────
-    this._paramsSection = this.panel.addSection("Parameters", { expanded: true });
+    this._paramsSection = this.panel.addSection("Parameters", { expanded: !isMobile });
     this._paramSliders = [];
     this._buildParamSliders(this._activePreset);
 
     // ── Physics ──────────────────────────────────────────────────────
-    const physics = this.panel.addSection("Physics", { expanded: true });
+    const physics = this.panel.addSection("Physics", { expanded: !isMobile });
 
     this._controls.dt = new Slider(this, {
       label: "TIME STEP", width: sw,
@@ -517,21 +534,105 @@ export class CaosPlayground extends Attractor3DDemo {
     });
     effects.addItem(this._controls.rotationSpeed);
 
-    // ── Restart button (always visible, not in a section) ───────────
+    // ── Reset + Restart buttons (always visible, not in a section) ────
+    this._controls.reset = new Button(this, {
+      text: "Reset Defaults", width: sw, height: 32,
+      onClick: () => this._resetToDefaults(),
+    });
+    this.panel.addItem(this._controls.reset);
+
     this._controls.restart = new Button(this, {
       text: "Restart", width: sw, height: 32,
-      onClick: () => this._onAttractorChange(this._activePreset),
+      onClick: () => {
+        // Restart simulation with current slider values (don't reset to preset)
+        this.switchAttractor(this._activePreset, {
+          ...this.config,
+          maxSegments: CONFIG.maxSegments,
+        });
+      },
     });
     this.panel.addItem(this._controls.restart);
 
     // Commit all section items to the Scene and perform layout
     this.panel.layoutAll();
+
+    // Position panel now that height is known
+    this._layoutPanel();
+  }
+
+  // ─── Mobile Toggle Button ──────────────────────────────────────────
+
+  _buildToggleButton() {
+    this._toggleBtn = new Button(this, {
+      text: "\u2699 Settings",
+      width: CONFIG.toggle.width,
+      height: CONFIG.toggle.height,
+      onClick: () => this._togglePanel(),
+    });
+    this._toggleBtn.x = CONFIG.toggle.margin + CONFIG.toggle.width / 2;
+    this._toggleBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
+    this.pipeline.add(this._toggleBtn);
+
+    // Only show on mobile
+    this._toggleBtn.visible = Screen.isMobile;
+    this._toggleBtn.interactive = Screen.isMobile;
+  }
+
+  _initPanelStateMachine() {
+    this._panelFSM = new StateMachine({
+      initial: Screen.isMobile ? "panel-hidden" : "panel-visible",
+      context: this,
+      states: {
+        "panel-hidden": {
+          enter() {
+            this.panel.visible = false;
+            this.panel.interactive = false;
+            if (this._toggleBtn) {
+              this._toggleBtn.text = "\u2699 Settings";
+            }
+          },
+        },
+        "panel-visible": {
+          enter() {
+            this.panel.visible = true;
+            this.panel.interactive = true;
+            if (Screen.isMobile && this._toggleBtn) {
+              this._toggleBtn.text = "\u2716 Close";
+            }
+          },
+        },
+      },
+    });
+  }
+
+  _togglePanel() {
+    if (this._panelFSM.is("panel-hidden")) {
+      this._panelFSM.setState("panel-visible");
+    } else {
+      this._panelFSM.setState("panel-hidden");
+    }
+  }
+
+  _layoutPanel() {
+    if (Screen.isMobile) {
+      // Bottom sheet: full width, anchored to bottom
+      this.panel.x = this.width / 2;
+      const maxH = this.height * CONFIG.panel.mobileMaxHeight;
+      const panelH = Math.min(this.panel._height || 400, maxH);
+      this.panel.y = this.height - panelH / 2 - 10;
+    } else {
+      // Desktop: right sidebar
+      this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
+      this.panel.y = CONFIG.panel.marginTop;
+    }
   }
 
   // ─── Dynamic Parameter Sliders ─────────────────────────────────────
 
   _buildParamSliders(attractorKey) {
-    const sw = CONFIG.panel.width - CONFIG.panel.padding * 2;
+    const panelWidth = Screen.isMobile ? this.width - 20 : CONFIG.panel.width;
+    const padding = Screen.isMobile ? CONFIG.panel.mobilePadding : CONFIG.panel.padding;
+    const sw = panelWidth - padding * 2;
 
     // Remove old sliders if any
     if (this._paramSliders.length > 0) {
@@ -590,7 +691,7 @@ export class CaosPlayground extends Attractor3DDemo {
     this._activePreset = key;
 
     // Full attractor swap via base class
-    this.switchAttractor(key, { ...preset, maxSegments: 250000 });
+    this.switchAttractor(key, { ...preset, maxSegments: CONFIG.maxSegments });
 
     // Update all UI controls from the new config (guard against cascading onChange)
     this._updatingSliders = true;
@@ -620,13 +721,38 @@ export class CaosPlayground extends Attractor3DDemo {
     console.log(`Switched to ${preset.label}`);
   }
 
+  // ─── Reset to Preset Defaults ─────────────────────────────────────
+
+  _resetToDefaults() {
+    const preset = ATTRACTOR_PRESETS[this._activePreset];
+    if (!preset) return;
+
+    // Re-apply the full preset (reloads from ATTRACTOR_PRESETS, resets all sliders)
+    this._onAttractorChange(this._activePreset);
+
+    console.log(`Reset ${preset.label} to defaults`);
+  }
+
   // ─── Resize ─────────────────────────────────────────────────────────
 
   /** @override */
   onResize() {
     super.onResize(); // Attractor3DDemo resize (pipeline + zoom)
     if (!this.panel) return;
-    this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
-    this.panel.y = CONFIG.panel.marginTop;
+
+    this._layoutPanel();
+
+    // Update toggle button visibility based on new screen size
+    if (this._toggleBtn) {
+      this._toggleBtn.visible = Screen.isMobile;
+      this._toggleBtn.interactive = Screen.isMobile;
+    }
+
+    // On desktop, ensure panel is always visible; on mobile, hide by default
+    if (!Screen.isMobile && this._panelFSM) {
+      this._panelFSM.setState("panel-visible");
+    } else if (Screen.isMobile && this._panelFSM) {
+      this._panelFSM.setState("panel-hidden");
+    }
   }
 }
