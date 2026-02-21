@@ -296,7 +296,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
     this.fpsCounter = new FPSCounter(this, {
       color: "#00FF00",
-      anchor: "bottom-right",
+      anchor: Screen.isMobile ? "bottom-left" : "bottom-right",
     });
     this.pipeline.add(this.fpsCounter);
 
@@ -361,12 +361,12 @@ export class CaosPlayground extends Attractor3DDemo {
     this.panel.addItem(this._controls.attractor);
 
     // ── Parameters (dynamic, rebuilt per attractor) ─────────────────
-    this._paramsSection = this.panel.addSection("Parameters", { expanded: true });
+    this._paramsSection = this.panel.addSection("Parameters", { expanded: !isMobile });
     this._paramSliders = [];
     this._buildParamSliders(this._activePreset);
 
     // ── Physics ──────────────────────────────────────────────────────
-    const physics = this.panel.addSection("Physics", { expanded: true });
+    const physics = this.panel.addSection("Physics", { expanded: !isMobile });
 
     this._controls.dt = new Slider(this, {
       label: "TIME STEP", width: sw,
@@ -633,7 +633,9 @@ export class CaosPlayground extends Attractor3DDemo {
   // ─── Dynamic Parameter Sliders ─────────────────────────────────────
 
   _buildParamSliders(attractorKey) {
-    const sw = CONFIG.panel.width - CONFIG.panel.padding * 2;
+    const panelWidth = Screen.isMobile ? this.width - 20 : CONFIG.panel.width;
+    const padding = Screen.isMobile ? CONFIG.panel.mobilePadding : CONFIG.panel.padding;
+    const sw = panelWidth - padding * 2;
 
     // Remove old sliders if any
     if (this._paramSliders.length > 0) {
