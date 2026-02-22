@@ -82,6 +82,17 @@ export class Input {
 
   static _onTouchEnd(e, game) {
     Input.down = false;
+    // On touchend, e.touches is empty — use changedTouches for the ended touch
+    const touch = e.changedTouches[0];
+    if (touch) {
+      const rect = game.canvas.getBoundingClientRect();
+      const cssX = touch.clientX - rect.left;
+      const cssY = touch.clientY - rect.top;
+      const scaled = Input._scaleToCanvas(game, cssX, cssY);
+      Input._setPosition(scaled.x, scaled.y);
+      Object.defineProperty(e, "x", { value: scaled.x, configurable: true });
+      Object.defineProperty(e, "y", { value: scaled.y, configurable: true });
+    }
     game.events.emit("inputup", e);
   }
 
