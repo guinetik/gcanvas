@@ -190,7 +190,7 @@ export class Slider extends GameObject {
 
     // Global move/up for drag continuity outside bounds
     this.game.events.on("inputmove", (e) => {
-      if (this._dragging) {
+      if (this._dragging && this.isInteractiveInHierarchy()) {
         const local = this.screenToLocal(e.x, e.y);
         this.value = this._valueFromX(local.x);
       }

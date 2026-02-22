@@ -132,6 +132,21 @@ export class GameObject extends Transformable {
   }
 
   /**
+   * Check whether this object or any ancestor has interactive disabled.
+   * Used by global event listeners (Slider drag, Dropdown scroll) that
+   * bypass the Pipeline's hit-test dispatch.
+   * @returns {boolean} True if this object AND all ancestors are interactive
+   */
+  isInteractiveInHierarchy() {
+    let current = this;
+    while (current) {
+      if (current._interactive === false || current.interactive === false) return false;
+      current = current.parent;
+    }
+    return true;
+  }
+
+  /**
    * Test whether a given point lies inside the object's bounds,
    * taking into account the full transformation hierarchy (position, rotation, scale).
    *
@@ -140,12 +155,23 @@ export class GameObject extends Transformable {
    * - Hit test checks if point is within (0, 0) to (width, height)
    * - Rotation/scale happens around the pivot point (based on origin)
    *
+   * Also checks the parent chain — if any ancestor has interactive disabled,
+   * returns false. This prevents children from receiving events when their
+   * parent Scene/container is hidden.
+   *
    * @param {number} x - X screen coordinate
    * @param {number} y - Y screen coordinate
    * @returns {boolean} True if the point is inside this object's bounds
    */
   _hitTest(x, y) {
     if (!this._interactive) return false;
+
+    // Check if any ancestor has interactive disabled
+    let ancestor = this.parent;
+    while (ancestor) {
+      if (ancestor._interactive === false || ancestor.interactive === false) return false;
+      ancestor = ancestor.parent;
+    }
 
     const bounds = this.getBounds?.();
     if (!bounds) return false;

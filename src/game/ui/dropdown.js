@@ -293,7 +293,7 @@ export class Dropdown extends GameObject {
 
     // Global move for hover tracking inside panel
     this.game.events.on("inputmove", (e) => {
-      if (!this._isOpen) return;
+      if (!this._isOpen || !this.isInteractiveInHierarchy()) return;
       const local = this.screenToLocal(e.x, e.y);
 
       // Touch-drag scrolling
@@ -313,7 +313,7 @@ export class Dropdown extends GameObject {
 
     // Global inputup — end touch scroll
     this.game.events.on("inputup", (e) => {
-      if (this._touchScrolling) {
+      if (this._touchScrolling && this.isInteractiveInHierarchy()) {
         const local = this.screenToLocal(e.x, e.y);
         const dy = Math.abs(local.y - (this._touchStartY - (this._scrollOffset - this._touchScrollStart)));
         // If finger barely moved, treat as a tap
@@ -326,7 +326,7 @@ export class Dropdown extends GameObject {
 
     // Click outside to close
     this.game.events.on("inputdown", (e) => {
-      if (!this._isOpen) return;
+      if (!this._isOpen || !this.isInteractiveInHierarchy()) return;
       const local = this.screenToLocal(e.x, e.y);
       const halfW = this.dropdownWidth / 2;
       if (

@@ -140,6 +140,8 @@ export class Pipeline extends Loggable {
     for (let i = this.gameObjects.length - 1; i >= 0; i--) {
       const obj = this.gameObjects[i];
       if (obj instanceof Scene) {
+        // Skip non-interactive or invisible scenes entirely
+        if (obj.interactive === false || obj.visible === false) continue;
         // If it's a Scene, see if any of its children were hit.
         if (this._dispatchToScene(obj, type, e)) {
           handled = true;
@@ -242,6 +244,8 @@ export class Pipeline extends Loggable {
       }
 
       if (child instanceof Scene) {
+        // Skip non-interactive or invisible child scenes
+        if (child.interactive === false || child.visible === false) continue;
         // Recurse deeper if child is also a Scene
         const hit = this._dispatchToScene(child, type, e);
         if (hit) {
