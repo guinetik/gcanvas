@@ -251,9 +251,11 @@ export class QuantumManifoldPlayground extends Game {
     this._initCollapse();
     this._initGestures();
     this._crossSectionVisible = true;
+    this._infoOverlayVisible = false;
     this._buildInfoPanel();
     this._buildUI();
     this._buildToggleButton();
+    this._buildInfoButton();
     this._initPanelStateMachine();
 
     this.fpsCounter = new FPSCounter(this, {
@@ -773,6 +775,28 @@ export class QuantumManifoldPlayground extends Game {
     this._toggleBtn.interactive = Screen.isMobile;
   }
 
+  _buildInfoButton() {
+    this._infoBtn = new ToggleButton(this, {
+      text: "?",
+      width: CONFIG.toggle.width,
+      height: CONFIG.toggle.height,
+      onToggle: (on) => {
+        this._infoOverlayVisible = on;
+        if (on && Screen.isMobile) {
+          // Hide panel when overlay opens on mobile
+          if (this._panelFSM && this._panelFSM.is("panel-visible")) {
+            this._panelFSM.setState("panel-hidden");
+          }
+        }
+      },
+    });
+    // Position to the right of the toggle button (or top-left on desktop)
+    const btnIndex = Screen.isMobile ? 1 : 0;
+    this._infoBtn.x = CONFIG.toggle.margin * (btnIndex + 1) + CONFIG.toggle.width * btnIndex + CONFIG.toggle.width / 2;
+    this._infoBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
+    this.pipeline.add(this._infoBtn);
+  }
+
   _initPanelStateMachine() {
     this._panelFSM = new StateMachine({
       initial: Screen.isMobile ? "panel-hidden" : "panel-visible",
@@ -798,9 +822,13 @@ export class QuantumManifoldPlayground extends Game {
             if (Screen.isMobile && this._toggleBtn) {
               this._toggleBtn.text = "\u2716";
             }
-            // On mobile, hide cross-section when panel is visible
+            // On mobile, hide cross-section and info overlay when panel is visible
             if (Screen.isMobile) {
               this._crossSectionVisible = false;
+              this._infoOverlayVisible = false;
+              if (this._infoBtn && this._infoBtn.toggled) {
+                this._infoBtn.toggle(false);
+              }
             }
           },
         },
@@ -992,6 +1020,130 @@ export class QuantumManifoldPlayground extends Game {
     } else {
       this.statsText.text = `${preset.label} | t=${this.time.toFixed(1)}s${wellStr}`;
     }
+  }
+
+  // ─── Info Overlay ────────────────────────────────────────────────────
+
+  _getPresetExplanation() {
+    const p = this._waveParams;
+    const wells = this._gravityWells.length;
+
+    const explanations = {
+      superposition: {
+        title: "Quantum Superposition",
+        lines: [
+          `${p.numPackets || 3} wave packets overlapping in space`,
+          "Each packet is a Gaussian \u00B7 plane wave: A\u00B7e^(-r\u00B2/4\u03C3\u00B2)\u00B7e^(ikr)",
+          "Interference creates peaks where waves align",
+          "and valleys where they cancel (destructive)",
+          `\u03C3=${(p.sigma || 1.2).toFixed(1)}  k=${(p.k || 5).toFixed(1)}  \u03C9=${(p.omega || 3).toFixed(1)}`,
+        ],
+      },
+      gaussian: {
+        title: "Gaussian Wave Packet",
+        lines: [
+          "A single localized particle — the simplest quantum state",
+          "The envelope e^(-r\u00B2/4\u03C3\u00B2) sets the probability spread",
+          "Inside, the phase e^(ikr-\u03C9t) oscillates like a carrier wave",
+          `Moving at v=(${(p.vx || 0).toFixed(1)}, ${(p.vz || 0).toFixed(1)}) with \u03C3=${(p.sigma || 1).toFixed(1)}`,
+        ],
+      },
+      doubleSlit: {
+        title: "Double-Slit Interference",
+        lines: [
+          "Two coherent sources separated by a gap",
+          "Waves from each slit overlap — their phases",
+          "add constructively (bright rings) or cancel",
+          `Slit separation: ${(p.slitSeparation || 2.5).toFixed(1)} \u00B7 \u03C3=${(p.sigma || 0.8).toFixed(1)}`,
+        ],
+      },
+      standingWave: {
+        title: "Standing Wave (Particle in a Box)",
+        lines: [
+          "Quantized modes: only certain wavelengths fit",
+          "sin(n\u03C0x/L)\u00B7sin(m\u03C0z/L) — nodes are fixed at zero",
+          "This is WHY energy is quantized in atoms",
+          `Mode (${p.nx || 3}, ${p.ny || 2}) \u00B7 \u03C9=${(p.omega || 2).toFixed(1)}`,
+        ],
+      },
+      tunneling: {
+        title: "Quantum Tunneling",
+        lines: [
+          "A particle hits a barrier it classically can't cross",
+          "But \u03C8 doesn't stop — it decays as e^(-\u03BAx) inside",
+          "If the barrier is thin enough, \u03C8 leaks through",
+          `Barrier: h=${(p.barrierHeight || 0.6).toFixed(1)} w=${(p.barrierWidth || 0.8).toFixed(1)} \u00B7 v=${(p.vx || 0.6).toFixed(1)}`,
+        ],
+      },
+      harmonic: {
+        title: "Quantum Harmonic Oscillator",
+        lines: [
+          "The quantum version of a spring — H\u2099(x)\u00B7e^(-x\u00B2/2)",
+          "H\u2099 are Hermite polynomials with n zero-crossings",
+          "Models vibrating molecules & photon fields",
+          `Mode (${p.nx || 2}, ${p.ny || 3}) \u00B7 \u03C3=${(p.sigma || 1.5).toFixed(1)}`,
+        ],
+      },
+    };
+
+    const info = explanations[this._activePreset] || explanations.gaussian;
+
+    // Append gravity info if wells exist
+    if (wells > 0) {
+      info.lines.push("");
+      info.lines.push(`+ ${wells} gravity well${wells > 1 ? "s" : ""}: spacetime curvature \u03A6(r) = -GM/r`);
+    }
+
+    return info;
+  }
+
+  _drawInfoOverlay() {
+    if (!this._infoOverlayVisible) return;
+
+    const info = this._getPresetExplanation();
+    const padding = 16;
+    const lineHeight = 18;
+    const titleHeight = 28;
+    const panelW = Screen.isMobile ? this.width - 40 : 320;
+    const panelH = padding * 2 + titleHeight + info.lines.length * lineHeight;
+
+    // Mobile: top-center below buttons. Desktop: left side, vertically centered
+    const px = Screen.isMobile
+      ? (this.width - panelW) / 2
+      : CONFIG.panel.marginRight;
+    const py = Screen.isMobile
+      ? CONFIG.toggle.margin + CONFIG.toggle.height + 12
+      : (this.height - panelH) / 2;
+
+    // Background
+    Painter.shapes.rect(px, py, panelW, panelH, "rgba(0, 0, 0, 0.8)");
+
+    Painter.useCtx((ctx) => {
+      ctx.save();
+      ctx.textBaseline = "top";
+
+      // Title
+      ctx.font = "bold 14px monospace";
+      ctx.fillStyle = "#0ff";
+      ctx.textAlign = "left";
+      ctx.fillText(info.title, px + padding, py + padding);
+
+      // Lines
+      ctx.font = "11px monospace";
+      for (let i = 0; i < info.lines.length; i++) {
+        const line = info.lines[i];
+        if (!line) continue;
+
+        // Last line with numbers gets a highlight color
+        const isParam = line.startsWith("\u03C3") || line.startsWith("Slit")
+          || line.startsWith("Mode") || line.startsWith("Barrier")
+          || line.startsWith("+");
+        ctx.fillStyle = isParam ? "#6d8" : "#aab";
+        ctx.fillText(line, px + padding, py + padding + titleHeight + i * lineHeight);
+      }
+
+      ctx.restore();
+    });
   }
 
   // ─── Wave Functions ──────────────────────────────────────────────────
@@ -1286,6 +1438,9 @@ export class QuantumManifoldPlayground extends Game {
 
     // Pipeline renders UI (accordion panel, info text, FPS) on top
     this.pipeline.render();
+
+    // Info overlay on top of everything
+    this._drawInfoOverlay();
   }
 
   _renderBackground(w, h) {
