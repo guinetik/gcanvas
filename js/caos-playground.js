@@ -258,21 +258,22 @@ const ATTRACTOR_PARAMS = {
 const CONFIG = {
   panel: {
     width: 300,
-    padding: 14,
+    padding: 18,
     marginRight: 16,
     marginTop: 16,
     debugColor: "rgba(0, 255, 0, 0.18)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     spacing: 10,
-    mobileMaxHeight: 0.75,
-    mobilePadding: 10,
+    mobileMaxHeight: 0.85,
+    mobilePadding: 16,
   },
   accordion: {
     headerHeight: 28,
   },
   toggle: {
     margin: 12,
-    width: 90,
-    height: 32,
+    width: 44,
+    height: 44,
   },
   maxSegments: 250000,
 };
@@ -341,6 +342,14 @@ export class CaosPlayground extends Attractor3DDemo {
       debug: true,
       debugColor,
     });
+
+    // Draw a semi-transparent black background behind the panel contents
+    const originalDraw = this.panel.draw.bind(this.panel);
+    this.panel.draw = () => {
+      Painter.shapes.rect(0, 0, this.panel._width, this.panel._height, CONFIG.panel.backgroundColor);
+      originalDraw();
+    };
+
     // Position set after layoutAll() via _layoutPanel() when panel height is known
     this.pipeline.add(this.panel);
 
@@ -556,6 +565,19 @@ export class CaosPlayground extends Attractor3DDemo {
     // Commit all section items to the Scene and perform layout
     this.panel.layoutAll();
 
+    // After every relayout, reposition panel so bottom edge stays anchored
+    const originalLayout = this.panel.layout.bind(this.panel);
+    this.panel.layout = () => {
+      originalLayout();
+      this._layoutPanel();
+    };
+
+    // On mobile, only allow one section expanded at a time
+    if (isMobile) {
+      this._sections = [this._paramsSection, physics, particles, color, effects];
+      this._setupExclusiveSections();
+    }
+
     // Position panel now that height is known
     this._layoutPanel();
   }
@@ -564,7 +586,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
   _buildToggleButton() {
     this._toggleBtn = new Button(this, {
-      text: "\u2699 Settings",
+      text: "\u2699",
       width: CONFIG.toggle.width,
       height: CONFIG.toggle.height,
       onClick: () => this._togglePanel(),
@@ -588,7 +610,7 @@ export class CaosPlayground extends Attractor3DDemo {
             this.panel.visible = false;
             this.panel.interactive = false;
             if (this._toggleBtn) {
-              this._toggleBtn.text = "\u2699 Settings";
+              this._toggleBtn.text = "\u2699";
             }
           },
         },
@@ -597,12 +619,38 @@ export class CaosPlayground extends Attractor3DDemo {
             this.panel.visible = true;
             this.panel.interactive = true;
             if (Screen.isMobile && this._toggleBtn) {
-              this._toggleBtn.text = "\u2716 Close";
+              this._toggleBtn.text = "\u2716";
             }
           },
         },
       },
     });
+  }
+
+  /**
+   * On mobile, wrap each section's toggle so only one can be expanded at a time.
+   */
+  _setupExclusiveSections() {
+    // Store each section's original toggle before wrapping
+    const origToggles = new Map();
+    for (const section of this._sections) {
+      origToggles.set(section, section.toggle.bind(section));
+    }
+
+    for (const section of this._sections) {
+      section.toggle = (force) => {
+        const willExpand = force !== undefined ? force : !section.expanded;
+        if (willExpand) {
+          // Collapse all other expanded sections
+          for (const other of this._sections) {
+            if (other !== section && other.expanded) {
+              origToggles.get(other)(false);
+            }
+          }
+        }
+        origToggles.get(section)(force);
+      };
+    }
   }
 
   _togglePanel() {
@@ -615,13 +663,14 @@ export class CaosPlayground extends Attractor3DDemo {
 
   _layoutPanel() {
     if (Screen.isMobile) {
-      // Bottom sheet: full width, anchored to bottom
-      this.panel.x = this.width / 2;
+      // Bottom sheet: full width, anchored to bottom (AccordionGroup uses top-left origin)
+      const panelWidth = this.width - 20;
       const maxH = this.height * CONFIG.panel.mobileMaxHeight;
       const panelH = Math.min(this.panel._height || 400, maxH);
-      this.panel.y = this.height - panelH / 2 - 10;
+      this.panel.x = 10; // 10px left margin
+      this.panel.y = this.height - panelH - 10; // 10px bottom margin
     } else {
-      // Desktop: right sidebar
+      // Desktop: right sidebar (top-left origin)
       this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
       this.panel.y = CONFIG.panel.marginTop;
     }

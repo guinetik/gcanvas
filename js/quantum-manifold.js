@@ -34,6 +34,7 @@ import {
   AccordionGroup,
 } from "/gcanvas.es.min.js";
 import { Complex } from "/gcanvas.es.min.js";
+import { StateMachine } from "/gcanvas.es.min.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRESETS
@@ -198,6 +199,14 @@ const CONFIG = {
     marginRight: 16,
     marginTop: 16,
     spacing: 10,
+    mobilePadding: 12,
+    mobileMaxHeight: 0.85,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  toggle: {
+    margin: 12,
+    width: 44,
+    height: 44,
   },
   // Quantum gravity wells
   gravity: {
@@ -241,12 +250,17 @@ export class QuantumManifoldPlayground extends Game {
     this._initGrid();
     this._initCollapse();
     this._initGestures();
+    this._crossSectionVisible = true;
+    this._infoOverlayVisible = false;
     this._buildInfoPanel();
     this._buildUI();
+    this._buildToggleButton();
+    this._buildInfoButton();
+    this._initPanelStateMachine();
 
     this.fpsCounter = new FPSCounter(this, {
       color: "#00FF00",
-      anchor: "bottom-right",
+      anchor: Screen.isMobile ? "bottom-left" : "bottom-right",
     });
     this.pipeline.add(this.fpsCounter);
 
@@ -429,7 +443,7 @@ export class QuantumManifoldPlayground extends Game {
     this.infoPanel = new Scene(this, { x: 0, y: 0, origin: "center" });
     applyAnchor(this.infoPanel, {
       anchor: Position.TOP_CENTER,
-      anchorOffsetY: 150,
+      anchorOffsetY: Screen.isMobile ? 70 : 150,
     });
     this.pipeline.add(this.infoPanel);
 
@@ -470,21 +484,46 @@ export class QuantumManifoldPlayground extends Game {
   // ─── UI Panel ────────────────────────────────────────────────────────
 
   _buildUI() {
-    const { width, padding, spacing } = CONFIG.panel;
+    const isMobile = Screen.isMobile;
+    const panelWidth = isMobile
+      ? this.width - 20
+      : CONFIG.panel.width;
+    const padding = isMobile
+      ? CONFIG.panel.mobilePadding
+      : CONFIG.panel.padding;
+    const { spacing } = CONFIG.panel;
 
     this.panel = new AccordionGroup(this, {
-      width,
+      width: panelWidth,
       padding,
       spacing,
       headerHeight: 28,
       debug: true,
       debugColor: "rgba(0, 255, 0, 0.18)",
     });
-    this.panel.x = this.width - width - CONFIG.panel.marginRight;
-    this.panel.y = CONFIG.panel.marginTop;
     this.pipeline.add(this.panel);
 
-    const sw = width - padding * 2;
+    // Semi-transparent background
+    const originalDraw = this.panel.draw.bind(this.panel);
+    this.panel.draw = () => {
+      Painter.shapes.rect(
+        0, 0,
+        this.panel._width, this.panel._height,
+        CONFIG.panel.backgroundColor
+      );
+      originalDraw();
+    };
+
+    // Reposition panel when sections expand/collapse (bottom-anchor on mobile)
+    const originalLayout = this.panel.layout.bind(this.panel);
+    this.panel.layout = () => {
+      originalLayout();
+      this._layoutPanel();
+    };
+
+    this._layoutPanel();
+
+    const sw = panelWidth - padding * 2;
     this._controls = {};
 
     // Preset dropdown (top-level, not in a section)
@@ -501,7 +540,7 @@ export class QuantumManifoldPlayground extends Game {
     this.panel.addItem(this._controls.preset);
 
     // Parameters section (dynamic, rebuilt per preset)
-    this._paramsSection = this.panel.addSection("Parameters", { expanded: true });
+    this._paramsSection = this.panel.addSection("Parameters", { expanded: !Screen.isMobile });
     this._paramSliders = [];
     this._buildParamSliders(this._activePreset);
 
@@ -551,7 +590,7 @@ export class QuantumManifoldPlayground extends Game {
     surface.addItem(this._controls.wireframe);
 
     // Gravity section
-    const gravity = this.panel.addSection("Quantum Gravity", { expanded: true });
+    const gravity = this.panel.addSection("Quantum Gravity", { expanded: !Screen.isMobile });
 
     this._controls.gravityToggle = new ToggleButton(this, {
       text: "Gravity",
@@ -681,22 +720,174 @@ export class QuantumManifoldPlayground extends Game {
     });
     this.panel.addItem(this._controls.collapseBtn);
 
+    this._controls.reset = new Button(this, {
+      text: "Reset Defaults",
+      width: sw,
+      height: 32,
+      onClick: () => this._resetToDefaults(),
+    });
+    this.panel.addItem(this._controls.reset);
+
     this._controls.restart = new Button(this, {
       text: "Restart",
       width: sw,
       height: 32,
       onClick: () => {
+        // Restart simulation with current params (don't reset sliders)
+        this.time = 0;
+        this.isCollapsed = false;
+        this.collapseAmount = 0;
         this._clearWells();
-        this._onPresetChange(this._activePreset);
+        if (this._activePreset === "superposition") {
+          this._superPackets = this._generateSuperPackets(
+            this._waveParams.numPackets || 3
+          );
+        }
       },
     });
     this.panel.addItem(this._controls.restart);
 
+    // Store section refs for exclusive mobile behavior
+    this._sections = [this._paramsSection, surface, gravity, view];
+    if (Screen.isMobile) {
+      this._setupExclusiveSections();
+    }
+
     this.panel.layoutAll();
+    this._layoutPanel();
+  }
+
+  // ─── Mobile Toggle Button ──────────────────────────────────────────
+
+  _buildToggleButton() {
+    this._toggleBtn = new Button(this, {
+      text: "\u2699",
+      width: CONFIG.toggle.width,
+      height: CONFIG.toggle.height,
+      onClick: () => this._togglePanel(),
+    });
+    this._toggleBtn.x = CONFIG.toggle.margin + CONFIG.toggle.width / 2;
+    this._toggleBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
+    this.pipeline.add(this._toggleBtn);
+
+    // Only show on mobile
+    this._toggleBtn.visible = Screen.isMobile;
+    this._toggleBtn.interactive = Screen.isMobile;
+  }
+
+  _buildInfoButton() {
+    this._infoBtn = new ToggleButton(this, {
+      text: "?",
+      width: CONFIG.toggle.width,
+      height: CONFIG.toggle.height,
+      onToggle: (on) => {
+        this._infoOverlayVisible = on;
+        if (on && Screen.isMobile) {
+          // Hide panel when overlay opens on mobile
+          if (this._panelFSM && this._panelFSM.is("panel-visible")) {
+            this._panelFSM.setState("panel-hidden");
+          }
+        }
+      },
+    });
+    // Position to the right of the toggle button (or top-left on desktop)
+    const btnIndex = Screen.isMobile ? 1 : 0;
+    this._infoBtn.x = CONFIG.toggle.margin * (btnIndex + 1) + CONFIG.toggle.width * btnIndex + CONFIG.toggle.width / 2;
+    this._infoBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
+    this.pipeline.add(this._infoBtn);
+  }
+
+  _initPanelStateMachine() {
+    this._panelFSM = new StateMachine({
+      initial: Screen.isMobile ? "panel-hidden" : "panel-visible",
+      context: this,
+      states: {
+        "panel-hidden": {
+          enter() {
+            this.panel.visible = false;
+            this.panel.interactive = false;
+            if (this._toggleBtn) {
+              this._toggleBtn.text = "\u2699";
+            }
+            // On mobile, show cross-section when panel is hidden
+            if (Screen.isMobile) {
+              this._crossSectionVisible = true;
+            }
+          },
+        },
+        "panel-visible": {
+          enter() {
+            this.panel.visible = true;
+            this.panel.interactive = true;
+            if (Screen.isMobile && this._toggleBtn) {
+              this._toggleBtn.text = "\u2716";
+            }
+            // On mobile, hide cross-section and info overlay when panel is visible
+            if (Screen.isMobile) {
+              this._crossSectionVisible = false;
+              this._infoOverlayVisible = false;
+              if (this._infoBtn && this._infoBtn.toggled) {
+                this._infoBtn.toggle(false);
+              }
+            }
+          },
+        },
+      },
+    });
+  }
+
+  _togglePanel() {
+    if (this._panelFSM.is("panel-hidden")) {
+      this._panelFSM.setState("panel-visible");
+    } else {
+      this._panelFSM.setState("panel-hidden");
+    }
+  }
+
+  _setupExclusiveSections() {
+    const origToggles = new Map();
+    for (const section of this._sections) {
+      origToggles.set(section, section.toggle.bind(section));
+    }
+    for (const section of this._sections) {
+      section.toggle = (force) => {
+        const willExpand = force !== undefined ? force : !section.expanded;
+        if (willExpand) {
+          for (const other of this._sections) {
+            if (other !== section && other.expanded) {
+              origToggles.get(other)(false);
+            }
+          }
+        }
+        origToggles.get(section)(force);
+      };
+    }
+  }
+
+  _layoutPanel() {
+    if (!this.panel) return;
+    if (Screen.isMobile) {
+      // Bottom sheet: full width - 20px, anchored to bottom
+      const panelH = this.panel._height || 300;
+      const maxH = this.height * CONFIG.panel.mobileMaxHeight;
+      const clampedH = Math.min(panelH, maxH);
+      this.panel.x = 10;
+      this.panel.y = this.height - clampedH - 10;
+    } else {
+      // Desktop: right sidebar
+      this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
+      this.panel.y = CONFIG.panel.marginTop;
+    }
   }
 
   _buildParamSliders(presetKey) {
-    const sw = CONFIG.panel.width - CONFIG.panel.padding * 2;
+    const panelWidth = Screen.isMobile
+      ? this.width - 20
+      : CONFIG.panel.width;
+    const padding = Screen.isMobile
+      ? CONFIG.panel.mobilePadding
+      : CONFIG.panel.padding;
+    const sw = panelWidth - padding * 2;
 
     if (this._paramSliders.length > 0) {
       this.panel.clearSection(this._paramsSection);
@@ -815,6 +1006,10 @@ export class QuantumManifoldPlayground extends Game {
     this._buildParamSliders(key);
   }
 
+  _resetToDefaults() {
+    this._onPresetChange(this._activePreset);
+  }
+
   _updateStatsText() {
     if (!this.statsText) return;
     const preset = MANIFOLD_PRESETS[this._activePreset];
@@ -825,6 +1020,130 @@ export class QuantumManifoldPlayground extends Game {
     } else {
       this.statsText.text = `${preset.label} | t=${this.time.toFixed(1)}s${wellStr}`;
     }
+  }
+
+  // ─── Info Overlay ────────────────────────────────────────────────────
+
+  _getPresetExplanation() {
+    const p = this._waveParams;
+    const wells = this._gravityWells.length;
+
+    const explanations = {
+      superposition: {
+        title: "Quantum Superposition",
+        lines: [
+          `${p.numPackets || 3} wave packets overlapping in space`,
+          "Each packet is a Gaussian \u00B7 plane wave: A\u00B7e^(-r\u00B2/4\u03C3\u00B2)\u00B7e^(ikr)",
+          "Interference creates peaks where waves align",
+          "and valleys where they cancel (destructive)",
+          `\u03C3=${(p.sigma || 1.2).toFixed(1)}  k=${(p.k || 5).toFixed(1)}  \u03C9=${(p.omega || 3).toFixed(1)}`,
+        ],
+      },
+      gaussian: {
+        title: "Gaussian Wave Packet",
+        lines: [
+          "A single localized particle — the simplest quantum state",
+          "The envelope e^(-r\u00B2/4\u03C3\u00B2) sets the probability spread",
+          "Inside, the phase e^(ikr-\u03C9t) oscillates like a carrier wave",
+          `Moving at v=(${(p.vx || 0).toFixed(1)}, ${(p.vz || 0).toFixed(1)}) with \u03C3=${(p.sigma || 1).toFixed(1)}`,
+        ],
+      },
+      doubleSlit: {
+        title: "Double-Slit Interference",
+        lines: [
+          "Two coherent sources separated by a gap",
+          "Waves from each slit overlap — their phases",
+          "add constructively (bright rings) or cancel",
+          `Slit separation: ${(p.slitSeparation || 2.5).toFixed(1)} \u00B7 \u03C3=${(p.sigma || 0.8).toFixed(1)}`,
+        ],
+      },
+      standingWave: {
+        title: "Standing Wave (Particle in a Box)",
+        lines: [
+          "Quantized modes: only certain wavelengths fit",
+          "sin(n\u03C0x/L)\u00B7sin(m\u03C0z/L) — nodes are fixed at zero",
+          "This is WHY energy is quantized in atoms",
+          `Mode (${p.nx || 3}, ${p.ny || 2}) \u00B7 \u03C9=${(p.omega || 2).toFixed(1)}`,
+        ],
+      },
+      tunneling: {
+        title: "Quantum Tunneling",
+        lines: [
+          "A particle hits a barrier it classically can't cross",
+          "But \u03C8 doesn't stop — it decays as e^(-\u03BAx) inside",
+          "If the barrier is thin enough, \u03C8 leaks through",
+          `Barrier: h=${(p.barrierHeight || 0.6).toFixed(1)} w=${(p.barrierWidth || 0.8).toFixed(1)} \u00B7 v=${(p.vx || 0.6).toFixed(1)}`,
+        ],
+      },
+      harmonic: {
+        title: "Quantum Harmonic Oscillator",
+        lines: [
+          "The quantum version of a spring — H\u2099(x)\u00B7e^(-x\u00B2/2)",
+          "H\u2099 are Hermite polynomials with n zero-crossings",
+          "Models vibrating molecules & photon fields",
+          `Mode (${p.nx || 2}, ${p.ny || 3}) \u00B7 \u03C3=${(p.sigma || 1.5).toFixed(1)}`,
+        ],
+      },
+    };
+
+    const info = explanations[this._activePreset] || explanations.gaussian;
+
+    // Append gravity info if wells exist
+    if (wells > 0) {
+      info.lines.push("");
+      info.lines.push(`+ ${wells} gravity well${wells > 1 ? "s" : ""}: spacetime curvature \u03A6(r) = -GM/r`);
+    }
+
+    return info;
+  }
+
+  _drawInfoOverlay() {
+    if (!this._infoOverlayVisible) return;
+
+    const info = this._getPresetExplanation();
+    const padding = 16;
+    const lineHeight = 18;
+    const titleHeight = 28;
+    const panelW = Screen.isMobile ? this.width - 40 : 320;
+    const panelH = padding * 2 + titleHeight + info.lines.length * lineHeight;
+
+    // Mobile: top-center below buttons. Desktop: left side, vertically centered
+    const px = Screen.isMobile
+      ? (this.width - panelW) / 2
+      : CONFIG.panel.marginRight;
+    const py = Screen.isMobile
+      ? CONFIG.toggle.margin + CONFIG.toggle.height + 12
+      : (this.height - panelH) / 2;
+
+    // Background
+    Painter.shapes.rect(px, py, panelW, panelH, "rgba(0, 0, 0, 0.8)");
+
+    Painter.useCtx((ctx) => {
+      ctx.save();
+      ctx.textBaseline = "top";
+
+      // Title
+      ctx.font = "bold 14px monospace";
+      ctx.fillStyle = "#0ff";
+      ctx.textAlign = "left";
+      ctx.fillText(info.title, px + padding, py + padding);
+
+      // Lines
+      ctx.font = "11px monospace";
+      for (let i = 0; i < info.lines.length; i++) {
+        const line = info.lines[i];
+        if (!line) continue;
+
+        // Last line with numbers gets a highlight color
+        const isParam = line.startsWith("\u03C3") || line.startsWith("Slit")
+          || line.startsWith("Mode") || line.startsWith("Barrier")
+          || line.startsWith("+");
+        ctx.fillStyle = isParam ? "#6d8" : "#aab";
+        ctx.fillText(line, px + padding, py + padding + titleHeight + i * lineHeight);
+      }
+
+      ctx.restore();
+    });
   }
 
   // ─── Wave Functions ──────────────────────────────────────────────────
@@ -1112,13 +1431,16 @@ export class QuantumManifoldPlayground extends Game {
     this._renderBackground(w, h);
     this._renderSurface(cx, cy);
     this._renderGravityWellMarkers(cx, cy);
-    if (CONFIG.crossSection.enabled) {
+    if (CONFIG.crossSection.enabled && this._crossSectionVisible) {
       this._renderCrossSection(w, h);
     }
     this._renderControls(w, h);
 
     // Pipeline renders UI (accordion panel, info text, FPS) on top
     this.pipeline.render();
+
+    // Info overlay on top of everything
+    this._drawInfoOverlay();
   }
 
   _renderBackground(w, h) {
@@ -1421,9 +1743,22 @@ export class QuantumManifoldPlayground extends Game {
       CONFIG.zoom.max,
       Math.max(CONFIG.zoom.min, Screen.minDimension() / CONFIG.zoom.baseScreenSize)
     );
+
     if (this.panel) {
-      this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
-      this.panel.y = CONFIG.panel.marginTop;
+      this._layoutPanel();
+    }
+
+    // Update toggle button visibility based on new screen size
+    if (this._toggleBtn) {
+      this._toggleBtn.visible = Screen.isMobile;
+      this._toggleBtn.interactive = Screen.isMobile;
+    }
+
+    // On desktop, ensure panel is always visible; on mobile, hide
+    if (!Screen.isMobile && this._panelFSM) {
+      this._panelFSM.setState("panel-visible");
+    } else if (Screen.isMobile && this._panelFSM) {
+      this._panelFSM.setState("panel-hidden");
     }
   }
 }
