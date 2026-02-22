@@ -34,6 +34,7 @@ import {
   AccordionGroup,
 } from "../../src/index.js";
 import { Complex } from "../../src/math/complex.js";
+import { StateMachine } from "../../src/state/state-machine.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRESETS
@@ -198,6 +199,14 @@ const CONFIG = {
     marginRight: 16,
     marginTop: 16,
     spacing: 10,
+    mobilePadding: 12,
+    mobileMaxHeight: 0.85,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  toggle: {
+    margin: 12,
+    width: 44,
+    height: 44,
   },
   // Quantum gravity wells
   gravity: {
@@ -241,12 +250,15 @@ export class QuantumManifoldPlayground extends Game {
     this._initGrid();
     this._initCollapse();
     this._initGestures();
+    this._crossSectionVisible = true;
     this._buildInfoPanel();
     this._buildUI();
+    this._buildToggleButton();
+    this._initPanelStateMachine();
 
     this.fpsCounter = new FPSCounter(this, {
       color: "#00FF00",
-      anchor: "bottom-right",
+      anchor: Screen.isMobile ? "bottom-left" : "bottom-right",
     });
     this.pipeline.add(this.fpsCounter);
 
@@ -429,7 +441,7 @@ export class QuantumManifoldPlayground extends Game {
     this.infoPanel = new Scene(this, { x: 0, y: 0, origin: "center" });
     applyAnchor(this.infoPanel, {
       anchor: Position.TOP_CENTER,
-      anchorOffsetY: 150,
+      anchorOffsetY: Screen.isMobile ? 70 : 150,
     });
     this.pipeline.add(this.infoPanel);
 
@@ -470,21 +482,46 @@ export class QuantumManifoldPlayground extends Game {
   // ─── UI Panel ────────────────────────────────────────────────────────
 
   _buildUI() {
-    const { width, padding, spacing } = CONFIG.panel;
+    const isMobile = Screen.isMobile;
+    const panelWidth = isMobile
+      ? this.width - 20
+      : CONFIG.panel.width;
+    const padding = isMobile
+      ? CONFIG.panel.mobilePadding
+      : CONFIG.panel.padding;
+    const { spacing } = CONFIG.panel;
 
     this.panel = new AccordionGroup(this, {
-      width,
+      width: panelWidth,
       padding,
       spacing,
       headerHeight: 28,
       debug: true,
       debugColor: "rgba(0, 255, 0, 0.18)",
     });
-    this.panel.x = this.width - width - CONFIG.panel.marginRight;
-    this.panel.y = CONFIG.panel.marginTop;
     this.pipeline.add(this.panel);
 
-    const sw = width - padding * 2;
+    // Semi-transparent background
+    const originalDraw = this.panel.draw.bind(this.panel);
+    this.panel.draw = () => {
+      Painter.shapes.rect(
+        0, 0,
+        this.panel._width, this.panel._height,
+        CONFIG.panel.backgroundColor
+      );
+      originalDraw();
+    };
+
+    // Reposition panel when sections expand/collapse (bottom-anchor on mobile)
+    const originalLayout = this.panel.layout.bind(this.panel);
+    this.panel.layout = () => {
+      originalLayout();
+      this._layoutPanel();
+    };
+
+    this._layoutPanel();
+
+    const sw = panelWidth - padding * 2;
     this._controls = {};
 
     // Preset dropdown (top-level, not in a section)
@@ -501,7 +538,7 @@ export class QuantumManifoldPlayground extends Game {
     this.panel.addItem(this._controls.preset);
 
     // Parameters section (dynamic, rebuilt per preset)
-    this._paramsSection = this.panel.addSection("Parameters", { expanded: true });
+    this._paramsSection = this.panel.addSection("Parameters", { expanded: !Screen.isMobile });
     this._paramSliders = [];
     this._buildParamSliders(this._activePreset);
 
@@ -551,7 +588,7 @@ export class QuantumManifoldPlayground extends Game {
     surface.addItem(this._controls.wireframe);
 
     // Gravity section
-    const gravity = this.panel.addSection("Quantum Gravity", { expanded: true });
+    const gravity = this.panel.addSection("Quantum Gravity", { expanded: !Screen.isMobile });
 
     this._controls.gravityToggle = new ToggleButton(this, {
       text: "Gravity",
@@ -681,22 +718,148 @@ export class QuantumManifoldPlayground extends Game {
     });
     this.panel.addItem(this._controls.collapseBtn);
 
+    this._controls.reset = new Button(this, {
+      text: "Reset Defaults",
+      width: sw,
+      height: 32,
+      onClick: () => this._resetToDefaults(),
+    });
+    this.panel.addItem(this._controls.reset);
+
     this._controls.restart = new Button(this, {
       text: "Restart",
       width: sw,
       height: 32,
       onClick: () => {
+        // Restart simulation with current params (don't reset sliders)
+        this.time = 0;
+        this.isCollapsed = false;
+        this.collapseAmount = 0;
         this._clearWells();
-        this._onPresetChange(this._activePreset);
+        if (this._activePreset === "superposition") {
+          this._superPackets = this._generateSuperPackets(
+            this._waveParams.numPackets || 3
+          );
+        }
       },
     });
     this.panel.addItem(this._controls.restart);
 
+    // Store section refs for exclusive mobile behavior
+    this._sections = [this._paramsSection, surface, gravity, view];
+    if (Screen.isMobile) {
+      this._setupExclusiveSections();
+    }
+
     this.panel.layoutAll();
+    this._layoutPanel();
+  }
+
+  // ─── Mobile Toggle Button ──────────────────────────────────────────
+
+  _buildToggleButton() {
+    this._toggleBtn = new Button(this, {
+      text: "\u2699",
+      width: CONFIG.toggle.width,
+      height: CONFIG.toggle.height,
+      onClick: () => this._togglePanel(),
+    });
+    this._toggleBtn.x = CONFIG.toggle.margin + CONFIG.toggle.width / 2;
+    this._toggleBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
+    this.pipeline.add(this._toggleBtn);
+
+    // Only show on mobile
+    this._toggleBtn.visible = Screen.isMobile;
+    this._toggleBtn.interactive = Screen.isMobile;
+  }
+
+  _initPanelStateMachine() {
+    this._panelFSM = new StateMachine({
+      initial: Screen.isMobile ? "panel-hidden" : "panel-visible",
+      context: this,
+      states: {
+        "panel-hidden": {
+          enter() {
+            this.panel.visible = false;
+            this.panel.interactive = false;
+            if (this._toggleBtn) {
+              this._toggleBtn.text = "\u2699";
+            }
+            // On mobile, show cross-section when panel is hidden
+            if (Screen.isMobile) {
+              this._crossSectionVisible = true;
+            }
+          },
+        },
+        "panel-visible": {
+          enter() {
+            this.panel.visible = true;
+            this.panel.interactive = true;
+            if (Screen.isMobile && this._toggleBtn) {
+              this._toggleBtn.text = "\u2716";
+            }
+            // On mobile, hide cross-section when panel is visible
+            if (Screen.isMobile) {
+              this._crossSectionVisible = false;
+            }
+          },
+        },
+      },
+    });
+  }
+
+  _togglePanel() {
+    if (this._panelFSM.is("panel-hidden")) {
+      this._panelFSM.setState("panel-visible");
+    } else {
+      this._panelFSM.setState("panel-hidden");
+    }
+  }
+
+  _setupExclusiveSections() {
+    const origToggles = new Map();
+    for (const section of this._sections) {
+      origToggles.set(section, section.toggle.bind(section));
+    }
+    for (const section of this._sections) {
+      section.toggle = (force) => {
+        const willExpand = force !== undefined ? force : !section.expanded;
+        if (willExpand) {
+          for (const other of this._sections) {
+            if (other !== section && other.expanded) {
+              origToggles.get(other)(false);
+            }
+          }
+        }
+        origToggles.get(section)(force);
+      };
+    }
+  }
+
+  _layoutPanel() {
+    if (!this.panel) return;
+    if (Screen.isMobile) {
+      // Bottom sheet: full width - 20px, anchored to bottom
+      const panelH = this.panel._height || 300;
+      const maxH = this.height * CONFIG.panel.mobileMaxHeight;
+      const clampedH = Math.min(panelH, maxH);
+      this.panel.x = 10;
+      this.panel.y = this.height - clampedH - 10;
+    } else {
+      // Desktop: right sidebar
+      this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
+      this.panel.y = CONFIG.panel.marginTop;
+    }
   }
 
   _buildParamSliders(presetKey) {
-    const sw = CONFIG.panel.width - CONFIG.panel.padding * 2;
+    const panelWidth = Screen.isMobile
+      ? this.width - 20
+      : CONFIG.panel.width;
+    const padding = Screen.isMobile
+      ? CONFIG.panel.mobilePadding
+      : CONFIG.panel.padding;
+    const sw = panelWidth - padding * 2;
 
     if (this._paramSliders.length > 0) {
       this.panel.clearSection(this._paramsSection);
@@ -813,6 +976,10 @@ export class QuantumManifoldPlayground extends Game {
 
     this._updateStatsText();
     this._buildParamSliders(key);
+  }
+
+  _resetToDefaults() {
+    this._onPresetChange(this._activePreset);
   }
 
   _updateStatsText() {
@@ -1112,7 +1279,7 @@ export class QuantumManifoldPlayground extends Game {
     this._renderBackground(w, h);
     this._renderSurface(cx, cy);
     this._renderGravityWellMarkers(cx, cy);
-    if (CONFIG.crossSection.enabled) {
+    if (CONFIG.crossSection.enabled && this._crossSectionVisible) {
       this._renderCrossSection(w, h);
     }
     this._renderControls(w, h);
@@ -1421,9 +1588,22 @@ export class QuantumManifoldPlayground extends Game {
       CONFIG.zoom.max,
       Math.max(CONFIG.zoom.min, Screen.minDimension() / CONFIG.zoom.baseScreenSize)
     );
+
     if (this.panel) {
-      this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
-      this.panel.y = CONFIG.panel.marginTop;
+      this._layoutPanel();
+    }
+
+    // Update toggle button visibility based on new screen size
+    if (this._toggleBtn) {
+      this._toggleBtn.visible = Screen.isMobile;
+      this._toggleBtn.interactive = Screen.isMobile;
+    }
+
+    // On desktop, ensure panel is always visible; on mobile, hide
+    if (!Screen.isMobile && this._panelFSM) {
+      this._panelFSM.setState("panel-visible");
+    } else if (Screen.isMobile && this._panelFSM) {
+      this._panelFSM.setState("panel-hidden");
     }
   }
 }
