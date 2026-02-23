@@ -14,6 +14,8 @@ import {
 } from "../../src/index.js";
 import { StateMachine } from "../../src/state/state-machine.js";
 import { WebGLParticleRenderer } from "../../src/webgl/webgl-particle-renderer.js";
+import { Tweenetik } from "../../src/motion/tweenetik.js";
+import { Easing } from "../../src/motion/easing.js";
 import {
   sampleOrbitalPositions,
   validateQuantumNumbers,
@@ -53,6 +55,10 @@ const CONFIG = {
     mobileMaxHeight: 0.85,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     spacing: 10,
+  },
+  transition: {
+    duration: 0.8,
+    stagger: 0.4,       // fraction of duration over which particles are spread
   },
   toggle: {
     margin: 12,
@@ -234,6 +240,9 @@ class HydrogenOrbitalDemo extends Game {
     this._particles = [];
     this._orbitalData = null;
 
+    // Intro transition (0 = origin, 1 = final positions)
+    this._transition = { progress: 0 };
+
     // Generate initial orbital
     this._regenerateOrbital();
 
@@ -287,6 +296,11 @@ class HydrogenOrbitalDemo extends Game {
     this._orbitalData = sampleOrbitalPositions(this.n, this.l, this.m, this.particleCount);
     this._buildParticles();
     this._updateInfoPanel();
+
+    // Animate particles from origin to final positions
+    Tweenetik.killTarget(this._transition);
+    this._transition.progress = 0;
+    Tweenetik.to(this._transition, { progress: 1 }, CONFIG.transition.duration, Easing.linear);
   }
 
   _buildParticles() {
@@ -318,7 +332,20 @@ class HydrogenOrbitalDemo extends Game {
     }
     const logRange = maxLog - minLog || 1;
 
+    // Pre-compute max distance for stagger normalization
+    let maxDist = 0;
+    for (let i = 0; i < count; i++) {
+      const idx = i * 4;
+      const x = data[idx] / scale;
+      const y = data[idx + 1] / scale;
+      const z = data[idx + 2] / scale;
+      const d = x * x + y * y + z * z;
+      if (d > maxDist) maxDist = d;
+    }
+    maxDist = Math.sqrt(maxDist) || 1;
+
     this._particles.length = 0;
+    const stagger = CONFIG.transition.stagger;
 
     for (let i = 0; i < count; i++) {
       const idx = i * 4;
@@ -337,12 +364,17 @@ class HydrogenOrbitalDemo extends Game {
 
       const color = sampleColormap(colormap, tColor);
 
+      // Stagger: outer particles spawn first (low spawnT), inner spawn later
+      const dist = Math.sqrt(x * x + y * y + z * z) / maxDist;
+      const spawnT = (1 - dist) * stagger;
+
       this._particles.push({
         x: x * 100,
         y: y * 100,
         z: z * 100,
         size: CONFIG.particles.pointSize * (0.5 + tProb * 0.5),
         color: { r: color[0], g: color[1], b: color[2], a: CONFIG.visual.alpha * tProb },
+        spawnT,
       });
     }
   }
@@ -1024,16 +1056,23 @@ class HydrogenOrbitalDemo extends Game {
       const cx = this.width / 2;
       const cy = this.height / 2;
       const projected = [];
+      const globalT = this._transition.progress;
+      const stagger = CONFIG.transition.stagger;
 
       for (const p of this._particles) {
-        const pt = this.camera.project(p.x, p.y, p.z);
+        // Per-particle local progress based on spawn threshold
+        const localT = Math.min(1, Math.max(0, (globalT - p.spawnT) / (1 - stagger)));
+        if (localT <= 0) continue;
+
+        const eased = Easing.easeOutCubic(localT);
+        const pt = this.camera.project(p.x * eased, p.y * eased, p.z * eased);
         if (pt.z < 0) continue;
 
         const scale = this.currentZoom * (CONFIG.camera.perspective / (CONFIG.camera.perspective + pt.z));
         projected.push({
           x: cx + pt.x * scale,
           y: cy + pt.y * scale,
-          size: p.size * scale,
+          size: p.size * scale * eased,
           color: p.color,
           depth: pt.z,
         });
