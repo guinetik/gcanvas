@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Math & Physics - Zeta Zeros</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Riemann Zeta — Critical Line</strong> — Trace ζ(½ + it) as a spiral in the complex plane.<br/>
+    <span style="color:#CCC">
+      <li>The spiral traces the output of ζ(½ + it) as t increases</li>
+      <li>Non-trivial zeros occur where the curve passes through the origin</li>
+      <li>The Riemann Hypothesis: all non-trivial zeros lie on Re = ½</li>
+      <li>Scroll to zoom | +/- to change speed | Space to pause | R to restart</li>
+      <li>Click to enable sound — chimes play at each zero</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/zeta-zeros.js"></script>
+</body>
+</html>
