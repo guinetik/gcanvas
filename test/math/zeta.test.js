@@ -4,6 +4,7 @@ import {
   riemannSiegelZ,
   zetaCriticalLine,
   findZerosInRange,
+  verifyZero,
   KNOWN_ZEROS,
 } from "../../src/math/zeta.js";
 
@@ -71,6 +72,28 @@ describe("findZerosInRange", () => {
     expect(zeros.length).toBe(2);
     expect(zeros[0]).toBeCloseTo(21.022, 1);
     expect(zeros[1]).toBeCloseTo(25.011, 1);
+  });
+});
+
+describe("verifyZero", () => {
+  it("matches a known zero within tolerance", () => {
+    const result = verifyZero(14.13, 0.1);
+    expect(result.verified).toBe(true);
+    expect(result.knownValue).toBeCloseTo(14.134725, 3);
+    expect(result.index).toBe(1);
+  });
+
+  it("does not match when outside tolerance", () => {
+    const result = verifyZero(16.0, 0.1);
+    expect(result.verified).toBe(false);
+    expect(result.knownValue).toBeNull();
+    expect(result.index).toBe(-1);
+  });
+
+  it("matches second zero", () => {
+    const result = verifyZero(21.02, 0.1);
+    expect(result.verified).toBe(true);
+    expect(result.index).toBe(2);
   });
 });
 

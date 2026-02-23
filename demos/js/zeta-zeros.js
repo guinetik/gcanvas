@@ -149,7 +149,7 @@ class ZetaZerosDemo extends Game {
     this.lastZeroT = -10;      // debounce
 
     // Flash effects
-    this.activeFlashes = [];   // { x, y, time, duration }
+    this.activeFlashes = [];   // { elapsed, duration }
 
     // Sound state
     this.soundEnabled = false;
@@ -602,7 +602,8 @@ class ZetaZerosDemo extends Game {
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
-    for (const zero of this.detectedZeros) {
+    for (let i = 0; i < this.detectedZeros.length; i++) {
+      const zero = this.detectedZeros[i];
       // Marker at origin
       ctx.fillStyle = CONFIG.colors.zeroMarker;
       ctx.beginPath();
@@ -610,7 +611,7 @@ class ZetaZerosDemo extends Game {
       ctx.fill();
 
       // Label offset so they don't overlap
-      const labelY = cy + 15 + this.detectedZeros.indexOf(zero) * 14;
+      const labelY = cy + 15 + i * 14;
       const label = zero.verified
         ? `t${zero.index} ≈ ${zero.t.toFixed(3)} ✓`
         : `t ≈ ${zero.t.toFixed(3)}`;
