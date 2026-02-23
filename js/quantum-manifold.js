@@ -17,209 +17,26 @@ import {
   Game,
   Painter,
   Camera3D,
-  Text,
-  applyAnchor,
-  Position,
-  Scene,
-  verticalLayout,
-  applyLayout,
   Screen,
   Gesture,
   FPSCounter,
-  Slider,
-  Dropdown,
-  Button,
-  ToggleButton,
-  Stepper,
-  AccordionGroup,
 } from "/gcanvas.es.min.js";
 import { Complex } from "/gcanvas.es.min.js";
-import { StateMachine } from "/gcanvas.es.min.js";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PRESETS
-// ─────────────────────────────────────────────────────────────────────────────
-
-const MANIFOLD_PRESETS = {
-  superposition: {
-    label: "Superposition",
-    sigma: 1.2,
-    k: 5.0,
-    omega: 3.0,
-    vx: 0.3,
-    vz: 0.2,
-    numPackets: 3,
-  },
-  gaussian: {
-    label: "Gaussian Packet",
-    sigma: 1.0,
-    k: 4.0,
-    omega: 2.0,
-    vx: 0.5,
-    vz: 0.3,
-    numPackets: 1,
-  },
-  doubleSlit: {
-    label: "Double Slit",
-    sigma: 0.8,
-    k: 6.0,
-    omega: 3.0,
-    slitSeparation: 2.5,
-    numPackets: 1,
-  },
-  standingWave: {
-    label: "Standing Wave",
-    nx: 3,
-    ny: 2,
-    omega: 2.0,
-    numPackets: 1,
-  },
-  tunneling: {
-    label: "Quantum Tunneling",
-    sigma: 0.9,
-    k: 5.0,
-    omega: 2.5,
-    vx: 0.6,
-    vz: 0.0,
-    barrierHeight: 0.6,
-    barrierWidth: 0.8,
-    numPackets: 1,
-  },
-  harmonic: {
-    label: "Harmonic Oscillator",
-    nx: 2,
-    ny: 3,
-    sigma: 1.5,
-    omega: 2.0,
-    numPackets: 1,
-  },
-};
-
-// Per-preset parameter definitions for dynamic sliders
-const PRESET_PARAMS = {
-  superposition: [
-    { key: "sigma", label: "SIGMA", default: 1.2, min: 0.3, max: 3.0, step: 0.1 },
-    { key: "k", label: "K", default: 5.0, min: 1.0, max: 12.0, step: 0.5 },
-    { key: "omega", label: "OMEGA", default: 3.0, min: 0.5, max: 8.0, step: 0.5 },
-    { key: "vx", label: "VELOCITY X", default: 0.3, min: -1.0, max: 1.0, step: 0.05 },
-    { key: "vz", label: "VELOCITY Z", default: 0.2, min: -1.0, max: 1.0, step: 0.05 },
-  ],
-  gaussian: [
-    { key: "sigma", label: "SIGMA", default: 1.0, min: 0.3, max: 3.0, step: 0.1 },
-    { key: "k", label: "K", default: 4.0, min: 1.0, max: 12.0, step: 0.5 },
-    { key: "omega", label: "OMEGA", default: 2.0, min: 0.5, max: 8.0, step: 0.5 },
-    { key: "vx", label: "VELOCITY X", default: 0.5, min: -1.0, max: 1.0, step: 0.05 },
-    { key: "vz", label: "VELOCITY Z", default: 0.3, min: -1.0, max: 1.0, step: 0.05 },
-  ],
-  doubleSlit: [
-    { key: "sigma", label: "SIGMA", default: 0.8, min: 0.3, max: 3.0, step: 0.1 },
-    { key: "k", label: "K", default: 6.0, min: 1.0, max: 12.0, step: 0.5 },
-    { key: "omega", label: "OMEGA", default: 3.0, min: 0.5, max: 8.0, step: 0.5 },
-    { key: "slitSeparation", label: "SLIT SEP", default: 2.5, min: 0.5, max: 5.0, step: 0.1 },
-  ],
-  standingWave: [
-    { key: "omega", label: "OMEGA", default: 2.0, min: 0.5, max: 8.0, step: 0.5 },
-  ],
-  tunneling: [
-    { key: "sigma", label: "SIGMA", default: 0.9, min: 0.3, max: 3.0, step: 0.1 },
-    { key: "k", label: "K", default: 5.0, min: 1.0, max: 12.0, step: 0.5 },
-    { key: "omega", label: "OMEGA", default: 2.5, min: 0.5, max: 8.0, step: 0.5 },
-    { key: "vx", label: "VELOCITY X", default: 0.6, min: -1.0, max: 1.0, step: 0.05 },
-    { key: "barrierHeight", label: "BARRIER H", default: 0.6, min: 0.1, max: 1.5, step: 0.05 },
-    { key: "barrierWidth", label: "BARRIER W", default: 0.8, min: 0.2, max: 3.0, step: 0.1 },
-  ],
-  harmonic: [
-    { key: "sigma", label: "SIGMA", default: 1.5, min: 0.5, max: 3.0, step: 0.1 },
-    { key: "omega", label: "OMEGA", default: 2.0, min: 0.5, max: 8.0, step: 0.5 },
-  ],
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CONFIG
-// ─────────────────────────────────────────────────────────────────────────────
-
-const CONFIG = {
-  grid: {
-    size: 10,        // world units (-size to +size)
-    resolution: 50,  // vertices per axis
-  },
-  surface: {
-    amplitude: 4.0,
-    wireframe: true,
-    wireframeAlpha: 0.35,
-    surfaceAlpha: 0.9,
-  },
-  camera: {
-    perspective: 900,
-    rotationX: 0.65,
-    rotationY: -0.4,
-    autoRotate: true,
-    autoRotateSpeed: 0.15,
-    inertia: true,
-    friction: 0.92,
-  },
-  colors: {
-    // Green/cyan palette: deep navy → teal → cyan → neon green
-    gradient: [
-      { stop: 0.0, color: [0, 8, 20] },       // deep navy
-      { stop: 0.2, color: [0, 30, 60] },       // dark teal
-      { stop: 0.4, color: [0, 80, 100] },      // teal
-      { stop: 0.6, color: [0, 180, 180] },     // cyan
-      { stop: 0.8, color: [0, 255, 200] },     // bright cyan-green
-      { stop: 1.0, color: [80, 255, 120] },    // neon green
-    ],
-    wireColor: "rgba(0, 255, 200, 0.25)",
-    background: "#000810",
-    // Gravity well rendering
-    wellGlow: "rgba(255, 60, 40, 0.6)",
-    wellRing: "rgba(255, 100, 60, 0.8)",
-  },
-  crossSection: {
-    enabled: true,
-    height: 80,
-    marginBottom: 30,
-    waveColor: "#00ffcc",
-    envelopeColor: "rgba(0, 200, 180, 0.3)",
-  },
-  collapse: {
-    holdTime: 300,
-    dragThreshold: 8,
-    duration: 800,
-  },
-  zoom: {
-    min: 0.1,
-    max: 6.0,
-    speed: 0.5,
-    easing: 0.12,
-    baseScreenSize: 600,
-  },
-  panel: {
-    width: 280,
-    padding: 14,
-    marginRight: 16,
-    marginTop: 16,
-    spacing: 10,
-    mobilePadding: 12,
-    mobileMaxHeight: 0.85,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  toggle: {
-    margin: 12,
-    width: 44,
-    height: 44,
-  },
-  // Quantum gravity wells
-  gravity: {
-    enabled: true,
-    wellDepth: 6.0,       // max depth of well (world units of Y displacement)
-    wellWidth: 2.5,       // sigma of Gaussian well
-    pulseSpeed: 1.5,      // breathing animation speed
-    pulseAmount: 0.08,    // how much the well breathes (0-1)
-    maxWells: 5,
-  },
-  timeScale: 1.0,
-  hueShift: 0,
-};
+import {
+  CONFIG,
+  MANIFOLD_PRESETS,
+} from "./quantum/quantuman.config.js";
+import {
+  createInfoPanel,
+  createControlPanel,
+  createToggleButton,
+  createInfoButton,
+  createPanelStateMachine,
+  layoutPanel,
+  buildParamSliders,
+  getPresetExplanation,
+  drawInfoOverlay,
+} from "./quantum/quantuman.ui.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // QUANTUM MANIFOLD PLAYGROUND
@@ -241,8 +58,8 @@ export class QuantumManifoldPlayground extends Game {
     this._waveParams = { ...MANIFOLD_PRESETS.superposition };
     this._updatingSliders = false;
 
-    // Gravity wells array: { x, z, mass }
     this._gravityWells = [];
+    this._paramSliders = [];
 
     Screen.init(this);
     this._initZoom();
@@ -252,6 +69,7 @@ export class QuantumManifoldPlayground extends Game {
     this._initGestures();
     this._crossSectionVisible = true;
     this._infoOverlayVisible = false;
+
     this._buildInfoPanel();
     this._buildUI();
     this._buildToggleButton();
@@ -264,14 +82,11 @@ export class QuantumManifoldPlayground extends Game {
     });
     this.pipeline.add(this.fpsCounter);
 
-    // Pre-generate superposition packet directions
     this._superPackets = this._generateSuperPackets(
       this._waveParams.numPackets || 3
     );
-    // Pre-generate standing wave quantum numbers
     this._standingNx = this._waveParams.nx || 3;
     this._standingNy = this._waveParams.ny || 2;
-    // Hermite quantum numbers
     this._hermiteNx = this._waveParams.nx || 2;
     this._hermiteNy = this._waveParams.ny || 3;
   }
@@ -343,7 +158,6 @@ export class QuantumManifoldPlayground extends Game {
       this.camera.reset();
     });
 
-    // Collapse interaction (hold without dragging)
     const startCollapse = (x, y) => {
       this.pointerStartX = x;
       this.pointerStartY = y;
@@ -440,276 +254,50 @@ export class QuantumManifoldPlayground extends Game {
   // ─── Info Panel ──────────────────────────────────────────────────────
 
   _buildInfoPanel() {
-    this.infoPanel = new Scene(this, { x: 0, y: 0, origin: "center" });
-    applyAnchor(this.infoPanel, {
-      anchor: Position.TOP_CENTER,
-      anchorOffsetY: Screen.isMobile ? 70 : 150,
-    });
-    this.pipeline.add(this.infoPanel);
-
-    this.titleText = new Text(this, "Quantum Manifold", {
-      font: "bold 16px monospace",
-      color: "#0ff",
-      align: "center",
-      baseline: "middle",
-      origin: "center",
-    });
-
-    this.equationText = new Text(
-      this,
-      "\u03A8(x,z,t) = A\u00B7e^(-r\u00B2/4\u03C3\u00B2)\u00B7e^(i(k\u00B7r-\u03C9t))  +  \u03A6(r) = -GM/r",
-      {
-        font: "12px monospace",
-        color: "#888",
-        align: "center",
-        baseline: "middle",
-        origin: "center",
+    const { panel, statsText, updateStats } = createInfoPanel(this);
+    this.infoPanel = panel;
+    this.statsText = statsText;
+    this._updateStatsText = () => {
+      const preset = MANIFOLD_PRESETS[this._activePreset];
+      const wellCount = this._gravityWells.length;
+      const wellStr = wellCount > 0 ? ` | ${wellCount} well${wellCount > 1 ? "s" : ""}` : "";
+      if (this._activePreset === "superposition") {
+        statsText.text = `${preset.label} | ${this._waveParams.numPackets || 3} packets${wellStr}`;
+      } else {
+        statsText.text = `${preset.label} | t=${this.time.toFixed(1)}s${wellStr}`;
       }
-    );
-
-    this.statsText = new Text(this, "Superposition | 3 packets | 0 wells", {
-      font: "12px monospace",
-      color: "#6d8",
-      align: "center",
-      baseline: "middle",
-      origin: "center",
-    });
-
-    const textItems = [this.titleText, this.equationText, this.statsText];
-    const layout = verticalLayout(textItems, { spacing: 18, align: "center" });
-    applyLayout(textItems, layout.positions);
-    textItems.forEach((item) => this.infoPanel.add(item));
+    };
+    this.pipeline.add(this.infoPanel);
   }
 
   // ─── UI Panel ────────────────────────────────────────────────────────
 
   _buildUI() {
-    const isMobile = Screen.isMobile;
-    const panelWidth = isMobile
-      ? this.width - 20
-      : CONFIG.panel.width;
-    const padding = isMobile
-      ? CONFIG.panel.mobilePadding
-      : CONFIG.panel.padding;
-    const { spacing } = CONFIG.panel;
-
-    this.panel = new AccordionGroup(this, {
-      width: panelWidth,
-      padding,
-      spacing,
-      headerHeight: 28,
-      debug: true,
-      debugColor: "rgba(0, 255, 0, 0.18)",
-    });
-    this.pipeline.add(this.panel);
-
-    // Semi-transparent background
-    const originalDraw = this.panel.draw.bind(this.panel);
-    this.panel.draw = () => {
-      Painter.shapes.rect(
-        0, 0,
-        this.panel._width, this.panel._height,
-        CONFIG.panel.backgroundColor
-      );
-      originalDraw();
+    const paramCallbacks = {
+      getUpdatingSliders: () => this._updatingSliders,
+      onNumPacketsChange: (v) => {
+        this._waveParams.numPackets = v;
+        this._superPackets = this._generateSuperPackets(v);
+      },
+      onNxChange: (v) => {
+        this._waveParams.nx = v;
+        if (this._activePreset === "standingWave") this._standingNx = v;
+        else this._hermiteNx = v;
+      },
+      onNyChange: (v) => {
+        this._waveParams.ny = v;
+        if (this._activePreset === "standingWave") this._standingNy = v;
+        else this._hermiteNy = v;
+      },
+      onGridResChange: () => this._initGrid(),
     };
 
-    // Reposition panel when sections expand/collapse (bottom-anchor on mobile)
-    const originalLayout = this.panel.layout.bind(this.panel);
-    this.panel.layout = () => {
-      originalLayout();
-      this._layoutPanel();
-    };
-
-    this._layoutPanel();
-
-    const sw = panelWidth - padding * 2;
-    this._controls = {};
-
-    // Preset dropdown (top-level, not in a section)
-    const presetOptions = Object.entries(MANIFOLD_PRESETS).map(
-      ([key, preset]) => ({ label: preset.label, value: key })
-    );
-    this._controls.preset = new Dropdown(this, {
-      label: "WAVE FUNCTION",
-      width: sw,
-      options: presetOptions,
-      value: this._activePreset,
-      onChange: (v) => this._onPresetChange(v),
-    });
-    this.panel.addItem(this._controls.preset);
-
-    // Parameters section (dynamic, rebuilt per preset)
-    this._paramsSection = this.panel.addSection("Parameters", { expanded: !Screen.isMobile });
-    this._paramSliders = [];
-    this._buildParamSliders(this._activePreset);
-
-    // Surface section
-    const surface = this.panel.addSection("Surface", { expanded: false });
-
-    this._controls.amplitude = new Slider(this, {
-      label: "AMPLITUDE",
-      width: sw,
-      min: 0.5,
-      max: 10.0,
-      value: CONFIG.surface.amplitude,
-      step: 0.5,
-      formatValue: (v) => v.toFixed(1),
-      onChange: (v) => {
-        if (this._updatingSliders) return;
-        CONFIG.surface.amplitude = v;
-      },
-    });
-    surface.addItem(this._controls.amplitude);
-
-    this._controls.gridRes = new Stepper(this, {
-      label: "GRID RES",
-      value: CONFIG.grid.resolution,
-      min: 20,
-      max: 80,
-      step: 10,
-      buttonSize: 32,
-      valueWidth: 60,
-      onChange: (v) => {
-        if (this._updatingSliders) return;
-        CONFIG.grid.resolution = v;
-        this._initGrid();
-      },
-    });
-    surface.addItem(this._controls.gridRes);
-
-    this._controls.wireframe = new ToggleButton(this, {
-      text: "Wireframe",
-      width: 100,
-      height: 30,
-      startToggled: CONFIG.surface.wireframe,
-      onToggle: (on) => {
-        CONFIG.surface.wireframe = on;
-      },
-    });
-    surface.addItem(this._controls.wireframe);
-
-    // Gravity section
-    const gravity = this.panel.addSection("Quantum Gravity", { expanded: !Screen.isMobile });
-
-    this._controls.gravityToggle = new ToggleButton(this, {
-      text: "Gravity",
-      width: 80,
-      height: 30,
-      startToggled: CONFIG.gravity.enabled,
-      onToggle: (on) => {
-        CONFIG.gravity.enabled = on;
-      },
-    });
-    gravity.addItem(this._controls.gravityToggle);
-
-    this._controls.wellDepth = new Slider(this, {
-      label: "WELL DEPTH",
-      width: sw,
-      min: 1.0,
-      max: 15.0,
-      value: CONFIG.gravity.wellDepth,
-      step: 0.5,
-      formatValue: (v) => v.toFixed(1),
-      onChange: (v) => {
-        if (this._updatingSliders) return;
-        CONFIG.gravity.wellDepth = v;
-      },
-    });
-    gravity.addItem(this._controls.wellDepth);
-
-    this._controls.wellWidth = new Slider(this, {
-      label: "WELL WIDTH",
-      width: sw,
-      min: 0.5,
-      max: 6.0,
-      value: CONFIG.gravity.wellWidth,
-      step: 0.1,
-      formatValue: (v) => v.toFixed(1),
-      onChange: (v) => {
-        if (this._updatingSliders) return;
-        CONFIG.gravity.wellWidth = v;
-      },
-    });
-    gravity.addItem(this._controls.wellWidth);
-
-    this._controls.addWell = new Button(this, {
-      text: "Add Gravity Well",
-      width: sw,
-      height: 32,
-      onClick: () => this._addRandomWell(),
-    });
-    gravity.addItem(this._controls.addWell);
-
-    this._controls.clearWells = new Button(this, {
-      text: "Clear Wells",
-      width: sw,
-      height: 32,
-      onClick: () => this._clearWells(),
-    });
-    gravity.addItem(this._controls.clearWells);
-
-    // View section
-    const view = this.panel.addSection("View", { expanded: false });
-
-    this._controls.autoRotate = new ToggleButton(this, {
-      text: "Auto-Rotate",
-      width: 110,
-      height: 30,
-      startToggled: CONFIG.camera.autoRotate,
-      onToggle: (on) => {
-        this.camera.autoRotate = on;
-      },
-    });
-    view.addItem(this._controls.autoRotate);
-
-    this._controls.rotSpeed = new Slider(this, {
-      label: "ROTATION SPEED",
-      width: sw,
-      min: 0.01,
-      max: 0.5,
-      value: CONFIG.camera.autoRotateSpeed,
-      step: 0.01,
-      formatValue: (v) => v.toFixed(2),
-      onChange: (v) => {
-        if (this._updatingSliders) return;
-        this.camera.autoRotateSpeed = v;
-      },
-    });
-    view.addItem(this._controls.rotSpeed);
-
-    this._controls.timeScale = new Slider(this, {
-      label: "TIME SCALE",
-      width: sw,
-      min: 0.0,
-      max: 3.0,
-      value: CONFIG.timeScale,
-      step: 0.1,
-      formatValue: (v) => v.toFixed(1),
-      onChange: (v) => {
-        if (this._updatingSliders) return;
-        CONFIG.timeScale = v;
-      },
-    });
-    view.addItem(this._controls.timeScale);
-
-    this._controls.crossSection = new ToggleButton(this, {
-      text: "Cross-Section",
-      width: 120,
-      height: 30,
-      startToggled: CONFIG.crossSection.enabled,
-      onToggle: (on) => {
-        CONFIG.crossSection.enabled = on;
-      },
-    });
-    view.addItem(this._controls.crossSection);
-
-    // Collapse + restart buttons (top-level)
-    this._controls.collapseBtn = new Button(this, {
-      text: "Collapse Wave",
-      width: sw,
-      height: 32,
-      onClick: () => {
+    const { panel, controls, paramsSection, sections } = createControlPanel(this, {
+      onPresetChange: (key) => this._onPresetChange(key),
+      buildParamSliders,
+      addWell: () => this._addRandomWell(),
+      clearWells: () => this._clearWells(),
+      collapse: () => {
         if (!this.isCollapsed) {
           this._collapse();
           setTimeout(() => {
@@ -717,23 +305,8 @@ export class QuantumManifoldPlayground extends Game {
           }, CONFIG.collapse.duration);
         }
       },
-    });
-    this.panel.addItem(this._controls.collapseBtn);
-
-    this._controls.reset = new Button(this, {
-      text: "Reset Defaults",
-      width: sw,
-      height: 32,
-      onClick: () => this._resetToDefaults(),
-    });
-    this.panel.addItem(this._controls.reset);
-
-    this._controls.restart = new Button(this, {
-      text: "Restart",
-      width: sw,
-      height: 32,
-      onClick: () => {
-        // Restart simulation with current params (don't reset sliders)
+      resetToDefaults: () => this._resetToDefaults(),
+      restart: () => {
         this.time = 0;
         this.isCollapsed = false;
         this.collapseAmount = 0;
@@ -744,94 +317,51 @@ export class QuantumManifoldPlayground extends Game {
           );
         }
       },
+      ...paramCallbacks,
+      waveParams: this._waveParams,
+      activePreset: this._activePreset,
+      camera: this.camera,
     });
-    this.panel.addItem(this._controls.restart);
 
-    // Store section refs for exclusive mobile behavior
-    this._sections = [this._paramsSection, surface, gravity, view];
-    if (Screen.isMobile) {
-      this._setupExclusiveSections();
-    }
-
-    this.panel.layoutAll();
-    this._layoutPanel();
+    this.panel = panel;
+    this._controls = controls;
+    this._paramsSection = paramsSection;
+    this._sections = sections;
+    this.pipeline.add(this.panel);
   }
 
   // ─── Mobile Toggle Button ──────────────────────────────────────────
 
   _buildToggleButton() {
-    this._toggleBtn = new Button(this, {
-      text: "\u2699",
-      width: CONFIG.toggle.width,
-      height: CONFIG.toggle.height,
-      onClick: () => this._togglePanel(),
+    this._toggleBtn = createToggleButton(this, {
+      onToggle: () => this._togglePanel(),
     });
-    this._toggleBtn.x = CONFIG.toggle.margin + CONFIG.toggle.width / 2;
-    this._toggleBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
     this.pipeline.add(this._toggleBtn);
-
-    // Only show on mobile
-    this._toggleBtn.visible = Screen.isMobile;
-    this._toggleBtn.interactive = Screen.isMobile;
   }
 
   _buildInfoButton() {
-    this._infoBtn = new ToggleButton(this, {
-      text: "?",
-      width: CONFIG.toggle.width,
-      height: CONFIG.toggle.height,
+    this._infoBtn = createInfoButton(this, {
       onToggle: (on) => {
         this._infoOverlayVisible = on;
         if (on && Screen.isMobile) {
-          // Hide panel when overlay opens on mobile
           if (this._panelFSM && this._panelFSM.is("panel-visible")) {
             this._panelFSM.setState("panel-hidden");
           }
         }
       },
     });
-    // Position to the right of the toggle button (or top-left on desktop)
-    const btnIndex = Screen.isMobile ? 1 : 0;
-    this._infoBtn.x = CONFIG.toggle.margin * (btnIndex + 1) + CONFIG.toggle.width * btnIndex + CONFIG.toggle.width / 2;
-    this._infoBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
     this.pipeline.add(this._infoBtn);
   }
 
   _initPanelStateMachine() {
-    this._panelFSM = new StateMachine({
-      initial: Screen.isMobile ? "panel-hidden" : "panel-visible",
-      context: this,
-      states: {
-        "panel-hidden": {
-          enter() {
-            this.panel.visible = false;
-            this.panel.interactive = false;
-            if (this._toggleBtn) {
-              this._toggleBtn.text = "\u2699";
-            }
-            // On mobile, show cross-section when panel is hidden
-            if (Screen.isMobile) {
-              this._crossSectionVisible = true;
-            }
-          },
-        },
-        "panel-visible": {
-          enter() {
-            this.panel.visible = true;
-            this.panel.interactive = true;
-            if (Screen.isMobile && this._toggleBtn) {
-              this._toggleBtn.text = "\u2716";
-            }
-            // On mobile, hide cross-section and info overlay when panel is visible
-            if (Screen.isMobile) {
-              this._crossSectionVisible = false;
-              this._infoOverlayVisible = false;
-              if (this._infoBtn && this._infoBtn.toggled) {
-                this._infoBtn.toggle(false);
-              }
-            }
-          },
-        },
+    this._panelFSM = createPanelStateMachine({
+      panel: this.panel,
+      toggleBtn: this._toggleBtn,
+      infoBtn: this._infoBtn,
+      setCrossSectionVisible: (v) => { this._crossSectionVisible = v; },
+      setInfoOverlayVisible: (v) => {
+        this._infoOverlayVisible = v;
+        if (this._infoBtn?.toggled) this._infoBtn.toggle(false);
       },
     });
   }
@@ -844,139 +374,8 @@ export class QuantumManifoldPlayground extends Game {
     }
   }
 
-  _setupExclusiveSections() {
-    const origToggles = new Map();
-    for (const section of this._sections) {
-      origToggles.set(section, section.toggle.bind(section));
-    }
-    for (const section of this._sections) {
-      section.toggle = (force) => {
-        const willExpand = force !== undefined ? force : !section.expanded;
-        if (willExpand) {
-          for (const other of this._sections) {
-            if (other !== section && other.expanded) {
-              origToggles.get(other)(false);
-            }
-          }
-        }
-        origToggles.get(section)(force);
-      };
-    }
-  }
-
   _layoutPanel() {
-    if (!this.panel) return;
-    if (Screen.isMobile) {
-      // Bottom sheet: full width - 20px, anchored to bottom
-      const panelH = this.panel._height || 300;
-      const maxH = this.height * CONFIG.panel.mobileMaxHeight;
-      const clampedH = Math.min(panelH, maxH);
-      this.panel.x = 10;
-      this.panel.y = this.height - clampedH - 10;
-    } else {
-      // Desktop: right sidebar
-      this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
-      this.panel.y = CONFIG.panel.marginTop;
-    }
-  }
-
-  _buildParamSliders(presetKey) {
-    const panelWidth = Screen.isMobile
-      ? this.width - 20
-      : CONFIG.panel.width;
-    const padding = Screen.isMobile
-      ? CONFIG.panel.mobilePadding
-      : CONFIG.panel.padding;
-    const sw = panelWidth - padding * 2;
-
-    if (this._paramSliders.length > 0) {
-      this.panel.clearSection(this._paramsSection);
-      this._paramSliders = [];
-    }
-
-    const paramDefs = PRESET_PARAMS[presetKey];
-    if (!paramDefs) return;
-
-    // Stepper for numPackets (superposition only)
-    if (presetKey === "superposition") {
-      const stepper = new Stepper(this, {
-        label: "PACKETS",
-        value: this._waveParams.numPackets || 3,
-        min: 2,
-        max: 8,
-        step: 1,
-        buttonSize: 32,
-        valueWidth: 60,
-        onChange: (v) => {
-          if (this._updatingSliders) return;
-          this._waveParams.numPackets = v;
-          this._superPackets = this._generateSuperPackets(v);
-        },
-      });
-      this._paramsSection.addItem(stepper);
-      this._paramSliders.push(stepper);
-    }
-
-    // Steppers for standing wave / harmonic quantum numbers
-    if (presetKey === "standingWave" || presetKey === "harmonic") {
-      const nxStepper = new Stepper(this, {
-        label: "N (x)",
-        value: this._waveParams.nx || (presetKey === "harmonic" ? 2 : 3),
-        min: 1,
-        max: 6,
-        step: 1,
-        buttonSize: 32,
-        valueWidth: 60,
-        onChange: (v) => {
-          if (this._updatingSliders) return;
-          this._waveParams.nx = v;
-          if (presetKey === "standingWave") this._standingNx = v;
-          else this._hermiteNx = v;
-        },
-      });
-      this._paramsSection.addItem(nxStepper);
-      this._paramSliders.push(nxStepper);
-
-      const nyStepper = new Stepper(this, {
-        label: "M (z)",
-        value: this._waveParams.ny || (presetKey === "harmonic" ? 3 : 2),
-        min: 1,
-        max: 6,
-        step: 1,
-        buttonSize: 32,
-        valueWidth: 60,
-        onChange: (v) => {
-          if (this._updatingSliders) return;
-          this._waveParams.ny = v;
-          if (presetKey === "standingWave") this._standingNy = v;
-          else this._hermiteNy = v;
-        },
-      });
-      this._paramsSection.addItem(nyStepper);
-      this._paramSliders.push(nyStepper);
-    }
-
-    for (const def of paramDefs) {
-      const decimals = def.step >= 1 ? 0 : def.step >= 0.1 ? 1 : 2;
-      const slider = new Slider(this, {
-        label: def.label,
-        width: sw,
-        min: def.min,
-        max: def.max,
-        value: def.default,
-        step: def.step,
-        formatValue: (v) => v.toFixed(decimals),
-        onChange: (v) => {
-          if (this._updatingSliders) return;
-          this._waveParams[def.key] = v;
-        },
-      });
-      this._paramsSection.addItem(slider);
-      this._paramSliders.push(slider);
-    }
-
-    this.panel.commitSection(this._paramsSection);
-    this.panel.layout();
+    layoutPanel(this.panel, this.width, this.height);
   }
 
   _onPresetChange(key) {
@@ -1003,159 +402,56 @@ export class QuantumManifoldPlayground extends Game {
     }
 
     this._updateStatsText();
-    this._buildParamSliders(key);
+    this._paramSliders = buildParamSliders(
+      this,
+      this.panel,
+      this._paramsSection,
+      key,
+      this._waveParams,
+      {
+        getUpdatingSliders: () => this._updatingSliders,
+        onNumPacketsChange: (v) => {
+          this._waveParams.numPackets = v;
+          this._superPackets = this._generateSuperPackets(v);
+        },
+        onNxChange: (v) => {
+          this._waveParams.nx = v;
+          if (key === "standingWave") this._standingNx = v;
+          else this._hermiteNx = v;
+        },
+        onNyChange: (v) => {
+          this._waveParams.ny = v;
+          if (key === "standingWave") this._standingNy = v;
+          else this._hermiteNy = v;
+        },
+      }
+    );
   }
 
   _resetToDefaults() {
     this._onPresetChange(this._activePreset);
   }
 
-  _updateStatsText() {
-    if (!this.statsText) return;
-    const preset = MANIFOLD_PRESETS[this._activePreset];
-    const wellCount = this._gravityWells.length;
-    const wellStr = wellCount > 0 ? ` | ${wellCount} well${wellCount > 1 ? "s" : ""}` : "";
-    if (this._activePreset === "superposition") {
-      this.statsText.text = `${preset.label} | ${this._waveParams.numPackets || 3} packets${wellStr}`;
-    } else {
-      this.statsText.text = `${preset.label} | t=${this.time.toFixed(1)}s${wellStr}`;
-    }
-  }
-
   // ─── Info Overlay ────────────────────────────────────────────────────
 
-  _getPresetExplanation() {
-    const p = this._waveParams;
-    const wells = this._gravityWells.length;
-
-    const explanations = {
-      superposition: {
-        title: "Quantum Superposition",
-        lines: [
-          `${p.numPackets || 3} wave packets overlapping in space`,
-          "Each packet is a Gaussian \u00B7 plane wave: A\u00B7e^(-r\u00B2/4\u03C3\u00B2)\u00B7e^(ikr)",
-          "Interference creates peaks where waves align",
-          "and valleys where they cancel (destructive)",
-          `\u03C3=${(p.sigma || 1.2).toFixed(1)}  k=${(p.k || 5).toFixed(1)}  \u03C9=${(p.omega || 3).toFixed(1)}`,
-        ],
-      },
-      gaussian: {
-        title: "Gaussian Wave Packet",
-        lines: [
-          "A single localized particle — the simplest quantum state",
-          "The envelope e^(-r\u00B2/4\u03C3\u00B2) sets the probability spread",
-          "Inside, the phase e^(ikr-\u03C9t) oscillates like a carrier wave",
-          `Moving at v=(${(p.vx || 0).toFixed(1)}, ${(p.vz || 0).toFixed(1)}) with \u03C3=${(p.sigma || 1).toFixed(1)}`,
-        ],
-      },
-      doubleSlit: {
-        title: "Double-Slit Interference",
-        lines: [
-          "Two coherent sources separated by a gap",
-          "Waves from each slit overlap — their phases",
-          "add constructively (bright rings) or cancel",
-          `Slit separation: ${(p.slitSeparation || 2.5).toFixed(1)} \u00B7 \u03C3=${(p.sigma || 0.8).toFixed(1)}`,
-        ],
-      },
-      standingWave: {
-        title: "Standing Wave (Particle in a Box)",
-        lines: [
-          "Quantized modes: only certain wavelengths fit",
-          "sin(n\u03C0x/L)\u00B7sin(m\u03C0z/L) — nodes are fixed at zero",
-          "This is WHY energy is quantized in atoms",
-          `Mode (${p.nx || 3}, ${p.ny || 2}) \u00B7 \u03C9=${(p.omega || 2).toFixed(1)}`,
-        ],
-      },
-      tunneling: {
-        title: "Quantum Tunneling",
-        lines: [
-          "A particle hits a barrier it classically can't cross",
-          "But \u03C8 doesn't stop — it decays as e^(-\u03BAx) inside",
-          "If the barrier is thin enough, \u03C8 leaks through",
-          `Barrier: h=${(p.barrierHeight || 0.6).toFixed(1)} w=${(p.barrierWidth || 0.8).toFixed(1)} \u00B7 v=${(p.vx || 0.6).toFixed(1)}`,
-        ],
-      },
-      harmonic: {
-        title: "Quantum Harmonic Oscillator",
-        lines: [
-          "The quantum version of a spring — H\u2099(x)\u00B7e^(-x\u00B2/2)",
-          "H\u2099 are Hermite polynomials with n zero-crossings",
-          "Models vibrating molecules & photon fields",
-          `Mode (${p.nx || 2}, ${p.ny || 3}) \u00B7 \u03C3=${(p.sigma || 1.5).toFixed(1)}`,
-        ],
-      },
-    };
-
-    const info = explanations[this._activePreset] || explanations.gaussian;
-
-    // Append gravity info if wells exist
-    if (wells > 0) {
-      info.lines.push("");
-      info.lines.push(`+ ${wells} gravity well${wells > 1 ? "s" : ""}: spacetime curvature \u03A6(r) = -GM/r`);
-    }
-
-    return info;
-  }
-
   _drawInfoOverlay() {
-    if (!this._infoOverlayVisible) return;
-
-    const info = this._getPresetExplanation();
-    const padding = 16;
-    const lineHeight = 18;
-    const titleHeight = 28;
-    const panelW = Screen.isMobile ? this.width - 40 : 320;
-    const panelH = padding * 2 + titleHeight + info.lines.length * lineHeight;
-
-    // Mobile: top-center below buttons. Desktop: left side, vertically centered
-    const px = Screen.isMobile
-      ? (this.width - panelW) / 2
-      : CONFIG.panel.marginRight;
-    const py = Screen.isMobile
-      ? CONFIG.toggle.margin + CONFIG.toggle.height + 12
-      : (this.height - panelH) / 2;
-
-    // Background
-    Painter.shapes.rect(px, py, panelW, panelH, "rgba(0, 0, 0, 0.8)");
-
-    Painter.useCtx((ctx) => {
-      ctx.save();
-      ctx.textBaseline = "top";
-
-      // Title
-      ctx.font = "bold 14px monospace";
-      ctx.fillStyle = "#0ff";
-      ctx.textAlign = "left";
-      ctx.fillText(info.title, px + padding, py + padding);
-
-      // Lines
-      ctx.font = "11px monospace";
-      for (let i = 0; i < info.lines.length; i++) {
-        const line = info.lines[i];
-        if (!line) continue;
-
-        // Last line with numbers gets a highlight color
-        const isParam = line.startsWith("\u03C3") || line.startsWith("Slit")
-          || line.startsWith("Mode") || line.startsWith("Barrier")
-          || line.startsWith("+");
-        ctx.fillStyle = isParam ? "#6d8" : "#aab";
-        ctx.fillText(line, px + padding, py + padding + titleHeight + i * lineHeight);
-      }
-
-      ctx.restore();
+    drawInfoOverlay({
+      visible: this._infoOverlayVisible,
+      info: getPresetExplanation(
+        this._activePreset,
+        this._waveParams,
+        this._gravityWells.length
+      ),
+      width: this.width,
+      height: this.height,
     });
   }
 
   // ─── Wave Functions ──────────────────────────────────────────────────
 
-  /**
-   * Wrap a displacement into [-size, +size] for periodic boundary conditions.
-   * Packets that leave one side of the grid re-enter from the other.
-   */
   _wrapDelta(d) {
     const size = CONFIG.grid.size;
     const range = 2 * size;
-    // Modular wrap to [-size, size]
     return ((((d + size) % range) + range) % range) - size;
   }
 
@@ -1339,10 +635,6 @@ export class QuantumManifoldPlayground extends Game {
     return [r, g, b];
   }
 
-  /**
-   * Color for gravity-pulled areas: blends toward warm red/orange
-   * based on how deep the gravity well pulls.
-   */
   _gravityColor(normalizedDip) {
     const t = Math.min(1, normalizedDip);
     const r = Math.floor(20 + 235 * t);
@@ -1370,16 +662,12 @@ export class QuantumManifoldPlayground extends Game {
     this.time += dt * CONFIG.timeScale;
     this.camera.update(dt);
 
-    // Ease zoom
     this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoom.easing;
 
-    // Animate collapse
     const targetCollapse = this.isCollapsed ? 1 : 0;
     this.collapseAmount += (targetCollapse - this.collapseAmount) * 0.12;
 
-    // Compute wave function + gravity for all vertices
     this._evolveWaveFunction();
-
     this._updateStatsText();
   }
 
@@ -1396,7 +684,6 @@ export class QuantumManifoldPlayground extends Game {
         const psi = this._computeWave(v.x, v.z, t);
         let probDensity = psi.real * psi.real + psi.imag * psi.imag;
 
-        // Collapse: spike at collapse point
         if (collapse > 0.01) {
           const cdx = v.x - this.collapseX;
           const cdz = v.z - this.collapseZ;
@@ -1405,12 +692,10 @@ export class QuantumManifoldPlayground extends Game {
           probDensity = probDensity * (1 - collapse) + collapsedProb * collapse;
         }
 
-        // Gravity well deformation (pulls mesh downward)
         const gravityDip = this._computeGravityAt(v.x, v.z);
         v.gravityDip = gravityDip;
 
         v.height = probDensity;
-        // Net Y: quantum probability pushes UP, gravity pulls DOWN
         v.y = probDensity * amplitude - gravityDip;
       }
     }
@@ -1424,7 +709,6 @@ export class QuantumManifoldPlayground extends Game {
     const cx = w / 2;
     const cy = h / 2 + 30;
 
-    // Manual render order: clear -> surface -> pipeline (UI on top)
     Painter.setContext(this.ctx);
     if (this.running) this.clear();
 
@@ -1436,10 +720,7 @@ export class QuantumManifoldPlayground extends Game {
     }
     this._renderControls(w, h);
 
-    // Pipeline renders UI (accordion panel, info text, FPS) on top
     this.pipeline.render();
-
-    // Info overlay on top of everything
     this._drawInfoOverlay();
   }
 
@@ -1459,7 +740,6 @@ export class QuantumManifoldPlayground extends Game {
     const n = resolution + 1;
     const gridScale = 15;
 
-    // Project all vertices
     const projected = new Array(n);
     for (let i = 0; i < n; i++) {
       projected[i] = new Array(n);
@@ -1480,7 +760,6 @@ export class QuantumManifoldPlayground extends Game {
       }
     }
 
-    // Build quads and sort back-to-front
     const quads = [];
     for (let i = 0; i < resolution; i++) {
       for (let j = 0; j < resolution; j++) {
@@ -1497,7 +776,6 @@ export class QuantumManifoldPlayground extends Game {
 
     quads.sort((a, b) => a.avgZ - b.avgZ);
 
-    // Find max height for normalization
     let maxH = 0;
     let maxDip = 0;
     for (const q of quads) {
@@ -1507,17 +785,15 @@ export class QuantumManifoldPlayground extends Game {
     if (maxH < 0.001) maxH = 1;
     if (maxDip < 0.001) maxDip = 1;
 
-    // Render filled quads
     Painter.useCtx((ctx) => {
       for (const q of quads) {
         const t = Math.min(1, q.avgH / maxH);
         const dipT = Math.min(1, q.avgDip / maxDip);
 
-        // Blend between quantum color (green/cyan) and gravity color (red/orange)
         const [qr, qg, qb] = this._heightColor(t);
         if (dipT > 0.05) {
           const [gr, gg, gb] = this._gravityColor(dipT);
-          const blend = dipT * 0.7; // how much gravity takes over
+          const blend = dipT * 0.7;
           const r = Math.floor(qr * (1 - blend) + gr * blend);
           const g = Math.floor(qg * (1 - blend) + gg * blend);
           const b = Math.floor(qb * (1 - blend) + gb * blend);
@@ -1536,7 +812,6 @@ export class QuantumManifoldPlayground extends Game {
       }
     });
 
-    // Render wireframe
     if (CONFIG.surface.wireframe) {
       Painter.useCtx((ctx) => {
         ctx.strokeStyle = CONFIG.colors.wireColor;
@@ -1565,16 +840,12 @@ export class QuantumManifoldPlayground extends Game {
     }
   }
 
-  /**
-   * Render glowing markers at gravity well positions.
-   */
   _renderGravityWellMarkers(cx, cy) {
     if (!CONFIG.gravity.enabled || this._gravityWells.length === 0) return;
 
     const gridScale = 15;
 
     for (const well of this._gravityWells) {
-      // Get the well's depth at its own center for vertical placement
       const dip = this._computeGravityAt(well.x, well.z);
       const quantumH = (() => {
         const psi = this._computeWave(well.x, well.z, this.time);
@@ -1593,7 +864,6 @@ export class QuantumManifoldPlayground extends Game {
       const size = (4 + well.mass * 4) * p.scale;
       const pulse = 0.8 + 0.2 * Math.sin(this.time * 2 + well.phase);
 
-      // Glow
       Painter.useCtx((ctx) => {
         const gradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, size * 3 * pulse);
         gradient.addColorStop(0, CONFIG.colors.wellGlow);
@@ -1604,7 +874,6 @@ export class QuantumManifoldPlayground extends Game {
         ctx.fill();
       });
 
-      // Core
       Painter.useCtx((ctx) => {
         ctx.fillStyle = "#111";
         ctx.beginPath();
@@ -1629,7 +898,6 @@ export class QuantumManifoldPlayground extends Game {
     const { size } = CONFIG.grid;
     const numSamples = 200;
 
-    // Sample wave function along z=0, including gravity
     const samples = [];
     let maxProb = 0;
     for (let i = 0; i < numSamples; i++) {
@@ -1643,13 +911,11 @@ export class QuantumManifoldPlayground extends Game {
     }
     if (maxProb < 0.001) maxProb = 1;
 
-    // Find max gravity for normalization
     let maxGrav = 0;
     for (const s of samples) {
       if (s.grav > maxGrav) maxGrav = s.grav;
     }
 
-    // Background
     Painter.useCtx((ctx) => {
       ctx.fillStyle = "rgba(0, 8, 16, 0.7)";
       ctx.fillRect(plotX - 5, plotY - 5, plotW + 10, plotH + 10);
@@ -1658,7 +924,6 @@ export class QuantumManifoldPlayground extends Game {
       ctx.strokeRect(plotX - 5, plotY - 5, plotW + 10, plotH + 10);
     });
 
-    // Draw gravity well dip (inverted, shown as red area below baseline)
     if (maxGrav > 0.01) {
       Painter.useCtx((ctx) => {
         ctx.fillStyle = "rgba(255, 60, 40, 0.2)";
@@ -1675,7 +940,6 @@ export class QuantumManifoldPlayground extends Game {
       });
     }
 
-    // |Psi|^2 filled envelope
     Painter.useCtx((ctx) => {
       ctx.fillStyle = cs.envelopeColor;
       ctx.beginPath();
@@ -1690,7 +954,6 @@ export class QuantumManifoldPlayground extends Game {
       ctx.fill();
     });
 
-    // Re(Psi) wave line
     Painter.useCtx((ctx) => {
       ctx.strokeStyle = cs.waveColor;
       ctx.lineWidth = 2;
@@ -1705,7 +968,6 @@ export class QuantumManifoldPlayground extends Game {
       ctx.stroke();
     });
 
-    // Labels
     Painter.useCtx((ctx) => {
       ctx.font = "10px monospace";
       ctx.textAlign = "left";
@@ -1748,13 +1010,11 @@ export class QuantumManifoldPlayground extends Game {
       this._layoutPanel();
     }
 
-    // Update toggle button visibility based on new screen size
     if (this._toggleBtn) {
       this._toggleBtn.visible = Screen.isMobile;
       this._toggleBtn.interactive = Screen.isMobile;
     }
 
-    // On desktop, ensure panel is always visible; on mobile, hide
     if (!Screen.isMobile && this._panelFSM) {
       this._panelFSM.setState("panel-visible");
     } else if (Screen.isMobile && this._panelFSM) {
