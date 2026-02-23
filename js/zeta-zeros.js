@@ -97,7 +97,8 @@ const CONFIG = {
 
   // Zero log — fixed slot display on the left
   zeroLog: {
-    maxVisible: 10,             // fixed number of visible slots
+    maxVisibleMobile: 5,        // fewer slots on mobile
+    maxVisibleDesktop: 10,      // full slots on desktop
     fadeInDuration: 0.5,        // seconds to fade in
     fadeOutDuration: 3.0,       // seconds to fade out old entries
     lingerDuration: 6.0,        // seconds at full opacity before fading
@@ -246,16 +247,18 @@ class ZetaZerosDemo extends Game {
       },
     });
 
+    // Ensure canvas captures touch events
+    this.canvas.style.touchAction = "none";
+
     // Click/tap to start — also satisfies Web Audio user gesture requirement
-    const startHandler = () => {
-      this.canvas.removeEventListener("click", startHandler);
-      this.canvas.removeEventListener("touchstart", startHandler);
+    const startHandler = (e) => {
+      e.preventDefault();
+      this.canvas.removeEventListener("pointerdown", startHandler);
       this._initAudio().then(() => {
         this.fsm.setState("running");
       });
     };
-    this.canvas.addEventListener("click", startHandler);
-    this.canvas.addEventListener("touchstart", startHandler);
+    this.canvas.addEventListener("pointerdown", startHandler);
 
     Screen.init(this);
   }
@@ -1051,22 +1054,30 @@ class ZetaZerosDemo extends Game {
     const cx = this.width / 2;
     const cy = this.height / 2;
     const pulse = 0.85 + 0.15 * Math.sin(this.pulseTime * 2);
+    const isMobile = Screen.isMobile;
 
     Painter.useCtx((ctx) => {
-      // Title
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
+
+      // Title — two lines on mobile
       ctx.fillStyle = "#7af";
-      ctx.font = `bold ${Screen.responsive(22, 32, 40)}px monospace`;
-      ctx.fillText("Riemann Zeta — Critical Line", cx, cy - Screen.responsive(80, 110, 130));
+      const titleSize = Screen.responsive(16, 32, 40);
+      ctx.font = `bold ${titleSize}px monospace`;
+      if (isMobile) {
+        ctx.fillText("Riemann Zeta", cx, cy - 90);
+        ctx.fillText("Critical Line", cx, cy - 90 + titleSize + 4);
+      } else {
+        ctx.fillText("Riemann Zeta — Critical Line", cx, cy - Screen.responsive(80, 110, 130));
+      }
 
       // Equation
       ctx.fillStyle = "#fff";
       ctx.font = `${Screen.responsive(14, 20, 24)}px monospace`;
-      ctx.fillText("ζ(½ + it)", cx, cy - Screen.responsive(50, 70, 80));
+      ctx.fillText("ζ(½ + it)", cx, cy - Screen.responsive(40, 70, 80));
 
       // Play triangle
-      const r = Screen.responsive(28, 40, 50) * pulse;
+      const r = Screen.responsive(30, 40, 50) * pulse;
       ctx.fillStyle = `rgba(120, 170, 255, ${0.6 + 0.3 * pulse})`;
       ctx.beginPath();
       ctx.moveTo(cx - r * 0.4, cy - r * 0.6);
@@ -1082,16 +1093,24 @@ class ZetaZerosDemo extends Game {
       ctx.arc(cx, cy, r * 1.3, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Description
+      // Description — shorter on mobile
       ctx.fillStyle = "#667";
-      ctx.font = `${Screen.responsive(10, 13, 15)}px monospace`;
-      ctx.fillText("Verifying non-trivial zeros lie on the critical line Re = ½", cx, cy + Screen.responsive(50, 70, 85));
-      ctx.fillText("Each zero verified is one more data point for the Riemann Hypothesis", cx, cy + Screen.responsive(70, 95, 110));
+      const descSize = Screen.responsive(9, 13, 15);
+      ctx.font = `${descSize}px monospace`;
+      const gap = descSize + Screen.responsive(6, 8, 10);
+      const descY = cy + Screen.responsive(45, 70, 85);
+      if (isMobile) {
+        ctx.fillText("Verifying zeros on Re = ½", cx, descY);
+        ctx.fillText("One data point at a time", cx, descY + gap);
+      } else {
+        ctx.fillText("Verifying non-trivial zeros lie on the critical line Re = ½", cx, descY);
+        ctx.fillText("Each zero verified is one more data point for the Riemann Hypothesis", cx, descY + gap);
+      }
 
       // Call to action
       ctx.fillStyle = `rgba(120, 170, 255, ${0.5 + 0.3 * pulse})`;
       ctx.font = `${Screen.responsive(11, 14, 16)}px monospace`;
-      ctx.fillText("click to begin", cx, cy + Screen.responsive(100, 130, 150));
+      ctx.fillText(isMobile ? "tap to begin" : "click to begin", cx, descY + gap * 2 + Screen.responsive(10, 15, 20));
     });
   }
 
@@ -1211,6 +1230,7 @@ class ZetaZerosDemo extends Game {
 
   _drawZeroLog(ctx) {
     const zl = CONFIG.zeroLog;
+    const maxVisible = Screen.isMobile ? zl.maxVisibleMobile : zl.maxVisibleDesktop;
     const fontSize = Screen.responsive(11, 14, 16);
     ctx.font = `${fontSize}px monospace`;
     ctx.textAlign = "left";
@@ -1218,11 +1238,11 @@ class ZetaZerosDemo extends Game {
 
     // Show the most recent N zeros, fading old ones out
     const total = this.detectedZeros.length;
-    const startIdx = Math.max(0, total - zl.maxVisible);
+    const startIdx = Math.max(0, total - maxVisible);
     const x = Screen.responsive(15, 30, 40);
-    const baseY = this.height / 2 - (zl.maxVisible * (fontSize + 4)) / 2;
+    const baseY = this.height / 2 - (maxVisible * (fontSize + 4)) / 2;
 
-    for (let slot = 0; slot < zl.maxVisible; slot++) {
+    for (let slot = 0; slot < maxVisible; slot++) {
       const zeroIdx = startIdx + slot;
       if (zeroIdx >= total) break;
 
@@ -1260,7 +1280,9 @@ class ZetaZerosDemo extends Game {
     const verified = this.detectedZeros.filter((z) => z.verified).length;
     const fontSize = Screen.responsive(10, 13, 14);
     const x = Screen.responsive(15, 30, 40);
-    const y = this.height / 2 + (CONFIG.zeroLog.maxVisible * (fontSize + 6)) / 2 + fontSize + 10;
+    const zl = CONFIG.zeroLog;
+    const maxVisible = Screen.isMobile ? zl.maxVisibleMobile : zl.maxVisibleDesktop;
+    const y = this.height / 2 + (maxVisible * (fontSize + 6)) / 2 + fontSize + 10;
 
     ctx.font = `${fontSize}px monospace`;
     ctx.textAlign = "left";
@@ -1305,10 +1327,10 @@ class ZetaZerosDemo extends Game {
 
   _drawCrossSection() {
     const cs = CONFIG.crossSection;
-    const plotH = cs.height;
-    const plotW = this.width * 0.6;
+    const plotH = Screen.responsive(60, 80, cs.height);
+    const plotW = this.width * Screen.responsive(0.85, 0.7, 0.6);
     const plotX = (this.width - plotW) / 2;
-    const plotY = this.height - cs.marginBottom - plotH;
+    const plotY = this.height - Screen.responsive(25, 35, cs.marginBottom) - plotH;
 
     // Sliding window: show tWindow units ending at current t
     const tEnd = this.t;
@@ -1402,11 +1424,14 @@ class ZetaZerosDemo extends Game {
 
   _drawControls(ctx) {
     ctx.fillStyle = "#555";
-    ctx.font = "10px monospace";
+    ctx.font = `${Screen.responsive(8, 10, 10)}px monospace`;
     ctx.textAlign = "right";
+    const label = Screen.isMobile
+      ? `speed: ${this.tSpeed.toFixed(1)}x | pinch zoom`
+      : `speed: ${this.tSpeed.toFixed(1)}x | scroll to zoom | +/- speed | space pause | R restart`;
     ctx.fillText(
-      `speed: ${this.tSpeed.toFixed(1)}x | scroll to zoom | +/- speed | space pause | R restart`,
-      this.width - 20,
+      label,
+      this.width - Screen.responsive(10, 20, 20),
       this.height - 10,
     );
     ctx.textAlign = "left";
