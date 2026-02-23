@@ -48,6 +48,7 @@ const CONFIG = {
   trailMaxAlpha: 0.85,
   trailMinWidth: 1,
   trailMaxWidth: 3,
+  trailFadeSpeed: 0.03,       // semi-transparent clear — lower = longer ghosting
 
   // Scaling
   scale: 120,               // pixels per unit in the complex output plane
@@ -186,6 +187,24 @@ class ZetaZerosDemo extends Game {
     super(canvas);
     this.backgroundColor = CONFIG.colors.background;
     this.enableFluidSize();
+    this._didFirstClear = false;
+  }
+
+  // Override clear — semi-transparent fill creates ghosting afterimage trails
+  clear() {
+    if (!this._didFirstClear) {
+      Painter.useCtx((ctx) => {
+        ctx.fillStyle = CONFIG.colors.background;
+        ctx.fillRect(0, 0, this.width, this.height);
+      });
+      this._didFirstClear = true;
+      return;
+    }
+    Painter.useCtx((ctx) => {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = `rgba(10, 10, 18, ${CONFIG.trailFadeSpeed})`;
+      ctx.fillRect(0, 0, this.width, this.height);
+    });
   }
 
   init() {
@@ -250,15 +269,24 @@ class ZetaZerosDemo extends Game {
     // Ensure canvas captures touch events
     this.canvas.style.touchAction = "none";
 
-    // Click/tap to start — also satisfies Web Audio user gesture requirement
-    const startHandler = (e) => {
-      e.preventDefault();
-      this.canvas.removeEventListener("pointerdown", startHandler);
+    // HTML overlay button — sits above everything, guarantees tap works on mobile
+    this.startOverlay = document.createElement("div");
+    this.startOverlay.style.cssText =
+      "position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;cursor:pointer;";
+    document.body.appendChild(this.startOverlay);
+
+    const startHandler = () => {
+      this.startOverlay.remove();
+      this.startOverlay = null;
       this._initAudio().then(() => {
         this.fsm.setState("running");
       });
     };
-    this.canvas.addEventListener("pointerdown", startHandler);
+    this.startOverlay.addEventListener("click", startHandler);
+    this.startOverlay.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      startHandler();
+    });
 
     Screen.init(this);
   }
