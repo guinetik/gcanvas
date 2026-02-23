@@ -34,4 +34,20 @@ export class Complex {
   abs() {
     return Math.sqrt(this.real * this.real + this.imag * this.imag);
   }
+
+  conjugate() {
+    return new Complex(this.real, -this.imag);
+  }
+
+  arg() {
+    return Math.atan2(this.imag, this.real);
+  }
+
+  divideComplex(other) {
+    const denom = other.real * other.real + other.imag * other.imag;
+    return new Complex(
+      (this.real * other.real + this.imag * other.imag) / denom,
+      (this.imag * other.real - this.real * other.imag) / denom
+    );
+  }
 }
