@@ -173,6 +173,14 @@ export const CONFIG = {
       { stop: 0.8, color: [0, 255, 200] },     // bright cyan-green
       { stop: 1.0, color: [80, 255, 120] },    // neon green
     ],
+    // Purple/indigo palette for surface geometry (spacetime)
+    surfaceGradient: [
+      { stop: 0.0, color: [8, 4, 20] },        // deep indigo
+      { stop: 0.25, color: [30, 10, 60] },      // dark purple
+      { stop: 0.5, color: [60, 20, 120] },      // purple
+      { stop: 0.75, color: [120, 50, 180] },    // violet
+      { stop: 1.0, color: [180, 100, 255] },    // bright lavender
+    ],
     wireColor: "rgba(0, 255, 200, 0.25)",
     background: "#000810",
     // Gravity well rendering

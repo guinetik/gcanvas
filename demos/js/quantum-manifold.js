@@ -715,6 +715,25 @@ export class QuantumManifoldPlayground extends Game {
     return [r, g, b];
   }
 
+  _surfaceGeomColor(t) {
+    const grad = CONFIG.colors.surfaceGradient;
+
+    let i = 0;
+    while (i < grad.length - 1 && grad[i + 1].stop < t) i++;
+    if (i >= grad.length - 1) i = grad.length - 2;
+
+    const lo = grad[i];
+    const hi = grad[i + 1];
+    const range = hi.stop - lo.stop;
+    const f = range > 0 ? (t - lo.stop) / range : 0;
+
+    const r = Math.floor(lo.color[0] + (hi.color[0] - lo.color[0]) * f);
+    const g = Math.floor(lo.color[1] + (hi.color[1] - lo.color[1]) * f);
+    const b = Math.floor(lo.color[2] + (hi.color[2] - lo.color[2]) * f);
+
+    return [r, g, b];
+  }
+
   _gravityColor(normalizedDip) {
     const t = Math.min(1, normalizedDip);
     const r = Math.floor(20 + 235 * t);
@@ -879,24 +898,34 @@ export class QuantumManifoldPlayground extends Game {
 
     Painter.useCtx((ctx) => {
       for (const q of quads) {
-        let t = Math.min(1, q.avgH / maxH);
-        if (surfaceRange > 0.01) {
-          const surfaceT = (q.avgSurfaceH - minSurface) / surfaceRange;
-          t = Math.min(1, t * 0.4 + surfaceT * 0.6);
-        }
+        const waveT = Math.min(1, q.avgH / maxH);
         const dipT = Math.min(1, q.avgDip / maxDip);
 
-        const [qr, qg, qb] = this._heightColor(t);
+        // Wave color (matter — green/cyan)
+        const [wr, wg, wb] = this._heightColor(waveT);
+        let r = wr, g = wg, b = wb;
+
+        // Surface geometry color (spacetime — purple/indigo)
+        if (surfaceRange > 0.01) {
+          const surfaceT = (q.avgSurfaceH - minSurface) / surfaceRange;
+          const [sr, sg, sb] = this._surfaceGeomColor(surfaceT);
+          // Blend: surface is the base, wave paints on top proportionally
+          const waveMix = Math.min(1, waveT * 1.5);
+          r = Math.floor(sr * (1 - waveMix) + wr * waveMix);
+          g = Math.floor(sg * (1 - waveMix) + wg * waveMix);
+          b = Math.floor(sb * (1 - waveMix) + wb * waveMix);
+        }
+
+        // Gravity well color (red/orange)
         if (dipT > 0.05) {
           const [gr, gg, gb] = this._gravityColor(dipT);
           const blend = dipT * 0.7;
-          const r = Math.floor(qr * (1 - blend) + gr * blend);
-          const g = Math.floor(qg * (1 - blend) + gg * blend);
-          const b = Math.floor(qb * (1 - blend) + gb * blend);
-          ctx.fillStyle = `rgba(${r},${g},${b},${CONFIG.surface.surfaceAlpha})`;
-        } else {
-          ctx.fillStyle = `rgba(${qr},${qg},${qb},${CONFIG.surface.surfaceAlpha})`;
+          r = Math.floor(r * (1 - blend) + gr * blend);
+          g = Math.floor(g * (1 - blend) + gg * blend);
+          b = Math.floor(b * (1 - blend) + gb * blend);
         }
+
+        ctx.fillStyle = `rgba(${r},${g},${b},${CONFIG.surface.surfaceAlpha})`;
 
         ctx.beginPath();
         ctx.moveTo(q.p00.x, q.p00.y);
