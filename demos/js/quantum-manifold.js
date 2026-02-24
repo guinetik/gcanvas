@@ -1008,7 +1008,8 @@ export class QuantumManifoldPlayground extends Game {
       }
 
       const grav = this._computeGravityAt(x, sliceZ);
-      samples.push({ x, prob, re, grav });
+      const surfH = this._computeSurface(x, sliceZ, this.time);
+      samples.push({ x, prob, re, grav, surfH });
       if (prob > maxProb) maxProb = prob;
     }
     if (maxProb < 0.001) maxProb = 1;
@@ -1056,6 +1057,33 @@ export class QuantumManifoldPlayground extends Game {
       });
     }
 
+    // Surface geometry baseline
+    let maxSurfH = 0;
+    let minSurfH = 0;
+    for (const s of samples) {
+      if (s.surfH > maxSurfH) maxSurfH = s.surfH;
+      if (s.surfH < minSurfH) minSurfH = s.surfH;
+    }
+    const surfRange = maxSurfH - minSurfH;
+
+    if (surfRange > 0.01) {
+      Painter.useCtx((ctx) => {
+        ctx.strokeStyle = "rgba(180, 120, 255, 0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        for (let i = 0; i < numSamples; i++) {
+          const sx = plotX + (i / (numSamples - 1)) * plotW;
+          const normSurf = (surfRange > 0) ? (samples[i].surfH - minSurfH) / surfRange : 0.5;
+          const sy = plotY + plotH - normSurf * plotH * 0.5 - plotH * 0.1;
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+    }
+
     // |Ψ|² envelope fill
     Painter.useCtx((ctx) => {
       ctx.fillStyle = envColor;
@@ -1100,6 +1128,10 @@ export class QuantumManifoldPlayground extends Game {
       if (maxGrav > 0.01) {
         ctx.fillStyle = "rgba(255, 60, 40, 0.6)";
         ctx.fillText("\u03A6(r)", plotX + plotW - 150, plotY - 10);
+      }
+      if (surfRange > 0.01) {
+        ctx.fillStyle = "rgba(180, 120, 255, 0.6)";
+        ctx.fillText("S(r)", plotX + plotW - 200, plotY - 10);
       }
     });
   }
