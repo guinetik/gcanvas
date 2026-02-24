@@ -133,7 +133,7 @@ export class QuantumManifoldPlayground extends Game {
       for (let j = 0; j < n; j++) {
         const x = (i / resolution - 0.5) * 2 * size;
         const z = (j / resolution - 0.5) * 2 * size;
-        this.gridVertices[i][j] = { x, y: 0, z, rx: x, ry: 0, rz: z, height: 0, gravityDip: 0, surfaceH: 0 };
+        this.gridVertices[i][j] = { x, y: 0, z, height: 0, gravityDip: 0 };
       }
     }
   }
@@ -265,48 +265,30 @@ export class QuantumManifoldPlayground extends Game {
 
   // ─── Surface Geometry ─────────────────────────────────────────────────
 
-  /**
-   * Returns the 3D surface position and outward normal for a point
-   * in parameter space (x, z).
-   * @returns {{ rx, ry, rz, nx, ny, nz }}
-   */
-  _computeSurface(x, z) {
+  _computeSurface(x, z, t) {
     switch (this._activeSurface) {
       case "saddle":
         return this._saddleSurface(x, z);
-      case "torus":
-        return this._torusSurface(x, z);
+      case "torusRidge":
+        return this._torusRidgeSurface(x, z);
       default:
-        return { rx: x, ry: 0, rz: z, nx: 0, ny: 1, nz: 0 };
+        return 0;
     }
   }
 
   _saddleSurface(x, z) {
-    const c = this._surfaceParams.curvature || 4.0;
+    const c = this._surfaceParams.curvature || 2.0;
     const L = CONFIG.grid.size;
-    const h = c * (x * x - z * z) / (L * L);
-    return { rx: x, ry: h, rz: z, nx: 0, ny: 1, nz: 0 };
+    return c * (x * x - z * z) / (L * L);
   }
 
-  _torusSurface(x, z) {
-    const R = this._surfaceParams.majorRadius || 6.0;
-    const r = this._surfaceParams.tubeRadius || 2.0;
-    const L = CONFIG.grid.size;
-    // Map flat grid [-L, L] to parametric angles [0, 2π]
-    const u = ((x / L) + 1) * Math.PI;
-    const v = ((z / L) + 1) * Math.PI;
-    const cosU = Math.cos(u);
-    const sinU = Math.sin(u);
-    const cosV = Math.cos(v);
-    const sinV = Math.sin(v);
-    return {
-      rx: (R + r * cosV) * cosU,
-      ry: r * sinV,
-      rz: (R + r * cosV) * sinU,
-      nx: cosV * cosU,
-      ny: sinV,
-      nz: cosV * sinU,
-    };
+  _torusRidgeSurface(x, z) {
+    const R = this._surfaceParams.ringRadius || 5.0;
+    const w = this._surfaceParams.ringWidth || 1.5;
+    const amp = this._surfaceParams.ringAmplitude || 3.0;
+    const r = Math.sqrt(x * x + z * z);
+    const dr = r - R;
+    return amp * Math.exp(-(dr * dr) / (2 * w * w));
   }
 
   // ─── Info Panel ──────────────────────────────────────────────────────
@@ -793,13 +775,10 @@ export class QuantumManifoldPlayground extends Game {
         const gravityDip = this._computeGravityAt(v.x, v.z);
         v.gravityDip = gravityDip;
 
-        const surface = this._computeSurface(v.x, v.z);
-        const displacement = probDensity * amplitude - gravityDip;
-        v.surfaceH = surface.ry;
+        const surfaceH = this._computeSurface(v.x, v.z, t);
+        v.surfaceH = surfaceH;
         v.height = probDensity;
-        v.rx = surface.rx + displacement * surface.nx;
-        v.ry = surface.ry + displacement * surface.ny;
-        v.rz = surface.rz + displacement * surface.nz;
+        v.y = surfaceH + probDensity * amplitude - gravityDip;
       }
     }
   }
@@ -849,9 +828,9 @@ export class QuantumManifoldPlayground extends Game {
       for (let j = 0; j < n; j++) {
         const v = this.gridVertices[i][j];
         const p = this._project3D(
-          v.rx * gridScale,
-          -v.ry * gridScale * 0.5,
-          v.rz * gridScale
+          v.x * gridScale,
+          -v.y * gridScale * 0.5,
+          v.z * gridScale
         );
         projected[i][j] = {
           x: cx + p.x,
@@ -968,13 +947,12 @@ export class QuantumManifoldPlayground extends Game {
         const psi = this._computeWave(well.x, well.z, this.time);
         return (psi.real * psi.real + psi.imag * psi.imag) * CONFIG.surface.amplitude;
       })();
-      const displacement = quantumH - dip;
-      const surface = this._computeSurface(well.x, well.z);
+      const netY = quantumH - dip;
 
       const p = this._project3D(
-        (surface.rx + displacement * surface.nx) * gridScale,
-        -(surface.ry + displacement * surface.ny) * gridScale * 0.5,
-        (surface.rz + displacement * surface.nz) * gridScale
+        well.x * gridScale,
+        -netY * gridScale * 0.5,
+        well.z * gridScale
       );
 
       const sx = cx + p.x;
@@ -1035,8 +1013,8 @@ export class QuantumManifoldPlayground extends Game {
       }
 
       const grav = this._computeGravityAt(x, sliceZ);
-      const surf = this._computeSurface(x, sliceZ);
-      samples.push({ x, prob, re, grav, surfH: surf.ry });
+      const surfH = this._computeSurface(x, sliceZ, this.time);
+      samples.push({ x, prob, re, grav, surfH });
       if (prob > maxProb) maxProb = prob;
     }
     if (maxProb < 0.001) maxProb = 1;
