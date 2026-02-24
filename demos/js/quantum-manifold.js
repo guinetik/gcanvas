@@ -37,6 +37,7 @@ import {
   createPanelStateMachine,
   layoutPanel,
   buildParamSliders,
+  buildSurfaceSliders,
   getPresetExplanation,
   drawInfoOverlay,
 } from "./quantum/quantuman.ui.js";
@@ -336,8 +337,11 @@ export class QuantumManifoldPlayground extends Game {
       onGridResChange: () => this._initGrid(),
     };
 
-    const { panel, controls, paramsSection, sections } = createControlPanel(this, {
+    const { panel, controls, paramsSection, surfaceGeomSection, sections } = createControlPanel(this, {
       onPresetChange: (key) => this._onPresetChange(key),
+      onSurfaceChange: (key) => this._onSurfaceChange(key),
+      activeSurface: this._activeSurface,
+      surfaceParams: this._surfaceParams,
       buildParamSliders,
       addWell: () => this._addRandomWell(),
       clearWells: () => this._clearWells(),
@@ -370,6 +374,7 @@ export class QuantumManifoldPlayground extends Game {
     this.panel = panel;
     this._controls = controls;
     this._paramsSection = paramsSection;
+    this._surfaceGeomSection = surfaceGeomSection;
     this._sections = sections;
     this.pipeline.add(this.panel);
   }
@@ -473,6 +478,26 @@ export class QuantumManifoldPlayground extends Game {
           if (key === "standingWave") this._standingNy = v;
           else this._hermiteNy = v;
         },
+      }
+    );
+  }
+
+  _onSurfaceChange(key) {
+    const preset = SURFACE_PRESETS[key];
+    if (!preset) return;
+
+    this._controls.surface.close();
+    this._activeSurface = key;
+    this._surfaceParams = { ...preset };
+
+    this._surfaceSliders = buildSurfaceSliders(
+      this,
+      this.panel,
+      this._surfaceGeomSection,
+      key,
+      this._surfaceParams,
+      {
+        getUpdatingSliders: () => this._updatingSliders,
       }
     );
   }

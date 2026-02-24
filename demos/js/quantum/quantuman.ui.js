@@ -25,7 +25,7 @@ import {
   Stepper,
 } from "../../../src/index.js";
 import { StateMachine } from "../../../src/state/state-machine.js";
-import { CONFIG, MANIFOLD_PRESETS, PRESET_PARAMS } from "./quantuman.config.js";
+import { CONFIG, MANIFOLD_PRESETS, PRESET_PARAMS, SURFACE_PRESETS, SURFACE_PARAMS } from "./quantuman.config.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INFO PANEL
@@ -474,9 +474,26 @@ export function createControlPanel(game, callbacks) {
   });
   panel.addItem(controls.preset);
 
+  // Surface geometry dropdown
+  const surfaceOptions = Object.entries(SURFACE_PRESETS).map(
+    ([key, preset]) => ({ label: preset.label, value: key })
+  );
+  controls.surface = new Dropdown(game, {
+    label: "SURFACE SHAPE",
+    width: sw,
+    options: surfaceOptions,
+    value: callbacks.activeSurface || "flat",
+    onChange: (v) => callbacks.onSurfaceChange?.(v),
+  });
+  panel.addItem(controls.surface);
+
   // Parameters section
   const paramsSection = panel.addSection("Parameters", { expanded: !Screen.isMobile });
   buildParamSliders(game, panel, paramsSection, activePreset, waveParams, callbacks);
+
+  // Surface geometry section
+  const surfaceGeom = panel.addSection("Surface Shape", { expanded: false });
+  buildSurfaceSliders(game, panel, surfaceGeom, callbacks.activeSurface || "flat", callbacks.surfaceParams || {}, callbacks);
 
   // Surface section
   const surface = panel.addSection("Surface", { expanded: false });
@@ -652,7 +669,7 @@ export function createControlPanel(game, callbacks) {
   });
   panel.addItem(controls.restart);
 
-  const sections = [paramsSection, surface, gravity, view];
+  const sections = [paramsSection, surfaceGeom, surface, gravity, view];
   if (Screen.isMobile) {
     setupExclusiveSections(panel, sections, {});
   }
@@ -664,6 +681,7 @@ export function createControlPanel(game, callbacks) {
     panel,
     controls,
     paramsSection,
+    surfaceGeomSection: surfaceGeom,
     sections,
   };
 }
@@ -776,6 +794,47 @@ export function buildParamSliders(game, panel, paramsSection, presetKey, wavePar
   }
 
   panel.commitSection(paramsSection);
+  panel.layout();
+  return items;
+}
+
+/**
+ * Builds surface geometry sliders for a given surface preset.
+ */
+export function buildSurfaceSliders(game, panel, surfaceSection, surfaceKey, surfaceParams, callbacks = {}) {
+  const panelWidth = Screen.isMobile ? game.width - 20 : CONFIG.panel.width;
+  const padding = Screen.isMobile ? CONFIG.panel.mobilePadding : CONFIG.panel.padding;
+  const sw = panelWidth - padding * 2;
+
+  panel.clearSection(surfaceSection);
+  const paramDefs = SURFACE_PARAMS[surfaceKey];
+  if (!paramDefs || paramDefs.length === 0) {
+    panel.commitSection(surfaceSection);
+    panel.layout();
+    return [];
+  }
+
+  const items = [];
+  for (const def of paramDefs) {
+    const decimals = def.step >= 1 ? 0 : def.step >= 0.1 ? 1 : 2;
+    const slider = new Slider(game, {
+      label: def.label,
+      width: sw,
+      min: def.min,
+      max: def.max,
+      value: def.default,
+      step: def.step,
+      formatValue: (v) => v.toFixed(decimals),
+      onChange: (v) => {
+        if (callbacks.getUpdatingSliders?.()) return;
+        surfaceParams[def.key] = v;
+      },
+    });
+    surfaceSection.addItem(slider);
+    items.push(slider);
+  }
+
+  panel.commitSection(surfaceSection);
   panel.layout();
   return items;
 }
