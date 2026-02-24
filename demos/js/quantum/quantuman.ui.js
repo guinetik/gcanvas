@@ -72,7 +72,18 @@ export function createInfoPanel(game, options = {}) {
     baseline: "middle",
   });
 
-  const textItems = [titleText, equationText, statsText];
+  const hintsText = new Text(
+    game,
+    "drag to rotate \u00B7 scroll to zoom \u00B7 hold to collapse \u00B7 double-click to reset",
+    {
+      font: `${Screen.responsive(8, 10, 11)}px monospace`,
+      color: "#445",
+      align: "left",
+      baseline: "middle",
+    }
+  );
+
+  const textItems = [titleText, equationText, statsText, hintsText];
   const spacing = Screen.responsive(14, 20, 24);
   let y = 0;
   for (const item of textItems) {
@@ -755,6 +766,9 @@ export function buildParamSliders(game, panel, paramsSection, presetKey, wavePar
       onChange: (v) => {
         if (callbacks.getUpdatingSliders?.()) return;
         waveParams[def.key] = v;
+        if (def.key === "speed" && callbacks.onSpeedChange) {
+          callbacks.onSpeedChange();
+        }
       },
     });
     paramsSection.addItem(slider);

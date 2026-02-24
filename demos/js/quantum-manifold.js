@@ -23,6 +23,7 @@ import {
 } from "../../src/index.js";
 import { Complex } from "../../src/math/complex.js";
 import { Random } from "../../src/math/random.js";
+import { createTheme } from "../../src/game/ui/theme.js";
 import {
   CONFIG,
   MANIFOLD_PRESETS,
@@ -48,6 +49,7 @@ export class QuantumManifoldPlayground extends Game {
     super(canvas);
     this.backgroundColor = CONFIG.colors.background;
     this.enableFluidSize();
+    this.theme = createTheme("#0ff");
   }
 
   // ─── Init ────────────────────────────────────────────────────────────
@@ -115,7 +117,7 @@ export class QuantumManifoldPlayground extends Game {
       friction: CONFIG.camera.friction,
       velocityScale: 1.2,
     });
-    this.camera.enableMouseControl(this.canvas);
+    this.camera.enableMouseControl(this.canvas, { game: this });
   }
 
   _initGrid() {
@@ -285,6 +287,11 @@ export class QuantumManifoldPlayground extends Game {
         this._waveParams.numPackets = v;
         this._superPackets = this._generateSuperPackets(v);
       },
+      onSpeedChange: () => {
+        this._superPackets = this._generateSuperPackets(
+          this._waveParams.numPackets || 3
+        );
+      },
       onNxChange: (v) => {
         this._waveParams.nx = v;
         if (this._activePreset === "standingWave") this._standingNx = v;
@@ -420,6 +427,11 @@ export class QuantumManifoldPlayground extends Game {
           this._waveParams.numPackets = v;
           this._superPackets = this._generateSuperPackets(v);
         },
+        onSpeedChange: () => {
+          this._superPackets = this._generateSuperPackets(
+            this._waveParams.numPackets || 3
+          );
+        },
         onNxChange: (v) => {
           this._waveParams.nx = v;
           if (key === "standingWave") this._standingNx = v;
@@ -512,14 +524,15 @@ export class QuantumManifoldPlayground extends Game {
   }
 
   _generateSuperPackets(n) {
+    const speed = this._waveParams.speed || 0.3;
     const packets = [];
     for (let i = 0; i < n; i++) {
       const angle = (i / n) * Math.PI * 2 + 0.3;
       packets.push({
         kx: Math.cos(angle) * (3 + i * 1.5),
         kz: Math.sin(angle) * (3 + i * 1.5),
-        vx: Math.cos(angle) * 0.3,
-        vz: Math.sin(angle) * 0.3,
+        vx: Math.cos(angle) * speed,
+        vz: Math.sin(angle) * speed,
         phase: i * 1.2,
       });
     }
@@ -1019,18 +1032,8 @@ export class QuantumManifoldPlayground extends Game {
     });
   }
 
-  _renderControls(w, h) {
-    Painter.useCtx((ctx) => {
-      ctx.font = "10px monospace";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "bottom";
-      ctx.fillStyle = "#556677";
-      ctx.fillText(
-        "drag to rotate  \u00B7  scroll to zoom  \u00B7  hold to collapse  \u00B7  double-click to reset",
-        w - 20,
-        h - 10
-      );
-    });
+  _renderControls() {
+    // Hints are now rendered in the info panel (top-left)
   }
 
   // ─── Resize ──────────────────────────────────────────────────────────
