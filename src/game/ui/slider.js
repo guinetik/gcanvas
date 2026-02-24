@@ -82,7 +82,8 @@ export class Slider extends GameObject {
     this.formatValue = opts.formatValue || ((v) => v.toFixed(2));
 
     // Colors - allow override via accentColor
-    const theme = UI_THEME.slider;
+    const theme = (this.game?.theme?.slider) || UI_THEME.slider;
+    this._theme = this.game?.theme || UI_THEME;
     this._colors = {
       trackBg: theme.track.bg,
       trackBorder: theme.track.border,
@@ -290,7 +291,7 @@ export class Slider extends GameObject {
 
     // Label (top-left)
     if (this.labelText) {
-      ctx.font = UI_THEME.fonts.small;
+      ctx.font = this._theme.fonts.small;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillStyle = this._colors.labelText;
@@ -298,7 +299,7 @@ export class Slider extends GameObject {
     }
 
     // Value (top-right)
-    ctx.font = UI_THEME.fonts.small;
+    ctx.font = this._theme.fonts.small;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.fillStyle = this._colors.valueText;
@@ -386,7 +387,7 @@ export class Slider extends GameObject {
     const y = this._minMaxY;
     const halfW = this.sliderWidth / 2;
 
-    ctx.font = UI_THEME.fonts.small;
+    ctx.font = this._theme.fonts.small;
     ctx.textBaseline = "middle";
     ctx.fillStyle = this._colors.minMaxText;
 

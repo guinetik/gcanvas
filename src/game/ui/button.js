@@ -102,17 +102,19 @@ export class Button extends GameObject {
       onPressed = null,
       onRelease = null,
       padding = 10,
-      // Terminal × Vercel theme: dark bg, green accents, inverted hover
-      colorDefaultBg = UI_THEME.button.default.bg,
-      colorDefaultStroke = UI_THEME.button.default.stroke,
-      colorDefaultText = UI_THEME.button.default.text,
-      colorHoverBg = UI_THEME.button.hover.bg,
-      colorHoverStroke = UI_THEME.button.hover.stroke,
-      colorHoverText = UI_THEME.button.hover.text,
-      colorPressedBg = UI_THEME.button.pressed.bg,
-      colorPressedStroke = UI_THEME.button.pressed.stroke,
-      colorPressedText = UI_THEME.button.pressed.text,
+      colorDefaultBg,
+      colorDefaultStroke,
+      colorDefaultText,
+      colorHoverBg,
+      colorHoverStroke,
+      colorHoverText,
+      colorPressedBg,
+      colorPressedStroke,
+      colorPressedText,
     } = options;
+
+    // Resolve theme: per-option overrides > game theme > default UI_THEME
+    const _t = (game?.theme?.button) || UI_THEME.button;
 
     // Basic position and sizing
     this.x = x;
@@ -126,15 +128,15 @@ export class Button extends GameObject {
     
     // Initialize the button components
     this.initColorScheme({
-      colorDefaultBg,
-      colorDefaultStroke,
-      colorDefaultText,
-      colorHoverBg,
-      colorHoverStroke,
-      colorHoverText,
-      colorPressedBg,
-      colorPressedStroke,
-      colorPressedText
+      colorDefaultBg: colorDefaultBg ?? _t.default.bg,
+      colorDefaultStroke: colorDefaultStroke ?? _t.default.stroke,
+      colorDefaultText: colorDefaultText ?? _t.default.text,
+      colorHoverBg: colorHoverBg ?? _t.hover.bg,
+      colorHoverStroke: colorHoverStroke ?? _t.hover.stroke,
+      colorHoverText: colorHoverText ?? _t.hover.text,
+      colorPressedBg: colorPressedBg ?? _t.pressed.bg,
+      colorPressedStroke: colorPressedStroke ?? _t.pressed.stroke,
+      colorPressedText: colorPressedText ?? _t.pressed.text,
     });
     
     this.initBackground(shape);

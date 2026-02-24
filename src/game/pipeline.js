@@ -155,6 +155,13 @@ export class Pipeline extends Loggable {
       }
     }
 
+    // Signal to external systems (e.g. Camera3D) whether the UI consumed this event
+    if (type === "inputdown") {
+      this.game._uiHandledInput = handled;
+    } else if (type === "inputup") {
+      this.game._uiHandledInput = false;
+    }
+
     // If this is a pointer move event, we also check for hover transitions.
     if (type === "inputmove") {
       this._dispatchHover(e);

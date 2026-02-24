@@ -49,6 +49,15 @@ export class Game {
      */
     this.events = new EventEmitter();
     /**
+     * Optional UI theme override. Set to a theme object (e.g. from createTheme())
+     * to change the accent color of all UI components in this game.
+     * Components fall back to UI_THEME (green) when this is null.
+     * @type {Object|null}
+     */
+    this.theme = null;
+    /** @internal Flag set by Pipeline when a UI element handles a pointer event. */
+    this._uiHandledInput = false;
+    /**
      * The pipeline is a collection of GameObjects that are updated and rendered each frame.
      * @type {Cursor}
      */

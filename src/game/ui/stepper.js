@@ -65,6 +65,9 @@ export class Stepper extends GameObject {
     options.origin = options.origin ?? "center";
     super(game, options);
 
+    // Resolve theme once for all sub-components
+    this._theme = game?.theme || UI_THEME;
+
     const {
       x = 0,
       y = 0,
@@ -76,7 +79,7 @@ export class Stepper extends GameObject {
       valueWidth = 60,
       height = 32,
       gap = 4,
-      font = UI_THEME.fonts.medium,
+      font = null,
       onChange = null,
       formatValue = null,
       label = "",
@@ -89,7 +92,7 @@ export class Stepper extends GameObject {
     this.valueWidth = valueWidth;
     this.stepperHeight = height;
     this.gap = gap;
-    this.font = font;
+    this.font = font || this._theme.fonts.medium;
 
     // Value state
     this._value = this.clamp(value, min, max);
@@ -160,8 +163,8 @@ export class Stepper extends GameObject {
     // Create optional label
     if (this.labelText) {
       this.label = new TextShape(this.labelText, {
-        font: UI_THEME.fonts.small,
-        color: UI_THEME.colors.dimText,
+        font: this._theme.fonts.small,
+        color: this._theme.colors.dimText,
         align: "center",
         baseline: "middle",
         origin: "center",
@@ -174,8 +177,8 @@ export class Stepper extends GameObject {
     this.decrementBg = new Rectangle({
       width: this.buttonSize,
       height: this.stepperHeight,
-      color: UI_THEME.button.default.bg,
-      stroke: UI_THEME.button.default.stroke,
+      color: this._theme.button.default.bg,
+      stroke: this._theme.button.default.stroke,
       lineWidth: 1,
       origin: "center",
     });
@@ -185,7 +188,7 @@ export class Stepper extends GameObject {
     // Create decrement button text
     this.decrementText = new TextShape("−", {
       font: this.font,
-      color: UI_THEME.button.default.text,
+      color: this._theme.button.default.text,
       align: "center",
       baseline: "middle",
       origin: "center",
@@ -197,8 +200,8 @@ export class Stepper extends GameObject {
     this.valueBg = new Rectangle({
       width: this.valueWidth,
       height: this.stepperHeight,
-      color: UI_THEME.colors.darkerBg,
-      stroke: UI_THEME.colors.subtleBorder,
+      color: this._theme.colors.darkerBg,
+      stroke: this._theme.colors.subtleBorder,
       lineWidth: 1,
       origin: "center",
     });
@@ -208,7 +211,7 @@ export class Stepper extends GameObject {
     // Create value display text
     this.valueText = new TextShape(this.formatValue(this._value), {
       font: this.font,
-      color: UI_THEME.colors.neonGreen,
+      color: this._theme.colors.neonGreen,
       align: "center",
       baseline: "middle",
       origin: "center",
@@ -220,8 +223,8 @@ export class Stepper extends GameObject {
     this.incrementBg = new Rectangle({
       width: this.buttonSize,
       height: this.stepperHeight,
-      color: UI_THEME.button.default.bg,
-      stroke: UI_THEME.button.default.stroke,
+      color: this._theme.button.default.bg,
+      stroke: this._theme.button.default.stroke,
       lineWidth: 1,
       origin: "center",
     });
@@ -231,7 +234,7 @@ export class Stepper extends GameObject {
     // Create increment button text
     this.incrementText = new TextShape("+", {
       font: this.font,
-      color: UI_THEME.button.default.text,
+      color: this._theme.button.default.text,
       align: "center",
       baseline: "middle",
       origin: "center",
@@ -440,44 +443,44 @@ export class Stepper extends GameObject {
   updateButtonStates() {
     // Decrement button
     if (this._decrementPressed) {
-      this.decrementBg.color = UI_THEME.button.pressed.bg;
-      this.decrementBg.stroke = UI_THEME.button.pressed.stroke;
-      this.decrementText.color = UI_THEME.button.pressed.text;
+      this.decrementBg.color = this._theme.button.pressed.bg;
+      this.decrementBg.stroke = this._theme.button.pressed.stroke;
+      this.decrementText.color = this._theme.button.pressed.text;
     } else if (this._decrementHover) {
-      this.decrementBg.color = UI_THEME.button.hover.bg;
-      this.decrementBg.stroke = UI_THEME.button.hover.stroke;
-      this.decrementText.color = UI_THEME.button.hover.text;
+      this.decrementBg.color = this._theme.button.hover.bg;
+      this.decrementBg.stroke = this._theme.button.hover.stroke;
+      this.decrementText.color = this._theme.button.hover.text;
     } else {
-      this.decrementBg.color = UI_THEME.button.default.bg;
-      this.decrementBg.stroke = UI_THEME.button.default.stroke;
-      this.decrementText.color = UI_THEME.button.default.text;
+      this.decrementBg.color = this._theme.button.default.bg;
+      this.decrementBg.stroke = this._theme.button.default.stroke;
+      this.decrementText.color = this._theme.button.default.text;
     }
 
     // Check if at min - dim the decrement button
     if (this._value <= this.min) {
-      this.decrementBg.stroke = UI_THEME.colors.subtleBorder;
-      this.decrementText.color = UI_THEME.colors.dimText;
+      this.decrementBg.stroke = this._theme.colors.subtleBorder;
+      this.decrementText.color = this._theme.colors.dimText;
     }
 
     // Increment button
     if (this._incrementPressed) {
-      this.incrementBg.color = UI_THEME.button.pressed.bg;
-      this.incrementBg.stroke = UI_THEME.button.pressed.stroke;
-      this.incrementText.color = UI_THEME.button.pressed.text;
+      this.incrementBg.color = this._theme.button.pressed.bg;
+      this.incrementBg.stroke = this._theme.button.pressed.stroke;
+      this.incrementText.color = this._theme.button.pressed.text;
     } else if (this._incrementHover) {
-      this.incrementBg.color = UI_THEME.button.hover.bg;
-      this.incrementBg.stroke = UI_THEME.button.hover.stroke;
-      this.incrementText.color = UI_THEME.button.hover.text;
+      this.incrementBg.color = this._theme.button.hover.bg;
+      this.incrementBg.stroke = this._theme.button.hover.stroke;
+      this.incrementText.color = this._theme.button.hover.text;
     } else {
-      this.incrementBg.color = UI_THEME.button.default.bg;
-      this.incrementBg.stroke = UI_THEME.button.default.stroke;
-      this.incrementText.color = UI_THEME.button.default.text;
+      this.incrementBg.color = this._theme.button.default.bg;
+      this.incrementBg.stroke = this._theme.button.default.stroke;
+      this.incrementText.color = this._theme.button.default.text;
     }
 
     // Check if at max - dim the increment button
     if (this._value >= this.max) {
-      this.incrementBg.stroke = UI_THEME.colors.subtleBorder;
-      this.incrementText.color = UI_THEME.colors.dimText;
+      this.incrementBg.stroke = this._theme.colors.subtleBorder;
+      this.incrementText.color = this._theme.colors.dimText;
     }
   }
 

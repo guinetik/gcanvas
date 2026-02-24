@@ -80,7 +80,8 @@ export class Dropdown extends GameObject {
     );
 
     // Theme colors
-    const theme = UI_THEME.dropdown;
+    const theme = (this.game?.theme?.dropdown) || UI_THEME.dropdown;
+    this._theme = this.game?.theme || UI_THEME;
     this._colors = {
       triggerBg: theme.trigger.bg,
       triggerBorder: theme.trigger.border,
@@ -508,7 +509,7 @@ export class Dropdown extends GameObject {
 
   _drawLabel(ctx) {
     const y = this._totalTriggerTop - 6;
-    ctx.font = UI_THEME.fonts.small;
+    ctx.font = this._theme.fonts.small;
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillStyle = this._colors.labelText;
@@ -539,7 +540,7 @@ export class Dropdown extends GameObject {
 
     // Selected text or placeholder
     const padding = 10;
-    ctx.font = UI_THEME.fonts.medium;
+    ctx.font = this._theme.fonts.medium;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     const textY = top + h / 2;
@@ -616,7 +617,7 @@ export class Dropdown extends GameObject {
       }
 
       // Item text
-      ctx.font = UI_THEME.fonts.medium;
+      ctx.font = this._theme.fonts.medium;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       if (isHovered) {

@@ -171,6 +171,121 @@ export const UI_THEME = {
   },
 };
 
+/**
+ * Parse a 3 or 6 digit hex color to [r, g, b] (0-255).
+ * Accepts "#0ff", "#00ffff", "0ff", "00ffff".
+ */
+function parseHex(hex) {
+  let h = hex.replace(/^#/, "");
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  const n = parseInt(h, 16);
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+/**
+ * Create a complete UI theme from a single accent color.
+ *
+ * Returns an object with the same shape as UI_THEME, so it can be
+ * used as a drop-in replacement. All shades (dim, glow, hover, etc.)
+ * are derived from the accent color's RGB values.
+ *
+ * @param {string} accentHex - Hex color string, e.g. "#0ff" or "#ff6600"
+ * @returns {Object} Full theme object matching UI_THEME structure
+ *
+ * @example
+ * ```js
+ * import { createTheme } from "gcanvas";
+ * const cyanTheme = createTheme("#0ff");
+ * // Use in a Game subclass constructor:
+ * this.theme = cyanTheme;
+ * ```
+ */
+export function createTheme(accentHex) {
+  const [r, g, b] = parseHex(accentHex);
+  const accent = `rgb(${r},${g},${b})`;
+  const dim = `rgba(${r},${g},${b},0.7)`;
+  const glow = `rgba(${r},${g},${b},0.5)`;
+  const subtle = `rgba(${r},${g},${b},0.4)`;
+  const active = `rgba(${r},${g},${b},0.15)`;
+  const hover = `rgba(${r},${g},${b},0.08)`;
+  const fillGlow = `rgba(${r},${g},${b},0.3)`;
+  const pulseGlow = `rgba(${r},${g},${b},0.25)`;
+  const scrollTrack = `rgba(${r},${g},${b},0.1)`;
+
+  // Darker accent for pressed state
+  const pr = Math.floor(r * 0.8);
+  const pg = Math.floor(g * 0.8);
+  const pb = Math.floor(b * 0.8);
+  const pressed = `rgb(${pr},${pg},${pb})`;
+
+  return {
+    colors: {
+      neonGreen: accent,
+      terminalGreen: accent,
+      cyanAccent: accent,
+      darkBg: "rgba(0, 0, 0, 0.85)",
+      darkerBg: "rgba(0, 0, 0, 0.92)",
+      hoverBg: accent,
+      pressedBg: pressed,
+      activeBg: active,
+      lightText: accent,
+      darkText: "#000",
+      dimText: dim,
+      subtleBorder: subtle,
+      activeBorder: accent,
+      glowBorder: glow,
+    },
+    fonts: { ...UI_THEME.fonts },
+    spacing: { ...UI_THEME.spacing },
+    button: {
+      default: { bg: "rgba(0, 0, 0, 0.85)", stroke: subtle, text: accent },
+      hover: { bg: accent, stroke: accent, text: "#000" },
+      pressed: { bg: pressed, stroke: accent, text: "#000" },
+      active: { bg: active, stroke: accent, text: accent },
+    },
+    tooltip: {
+      bg: "rgba(0, 0, 0, 0.92)",
+      border: glow,
+      text: accent,
+    },
+    dropdown: {
+      trigger: {
+        bg: "rgba(0, 0, 0, 0.85)",
+        border: subtle,
+        text: accent,
+        placeholder: glow,
+        arrow: dim,
+        hoverBg: hover,
+        hoverBorder: accent,
+      },
+      panel: { bg: "rgba(0, 0, 0, 0.92)", border: glow },
+      item: {
+        text: dim,
+        hoverBg: accent,
+        hoverText: "#000",
+        selectedText: accent,
+      },
+      scrollbar: { track: scrollTrack, thumb: subtle },
+      label: { text: dim },
+    },
+    slider: {
+      track: {
+        bg: "rgba(0, 0, 0, 0.85)",
+        border: subtle,
+        fill: accent,
+        fillGlow: fillGlow,
+      },
+      thumb: {
+        fill: accent,
+        stroke: accent,
+        glow: glow,
+        pulseGlow: pulseGlow,
+      },
+      label: { text: dim, value: accent, minMax: glow },
+    },
+  };
+}
+
 export default UI_THEME;
 
 

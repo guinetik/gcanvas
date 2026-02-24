@@ -7,4 +7,4 @@ export { Stepper } from "./stepper.js";
 export { Slider } from "./slider.js";
 export { Dropdown } from "./dropdown.js";
 export { AccordionSection, AccordionGroup } from "./accordion.js";
-export { UI_THEME } from "./theme.js";
+export { UI_THEME, createTheme } from "./theme.js";

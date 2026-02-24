@@ -63,6 +63,7 @@ export class AccordionSection extends GameObject {
     options.origin = options.origin ?? "center";
     super(game, options);
 
+    this._theme = game?.theme || UI_THEME;
     this._title = title;
     this._expanded = options.expanded ?? false;
     this._onToggle = options.onToggle ?? null;
@@ -188,8 +189,8 @@ export class AccordionSection extends GameObject {
       ctx.lineTo(chevronX - cs / 2, chevronY + cs);
     }
     ctx.strokeStyle = this._expanded
-      ? UI_THEME.colors.neonGreen
-      : UI_THEME.colors.dimText;
+      ? this._theme.colors.neonGreen
+      : this._theme.colors.dimText;
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -198,8 +199,8 @@ export class AccordionSection extends GameObject {
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.fillStyle = this._expanded
-      ? UI_THEME.colors.neonGreen
-      : UI_THEME.colors.dimText;
+      ? this._theme.colors.neonGreen
+      : this._theme.colors.dimText;
     ctx.fillText(this._title.toUpperCase(), -halfW + 20, 0);
   }
 }

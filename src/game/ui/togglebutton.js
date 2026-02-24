@@ -53,9 +53,10 @@ export class ToggleButton extends Button {
       },
     });
     // Terminal × Vercel theme for toggled state
-    this.colorActiveBg = options.colorActiveBg || UI_THEME.button.active.bg;
-    this.colorActiveStroke = options.colorActiveStroke || UI_THEME.button.active.stroke;
-    this.colorActiveText = options.colorActiveText || UI_THEME.button.active.text;
+    const _ta = (game?.theme?.button?.active) || UI_THEME.button.active;
+    this.colorActiveBg = options.colorActiveBg || _ta.bg;
+    this.colorActiveStroke = options.colorActiveStroke || _ta.stroke;
+    this.colorActiveText = options.colorActiveText || _ta.text;
     // Track toggled state. Default is false unless 'startToggled' is set
     this.toggled = !!options.startToggled;
 
