@@ -797,7 +797,19 @@ export class QuantumManifoldPlayground extends Game {
         const surfaceH = this._computeSurface(v.x, v.z, t);
         v.surfaceH = surfaceH;
         v.height = probDensity;
-        v.y = surfaceH + probDensity * amplitude - gravityDip;
+
+        // Barrier height (tunneling preset only)
+        let barrierH = 0;
+        if (this._activePreset === "tunneling") {
+          const bH = this._waveParams.barrierHeight || 0.6;
+          const bW = this._waveParams.barrierWidth || 0.8;
+          if (Math.abs(v.x) < bW) {
+            barrierH = bH * (1 - Math.abs(v.x) / bW);
+          }
+        }
+        v.barrierH = barrierH;
+
+        v.y = surfaceH + probDensity * amplitude + barrierH * amplitude * 0.5 - gravityDip;
       }
     }
   }
@@ -858,6 +870,7 @@ export class QuantumManifoldPlayground extends Game {
           height: v.height,
           gravityDip: v.gravityDip,
           surfaceH: v.surfaceH || 0,
+          barrierH: v.barrierH || 0,
         };
       }
     }
@@ -873,7 +886,8 @@ export class QuantumManifoldPlayground extends Game {
         const avgH = (p00.height + p10.height + p11.height + p01.height) * 0.25;
         const avgDip = (p00.gravityDip + p10.gravityDip + p11.gravityDip + p01.gravityDip) * 0.25;
         const avgSurfaceH = (p00.surfaceH + p10.surfaceH + p11.surfaceH + p01.surfaceH) * 0.25;
-        quads.push({ p00, p10, p11, p01, avgZ, avgH, avgDip, avgSurfaceH });
+        const avgBarrier = (p00.barrierH + p10.barrierH + p11.barrierH + p01.barrierH) * 0.25;
+        quads.push({ p00, p10, p11, p01, avgZ, avgH, avgDip, avgSurfaceH, avgBarrier });
       }
     }
 
@@ -923,6 +937,17 @@ export class QuantumManifoldPlayground extends Game {
           r = Math.floor(r * (1 - blend) + gr * blend);
           g = Math.floor(g * (1 - blend) + gg * blend);
           b = Math.floor(b * (1 - blend) + gb * blend);
+        }
+
+        // Barrier color (amber/gold wall)
+        if (q.avgBarrier > 0.01) {
+          const maxBarrier = this._waveParams.barrierHeight || 0.6;
+          const barrierT = Math.min(1, q.avgBarrier / maxBarrier);
+          const br = 255, bg = Math.floor(180 + 60 * barrierT), bb = Math.floor(40 * (1 - barrierT));
+          const blend = barrierT * 0.85;
+          r = Math.floor(r * (1 - blend) + br * blend);
+          g = Math.floor(g * (1 - blend) + bg * blend);
+          b = Math.floor(b * (1 - blend) + bb * blend);
         }
 
         ctx.fillStyle = `rgba(${r},${g},${b},${CONFIG.surface.surfaceAlpha})`;
@@ -1043,7 +1068,15 @@ export class QuantumManifoldPlayground extends Game {
 
       const grav = this._computeGravityAt(x, sliceZ);
       const surfH = this._computeSurface(x, sliceZ, this.time);
-      samples.push({ x, prob, re, grav, surfH });
+      let barrierVal = 0;
+      if (this._activePreset === "tunneling") {
+        const bH = this._waveParams.barrierHeight || 0.6;
+        const bW = this._waveParams.barrierWidth || 0.8;
+        if (Math.abs(x) < bW) {
+          barrierVal = bH * (1 - Math.abs(x) / bW);
+        }
+      }
+      samples.push({ x, prob, re, grav, surfH, barrierVal });
       if (prob > maxProb) maxProb = prob;
     }
     if (maxProb < 0.001) maxProb = 1;
@@ -1088,6 +1121,39 @@ export class QuantumManifoldPlayground extends Game {
         ctx.lineTo(plotX + plotW, plotY + plotH / 2);
         ctx.closePath();
         ctx.fill();
+      });
+    }
+
+    // Barrier fill (tunneling preset)
+    if (this._activePreset === "tunneling") {
+      const maxBarrier = this._waveParams.barrierHeight || 0.6;
+      Painter.useCtx((ctx) => {
+        ctx.fillStyle = "rgba(255, 200, 40, 0.25)";
+        ctx.beginPath();
+        ctx.moveTo(plotX, plotY + plotH);
+        for (let i = 0; i < numSamples; i++) {
+          const sx = plotX + (i / (numSamples - 1)) * plotW;
+          const bNorm = samples[i].barrierVal / maxBarrier;
+          const sy = plotY + plotH - bNorm * plotH * 0.6;
+          ctx.lineTo(sx, sy);
+        }
+        ctx.lineTo(plotX + plotW, plotY + plotH);
+        ctx.closePath();
+        ctx.fill();
+
+        // Barrier outline
+        ctx.strokeStyle = "rgba(255, 200, 40, 0.7)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let i = 0; i < numSamples; i++) {
+          const sx = plotX + (i / (numSamples - 1)) * plotW;
+          const bNorm = samples[i].barrierVal / maxBarrier;
+          if (bNorm < 0.01) continue;
+          const sy = plotY + plotH - bNorm * plotH * 0.6;
+          if (i === 0 || samples[i - 1].barrierVal < 0.01) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
       });
     }
 
@@ -1166,6 +1232,10 @@ export class QuantumManifoldPlayground extends Game {
       if (surfRange > 0.01) {
         ctx.fillStyle = "rgba(180, 120, 255, 0.6)";
         ctx.fillText("S(r)", plotX + plotW - 200, plotY - 10);
+      }
+      if (this._activePreset === "tunneling") {
+        ctx.fillStyle = "rgba(255, 200, 40, 0.7)";
+        ctx.fillText("V(x)", plotX + plotW - 250, plotY - 10);
       }
     });
   }

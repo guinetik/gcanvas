@@ -75,7 +75,7 @@ export const SURFACE_PRESETS = {
   },
   saddle: {
     label: "Saddle",
-    curvature: 2.0,
+    curvature: 5.0,
   },
   torusRidge: {
     label: "Torus Ridge",
@@ -129,7 +129,7 @@ export const PRESET_PARAMS = {
 export const SURFACE_PARAMS = {
   flat: [],
   saddle: [
-    { key: "curvature", label: "CURVATURE", default: 2.0, min: 0.5, max: 5.0, step: 0.1 },
+    { key: "curvature", label: "CURVATURE", default: 5.0, min: 0.5, max: 12.0, step: 0.5 },
   ],
   torusRidge: [
     { key: "ringRadius", label: "RING RADIUS", default: 5.0, min: 2.0, max: 8.0, step: 0.5 },
