@@ -808,6 +808,7 @@ export class QuantumManifoldPlayground extends Game {
           z: p.z,
           height: v.height,
           gravityDip: v.gravityDip,
+          surfaceH: v.surfaceH || 0,
         };
       }
     }
@@ -822,7 +823,8 @@ export class QuantumManifoldPlayground extends Game {
         const avgZ = (p00.z + p10.z + p11.z + p01.z) * 0.25;
         const avgH = (p00.height + p10.height + p11.height + p01.height) * 0.25;
         const avgDip = (p00.gravityDip + p10.gravityDip + p11.gravityDip + p01.gravityDip) * 0.25;
-        quads.push({ p00, p10, p11, p01, avgZ, avgH, avgDip });
+        const avgSurfaceH = (p00.surfaceH + p10.surfaceH + p11.surfaceH + p01.surfaceH) * 0.25;
+        quads.push({ p00, p10, p11, p01, avgZ, avgH, avgDip, avgSurfaceH });
       }
     }
 
@@ -837,9 +839,21 @@ export class QuantumManifoldPlayground extends Game {
     if (maxH < 0.001) maxH = 1;
     if (maxDip < 0.001) maxDip = 1;
 
+    let maxSurface = 0;
+    let minSurface = 0;
+    for (const q of quads) {
+      if (q.avgSurfaceH > maxSurface) maxSurface = q.avgSurfaceH;
+      if (q.avgSurfaceH < minSurface) minSurface = q.avgSurfaceH;
+    }
+    const surfaceRange = maxSurface - minSurface;
+
     Painter.useCtx((ctx) => {
       for (const q of quads) {
-        const t = Math.min(1, q.avgH / maxH);
+        let t = Math.min(1, q.avgH / maxH);
+        if (surfaceRange > 0.01) {
+          const surfaceT = (q.avgSurfaceH - minSurface) / surfaceRange;
+          t = Math.min(1, t * 0.4 + surfaceT * 0.6);
+        }
         const dipT = Math.min(1, q.avgDip / maxDip);
 
         const [qr, qg, qb] = this._heightColor(t);
