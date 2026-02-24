@@ -307,7 +307,7 @@ export class QuantumManifoldPlayground extends Game {
       if (this._activePreset === "superposition") {
         statsText.text = `${preset.label} | ${this._waveParams.numPackets || 3} packets${surfaceLabel}${wellStr}`;
       } else {
-        statsText.text = `${preset.label} | t=${this.time.toFixed(1)}s${surfaceLabel}${wellStr}`;
+        statsText.text = `${preset.label}${surfaceLabel}${wellStr}`;
       }
     };
     this.pipeline.add(this.infoPanel);
