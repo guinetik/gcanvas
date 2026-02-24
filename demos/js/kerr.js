@@ -7,10 +7,7 @@
  * Key difference from Schwarzschild: g_tφ ≠ 0 (frame dragging term)
  */
 
-import { Game, Painter, Camera3D, Screen, Gesture } from "../../src/index.js";
-import { GameObject } from "../../src/game/objects/go.js";
-import { Rectangle } from "../../src/shapes/rect.js";
-import { TextShape } from "../../src/shapes/text.js";
+import { Game, Painter, Camera3D, Screen, Gesture, Text, Scene, applyAnchor, FPSCounter } from "../../src/index.js";
 import { Position } from "../../src/util/position.js";
 import { Tensor } from "../../src/math/tensor.js";
 import { flammEmbeddingHeight } from "../../src/math/gr.js";
@@ -20,9 +17,10 @@ import {
   orbitalRadiusSimple,
   updateTrail,
 } from "../../src/math/orbital.js";
-import { verticalLayout, applyLayout } from "../../src/util/layout.js";
 import { Tooltip } from "../../src/game/ui/tooltip.js";
 import { Button } from "../../src/game/ui/button.js";
+import { ToggleButton } from "../../src/game/ui/togglebutton.js";
+import { KerrInfoPanel } from "./kerr.info.js";
 
 // Configuration
 const CONFIG = {
@@ -89,276 +87,12 @@ const CONFIG = {
   frameDragColor: "rgba(255, 200, 100, 0.5)",
   orbiterColor: "#4af",
   orbiterGlow: "rgba(100, 180, 255, 0.6)",
+
+  // Button layout
+  btnMargin: 12,
+  btnSize: 44,
+  btnGap: 8,
 };
-
-/**
- * KerrMetricPanelGO - Displays the Kerr metric tensor components
- * Highlights the off-diagonal g_tφ frame dragging term
- * Responsive for mobile screens
- */
-class KerrMetricPanelGO extends GameObject {
-  constructor(game, options = {}) {
-    // Responsive sizing
-    const isMobile = game.width < CONFIG.mobileWidth;
-    const panelWidth = isMobile ? 280 : 280;
-    const panelHeight = isMobile ? 300 : 300;
-    const lineHeight = isMobile ? 12 : 14;
-    const valueOffset = isMobile ? 140 : 180;
-
-    super(game, {
-      ...options,
-      width: panelWidth,
-      height: panelHeight,
-      originX: 0.5,
-      originY: 0.5,
-      debug: true,
-      debugColor: "gray",
-      anchor: Position.BOTTOM_LEFT,
-      anchorMargin: 20,
-    });
-
-    this.bgRect = new Rectangle({
-      width: panelWidth,
-      height: panelHeight,
-      color: "rgba(0, 0, 0, 0.7)",
-      origin: "center",
-    });
-
-    // Define features with descriptions for tooltips
-    this.features = {
-      title: {
-        text: "Kerr Metric (Rotating Black Hole)",
-        font: "bold 14px monospace",
-        color: "#f7a",
-        height: lineHeight + 4,
-        desc: "The Kerr metric describes spacetime around a rotating black hole.\n\nKerr is STATIONARY - it doesn't evolve over time. This animation shows geometric interpolation from flat to Kerr.\n\nNOTE: Visual effects are EXAGGERATED (like rubber sheet analogy) to make curvature and frame dragging easier to see.",
-      },
-      equation: {
-        text: "ds² = gμν dxμ dxν (Boyer-Lindquist)",
-        font: "14px monospace",
-        color: "#888",
-        height: lineHeight,
-        desc: "Boyer-Lindquist coordinates (t, r, θ, φ) generalize Schwarzschild coordinates for rotating spacetime.",
-      },
-      mass: {
-        text: "M = 1.00",
-        font: "12px monospace",
-        color: "#888",
-        height: lineHeight,
-        desc: "Mass of the black hole in geometrized units (G = c = 1).",
-      },
-      spin: {
-        text: "a = 0.70M (70%)",
-        font: "bold 12px monospace",
-        color: "#fa8",
-        height: lineHeight + 4,
-        desc: "Spin parameter a = J/Mc (angular momentum per unit mass).\n\n0 = Schwarzschild (no rotation)\nM = Extremal Kerr (maximum spin)\n\nClick to randomize!",
-      },
-      gtt: {
-        text: "g_tt = -(1 - 2Mr/Σ)",
-        font: "10px monospace",
-        color: "#f88",
-        height: lineHeight,
-        value: "= -0.800",
-        desc: "Time-time component. Modified by Σ = r² + a²cos²θ.\nDepends on BOTH r and θ (not spherically symmetric!).",
-      },
-      grr: {
-        text: "g_rr = Σ/Δ",
-        font: "10px monospace",
-        color: "#8f8",
-        height: lineHeight,
-        value: "= 1.250",
-        desc: "Radial component. Δ = r² - 2Mr + a².\nDiverges at horizons where Δ = 0.",
-      },
-      gthth: {
-        text: "g_θθ = Σ",
-        font: "10px monospace",
-        color: "#88f",
-        height: lineHeight,
-        value: "= 100.00",
-        desc: "Theta component. Σ = r² + a²cos²θ.\nNot just r² - rotation breaks spherical symmetry.",
-      },
-      gphph: {
-        text: "g_φφ = (r²+a²+...)sin²θ",
-        font: "10px monospace",
-        color: "#f8f",
-        height: lineHeight,
-        value: "= 100.00",
-        desc: "Phi component. More complex than Schwarzschild.\nIncludes 2Ma²r sin²θ/Σ rotation term.",
-      },
-      gtph: {
-        text: "g_tφ = -2Mar sin²θ/Σ",
-        font: "bold 12px monospace",
-        color: "#ff0",
-        height: lineHeight + 6,
-        value: "= -0.180",
-        desc: "FRAME DRAGGING TERM\n\nThis off-diagonal component is THE key difference!\n\nIt couples time and rotation: even light must rotate with the black hole.\n\nInside the ergosphere, NOTHING can stay still.",
-      },
-      rplus: {
-        text: "r+ = 1.44",
-        font: "10px monospace",
-        color: "#f55",
-        height: lineHeight - 2,
-        desc: "Outer Event Horizon: r+ = M + √(M² - a²)\nSmaller than Schwarzschild 2M when spinning.\nApproaches M as a → M (extremal).",
-      },
-      rminus: {
-        text: "r- = 0.56",
-        font: "10px monospace",
-        color: "#a55",
-        height: lineHeight - 2,
-        desc: "Inner (Cauchy) Horizon: r- = M - √(M² - a²)\nUnique to rotating black holes.\nHides a ring singularity, not a point.",
-      },
-      rergo: {
-        text: "r_ergo = 2.00",
-        font: "10px monospace",
-        color: "#f80",
-        height: lineHeight - 2,
-        desc: "Ergosphere boundary (at equator)\nBetween r+ and r_ergo: the ergosphere.\nObjects can escape, but CANNOT stay stationary!",
-      },
-      riscoP: {
-        text: "r_ISCO(pro) = 2.32",
-        font: "10px monospace",
-        color: "#5f8",
-        height: lineHeight - 2,
-        desc: "ISCO for prograde (co-rotating) orbits.\nCloser than Schwarzschild ISCO!\nFrame dragging helps co-rotating orbits.",
-      },
-      riscoR: {
-        text: "r_ISCO(retro) = 8.71",
-        font: "10px monospace",
-        color: "#58f",
-        height: lineHeight - 2,
-        desc: "ISCO for retrograde (counter-rotating) orbits.\nFarther than Schwarzschild ISCO!\nFrame dragging opposes counter-rotation.",
-      },
-      pos: {
-        text: "Orbiter: r=10, Ω_drag=0.02",
-        font: "10px monospace",
-        color: "#aaa",
-        height: lineHeight,
-        desc: "Orbiter position and local frame-dragging rate.\nΩ_drag shows how fast spacetime rotates here.",
-      },
-    };
-
-    this.panelWidth = panelWidth;
-    this.panelHeight = panelHeight;
-
-    // Create TextShapes
-    const rowItems = [];
-    for (const [key, config] of Object.entries(this.features)) {
-      config.shape = new TextShape(config.text, {
-        font: config.font,
-        color: config.color,
-        align: "left",
-        baseline: "top",
-        height: config.height,
-        origin: "top-left",
-      });
-      rowItems.push(config.shape);
-
-      if (config.value) {
-        config.valueShape = new TextShape(config.value, {
-          font: config.font,
-          color: "#fff",
-          align: "left",
-          baseline: "top",
-          origin: "top-left",
-        });
-      }
-    }
-
-    // Apply vertical layout
-    const layout = verticalLayout(rowItems, {
-      spacing: 10,
-      padding: 0,
-      align: "start",
-      centerItems: false,
-    });
-    applyLayout(rowItems, layout.positions, {
-      offsetX: -panelWidth / 2,
-      offsetY: -panelHeight / 2,
-    });
-
-    // Position value shapes
-    for (const config of Object.values(this.features)) {
-      if (config.valueShape) {
-        config.valueShape.x = config.shape.x + valueOffset;
-        config.valueShape.y = config.shape.y;
-      }
-    }
-  }
-
-  setMetricValues(r, theta, M, a) {
-    const metric = Tensor.kerr(r, theta, M, a);
-    const f = this.features;
-
-    // Diagonal components
-    f.gtt.valueShape.text = `= ${metric.get(0, 0).toFixed(4)}`;
-    f.grr.valueShape.text = `= ${metric.get(1, 1).toFixed(4)}`;
-    f.gthth.valueShape.text = `= ${metric.get(2, 2).toFixed(2)}`;
-    f.gphph.valueShape.text = `= ${metric.get(3, 3).toFixed(2)}`;
-
-    // OFF-DIAGONAL (the key term!)
-    f.gtph.valueShape.text = `= ${metric.get(0, 3).toFixed(4)}`;
-
-    // Parameters
-    const spinPercent = ((a / M) * 100).toFixed(0);
-    f.spin.shape.text = `a = ${a.toFixed(2)}M (${spinPercent}%)`;
-    f.mass.shape.text = `M = ${M.toFixed(2)}`;
-
-    // Key radii
-    const rPlus = Tensor.kerrHorizonRadius(M, a, false);
-    const rMinus = Tensor.kerrHorizonRadius(M, a, true);
-    const rErgo = Tensor.kerrErgosphereRadius(M, a, Math.PI / 2);
-    const iscoP = Tensor.kerrISCO(M, a, true);
-    const iscoR = Tensor.kerrISCO(M, a, false);
-
-    f.rplus.shape.text = `r+ = ${rPlus.toFixed(2)}`;
-    f.rminus.shape.text = `r- = ${rMinus.toFixed(2)}`;
-    f.rergo.shape.text = `r_ergo = ${rErgo.toFixed(2)}`;
-    f.riscoP.shape.text = `r_ISCO(pro) = ${iscoP.toFixed(2)}`;
-    f.riscoR.shape.text = `r_ISCO(retro) = ${iscoR.toFixed(2)}`;
-  }
-
-  setOrbiterPosition(r, phi, M, a) {
-    const omega = Tensor.kerrFrameDraggingOmega(r, Math.PI / 2, M, a);
-    this.features.pos.shape.text = `Orbiter: r=${r.toFixed(2)}, Ω_drag=${omega.toFixed(4)}`;
-  }
-
-  getFeatureAt(screenX, screenY) {
-    const localX = screenX - this.x;
-    const localY = screenY - this.y;
-
-    if (
-      localX < -this.panelWidth / 2 ||
-      localX > this.panelWidth / 2 ||
-      localY < -this.panelHeight / 2 ||
-      localY > this.panelHeight / 2
-    ) {
-      return null;
-    }
-
-    for (const config of Object.values(this.features)) {
-      const shape = config.shape;
-      const rowTop = shape.y;
-      const rowBottom = shape.y + (config.height || 14);
-
-      if (localY >= rowTop && localY <= rowBottom) {
-        return config;
-      }
-    }
-
-    return null;
-  }
-
-  draw() {
-    super.draw();
-    this.bgRect.render();
-
-    for (const config of Object.values(this.features)) {
-      config.shape.render();
-      if (config.valueShape) config.valueShape.render();
-    }
-  }
-}
 
 class KerrDemo extends Game {
   constructor(canvas) {
@@ -442,44 +176,135 @@ class KerrDemo extends Game {
     this.initGrid();
     this.gridScale = CONFIG.baseGridScale;
 
-    // Create metric panel
-    this.metricPanel = new KerrMetricPanelGO(this, { name: "metricPanel" });
-    this.pipeline.add(this.metricPanel);
+    // ── Info header (top-left summary) ──
+    this._buildInfoHeader();
 
-    // Tooltip (responsive)
-    const isMobileTooltip = this.width < CONFIG.mobileWidth;
+    // ── Buttons: settings (toggle) + new black hole, always visible ──
+    this._buildButtons();
+
+    // ── Info modal panel (rendered manually after all scene drawing) ──
+    this.infoPanel = new KerrInfoPanel(this);
+
+    // Panel emits "panel:dismiss" when user clicks outside — untoggle the button
+    this.events.on("panel:dismiss", () => {
+      this._settingsBtn.toggle(false);
+    });
+
+    // Tooltip (responsive) — NOT in pipeline, rendered manually after panel
+    const isMobile = this.width < CONFIG.mobileWidth;
     this.tooltip = new Tooltip(this, {
-      maxWidth: isMobileTooltip ? 200 : 300,
-      font: `${isMobileTooltip ? 9 : 11}px monospace`,
-      padding: isMobileTooltip ? 6 : 10,
+      maxWidth: isMobile ? 200 : 300,
+      font: `${isMobile ? 9 : 11}px monospace`,
+      padding: isMobile ? 6 : 10,
       bgColor: "rgba(20, 20, 30, 0.95)",
     });
-    this.pipeline.add(this.tooltip);
 
     this.hoveredFeature = null;
 
     // Event listeners
     this.canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e));
     this.canvas.addEventListener("mouseleave", () => this.tooltip.hide());
-    this.initControls();
 
-    // Button to form new black hole (positioned at bottom-left)
-    const isMobile = this.width < CONFIG.mobileWidth;
+    // FPS counter
+    this.fpsCounter = new FPSCounter(this, {
+      color: "#00FF00",
+      anchor: isMobile ? "bottom-left" : "bottom-right",
+    });
+    this.pipeline.add(this.fpsCounter);
+  }
 
-    // Position button above the metric panel using relative anchoring
-    const btnWidth = isMobile ? 120 : 140;
-    const btnHeight = isMobile ? 30 : 36;
-    this.newBlackHoleBtn = new Button(this, {
+  // ── Info Header ─────────────────────────────────────────────────────────
+
+  _buildInfoHeader() {
+    this._infoScene = new Scene(this, { x: 0, y: 0 });
+    applyAnchor(this._infoScene, {
       anchor: Position.TOP_LEFT,
-      anchorRelative: this.metricPanel,
-      anchorMargin: 0,
-      anchorOffsetX: 0, // Align with panel's left edge
-      anchorOffsetY: -btnHeight - 16, // Position above panel with spacing
-      width: btnWidth,
-      height: btnHeight,
-      text: "New Black Hole",
-      font: `${isMobile ? 10 : 12}px monospace`,
-      origin: "center",
+      anchorOffsetX: Screen.responsive(15, 30, 40),
+      anchorOffsetY: Screen.responsive(60, 80, 90),
+    });
+
+    this._titleText = new Text(this, "Kerr Metric", {
+      font: `bold ${Screen.responsive(18, 24, 28)}px monospace`,
+      color: "#f7a",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this._equationText = new Text(this, "ds\u00B2 = g\u03BC\u03BD dx\u03BC dx\u03BD", {
+      font: `${Screen.responsive(14, 18, 20)}px monospace`,
+      color: "#fff",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this._massText = new Text(this, "M = 1.00", {
+      font: `${Screen.responsive(9, 12, 13)}px monospace`,
+      color: "#667",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this._spinText = new Text(this, "a = 0.70M (70%)", {
+      font: `${Screen.responsive(9, 12, 13)}px monospace`,
+      color: "#667",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this._orbitText = new Text(this, "r = 10.00  \u03A9_drag = 0.0200", {
+      font: `${Screen.responsive(9, 12, 13)}px monospace`,
+      color: "#667",
+      align: "left",
+      baseline: "middle",
+    });
+
+    const items = [this._titleText, this._equationText, this._massText, this._spinText, this._orbitText];
+    const spacing = Screen.responsive(14, 20, 24);
+    let y = 0;
+    for (const item of items) {
+      item.x = 0;
+      item.y = y;
+      y += spacing;
+      this._infoScene.add(item);
+    }
+    this.pipeline.add(this._infoScene);
+  }
+
+  _updateInfoHeader() {
+    const spinPercent = ((this.spin / this.mass) * 100).toFixed(0);
+    const omega = Tensor.kerrFrameDraggingOmega(this.orbitR, Math.PI / 2, this.mass, this.spin);
+    this._massText.text = `M = ${this.mass.toFixed(2)}`;
+    this._spinText.text = `a = ${this.spin.toFixed(2)}M (${spinPercent}%)`;
+    this._orbitText.text = `r = ${this.orbitR.toFixed(2)}  \u03A9_drag = ${omega.toFixed(4)}`;
+  }
+
+  // ── Buttons ────────────────────────────────────────────────────────────
+
+  _buildButtons() {
+    const { btnMargin, btnSize, btnGap } = CONFIG;
+    const centerY = btnMargin + btnSize / 2;
+
+    // Settings toggle button (always visible)
+    this._settingsBtn = new ToggleButton(this, {
+      text: "\u2699",
+      width: btnSize,
+      height: btnSize,
+      font: "18px monospace",
+      onToggle: (isOn) => {
+        if (isOn) this.infoPanel.show();
+        else this.infoPanel.hide();
+      },
+    });
+    this._settingsBtn.x = btnMargin + btnSize / 2;
+    this._settingsBtn.y = centerY;
+    this.pipeline.add(this._settingsBtn);
+
+    // New Black Hole button (always visible, right of settings)
+    this._shuffleBtn = new Button(this, {
+      text: "\u21BB",
+      width: btnSize,
+      height: btnSize,
+      font: "18px monospace",
       colorDefaultBg: "rgba(20, 20, 40, 0.8)",
       colorDefaultStroke: "#f80",
       colorDefaultText: "#fa8",
@@ -491,38 +316,9 @@ class KerrDemo extends Game {
       colorPressedText: "#fff",
       onClick: () => this.shuffleParameters(),
     });
-    this.pipeline.add(this.newBlackHoleBtn);
-  }
-
-  initControls() {
-    // Instructions (drag to rotate)
-    this.controlsText = new TextShape(
-      "drag to rotate | scroll to zoom | double-click to reset",
-      {
-        font: "10px monospace",
-        color: "#ccc",
-        align: "right",
-        baseline: "bottom",
-        origin: "center",
-      },
-    );
-
-    // Explanatory text lines
-    const explanationLines = [
-      "Geometric Demonstration: Flat Spacetime → Kerr Metric", // Top line
-      "Visualizes the structural contrast, not physical time evolution.",
-      "Effects exaggerated for visibility.",
-    ];
-
-    this.explanationShapes = explanationLines.map((line) => {
-      return new TextShape(line, {
-        font: "10px monospace",
-        color: "#ccc",
-        align: "right",
-        baseline: "bottom",
-        origin: "center",
-      });
-    });
+    this._shuffleBtn.x = btnMargin + btnSize + btnGap + btnSize / 2;
+    this._shuffleBtn.y = centerY;
+    this.pipeline.add(this._shuffleBtn);
   }
 
   /**
@@ -544,6 +340,21 @@ class KerrDemo extends Game {
       CONFIG.maxZoom,
       Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize),
     );
+
+    // Info header repositioning
+    if (this._infoScene) {
+      applyAnchor(this._infoScene, {
+        anchor: Position.TOP_LEFT,
+        anchorOffsetX: Screen.responsive(15, 30, 40),
+        anchorOffsetY: Screen.responsive(60, 80, 90),
+      });
+    }
+
+    // Close modal on resize
+    if (this.infoPanel && this.infoPanel.visible) {
+      this.infoPanel.hide();
+      if (this._settingsBtn) this._settingsBtn.toggle(false);
+    }
   }
 
   handleMouseMove(e) {
@@ -551,8 +362,8 @@ class KerrDemo extends Game {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Check metric panel
-    const feature = this.metricPanel.getFeatureAt(mouseX, mouseY);
+    // Check info panel (when visible)
+    const feature = this.infoPanel.getFeatureAt(mouseX, mouseY);
     if (feature && feature.desc) {
       if (this.hoveredFeature !== feature) {
         this.hoveredFeature = feature;
@@ -828,27 +639,16 @@ class KerrDemo extends Game {
       }
     }
 
-    // Update metric panel
-    if (this.metricPanel) {
-      // Use EFFECTIVE mass and spin based on formation progress (lambda)
-      // This allows the numbers to evolve from Flat Spacetime values to final Kerr values
-      // Note: We clamp at a small epsilon for M to avoid division by zero if lambda is 0
-      const effectiveM = Math.max(0.001, this.mass * lambda);
-      const effectiveA = this.spin * lambda;
+    // Update info panel (even when hidden, so values are current when opened)
+    // Use EFFECTIVE mass and spin based on formation progress (lambda)
+    const effectiveM = Math.max(0.001, this.mass * lambda);
+    const effectiveA = this.spin * lambda;
 
-      this.metricPanel.setMetricValues(
-        this.orbitR,
-        Math.PI / 2,
-        effectiveM,
-        effectiveA,
-      );
-      this.metricPanel.setOrbiterPosition(
-        this.orbitR,
-        this.orbitPhi,
-        effectiveM,
-        effectiveA,
-      );
-    }
+    this.infoPanel.setMetricValues(this.orbitR, Math.PI / 2, effectiveM, effectiveA);
+    this.infoPanel.setOrbiterPosition(this.orbitR, this.orbitPhi, effectiveM, effectiveA);
+
+    // Update info header
+    this._updateInfoHeader();
   }
 
   render() {
@@ -877,38 +677,38 @@ class KerrDemo extends Game {
     // Draw formation progress indicator
     this.drawFormationProgress(w, h);
 
-    // Draw controls
-    this.renderControls();
+    // Draw controls hint
+    this.drawControls(w, h);
+
+    // Info modal renders LAST so it overlays everything
+    this.infoPanel.render();
+
+    // Tooltip renders after info panel so it's always on top
+    this.tooltip.render();
   }
 
-  renderControls() {
-    const w = this.width;
-    const h = this.height;
+  drawControls(w, h) {
     const isMobile = w < CONFIG.mobileWidth;
-    const margin = isMobile ? 12 : 20;
-    const lineSpacing = isMobile ? 12 : 15;
 
-    // On mobile, use shorter text
-    if (isMobile) {
-      this.controlsText.text = "tap to form | drag to rotate";
-      this.controlsText.font = "8px monospace";
-    }
+    Painter.useCtx((ctx) => {
+      ctx.font = "10px monospace";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+      ctx.fillStyle = "#556677";
 
-    // Position and render main controls text
-    this.controlsText.x = w - margin;
-    this.controlsText.y =
-      h - 25 - (isMobile ? 1 : this.explanationShapes.length) * lineSpacing;
-    this.controlsText.render();
-
-    // Position and render explanation lines (hide most on mobile)
-    this.explanationShapes.forEach((shape, i) => {
-      if (isMobile && i < this.explanationShapes.length - 1) return; // Only show last line on mobile
-
-      shape.font = isMobile ? "8px monospace" : "10px monospace";
-      const lineIndexFromBottom = this.explanationShapes.length - 1 - i;
-      shape.x = w - margin;
-      shape.y = h - 10 - lineIndexFromBottom * lineSpacing;
-      shape.render();
+      if (isMobile) {
+        ctx.fillText(
+          "drag to rotate \u00B7 pinch to zoom",
+          w - 15,
+          h - 10,
+        );
+      } else {
+        ctx.fillText(
+          "drag to rotate \u00B7 scroll to zoom \u00B7 double-click to reset",
+          w - 20,
+          h - 10,
+        );
+      }
     });
   }
 
