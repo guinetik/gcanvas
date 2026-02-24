@@ -27,6 +27,7 @@ import { createTheme } from "../../src/game/ui/theme.js";
 import {
   CONFIG,
   MANIFOLD_PRESETS,
+  SURFACE_PRESETS,
 } from "./quantum/quantuman.config.js";
 import {
   createInfoPanel,
@@ -59,6 +60,8 @@ export class QuantumManifoldPlayground extends Game {
     this.time = 0;
     this._activePreset = "superposition";
     this._waveParams = { ...MANIFOLD_PRESETS.superposition };
+    this._activeSurface = "flat";
+    this._surfaceParams = { ...SURFACE_PRESETS.flat };
     this._updatingSliders = false;
 
     this._gravityWells = [];
@@ -257,6 +260,34 @@ export class QuantumManifoldPlayground extends Game {
       total += depth * Math.exp(-r2 / (2 * s * s));
     }
     return total;
+  }
+
+  // ─── Surface Geometry ─────────────────────────────────────────────────
+
+  _computeSurface(x, z, t) {
+    switch (this._activeSurface) {
+      case "saddle":
+        return this._saddleSurface(x, z);
+      case "torusRidge":
+        return this._torusRidgeSurface(x, z);
+      default:
+        return 0;
+    }
+  }
+
+  _saddleSurface(x, z) {
+    const c = this._surfaceParams.curvature || 2.0;
+    const L = CONFIG.grid.size;
+    return c * (x * x - z * z) / (L * L);
+  }
+
+  _torusRidgeSurface(x, z) {
+    const R = this._surfaceParams.ringRadius || 5.0;
+    const w = this._surfaceParams.ringWidth || 1.5;
+    const amp = this._surfaceParams.ringAmplitude || 3.0;
+    const r = Math.sqrt(x * x + z * z);
+    const dr = r - R;
+    return amp * Math.exp(-(dr * dr) / (2 * w * w));
   }
 
   // ─── Info Panel ──────────────────────────────────────────────────────
@@ -714,8 +745,10 @@ export class QuantumManifoldPlayground extends Game {
         const gravityDip = this._computeGravityAt(v.x, v.z);
         v.gravityDip = gravityDip;
 
+        const surfaceH = this._computeSurface(v.x, v.z, t);
+        v.surfaceH = surfaceH;
         v.height = probDensity;
-        v.y = probDensity * amplitude - gravityDip;
+        v.y = surfaceH + probDensity * amplitude - gravityDip;
       }
     }
   }
