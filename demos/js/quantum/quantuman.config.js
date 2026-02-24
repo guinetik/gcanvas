@@ -68,6 +68,23 @@ export const MANIFOLD_PRESETS = {
   },
 };
 
+/** Surface geometry presets with default parameters. */
+export const SURFACE_PRESETS = {
+  flat: {
+    label: "Flat",
+  },
+  saddle: {
+    label: "Saddle",
+    curvature: 2.0,
+  },
+  torusRidge: {
+    label: "Torus Ridge",
+    ringRadius: 5.0,
+    ringWidth: 1.5,
+    ringAmplitude: 3.0,
+  },
+};
+
 /** Per-preset parameter definitions for dynamic sliders. */
 export const PRESET_PARAMS = {
   superposition: [
@@ -105,6 +122,19 @@ export const PRESET_PARAMS = {
   harmonic: [
     { key: "sigma", label: "SIGMA", default: 1.5, min: 0.5, max: 3.0, step: 0.1 },
     { key: "omega", label: "OMEGA", default: 2.0, min: 0.5, max: 8.0, step: 0.5 },
+  ],
+};
+
+/** Per-surface-preset parameter definitions for dynamic sliders. */
+export const SURFACE_PARAMS = {
+  flat: [],
+  saddle: [
+    { key: "curvature", label: "CURVATURE", default: 2.0, min: 0.5, max: 5.0, step: 0.1 },
+  ],
+  torusRidge: [
+    { key: "ringRadius", label: "RING RADIUS", default: 5.0, min: 2.0, max: 8.0, step: 0.5 },
+    { key: "ringWidth", label: "RING WIDTH", default: 1.5, min: 0.5, max: 3.0, step: 0.1 },
+    { key: "ringAmplitude", label: "RING AMP", default: 3.0, min: 0.5, max: 6.0, step: 0.5 },
   ],
 };
 
