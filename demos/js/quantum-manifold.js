@@ -301,10 +301,13 @@ export class QuantumManifoldPlayground extends Game {
       const preset = MANIFOLD_PRESETS[this._activePreset];
       const wellCount = this._gravityWells.length;
       const wellStr = wellCount > 0 ? ` | ${wellCount} well${wellCount > 1 ? "s" : ""}` : "";
+      const surfaceLabel = this._activeSurface !== "flat"
+        ? ` | ${SURFACE_PRESETS[this._activeSurface]?.label || ""}`
+        : "";
       if (this._activePreset === "superposition") {
-        statsText.text = `${preset.label} | ${this._waveParams.numPackets || 3} packets${wellStr}`;
+        statsText.text = `${preset.label} | ${this._waveParams.numPackets || 3} packets${surfaceLabel}${wellStr}`;
       } else {
-        statsText.text = `${preset.label} | t=${this.time.toFixed(1)}s${wellStr}`;
+        statsText.text = `${preset.label} | t=${this.time.toFixed(1)}s${surfaceLabel}${wellStr}`;
       }
     };
     this.pipeline.add(this.infoPanel);
@@ -504,6 +507,7 @@ export class QuantumManifoldPlayground extends Game {
 
   _resetToDefaults() {
     this._onPresetChange(this._activePreset);
+    this._onSurfaceChange(this._activeSurface);
   }
 
   // ─── Info Overlay ────────────────────────────────────────────────────
@@ -514,7 +518,8 @@ export class QuantumManifoldPlayground extends Game {
       info: getPresetExplanation(
         this._activePreset,
         this._waveParams,
-        this._gravityWells.length
+        this._gravityWells.length,
+        this._activeSurface
       ),
       width: this.width,
       height: this.height,

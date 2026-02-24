@@ -112,7 +112,7 @@ export function createInfoPanel(game, options = {}) {
  * @param {number} wellCount - Number of gravity wells
  * @returns {{ title: string, lines: string[] }}
  */
-export function getPresetExplanation(activePreset, waveParams, wellCount = 0) {
+export function getPresetExplanation(activePreset, waveParams, wellCount = 0, surfaceKey = "flat") {
   const p = waveParams;
 
   const explanations = {
@@ -180,6 +180,12 @@ export function getPresetExplanation(activePreset, waveParams, wellCount = 0) {
   };
 
   const info = explanations[activePreset] || explanations.gaussian;
+
+  if (surfaceKey && surfaceKey !== "flat") {
+    const surfLabel = SURFACE_PRESETS[surfaceKey]?.label || surfaceKey;
+    info.lines.push("");
+    info.lines.push(`Surface: ${surfLabel}`);
+  }
 
   if (wellCount > 0) {
     info.lines.push("");
