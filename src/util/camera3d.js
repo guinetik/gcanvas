@@ -326,6 +326,7 @@ export class Camera3D {
     }
 
     this._canvas = canvas;
+    this._game = options.game || null;
     const invertX = options.invertX ? -1 : 1;
     const invertY = options.invertY ? -1 : 1;
     this._hAxis = options.horizontalAxis || 'rotationY';
@@ -334,6 +335,8 @@ export class Camera3D {
     // Create bound handlers so we can remove them later
     this._boundHandlers = {
       mousedown: (e) => {
+        // Skip camera drag if a UI element handled this pointer event
+        if (this._game?._uiHandledInput) return;
         this._isDragging = true;
         this._lastMouseX = e.clientX;
         this._lastMouseY = e.clientY;
@@ -396,6 +399,7 @@ export class Camera3D {
       },
 
       touchstart: (e) => {
+        if (this._game?._uiHandledInput) return;
         if (e.touches.length === 1) {
           this._isDragging = true;
           this._lastMouseX = e.touches[0].clientX;
