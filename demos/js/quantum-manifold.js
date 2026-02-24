@@ -225,7 +225,6 @@ export class QuantumManifoldPlayground extends Game {
   // ─── Gravity Wells ───────────────────────────────────────────────────
 
   _addRandomWell() {
-    if (this._activeSurface !== "flat") return;
     if (this._gravityWells.length >= CONFIG.gravity.maxWells) return;
     const s = CONFIG.grid.size * 0.6;
     this._gravityWells.push({
@@ -245,7 +244,7 @@ export class QuantumManifoldPlayground extends Game {
    * Positive return = depth of downward pull.
    */
   _computeGravityAt(x, z) {
-    if (!CONFIG.gravity.enabled || this._gravityWells.length === 0 || this._activeSurface !== "flat") return 0;
+    if (!CONFIG.gravity.enabled || this._gravityWells.length === 0) return 0;
 
     const sigma = CONFIG.gravity.wellWidth;
     const baseDepth = CONFIG.gravity.wellDepth;
@@ -511,11 +510,6 @@ export class QuantumManifoldPlayground extends Game {
     this._controls.surface.close();
     this._activeSurface = key;
     this._surfaceParams = { ...preset };
-
-    // Gravity wells don't work on non-flat surfaces — clear them
-    if (key !== "flat") {
-      this._clearWells();
-    }
 
     this._surfaceSliders = buildSurfaceSliders(
       this,
