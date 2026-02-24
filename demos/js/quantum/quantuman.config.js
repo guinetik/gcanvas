@@ -75,13 +75,12 @@ export const SURFACE_PRESETS = {
   },
   saddle: {
     label: "Saddle",
-    curvature: 2.0,
+    curvature: 4.0,
   },
-  torusRidge: {
-    label: "Torus Ridge",
-    ringRadius: 5.0,
-    ringWidth: 1.5,
-    ringAmplitude: 3.0,
+  torus: {
+    label: "Torus",
+    majorRadius: 6.0,
+    tubeRadius: 2.0,
   },
 };
 
@@ -129,12 +128,11 @@ export const PRESET_PARAMS = {
 export const SURFACE_PARAMS = {
   flat: [],
   saddle: [
-    { key: "curvature", label: "CURVATURE", default: 2.0, min: 0.5, max: 5.0, step: 0.1 },
+    { key: "curvature", label: "CURVATURE", default: 4.0, min: 0.5, max: 10.0, step: 0.5 },
   ],
-  torusRidge: [
-    { key: "ringRadius", label: "RING RADIUS", default: 5.0, min: 2.0, max: 8.0, step: 0.5 },
-    { key: "ringWidth", label: "RING WIDTH", default: 1.5, min: 0.5, max: 3.0, step: 0.1 },
-    { key: "ringAmplitude", label: "RING AMP", default: 3.0, min: 0.5, max: 6.0, step: 0.5 },
+  torus: [
+    { key: "majorRadius", label: "MAJOR R", default: 6.0, min: 3.0, max: 9.0, step: 0.5 },
+    { key: "tubeRadius", label: "TUBE R", default: 2.0, min: 0.5, max: 4.0, step: 0.25 },
   ],
 };
 
