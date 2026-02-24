@@ -1,3 +1,5 @@
+import { binarySearch } from "./search.js";
+
 /**
  * 🎲 Random - A utility class for game-friendly pseudorandom operations.
  *
@@ -175,6 +177,61 @@ export class Random {
    */
   static coin() {
     return Math.random() < 0.5;
+  }
+
+  /**
+   * Build a cumulative distribution function from an array of weights.
+   *
+   * Returns a Float64Array of length `weights.length` where each entry
+   * is the running sum of weights, normalized to [0, 1]. Suitable for
+   * use with `binarySearch` to sample from the distribution.
+   *
+   * @param {number[]} weights - Non-negative weight for each item
+   * @returns {Float64Array} Normalized cumulative distribution
+   */
+  static cdf(weights) {
+    const n = weights.length;
+    const cumulative = new Float64Array(n);
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      sum += weights[i];
+      cumulative[i] = sum;
+    }
+    if (sum > 0) {
+      for (let i = 0; i < n; i++) {
+        cumulative[i] /= sum;
+      }
+    }
+    return cumulative;
+  }
+
+  /**
+   * Pick a random item from an array, weighted by the given probabilities.
+   *
+   * Items with higher weights are proportionally more likely to be chosen.
+   * Uses CDF construction + binary search for O(n) build + O(log n) sampling.
+   *
+   * @template T
+   * @param {T[]} items - Array of items to choose from
+   * @param {number[]} weights - Non-negative weight for each item (same length as items)
+   * @returns {T} A randomly selected item
+   *
+   * @example
+   * // Quantum collapse: sample position weighted by |Ψ|²
+   * const point = Random.weighted(gridPoints, probabilities);
+   *
+   * @example
+   * // Loot table: rarer items have lower weights
+   * const drop = Random.weighted(
+   *   ["common", "rare", "legendary"],
+   *   [80, 18, 2]
+   * );
+   */
+  static weighted(items, weights) {
+    const cumulative = Random.cdf(weights);
+    const r = Math.random();
+    const idx = binarySearch(cumulative, r);
+    return items[Math.min(idx, items.length - 1)];
   }
 
   /**

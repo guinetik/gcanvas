@@ -22,6 +22,7 @@ import {
   FPSCounter,
 } from "../../src/index.js";
 import { Complex } from "../../src/math/complex.js";
+import { Random } from "../../src/math/random.js";
 import {
   CONFIG,
   MANIFOLD_PRESETS,
@@ -198,9 +199,14 @@ export class QuantumManifoldPlayground extends Game {
 
   _collapse() {
     this.isCollapsed = true;
-    const s = CONFIG.grid.size * 0.6;
-    this.collapseX = (Math.random() - 0.5) * 2 * s;
-    this.collapseZ = (Math.random() - 0.5) * 2 * s;
+    const vertices = this.gridVertices.flat();
+    const weights = vertices.map((v) => {
+      const psi = this._computeWave(v.x, v.z, this.time);
+      return psi.real * psi.real + psi.imag * psi.imag;
+    });
+    const point = Random.weighted(vertices, weights);
+    this.collapseX = point.x;
+    this.collapseZ = point.z;
   }
 
   _cancelCollapse() {
@@ -900,12 +906,23 @@ export class QuantumManifoldPlayground extends Game {
 
     const samples = [];
     let maxProb = 0;
+    const collapse = this.collapseAmount;
+    const sliceZ = collapse > 0.01 ? this.collapseZ * collapse : 0;
     for (let i = 0; i < numSamples; i++) {
       const x = (i / (numSamples - 1) - 0.5) * 2 * size;
-      const psi = this._computeWave(x, 0, this.time);
-      const prob = psi.real * psi.real + psi.imag * psi.imag;
-      const re = psi.real;
-      const grav = this._computeGravityAt(x, 0);
+      const psi = this._computeWave(x, sliceZ, this.time);
+      let prob = psi.real * psi.real + psi.imag * psi.imag;
+      let re = psi.real;
+
+      if (collapse > 0.01) {
+        const cdx = x - this.collapseX;
+        const cr2 = cdx * cdx;
+        const collapsedProb = Math.exp(-cr2 / 0.3);
+        prob = prob * (1 - collapse) + collapsedProb * collapse;
+        re = re * (1 - collapse) + Math.sqrt(collapsedProb) * collapse;
+      }
+
+      const grav = this._computeGravityAt(x, sliceZ);
       samples.push({ x, prob, re, grav });
       if (prob > maxProb) maxProb = prob;
     }
@@ -916,14 +933,28 @@ export class QuantumManifoldPlayground extends Game {
       if (s.grav > maxGrav) maxGrav = s.grav;
     }
 
+    // Collapse-dependent colors (computed before any draw calls)
+    const collapseBlend = Math.min(1, collapse / 0.5);
+    const envColor = collapse > 0.01
+      ? `rgba(${Math.floor(255 * collapseBlend)}, ${Math.floor(200 + 55 * collapseBlend)}, ${Math.floor(180 + 75 * collapseBlend)}, ${0.3 + 0.4 * collapseBlend})`
+      : cs.envelopeColor;
+    const waveStrokeColor = collapse > 0.01
+      ? `rgba(${Math.floor(255 * collapseBlend)}, 255, ${Math.floor(204 + 51 * collapseBlend)}, 1)`
+      : cs.waveColor;
+
+    // Background + border
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = "rgba(0, 8, 16, 0.7)";
-      ctx.fillRect(plotX - 5, plotY - 5, plotW + 10, plotH + 10);
-      ctx.strokeStyle = "rgba(0, 200, 180, 0.3)";
+      ctx.fillStyle = "rgba(0, 8, 16, 0.75)";
+      ctx.fillRect(plotX - 8, plotY - 8, plotW + 16, plotH + 16);
+      const borderColor = collapse > 0.01
+        ? `rgba(${Math.floor(100 + 155 * collapseBlend)}, ${Math.floor(200 + 55 * collapseBlend)}, ${Math.floor(180 + 75 * collapseBlend)}, ${0.2 + 0.3 * collapseBlend})`
+        : "rgba(0, 200, 180, 0.15)";
+      ctx.strokeStyle = borderColor;
       ctx.lineWidth = 1;
-      ctx.strokeRect(plotX - 5, plotY - 5, plotW + 10, plotH + 10);
+      ctx.strokeRect(plotX - 8, plotY - 8, plotW + 16, plotH + 16);
     });
 
+    // Gravity fill
     if (maxGrav > 0.01) {
       Painter.useCtx((ctx) => {
         ctx.fillStyle = "rgba(255, 60, 40, 0.2)";
@@ -940,8 +971,9 @@ export class QuantumManifoldPlayground extends Game {
       });
     }
 
+    // |Ψ|² envelope fill
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = cs.envelopeColor;
+      ctx.fillStyle = envColor;
       ctx.beginPath();
       ctx.moveTo(plotX, plotY + plotH);
       for (let i = 0; i < numSamples; i++) {
@@ -954,8 +986,9 @@ export class QuantumManifoldPlayground extends Game {
       ctx.fill();
     });
 
+    // Re(Ψ) wave line
     Painter.useCtx((ctx) => {
-      ctx.strokeStyle = cs.waveColor;
+      ctx.strokeStyle = waveStrokeColor;
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < numSamples; i++) {
@@ -968,12 +1001,14 @@ export class QuantumManifoldPlayground extends Game {
       ctx.stroke();
     });
 
+    // Labels
     Painter.useCtx((ctx) => {
       ctx.font = "10px monospace";
       ctx.textAlign = "left";
-      ctx.fillStyle = "#888";
-      ctx.fillText("Cross-section (z=0)", plotX, plotY - 10);
-      ctx.fillStyle = cs.waveColor;
+      ctx.fillStyle = collapse > 0.01 ? `rgba(255,255,255,${0.5 + 0.5 * collapseBlend})` : "#888";
+      const sliceLabel = collapse > 0.01 ? `Cross-section (z=${sliceZ.toFixed(1)})` : "Cross-section (z=0)";
+      ctx.fillText(sliceLabel, plotX, plotY - 10);
+      ctx.fillStyle = collapse > 0.01 ? waveStrokeColor : cs.waveColor;
       ctx.fillText("Re(\u03A8)", plotX + plotW - 50, plotY - 10);
       ctx.fillStyle = "rgba(0, 200, 180, 0.6)";
       ctx.fillText("|\u03A8|\u00B2", plotX + plotW - 100, plotY - 10);
@@ -986,15 +1021,15 @@ export class QuantumManifoldPlayground extends Game {
 
   _renderControls(w, h) {
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = "#555";
       ctx.font = "10px monospace";
       ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+      ctx.fillStyle = "#556677";
       ctx.fillText(
-        "drag to rotate  |  scroll to zoom  |  hold to collapse  |  double-click to reset",
+        "drag to rotate  \u00B7  scroll to zoom  \u00B7  hold to collapse  \u00B7  double-click to reset",
         w - 20,
         h - 10
       );
-      ctx.textAlign = "left";
     });
   }
 

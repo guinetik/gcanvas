@@ -1,4 +1,5 @@
 export {Random} from "./random.js";
+export {binarySearch} from "./search.js";
 export {Complex} from "./complex.js";
 export {Fractals} from "./fractal.js";
 export {Patterns} from "./patterns.js";
