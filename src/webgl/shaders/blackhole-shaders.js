@@ -6,8 +6,6 @@
  * a procedural FBM-textured accretion disk, Doppler shifting, photon ring,
  * and gravitational glow. Outputs premultiplied alpha for compositing onto
  * the 2D canvas.
- *
- * Adapted from a Shadertoy black hole raytracer.
  */
 
 export const BLACKHOLE_VERTEX = `
@@ -22,7 +20,7 @@ void main() {
 `;
 
 export const BLACKHOLE_FRAGMENT = `
-precision mediump float;
+precision highp float;
 
 varying vec2 vUV;
 uniform vec2 uResolution;
@@ -30,154 +28,171 @@ uniform float uTime;
 uniform float uTiltX;
 uniform float uRotY;
 
-#define PI 3.1415927
+#define PI 3.14159265359
+#define MAX_STEPS 300
+#define STEP_SIZE 0.05
 
-#define CAMERA_DIST 2.0
-#define CAMERA_ANGLE_V (PI * 0.48)
-#define FOV_FACTOR 1.5
+// Black Hole Parameters
+#define BH_RADIUS 0.35
+#define ACCRETION_INNER 0.6
+#define ACCRETION_OUTER 2.2
+#define DISK_HEIGHT 0.08
 
-#define EVENT_HORIZON_RADIUS 0.1
-#define GRAVITY_STRENGTH 0.005
-#define CAPTURE_THRESHOLD 0.001
+// Visuals
+#define COLOR_INNER vec3(1.0, 0.8, 0.5)
+#define COLOR_OUTER vec3(0.8, 0.2, 0.05)
+#define GLOW_COLOR vec3(0.2, 0.4, 1.0)
 
-#define MAX_STEPS 150
-#define STEP_SIZE 0.02
-#define ADAPTIVE_NEAR 0.8
-#define ADAPTIVE_FAR 1.5
-#define ADAPTIVE_INNER 0.2
-#define ADAPTIVE_OUTER 1.5
-
-#define DISK_TORUS_MAJOR 1.0
-#define DISK_TORUS_MINOR 1.2
-#define DISK_FLATTEN 40.0
-#define DISK_ROTATION_SPEED 0.6
-#define DISK_INTENSITY 0.5
-#define DISK_FALLOFF 100.0
-#define DOPPLER_STRENGTH 0.7
-#define FBM_OCTAVES 4
-
-#define OUTER_DISK_COLOR vec3(0.5, 0.12, 0.02)
-#define MID_DISK_COLOR vec3(1.0, 0.55, 0.12)
-#define INNER_DISK_COLOR vec3(1.0, 0.85, 0.6)
-
-#define GLOW_COLOR vec3(0.8, 0.5, 0.2)
-#define GLOW_INTENSITY 0.00006
-
-#define PHOTON_SPHERE_RADIUS 0.15
-#define PHOTON_RING_WIDTH 0.02
-#define PHOTON_RING_COLOR vec3(0.9, 0.7, 0.4)
-#define PHOTON_RING_INTENSITY 0.0015
-
-#define GAMMA vec3(0.45)
-
-float sdfSphere(vec3 p, float radius) {
-    return length(p) - radius;
-}
-
-float sdfTorus(vec3 p, vec2 t) {
-    vec2 q = vec2(length(p.xz) - t.x, p.y);
-    return length(q) - t.y;
-}
-
+// -----------------------------------------------------------------------------
+// Noise
+// -----------------------------------------------------------------------------
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-float valueNoise(vec2 p) {
+float noise(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p);
     f = f * f * (3.0 - 2.0 * f);
-    float a = hash(i);
-    float b = hash(i + vec2(1.0, 0.0));
-    float c = hash(i + vec2(0.0, 1.0));
-    float d = hash(i + vec2(1.0, 1.0));
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
-float fbmNoise(vec2 p) {
+float fbm(vec2 p) {
     float total = 0.0;
-    float amplitude = 1.0;
-    for (int i = 0; i < FBM_OCTAVES; i++) {
-        total += amplitude * valueNoise(p);
+    float amp = 0.5;
+    for (int i = 0; i < 4; i++) {
+        total += noise(p) * amp;
         p *= 2.0;
-        amplitude *= 0.5;
+        amp *= 0.5;
     }
     return total;
 }
 
+// -----------------------------------------------------------------------------
+// Main
+// -----------------------------------------------------------------------------
 void main() {
-    vec2 fragCoord = vUV * uResolution;
-    vec2 uv = fragCoord / uResolution.xy;
-    vec2 screenPos = uv * 2.0 - 1.0;
-    screenPos.x *= uResolution.x / uResolution.y;
-
-    float cameraAngleH = PI * 0.5 + uRotY;
-    float cameraAngleV = CAMERA_ANGLE_V + uTiltX * 0.3;
-
-    vec3 cameraPos = vec3(
-        CAMERA_DIST * cos(cameraAngleH) * sin(cameraAngleV),
-        CAMERA_DIST * cos(cameraAngleV),
-        CAMERA_DIST * sin(cameraAngleH) * sin(cameraAngleV)
-    );
-
-    vec3 forward = normalize(-cameraPos);
-    vec3 right = normalize(cross(vec3(0.0, 1.0, -0.1), forward));
-    vec3 up = normalize(cross(forward, right));
-
-    vec3 rayDir = normalize(forward * FOV_FACTOR + right * screenPos.x + up * screenPos.y);
-
-    vec3 rayPos = cameraPos;
-    vec3 rayVel = rayDir;
-    vec3 finalColor = vec3(0.0);
-    float notCaptured = 1.0;
-
+    // UV centered at 0,0
+    vec2 uv = vUV * 2.0 - 1.0;
+    
+    // Camera Setup
+    // We orbit around 0,0,0 at distance 5.0
+    float camDist = 5.0;
+    
+    // Convert Euler angles to camera position
+    // uTiltX is pitch (up/down), uRotY is yaw (around Y)
+    float cy = camDist * sin(uTiltX);
+    float hDist = camDist * cos(uTiltX);
+    float cx = hDist * sin(uRotY);
+    float cz = hDist * cos(uRotY);
+    vec3 ro = vec3(cx, cy, cz);
+    
+    // Target is origin
+    vec3 ta = vec3(0.0);
+    vec3 fwd = normalize(ta - ro);
+    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
+    vec3 up = cross(fwd, right);
+    
+    // Ray Direction
+    vec3 rd = normalize(fwd * 2.0 + right * uv.x + up * uv.y);
+    
+    // Raymarching State
+    vec3 p = ro;
+    vec3 v = rd;
+    vec3 col = vec3(0.0);
+    float alpha = 0.0;
+    
+    bool hitHorizon = false;
+    
     for (int i = 0; i < MAX_STEPS; i++) {
-        vec3 toBH = -rayPos;
-        float dist = length(toBH);
-        float distSq = dist * dist;
-
-        float adaptiveStep = STEP_SIZE * mix(ADAPTIVE_NEAR, ADAPTIVE_FAR,
-                                              smoothstep(ADAPTIVE_INNER, ADAPTIVE_OUTER, dist));
-
-        rayPos += rayVel * adaptiveStep * notCaptured;
-        rayVel += normalize(toBH) * (GRAVITY_STRENGTH / distSq);
-
-        float distToHorizon = dist - EVENT_HORIZON_RADIUS;
-        notCaptured = smoothstep(0.0, 0.666, distToHorizon);
-
-        if (notCaptured < CAPTURE_THRESHOLD) break;
-
-        float diskRadius = length(toBH.xz);
-        float diskAngle = atan(toBH.x, toBH.z);
-        float rotAngle = diskAngle + uTime * DISK_ROTATION_SPEED;
-
-        vec2 diskUV = vec2(diskRadius * 8.0, rotAngle * 5.0);
-        float turbulence = fbmNoise(diskUV) * 0.5 + 0.5;
-        turbulence *= fbmNoise(diskUV * 2.3 + 7.0) * 0.4 + 0.6;
-
-        float doppler = 1.0 + cos(rotAngle) * DOPPLER_STRENGTH;
-
-        float distFromBH = dist - EVENT_HORIZON_RADIUS;
-        float t = clamp(pow(max(distFromBH, 0.0), 1.5), 0.0, 1.0);
-        vec3 diskColor = mix(INNER_DISK_COLOR, MID_DISK_COLOR, smoothstep(0.0, 0.4, t));
-        diskColor = mix(diskColor, OUTER_DISK_COLOR, smoothstep(0.3, 1.0, t));
-        diskColor *= turbulence * doppler;
-        diskColor *= DISK_INTENSITY / (0.001 + distFromBH * DISK_FALLOFF);
-
-        vec3 flatPos = rayPos * vec3(1.0, DISK_FLATTEN, 1.0);
-        float diskMask = smoothstep(0.0, 1.0, -sdfTorus(flatPos, vec2(DISK_TORUS_MAJOR, DISK_TORUS_MINOR)));
-
-        finalColor += max(vec3(0.0), diskColor * diskMask * notCaptured);
-        finalColor += GLOW_COLOR * (1.0 / distSq) * GLOW_INTENSITY * notCaptured;
-
-        float ringDist = abs(dist - PHOTON_SPHERE_RADIUS);
-        float ring = exp(-ringDist * ringDist / (PHOTON_RING_WIDTH * PHOTON_RING_WIDTH));
-        finalColor += PHOTON_RING_COLOR * ring * PHOTON_RING_INTENSITY * notCaptured;
+        float r = length(p);
+        
+        // 1. Event Horizon Hit
+        if (r < BH_RADIUS) {
+            hitHorizon = true;
+            break;
+        }
+        
+        // 2. Escape
+        if (r > 15.0) break;
+        
+        // 3. Gravity (Newtonian approx for visual bending)
+        // Force ~ 1/r^2 towards center
+        vec3 accel = -normalize(p) * (1.5 / (r * r));
+        v += accel * STEP_SIZE;
+        // v = normalize(v); // Keep speed constant (c)
+        
+        vec3 nextP = p + v * STEP_SIZE;
+        
+        // 4. Accretion Disk Intersection
+        // Check if we crossed the Y plane (approximate disk)
+        // We use a "thick" plane check or exact crossing
+        if (p.y * nextP.y < 0.0) {
+            // Exact intersection time t
+            float t = -p.y / (nextP.y - p.y);
+            vec3 intersect = mix(p, nextP, t);
+            float dist = length(intersect);
+            
+            if (dist > ACCRETION_INNER && dist < ACCRETION_OUTER) {
+                // We hit the disk!
+                float angle = atan(intersect.z, intersect.x);
+                
+                // Texture coordinates
+                float speed = 2.0 / (dist * dist); // Keplerian-ish
+                vec2 diskUV = vec2(dist * 2.0, angle * 3.0 + uTime * speed);
+                
+                // Noise pattern
+                float n = fbm(diskUV);
+                
+                // Radial fade edges
+                float fade = smoothstep(ACCRETION_INNER, ACCRETION_INNER + 0.5, dist) * 
+                             smoothstep(ACCRETION_OUTER, ACCRETION_OUTER - 1.0, dist);
+                
+                // Doppler beaming (fake)
+                // Left side (approaching) brighter, right side (receding) dimmer
+                // Assuming rotation is counter-clockwise around Y
+                // Velocity vector at (x,0,z) is (-z, 0, x)
+                vec3 diskVel = normalize(vec3(-intersect.z, 0.0, intersect.x));
+                // View vector is roughly -v (ray direction)
+                float doppler = dot(diskVel, -normalize(v)) * 0.5 + 0.5;
+                doppler = pow(doppler, 3.0) * 2.0 + 0.2;
+                
+                // Color mixing
+                vec3 diskCol = mix(COLOR_OUTER, COLOR_INNER, n * fade);
+                diskCol *= doppler * fade * 2.5; // Intensity
+                
+                // Accumulate (additive blending for gas)
+                // Since this is a single plane intersection, we add it once.
+                // But wait, with bending light, we might hit the disk multiple times!
+                // (Front and back).
+                // So we accumulate.
+                col += diskCol * 0.4;
+                alpha += fade * 0.6;
+            }
+        }
+        
+        p = nextP;
     }
-
-    // Alpha: opaque for captured rays (black hole), proportional to light for disk/glow
-    float alpha = min(1.0, length(finalColor) * 2.0 + (1.0 - notCaptured));
-    finalColor = pow(max(finalColor, vec3(0.0)), GAMMA);
-    gl_FragColor = vec4(finalColor * alpha, alpha);
+    
+    // Final Composition
+    if (hitHorizon) {
+        // Black hole core
+        // If we have foreground disk (accumulated before hit), we see it.
+        // The core itself is black (0,0,0).
+        // Alpha should be 1.0 to obscure background stars.
+        alpha = 1.0;
+        // col is just whatever disk we passed through *in front* of the horizon.
+    } else {
+        // Space
+        // Add a faint glow around the black hole
+        // Based on impact parameter? Or just distance from center in screen space?
+        // Let's use the accumulated alpha.
+        alpha = clamp(alpha, 0.0, 1.0);
+    }
+    
+    // Premultiplied alpha output
+    // col is already accumulated light (premultiplied intensity)
+    gl_FragColor = vec4(col, alpha);
 }
 `;

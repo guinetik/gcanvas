@@ -263,7 +263,7 @@ export const CONFIG = {
     jetLength: 120,
     jetWidth: 8,
     jetAlpha: 0.15,
-    shaderSize: 280,           // WebGL render region size in pixels (before zoom)
+    shaderSize: 160,           // WebGL render region size in pixels (before zoom)
   },
   visual: {
     armHue: 210,

@@ -512,7 +512,7 @@ export class GalaxyPlayground extends Game {
     const screenX = cx + p.x * this.zoom;
     const screenY = cy + p.y * this.zoom;
 
-    const regionSize = Math.round(CONFIG.blackHole.shaderSize * p.scale * this.zoom);
+    const regionSize = Math.max(1, Math.round(CONFIG.blackHole.shaderSize * p.scale * this.zoom));
     this.blackHoleRenderer.resize(regionSize);
 
     this.blackHoleRenderer.render({
@@ -522,18 +522,8 @@ export class GalaxyPlayground extends Game {
     });
 
     ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    this.blackHoleRenderer.compositeOnto(ctx, screenX, screenY);
-    ctx.restore();
-
-    // Opaque black center
-    ctx.save();
     ctx.globalCompositeOperation = "source-over";
-    const holeRadius = CONFIG.blackHole.radius * p.scale * this.zoom;
-    ctx.beginPath();
-    ctx.arc(screenX, screenY, holeRadius, 0, Math.PI * 2);
-    ctx.fillStyle = "#000";
-    ctx.fill();
+    this.blackHoleRenderer.compositeOnto(ctx, screenX, screenY);
     ctx.restore();
   }
 

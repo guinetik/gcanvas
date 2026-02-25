@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Etch</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+
+  <!-- SEO:injected -->
+  <meta name="description" content="Etch - Etch — Barnsley fern rendered as a stipple drawing. Four affine transforms + randomness = a fern Density map &rarr; gamma correction &rarr; stipple..." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://gcanvas.guinetik.com/etch.html" />
+  <meta property="og:title" content="Etch" />
+  <meta property="og:description" content="Etch - Etch — Barnsley fern rendered as a stipple drawing. Four affine transforms + randomness = a fern Density map &rarr; gamma correction &rarr; stipple..." />
+  <meta property="og:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Etch" />
+  <meta name="twitter:description" content="Etch - Etch — Barnsley fern rendered as a stipple drawing. Four affine transforms + randomness = a fern Density map &rarr; gamma correction &rarr; stipple..." />
+  <meta name="twitter:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:creator" content="@guinetik" />
+  <link rel="canonical" href="https://gcanvas.guinetik.com/etch.html" />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-1GHJD0LM4Z"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-1GHJD0LM4Z');
+  </script>
+</head>
+<body>
+  <div id="info">
+    <strong>Etch</strong> — Barnsley fern rendered as a stipple drawing.<br/>
+    <span style="color:#CCC">
+      <li>Four affine transforms + randomness = a fern</li>
+      <li>Density map &rarr; gamma correction &rarr; stipple dithering</li>
+      <li>Parameters drift slowly &mdash; the fern breathes</li>
+      <li>Click to regrow, Space to freeze</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/etch.js"></script>
+</body>
+</html>
