@@ -28,6 +28,7 @@ import {
 } from "./galaxy/galaxy.ui.js";
 import { createTheme } from "../../src/game/ui/theme.js";
 import { WebGLParticleRenderer } from "../../src/webgl/webgl-particle-renderer.js";
+import { WebGLNebulaRenderer } from "../../src/webgl/webgl-nebula-renderer.js";
 
 const TAU = Math.PI * 2;
 
@@ -60,6 +61,7 @@ export class GalaxyPlayground extends Game {
     this._initGestures();
     this._initStars();
     this._initWebGL();
+    this._updateDensityMap();
     this._buildInfoPanel();
     this._buildUI();
     this._buildToggleButton();
@@ -146,10 +148,29 @@ export class GalaxyPlayground extends Game {
       shape: "glow",
       blendMode: "additive",
     });
+
+    this._nebulaSeed = Math.random();
+    this.nebulaRenderer = new WebGLNebulaRenderer({
+      width: this.width,
+      height: this.height,
+      nebulaIntensity: CONFIG.nebula.intensity,
+    });
+    this.nebulaRenderer.init();
   }
 
   _regenerate() {
     this._initStars();
+    this._nebulaSeed = Math.random();
+    this._updateDensityMap();
+  }
+
+  _updateDensityMap() {
+    if (this.nebulaRenderer && this.nebulaRenderer.isAvailable() && this.stars) {
+      this.nebulaRenderer.updateDensityMap(
+        this.stars,
+        this._galaxyParams.galaxyRadius || 350
+      );
+    }
   }
 
   _buildInfoPanel() {
@@ -267,7 +288,7 @@ export class GalaxyPlayground extends Game {
     ctx.fillRect(0, 0, w, h);
 
     this._drawGalacticHaze(ctx, cx, cy);
-    this._drawNebulaGlow(ctx, cx, cy);
+    this._drawNebula(ctx, cx, cy);
     this._drawStars(ctx, cx, cy);
     this._drawBlackHole(ctx, cx, cy);
 
@@ -280,12 +301,10 @@ export class GalaxyPlayground extends Game {
     const screenX = cx + p.x * this.zoom;
     const screenY = cy + p.y * this.zoom;
 
-    const tilt = Math.cos(this.camera.rotationX);
-    const hazeRadius = (this._galaxyParams.galaxyRadius || 350) * p.scale * this.zoom * 0.9;
+    const hazeRadius = (this._galaxyParams.galaxyRadius || 350) * p.scale * this.zoom * 0.4;
 
     ctx.save();
     ctx.translate(screenX, screenY);
-    ctx.scale(1, Math.max(0.15, Math.abs(tilt)));
 
     const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, hazeRadius);
     gradient.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue}, 70%, 50%, 0.1)`);
@@ -298,6 +317,42 @@ export class GalaxyPlayground extends Game {
     ctx.fillStyle = gradient;
     ctx.fill();
     ctx.restore();
+  }
+
+  _drawNebula(ctx, cx, cy) {
+    if (!CONFIG.nebula.enabled) return;
+
+    if (this.nebulaRenderer && this.nebulaRenderer.isAvailable()) {
+      const p = this.camera.project(0, 0, 0);
+      const screenX = cx + p.x * this.zoom;
+      const screenY = cy + p.y * this.zoom;
+
+      // Render fullscreen — the shader does its own inverse perspective
+      // projection matching Camera3D exactly, so no ctx.scale needed
+      this.nebulaRenderer.resize(this.width, this.height);
+      this.nebulaRenderer.render({
+        time: this.time,
+        centerX: screenX,
+        centerY: screenY,
+        perspective: CONFIG.camera.perspective,
+        sinTilt: Math.sin(this.camera.rotationX),
+        cosTilt: Math.cos(this.camera.rotationX),
+        sinRotY: Math.sin(this.camera.rotationY),
+        cosRotY: Math.cos(this.camera.rotationY),
+        galaxyRadius: this._galaxyParams.galaxyRadius || 350,
+        zoom: this.zoom,
+        seed: this._nebulaSeed,
+        galaxyRotation: this.galaxyRotation,
+        axisRatio: this._galaxyParams.axisRatio ?? 1.0,
+      });
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      this.nebulaRenderer.compositeOnto(ctx, 0, 0);
+      ctx.restore();
+    } else {
+      this._drawNebulaGlow(ctx, cx, cy);
+    }
   }
 
   _drawNebulaGlow(ctx, cx, cy) {
@@ -366,8 +421,11 @@ export class GalaxyPlayground extends Game {
 
       const twinkle = star.layer === "dust" ? 1.0 :
         0.7 + 0.3 * Math.sin(this.time * 2.5 + star.twinklePhase);
-      const alpha = (star.alpha || star.brightness) * twinkle * Math.min(1, scale * 1.5);
-      const size = Math.max(0.3, star.size * scale);
+      const baseAlpha = star.layer === "dust"
+        ? Math.max(0.3, star.alpha || star.brightness)
+        : (star.alpha || star.brightness);
+      const alpha = Math.max(0.15, baseAlpha * twinkle * Math.min(1, scale * 1.5));
+      const size = Math.max(1.5, star.size * scale * 1.8);
 
       // Convert hue to RGB
       const lightness = 50 + star.brightness * 40;
@@ -448,12 +506,23 @@ export class GalaxyPlayground extends Game {
 
     ctx.globalCompositeOperation = "lighter";
 
-    const diskGradient = ctx.createRadialGradient(0, 0, holeRadius, 0, 0, diskRadius);
-    diskGradient.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue + 30}, 100%, 80%, 0.9)`);
-    diskGradient.addColorStop(0.15, `hsla(${CONFIG.blackHole.accretionHue + 20}, 100%, 70%, 0.8)`);
-    diskGradient.addColorStop(0.3, `hsla(${CONFIG.blackHole.accretionHue}, 100%, 60%, 0.6)`);
-    diskGradient.addColorStop(0.5, `hsla(${CONFIG.blackHole.accretionHue - 10}, 90%, 50%, 0.3)`);
-    diskGradient.addColorStop(0.75, `hsla(${CONFIG.blackHole.accretionHue - 20}, 80%, 40%, 0.15)`);
+    // Spherical glow around black hole (does NOT tilt with camera)
+    const glowRadius = holeRadius * 3.5;
+    const glowGradient = ctx.createRadialGradient(0, 0, holeRadius, 0, 0, glowRadius);
+    glowGradient.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue + 30}, 100%, 80%, 0.7)`);
+    glowGradient.addColorStop(0.3, `hsla(${CONFIG.blackHole.accretionHue + 10}, 90%, 60%, 0.3)`);
+    glowGradient.addColorStop(0.7, `hsla(${CONFIG.blackHole.accretionHue}, 70%, 45%, 0.08)`);
+    glowGradient.addColorStop(1, "transparent");
+    ctx.beginPath();
+    ctx.arc(0, 0, glowRadius, 0, TAU);
+    ctx.fillStyle = glowGradient;
+    ctx.fill();
+
+    // Accretion disk (tilts with camera)
+    const diskGradient = ctx.createRadialGradient(0, 0, holeRadius * 1.2, 0, 0, diskRadius);
+    diskGradient.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue + 20}, 100%, 70%, 0.6)`);
+    diskGradient.addColorStop(0.3, `hsla(${CONFIG.blackHole.accretionHue}, 100%, 55%, 0.4)`);
+    diskGradient.addColorStop(0.6, `hsla(${CONFIG.blackHole.accretionHue - 15}, 80%, 40%, 0.15)`);
     diskGradient.addColorStop(1, "transparent");
 
     ctx.scale(1, Math.max(0.1, Math.abs(tilt)));
@@ -538,6 +607,9 @@ export class GalaxyPlayground extends Game {
   onResize() {
     if (this.glRenderer) {
       this.glRenderer.resize(this.width, this.height);
+    }
+    if (this.nebulaRenderer) {
+      this.nebulaRenderer.resize(this.width, this.height);
     }
 
     if (this.panel) {

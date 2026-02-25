@@ -40,21 +40,21 @@ function layerProperties(layer) {
     switch (layer) {
         case "dust":
             return {
-                size: 0.3 + Math.random() * 1.0,
-                brightness: 0.03 + Math.random() * 0.12,
-                alpha: 0.05 + Math.random() * 0.15,
+                size: 0.8 + Math.random() * 1.5,
+                brightness: 0.08 + Math.random() * 0.16,
+                alpha: 0.12 + Math.random() * 0.2,
             };
         case "bright":
             return {
-                size: 3 + Math.random() * 5,
-                brightness: 0.7 + Math.random() * 0.3,
-                alpha: 0.6 + Math.random() * 0.4,
+                size: 4 + Math.random() * 6,
+                brightness: 0.64 + Math.random() * 0.16,
+                alpha: 0.56 + Math.random() * 0.24,
             };
         default: // "star"
             return {
-                size: 0.8 + Math.random() * 2.0,
-                brightness: 0.3 + Math.random() * 0.5,
-                alpha: 0.3 + Math.random() * 0.5,
+                size: 1.5 + Math.random() * 3.0,
+                brightness: 0.32 + Math.random() * 0.4,
+                alpha: 0.4 + Math.random() * 0.4,
             };
     }
 }
@@ -133,6 +133,8 @@ export function generateGalaxy(params) {
       return generateSpiral(params);
     case "barred":
       return generateBarredSpiral(params);
+    case "lenticular":
+      return generateLenticular(params);
     case "elliptical":
       return generateElliptical(params);
     case "irregular":
@@ -231,6 +233,33 @@ function generateSpiral(p) {
       }
     }
     armPoints.push(armSamples);
+  }
+
+  // Bulge stars (concentrated central population)
+  const bulgeRadius = p.bulgeRadius || 0;
+  if (bulgeRadius > 0) {
+    const bulgeCount = Math.floor(totalStars * 0.15);
+    for (let i = 0; i < bulgeCount; i++) {
+      const r = Math.pow(Math.random(), 0.3) * bulgeRadius;
+      const theta = Math.random() * TAU;
+      const y = (Math.random() - 0.5) * bulgeRadius * 0.4;
+
+      const layer = assignLayer(Math.random());
+      const props = layerProperties(layer);
+
+      stars.push({
+        radius: r,
+        angle: theta,
+        y,
+        rotationSpeed: computeRotationSpeed(r) * 0.5,
+        hue: pickHue(layer, 0.1, false),
+        brightness: props.brightness,
+        size: props.size,
+        alpha: props.alpha,
+        layer,
+        twinklePhase: Math.random() * TAU,
+      });
+    }
   }
 
   // Field stars
@@ -355,6 +384,33 @@ function generateBarredSpiral(p) {
     armPoints.push(armSamples);
   }
 
+  // Bulge stars (concentrated spheroid beyond bar region)
+  const bulgeRadius = p.bulgeRadius || 0;
+  if (bulgeRadius > 0) {
+    const bulgeCount = Math.floor(totalStars * 0.1);
+    for (let i = 0; i < bulgeCount; i++) {
+      const r = Math.pow(Math.random(), 0.3) * bulgeRadius;
+      const theta = Math.random() * TAU;
+      const y = (Math.random() - 0.5) * bulgeRadius * 0.4;
+
+      const layer = assignLayer(Math.random());
+      const props = layerProperties(layer);
+
+      stars.push({
+        radius: r,
+        angle: theta,
+        y,
+        rotationSpeed: computeRotationSpeed(r) * 0.5,
+        hue: pickHue(layer, 0.1, false),
+        brightness: props.brightness,
+        size: props.size,
+        alpha: props.alpha,
+        layer,
+        twinklePhase: Math.random() * TAU,
+      });
+    }
+  }
+
   // Field stars
   const fieldStars = Math.floor((totalStars - barStars) * 0.1);
   for (let i = 0; i < fieldStars; i++) {
@@ -362,6 +418,78 @@ function generateBarredSpiral(p) {
   }
 
   stars._armPoints = armPoints;
+  return stars;
+}
+
+/**
+ * Generates stars for a lenticular (S0) galaxy.
+ * Smooth disk + prominent central bulge, no spiral arms.
+ *
+ * @param {Object} p - Parameters
+ * @returns {Object[]} Array of star objects
+ */
+function generateLenticular(p) {
+  const stars = [];
+  const galaxyRadius = p.galaxyRadius || 300;
+  const bulgeRadius = p.bulgeRadius || 80;
+  const bulgeFraction = p.bulgeFraction || 0.4;
+  const diskThickness = p.diskThickness || 4;
+  const totalStars = p.starCount || 28000;
+
+  // Bulge stars — de Vaucouleurs-like concentrated spheroid, warm old population
+  const bulgeCount = Math.floor(totalStars * bulgeFraction);
+  for (let i = 0; i < bulgeCount; i++) {
+    const r = Math.pow(Math.random(), 0.3) * bulgeRadius;
+    const theta = Math.random() * TAU;
+    const y = (Math.random() - 0.5) * bulgeRadius * 0.6;
+
+    const layer = assignLayer(Math.random());
+    const props = layerProperties(layer);
+
+    stars.push({
+      radius: r,
+      angle: theta,
+      y,
+      rotationSpeed: computeRotationSpeed(r) * 0.5,
+      hue: pickHue(layer, 0.1, false),
+      brightness: props.brightness,
+      size: props.size,
+      alpha: props.alpha,
+      layer,
+      twinklePhase: Math.random() * TAU,
+    });
+  }
+
+  // Disk stars — exponential radial profile, very thin, no arm structure
+  const diskCount = totalStars - bulgeCount;
+  const scaleLength = galaxyRadius / 3;
+  for (let i = 0; i < diskCount; i++) {
+    const u = Math.random();
+    const r = -Math.log(1 - u * 0.95) * scaleLength;
+    if (r > galaxyRadius) { i--; continue; }
+
+    const theta = Math.random() * TAU;
+    const distFactor = r / galaxyRadius;
+    const y = (Math.random() - 0.5) * diskThickness * (1 - distFactor * 0.5);
+
+    const layer = assignLayer(Math.random());
+    const props = layerProperties(layer);
+
+    stars.push({
+      radius: r,
+      angle: theta,
+      y,
+      rotationSpeed: computeRotationSpeed(r),
+      hue: pickHue(layer, distFactor * 0.3, false),
+      brightness: props.brightness,
+      size: props.size,
+      alpha: props.alpha,
+      layer,
+      twinklePhase: Math.random() * TAU,
+    });
+  }
+
+  stars._armPoints = [];
   return stars;
 }
 

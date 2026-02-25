@@ -205,9 +205,9 @@ export function createControlPanel(game, callbacks) {
   const structureSection = panel.addSection("Structure", { expanded: false });
   controls.starCount = new Stepper(game, {
     label: "STAR COUNT",
-    value: galaxyParams.starCount || 15000,
+    value: galaxyParams.starCount || 30000,
     min: 2000,
-    max: 30000,
+    max: 60000,
     step: 1000,
     buttonSize: 32,
     valueWidth: 60,
