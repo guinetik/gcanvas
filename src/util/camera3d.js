@@ -314,6 +314,8 @@ export class Camera3D {
    * Enable mouse/touch drag rotation on a canvas
    * @param {HTMLCanvasElement} canvas - The canvas element to attach controls to
    * @param {object} [options] - Control options
+   * @param {Game} [options.game] - Game instance; when set, camera skips drag if game._uiHandledInput is true
+   * @param {function(number, number): boolean} [options.isOverPanel] - (clientX, clientY) => true if pointer is over a UI panel; skips starting drag when over panel
    * @param {boolean} [options.invertX=false] - Invert horizontal rotation
    * @param {boolean} [options.invertY=false] - Invert vertical rotation
    * @param {string} [options.horizontalAxis='rotationY'] - Rotation property controlled by horizontal drag
@@ -327,6 +329,7 @@ export class Camera3D {
 
     this._canvas = canvas;
     this._game = options.game || null;
+    this._isOverPanel = options.isOverPanel || null;
     const invertX = options.invertX ? -1 : 1;
     const invertY = options.invertY ? -1 : 1;
     this._hAxis = options.horizontalAxis || 'rotationY';
@@ -337,6 +340,8 @@ export class Camera3D {
       mousedown: (e) => {
         // Skip camera drag if a UI element handled this pointer event
         if (this._game?._uiHandledInput) return;
+        // Skip if pointer is over panel (dual-layer guard for demos with side panels)
+        if (this._isOverPanel?.(e.clientX, e.clientY)) return;
         this._isDragging = true;
         this._lastMouseX = e.clientX;
         this._lastMouseY = e.clientY;
@@ -400,6 +405,7 @@ export class Camera3D {
 
       touchstart: (e) => {
         if (this._game?._uiHandledInput) return;
+        if (e.touches.length === 1 && this._isOverPanel?.(e.touches[0].clientX, e.touches[0].clientY)) return;
         if (e.touches.length === 1) {
           this._isDragging = true;
           this._lastMouseX = e.touches[0].clientX;

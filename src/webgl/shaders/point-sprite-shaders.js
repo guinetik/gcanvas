@@ -82,14 +82,23 @@ void main() {
         discard;
     }
 
-    // Radial falloff for glow effect
-    float glow = 1.0 - (dist * 2.0);
-    glow = glow * glow;  // Quadratic falloff
+    // Sharp bright core (white-hot center)
+    float core = smoothstep(0.18, 0.0, dist);
 
-    float alpha = vColor.a * glow;
-    vec3 color = vColor.rgb * (0.5 + glow * 0.5);  // Brighten center
+    // Soft halo with moderate falloff
+    float halo = exp(-dist * dist * 18.0);
 
-    gl_FragColor = vec4(color, alpha);
+    // Anti-aliased edge
+    float edge = smoothstep(0.5, 0.4, dist);
+
+    // Combine: core dominates center, halo provides glow
+    float intensity = max(core, halo * 0.6) * edge;
+
+    // Core shifts toward white, halo carries the star color
+    vec3 color = mix(vColor.rgb, vec3(1.0), core * 0.6);
+    float alpha = vColor.a * intensity;
+
+    gl_FragColor = vec4(color * alpha, alpha);
 }
 `;
 
