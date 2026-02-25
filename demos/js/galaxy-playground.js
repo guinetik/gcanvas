@@ -27,6 +27,7 @@ import {
   buildParamSliders,
 } from "./galaxy/galaxy.ui.js";
 import { createTheme } from "../../src/game/ui/theme.js";
+import { WebGLParticleRenderer } from "../../src/webgl/webgl-particle-renderer.js";
 
 const TAU = Math.PI * 2;
 
@@ -58,6 +59,7 @@ export class GalaxyPlayground extends Game {
     this._initCamera();
     this._initGestures();
     this._initStars();
+    this._initWebGL();
     this._buildInfoPanel();
     this._buildUI();
     this._buildToggleButton();
@@ -129,6 +131,16 @@ export class GalaxyPlayground extends Game {
 
   _initStars() {
     this.stars = generateGalaxy(this._galaxyParams);
+  }
+
+  _initWebGL() {
+    const maxParticles = 30000;
+    this.glRenderer = new WebGLParticleRenderer(maxParticles, {
+      width: this.width,
+      height: this.height,
+      shape: "glow",
+      blendMode: "additive",
+    });
   }
 
   _regenerate() {
@@ -283,6 +295,55 @@ export class GalaxyPlayground extends Game {
   }
 
   _drawStars(ctx, cx, cy) {
+    if (!this.glRenderer || !this.glRenderer.isAvailable()) {
+      this._drawStarsCanvas2D(ctx, cx, cy);
+      return;
+    }
+
+    this.glRenderer.resize(this.width, this.height);
+    this.glRenderer.clear();
+
+    const projected = [];
+
+    for (const star of this.stars) {
+      const x = Math.cos(star.angle) * star.radius;
+      const z = Math.sin(star.angle) * star.radius;
+
+      const p = this.camera.project(x, star.y, z);
+      if (p.scale < 0.02) continue;
+
+      const screenX = cx + p.x * this.zoom;
+      const screenY = cy + p.y * this.zoom;
+      const scale = p.scale * this.zoom;
+
+      const twinkle = star.layer === "dust" ? 1.0 :
+        0.7 + 0.3 * Math.sin(this.time * 2.5 + star.twinklePhase);
+      const alpha = (star.alpha || star.brightness) * twinkle * Math.min(1, scale * 1.5);
+      const size = Math.max(0.3, star.size * scale);
+
+      // Convert hue to RGB
+      const lightness = 50 + star.brightness * 40;
+      const saturation = star.layer === "dust" ? 40 : 60;
+      const [r, g, b] = Painter.colors.hslToRgb(star.hue, saturation, lightness);
+
+      projected.push({
+        x: screenX,
+        y: screenY,
+        size,
+        color: { r, g, b, a: alpha },
+        depth: p.z,
+      });
+    }
+
+    // Sort back-to-front
+    projected.sort((a, b) => b.depth - a.depth);
+
+    const count = this.glRenderer.updateParticles(projected);
+    this.glRenderer.render(count);
+    this.glRenderer.compositeOnto(ctx, 0, 0);
+  }
+
+  _drawStarsCanvas2D(ctx, cx, cy) {
     const projected = [];
 
     for (const star of this.stars) {
@@ -388,6 +449,10 @@ export class GalaxyPlayground extends Game {
   }
 
   onResize() {
+    if (this.glRenderer) {
+      this.glRenderer.resize(this.width, this.height);
+    }
+
     if (this.panel) {
       layoutPanel(this.panel, this.width, this.height);
     }
