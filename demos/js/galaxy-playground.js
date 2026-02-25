@@ -462,7 +462,6 @@ export class GalaxyPlayground extends Game {
     ctx.globalCompositeOperation = "source-over";
     ctx.save();
     ctx.translate(screenX, screenY);
-    ctx.scale(1, Math.max(0.3, Math.abs(tilt)));
 
     ctx.beginPath();
     ctx.arc(0, 0, holeRadius, 0, TAU);
@@ -478,7 +477,6 @@ export class GalaxyPlayground extends Game {
     ctx.globalCompositeOperation = "lighter";
     ctx.save();
     ctx.translate(screenX, screenY);
-    ctx.scale(1, Math.max(0.3, Math.abs(tilt)));
 
     const lensRing = ctx.createRadialGradient(0, 0, holeRadius * 0.9, 0, 0, holeRadius * 1.5);
     lensRing.addColorStop(0, "transparent");
