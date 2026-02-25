@@ -60,7 +60,24 @@ function layerProperties(layer) {
 }
 
 /**
+ * Realistic stellar hues based on spectral classes (blackbody sequence).
+ * Stars go red → orange → yellow → white → blue-white → blue. No green.
+ * Each entry: [hue, weight-inner, weight-outer]
+ *   weight-inner: likelihood near core (old population)
+ *   weight-outer: likelihood in arms (young population)
+ */
+const STELLAR_HUES = [
+    { hue: 10, spread: 8, wInner: 0.35, wOuter: 0.05 },   // M — red dwarfs
+    { hue: 25, spread: 8, wInner: 0.30, wOuter: 0.10 },   // K — orange
+    { hue: 42, spread: 6, wInner: 0.25, wOuter: 0.15 },   // G — yellow (Sun-like)
+    { hue: 55, spread: 5, wInner: 0.08, wOuter: 0.20 },   // F — yellow-white
+    { hue: 210, spread: 15, wInner: 0.02, wOuter: 0.35 },  // A/B — blue-white
+    { hue: 225, spread: 10, wInner: 0.00, wOuter: 0.15 },  // O — hot blue
+];
+
+/**
  * Picks a hue based on layer, position, and optional HII region flag.
+ * Uses weighted random selection from realistic spectral classes.
  */
 function pickHue(layer, distFactor, isHII) {
     const v = CONFIG.visual;
@@ -70,10 +87,20 @@ function pickHue(layer, distFactor, isHII) {
     if (layer === "dust") {
         return v.dustHueRange[0] + Math.random() * (v.dustHueRange[1] - v.dustHueRange[0]);
     }
-    // Blend from core hue to arm hue based on distance
-    const coreHue = v.coreHueRange[0] + Math.random() * (v.coreHueRange[1] - v.coreHueRange[0]);
-    const armHue = v.armHueRange[0] + Math.random() * (v.armHueRange[1] - v.armHueRange[0]);
-    return coreHue + (armHue - coreHue) * Math.pow(distFactor, 0.6);
+    // Weighted selection from spectral classes based on radial position
+    const d = Math.pow(distFactor, 0.6);
+    let totalWeight = 0;
+    for (const s of STELLAR_HUES) {
+        totalWeight += s.wInner * (1 - d) + s.wOuter * d;
+    }
+    let roll = Math.random() * totalWeight;
+    for (const s of STELLAR_HUES) {
+        roll -= s.wInner * (1 - d) + s.wOuter * d;
+        if (roll <= 0) {
+            return s.hue + (Math.random() - 0.5) * s.spread;
+        }
+    }
+    return 42; // fallback: Sun-like yellow
 }
 
 /**
