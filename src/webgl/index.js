@@ -13,6 +13,7 @@ export { WebGLCliffordRenderer } from "./webgl-clifford-renderer.js";
 export { WebGLFBO } from "./webgl-fbo.js";
 export { WebGLAttractorPipeline } from "./webgl-attractor-pipeline.js";
 export { WebGLNebulaRenderer } from "./webgl-nebula-renderer.js";
+export { WebGLBlackHoleRenderer } from "./webgl-blackhole-renderer.js";
 export { SPHERE_SHADERS } from "./shaders/sphere-shaders.js";
 export * from "./shaders/point-sprite-shaders.js";
 export * from "./shaders/dejong-point-shaders.js";

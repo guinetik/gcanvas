@@ -258,11 +258,12 @@ export const CONFIG = {
   },
   blackHole: {
     radius: 12,
-    accretionDiskRadius: 70,   // was 50
+    accretionDiskRadius: 70,
     accretionHue: 30,
     jetLength: 120,
     jetWidth: 8,
     jetAlpha: 0.15,
+    shaderSize: 280,           // WebGL render region size in pixels (before zoom)
   },
   visual: {
     armHue: 210,
