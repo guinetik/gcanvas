@@ -18,6 +18,7 @@ export const MANIFOLD_PRESETS = {
     sigma: 1.2,
     k: 5.0,
     omega: 3.0,
+    speed: 0.3,
     vx: 0.3,
     vz: 0.2,
     numPackets: 3,
@@ -67,12 +68,30 @@ export const MANIFOLD_PRESETS = {
   },
 };
 
+/** Surface geometry presets with default parameters. */
+export const SURFACE_PRESETS = {
+  flat: {
+    label: "Flat",
+  },
+  saddle: {
+    label: "Saddle",
+    curvature: 5.0,
+  },
+  torusRidge: {
+    label: "Torus Ridge",
+    ringRadius: 5.0,
+    ringWidth: 1.5,
+    ringAmplitude: 3.0,
+  },
+};
+
 /** Per-preset parameter definitions for dynamic sliders. */
 export const PRESET_PARAMS = {
   superposition: [
     { key: "sigma", label: "SIGMA", default: 1.2, min: 0.3, max: 3.0, step: 0.1 },
     { key: "k", label: "K", default: 5.0, min: 1.0, max: 12.0, step: 0.5 },
     { key: "omega", label: "OMEGA", default: 3.0, min: 0.5, max: 8.0, step: 0.5 },
+    { key: "speed", label: "SPEED", default: 0.3, min: 0.1, max: 2.0, step: 0.05 },
     { key: "vx", label: "VELOCITY X", default: 0.3, min: -1.0, max: 1.0, step: 0.05 },
     { key: "vz", label: "VELOCITY Z", default: 0.2, min: -1.0, max: 1.0, step: 0.05 },
   ],
@@ -103,6 +122,19 @@ export const PRESET_PARAMS = {
   harmonic: [
     { key: "sigma", label: "SIGMA", default: 1.5, min: 0.5, max: 3.0, step: 0.1 },
     { key: "omega", label: "OMEGA", default: 2.0, min: 0.5, max: 8.0, step: 0.5 },
+  ],
+};
+
+/** Per-surface-preset parameter definitions for dynamic sliders. */
+export const SURFACE_PARAMS = {
+  flat: [],
+  saddle: [
+    { key: "curvature", label: "CURVATURE", default: 5.0, min: 0.5, max: 12.0, step: 0.5 },
+  ],
+  torusRidge: [
+    { key: "ringRadius", label: "RING RADIUS", default: 5.0, min: 2.0, max: 8.0, step: 0.5 },
+    { key: "ringWidth", label: "RING WIDTH", default: 1.5, min: 0.5, max: 3.0, step: 0.1 },
+    { key: "ringAmplitude", label: "RING AMP", default: 3.0, min: 0.5, max: 6.0, step: 0.5 },
   ],
 };
 
@@ -140,6 +172,14 @@ export const CONFIG = {
       { stop: 0.6, color: [0, 180, 180] },     // cyan
       { stop: 0.8, color: [0, 255, 200] },     // bright cyan-green
       { stop: 1.0, color: [80, 255, 120] },    // neon green
+    ],
+    // Purple/indigo palette for surface geometry (spacetime)
+    surfaceGradient: [
+      { stop: 0.0, color: [8, 4, 20] },        // deep indigo
+      { stop: 0.25, color: [30, 10, 60] },      // dark purple
+      { stop: 0.5, color: [60, 20, 120] },      // purple
+      { stop: 0.75, color: [120, 50, 180] },    // violet
+      { stop: 1.0, color: [180, 100, 255] },    // bright lavender
     ],
     wireColor: "rgba(0, 255, 200, 0.25)",
     background: "#000810",

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galaxy Playground</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+
+  <meta name="description" content="Galaxy Playground — Interactive galaxy visualization with Hubble types: Spiral, Barred, Elliptical, Irregular. Tune parameters and regenerate." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://gcanvas.guinetik.com/galaxy-playground.html" />
+  <meta property="og:title" content="Galaxy Playground" />
+  <meta property="og:description" content="Interactive galaxy visualization with Hubble classification types. Tune parameters and regenerate." />
+  <meta property="og:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Galaxy Playground" />
+  <meta name="twitter:description" content="Interactive galaxy visualization with Hubble classification types." />
+  <meta name="twitter:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <link rel="canonical" href="https://gcanvas.guinetik.com/galaxy-playground.html" />
+
+  <!-- SEO:injected -->
+  <meta name="description" content="Galaxy Playground - Galaxy Playground — Interactive galaxy visualization with Hubble classification. Drag to tilt, click to pause Use the panel to switch..." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://gcanvas.guinetik.com/galaxy-playground.html" />
+  <meta property="og:title" content="Galaxy Playground" />
+  <meta property="og:description" content="Galaxy Playground - Galaxy Playground — Interactive galaxy visualization with Hubble classification. Drag to tilt, click to pause Use the panel to switch..." />
+  <meta property="og:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Galaxy Playground" />
+  <meta name="twitter:description" content="Galaxy Playground - Galaxy Playground — Interactive galaxy visualization with Hubble classification. Drag to tilt, click to pause Use the panel to switch..." />
+  <meta name="twitter:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:creator" content="@guinetik" />
+  <link rel="canonical" href="https://gcanvas.guinetik.com/galaxy-playground.html" />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-1GHJD0LM4Z"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-1GHJD0LM4Z');
+  </script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Galaxy Playground</strong> — Interactive galaxy visualization with Hubble classification.<br />
+    <span style="color:#CCC">
+      <li>Drag to tilt, click to pause</li>
+      <li>Use the panel to switch galaxy types and tune parameters</li>
+      <li>Regenerate to apply changes</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { GalaxyPlayground } from "./js/galaxy-playground.js";
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new GalaxyPlayground(canvas);
+      game.enablePauseOnBlur(true);
+      game.setFPS(60);
+      game.start();
+    });
+  </script>
+</body>
+
+</html>

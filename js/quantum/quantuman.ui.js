@@ -25,7 +25,7 @@ import {
   Stepper,
 } from "/gcanvas.es.min.js";
 import { StateMachine } from "/gcanvas.es.min.js";
-import { CONFIG, MANIFOLD_PRESETS, PRESET_PARAMS } from "./quantuman.config.js";
+import { CONFIG, MANIFOLD_PRESETS, PRESET_PARAMS, SURFACE_PRESETS, SURFACE_PARAMS } from "./quantuman.config.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INFO PANEL
@@ -40,44 +40,58 @@ import { CONFIG, MANIFOLD_PRESETS, PRESET_PARAMS } from "./quantuman.config.js";
  * @returns {{ panel: Scene, statsText: Text, updateStats: (text: string) => void }}
  */
 export function createInfoPanel(game, options = {}) {
-  const panel = new Scene(game, { x: 0, y: 0, origin: "center" });
+  const panel = new Scene(game, { x: 0, y: 0 });
   applyAnchor(panel, {
-    anchor: Position.TOP_CENTER,
-    anchorOffsetY: Screen.isMobile ? 70 : 150,
+    anchor: Position.TOP_LEFT,
+    anchorOffsetX: Screen.responsive(15, 30, 40),
+    anchorOffsetY: Screen.responsive(60, 80, 90),
   });
 
   const titleText = new Text(game, "Quantum Manifold", {
-    font: "bold 16px monospace",
-    color: "#0ff",
-    align: "center",
+    font: `bold ${Screen.responsive(18, 24, 28)}px monospace`,
+    color: "#7af",
+    align: "left",
     baseline: "middle",
-    origin: "center",
   });
 
   const equationText = new Text(
     game,
-    "\u03A8(x,z,t) = A\u00B7e^(-r\u00B2/4\u03C3\u00B2)\u00B7e^(i(k\u00B7r-\u03C9t))  +  \u03A6(r) = -GM/r",
+    "\u03A8(x,z,t) = A\u00B7e^(-r\u00B2/4\u03C3\u00B2)\u00B7e^(i(k\u00B7r-\u03C9t))",
     {
-      font: "12px monospace",
-      color: "#888",
-      align: "center",
+      font: `${Screen.responsive(14, 18, 20)}px monospace`,
+      color: "#fff",
+      align: "left",
       baseline: "middle",
-      origin: "center",
     }
   );
 
-  const statsText = new Text(game, "Superposition | 3 packets | 0 wells", {
-    font: "12px monospace",
-    color: "#6d8",
-    align: "center",
+  const statsText = new Text(game, "Superposition | 3 packets", {
+    font: `${Screen.responsive(9, 12, 13)}px monospace`,
+    color: "#667",
+    align: "left",
     baseline: "middle",
-    origin: "center",
   });
 
-  const textItems = [titleText, equationText, statsText];
-  const layout = verticalLayout(textItems, { spacing: 18, align: "center" });
-  applyLayout(textItems, layout.positions);
-  textItems.forEach((item) => panel.add(item));
+  const hintsText = new Text(
+    game,
+    "drag to rotate \u00B7 scroll to zoom \u00B7 hold to collapse \u00B7 double-click to reset",
+    {
+      font: `${Screen.responsive(8, 10, 11)}px monospace`,
+      color: "#445",
+      align: "left",
+      baseline: "middle",
+    }
+  );
+
+  const textItems = [titleText, equationText, statsText, hintsText];
+  const spacing = Screen.responsive(14, 20, 24);
+  let y = 0;
+  for (const item of textItems) {
+    item.x = 0;
+    item.y = y;
+    y += spacing;
+    panel.add(item);
+  }
 
   const updateStats = (text) => {
     if (statsText) statsText.text = text;
@@ -98,7 +112,7 @@ export function createInfoPanel(game, options = {}) {
  * @param {number} wellCount - Number of gravity wells
  * @returns {{ title: string, lines: string[] }}
  */
-export function getPresetExplanation(activePreset, waveParams, wellCount = 0) {
+export function getPresetExplanation(activePreset, waveParams, wellCount = 0, surfaceKey = "flat") {
   const p = waveParams;
 
   const explanations = {
@@ -106,7 +120,8 @@ export function getPresetExplanation(activePreset, waveParams, wellCount = 0) {
       title: "Quantum Superposition",
       lines: [
         `${p.numPackets || 3} wave packets overlapping in space`,
-        "Each packet is a Gaussian \u00B7 plane wave: A\u00B7e^(-r\u00B2/4\u03C3\u00B2)\u00B7e^(ikr)",
+        "Each packet is a Gaussian \u00B7 plane wave:",
+        "A\u00B7e^(-r\u00B2/4\u03C3\u00B2)\u00B7e^(ikr)",
         "Interference creates peaks where waves align",
         "and valleys where they cancel (destructive)",
         `\u03C3=${(p.sigma || 1.2).toFixed(1)}  k=${(p.k || 5).toFixed(1)}  \u03C9=${(p.omega || 3).toFixed(1)}`,
@@ -115,55 +130,67 @@ export function getPresetExplanation(activePreset, waveParams, wellCount = 0) {
     gaussian: {
       title: "Gaussian Wave Packet",
       lines: [
-        "A single localized particle — the simplest quantum state",
-        "The envelope e^(-r\u00B2/4\u03C3\u00B2) sets the probability spread",
-        "Inside, the phase e^(ikr-\u03C9t) oscillates like a carrier wave",
-        `Moving at v=(${(p.vx || 0).toFixed(1)}, ${(p.vz || 0).toFixed(1)}) with \u03C3=${(p.sigma || 1).toFixed(1)}`,
+        "A single localized particle",
+        "the simplest quantum state",
+        "Envelope: e^(-r\u00B2/4\u03C3\u00B2)",
+        "Phase: e^(ikr-\u03C9t)",
+        `v=(${(p.vx || 0).toFixed(1)}, ${(p.vz || 0).toFixed(1)})  \u03C3=${(p.sigma || 1).toFixed(1)}`,
       ],
     },
     doubleSlit: {
       title: "Double-Slit Interference",
       lines: [
         "Two coherent sources separated by a gap",
-        "Waves from each slit overlap — their phases",
-        "add constructively (bright rings) or cancel",
-        `Slit separation: ${(p.slitSeparation || 2.5).toFixed(1)} \u00B7 \u03C3=${(p.sigma || 0.8).toFixed(1)}`,
+        "Waves from each slit overlap",
+        "Constructive = bright rings",
+        "Destructive = cancellation",
+        `Separation: ${(p.slitSeparation || 2.5).toFixed(1)}  \u03C3=${(p.sigma || 0.8).toFixed(1)}`,
       ],
     },
     standingWave: {
-      title: "Standing Wave (Particle in a Box)",
+      title: "Standing Wave (Box)",
       lines: [
-        "Quantized modes: only certain wavelengths fit",
-        "sin(n\u03C0x/L)\u00B7sin(m\u03C0z/L) — nodes are fixed at zero",
-        "This is WHY energy is quantized in atoms",
-        `Mode (${p.nx || 3}, ${p.ny || 2}) \u00B7 \u03C9=${(p.omega || 2).toFixed(1)}`,
+        "Quantized modes: only certain",
+        "wavelengths fit the boundary",
+        "sin(n\u03C0x/L)\u00B7sin(m\u03C0z/L)",
+        "This is WHY energy is quantized",
+        `Mode (${p.nx || 3}, ${p.ny || 2})  \u03C9=${(p.omega || 2).toFixed(1)}`,
       ],
     },
     tunneling: {
       title: "Quantum Tunneling",
       lines: [
-        "A particle hits a barrier it classically can't cross",
-        "But \u03C8 doesn't stop — it decays as e^(-\u03BAx) inside",
-        "If the barrier is thin enough, \u03C8 leaks through",
-        `Barrier: h=${(p.barrierHeight || 0.6).toFixed(1)} w=${(p.barrierWidth || 0.8).toFixed(1)} \u00B7 v=${(p.vx || 0.6).toFixed(1)}`,
+        "Particle hits a classically",
+        "impassable barrier",
+        "\u03C8 decays as e^(-\u03BAx) inside",
+        "Thin barrier = \u03C8 leaks through",
+        `h=${(p.barrierHeight || 0.6).toFixed(1)}  w=${(p.barrierWidth || 0.8).toFixed(1)}  v=${(p.vx || 0.6).toFixed(1)}`,
       ],
     },
     harmonic: {
-      title: "Quantum Harmonic Oscillator",
+      title: "Harmonic Oscillator",
       lines: [
-        "The quantum version of a spring — H\u2099(x)\u00B7e^(-x\u00B2/2)",
-        "H\u2099 are Hermite polynomials with n zero-crossings",
-        "Models vibrating molecules & photon fields",
-        `Mode (${p.nx || 2}, ${p.ny || 3}) \u00B7 \u03C3=${(p.sigma || 1.5).toFixed(1)}`,
+        "Quantum version of a spring",
+        "H\u2099(x)\u00B7e^(-x\u00B2/2)",
+        "Hermite polynomials with n nodes",
+        "Models molecules & photon fields",
+        `Mode (${p.nx || 2}, ${p.ny || 3})  \u03C3=${(p.sigma || 1.5).toFixed(1)}`,
       ],
     },
   };
 
   const info = explanations[activePreset] || explanations.gaussian;
 
+  if (surfaceKey && surfaceKey !== "flat") {
+    const surfLabel = SURFACE_PRESETS[surfaceKey]?.label || surfaceKey;
+    info.lines.push("");
+    info.lines.push(`Surface: ${surfLabel}`);
+  }
+
   if (wellCount > 0) {
     info.lines.push("");
-    info.lines.push(`+ ${wellCount} gravity well${wellCount > 1 ? "s" : ""}: spacetime curvature \u03A6(r) = -GM/r`);
+    info.lines.push(`+ ${wellCount} gravity well${wellCount > 1 ? "s" : ""}`);
+    info.lines.push("\u03A6(r) = -GM/r");
   }
 
   return info;
@@ -453,9 +480,26 @@ export function createControlPanel(game, callbacks) {
   });
   panel.addItem(controls.preset);
 
+  // Surface geometry dropdown
+  const surfaceOptions = Object.entries(SURFACE_PRESETS).map(
+    ([key, preset]) => ({ label: preset.label, value: key })
+  );
+  controls.surface = new Dropdown(game, {
+    label: "SURFACE SHAPE",
+    width: sw,
+    options: surfaceOptions,
+    value: callbacks.activeSurface || "flat",
+    onChange: (v) => callbacks.onSurfaceChange?.(v),
+  });
+  panel.addItem(controls.surface);
+
   // Parameters section
   const paramsSection = panel.addSection("Parameters", { expanded: !Screen.isMobile });
   buildParamSliders(game, panel, paramsSection, activePreset, waveParams, callbacks);
+
+  // Surface geometry section
+  const surfaceGeom = panel.addSection("Surface Shape", { expanded: false });
+  buildSurfaceSliders(game, panel, surfaceGeom, callbacks.activeSurface || "flat", callbacks.surfaceParams || {}, callbacks);
 
   // Surface section
   const surface = panel.addSection("Surface", { expanded: false });
@@ -631,7 +675,7 @@ export function createControlPanel(game, callbacks) {
   });
   panel.addItem(controls.restart);
 
-  const sections = [paramsSection, surface, gravity, view];
+  const sections = [paramsSection, surfaceGeom, surface, gravity, view];
   if (Screen.isMobile) {
     setupExclusiveSections(panel, sections, {});
   }
@@ -643,6 +687,7 @@ export function createControlPanel(game, callbacks) {
     panel,
     controls,
     paramsSection,
+    surfaceGeomSection: surfaceGeom,
     sections,
   };
 }
@@ -745,6 +790,9 @@ export function buildParamSliders(game, panel, paramsSection, presetKey, wavePar
       onChange: (v) => {
         if (callbacks.getUpdatingSliders?.()) return;
         waveParams[def.key] = v;
+        if (def.key === "speed" && callbacks.onSpeedChange) {
+          callbacks.onSpeedChange();
+        }
       },
     });
     paramsSection.addItem(slider);
@@ -752,6 +800,47 @@ export function buildParamSliders(game, panel, paramsSection, presetKey, wavePar
   }
 
   panel.commitSection(paramsSection);
+  panel.layout();
+  return items;
+}
+
+/**
+ * Builds surface geometry sliders for a given surface preset.
+ */
+export function buildSurfaceSliders(game, panel, surfaceSection, surfaceKey, surfaceParams, callbacks = {}) {
+  const panelWidth = Screen.isMobile ? game.width - 20 : CONFIG.panel.width;
+  const padding = Screen.isMobile ? CONFIG.panel.mobilePadding : CONFIG.panel.padding;
+  const sw = panelWidth - padding * 2;
+
+  panel.clearSection(surfaceSection);
+  const paramDefs = SURFACE_PARAMS[surfaceKey];
+  if (!paramDefs || paramDefs.length === 0) {
+    panel.commitSection(surfaceSection);
+    panel.layout();
+    return [];
+  }
+
+  const items = [];
+  for (const def of paramDefs) {
+    const decimals = def.step >= 1 ? 0 : def.step >= 0.1 ? 1 : 2;
+    const slider = new Slider(game, {
+      label: def.label,
+      width: sw,
+      min: def.min,
+      max: def.max,
+      value: def.default,
+      step: def.step,
+      formatValue: (v) => v.toFixed(decimals),
+      onChange: (v) => {
+        if (callbacks.getUpdatingSliders?.()) return;
+        surfaceParams[def.key] = v;
+      },
+    });
+    surfaceSection.addItem(slider);
+    items.push(slider);
+  }
+
+  panel.commitSection(surfaceSection);
   panel.layout();
   return items;
 }

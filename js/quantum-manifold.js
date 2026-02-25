@@ -22,9 +22,12 @@ import {
   FPSCounter,
 } from "/gcanvas.es.min.js";
 import { Complex } from "/gcanvas.es.min.js";
+import { Random } from "/gcanvas.es.min.js";
+import { createTheme } from "/gcanvas.es.min.js";
 import {
   CONFIG,
   MANIFOLD_PRESETS,
+  SURFACE_PRESETS,
 } from "./quantum/quantuman.config.js";
 import {
   createInfoPanel,
@@ -34,6 +37,7 @@ import {
   createPanelStateMachine,
   layoutPanel,
   buildParamSliders,
+  buildSurfaceSliders,
   getPresetExplanation,
   drawInfoOverlay,
 } from "./quantum/quantuman.ui.js";
@@ -47,6 +51,7 @@ export class QuantumManifoldPlayground extends Game {
     super(canvas);
     this.backgroundColor = CONFIG.colors.background;
     this.enableFluidSize();
+    this.theme = createTheme("#0ff");
   }
 
   // ─── Init ────────────────────────────────────────────────────────────
@@ -56,6 +61,8 @@ export class QuantumManifoldPlayground extends Game {
     this.time = 0;
     this._activePreset = "superposition";
     this._waveParams = { ...MANIFOLD_PRESETS.superposition };
+    this._activeSurface = "flat";
+    this._surfaceParams = { ...SURFACE_PRESETS.flat };
     this._updatingSliders = false;
 
     this._gravityWells = [];
@@ -114,7 +121,7 @@ export class QuantumManifoldPlayground extends Game {
       friction: CONFIG.camera.friction,
       velocityScale: 1.2,
     });
-    this.camera.enableMouseControl(this.canvas);
+    this.camera.enableMouseControl(this.canvas, { game: this });
   }
 
   _initGrid() {
@@ -198,9 +205,14 @@ export class QuantumManifoldPlayground extends Game {
 
   _collapse() {
     this.isCollapsed = true;
-    const s = CONFIG.grid.size * 0.6;
-    this.collapseX = (Math.random() - 0.5) * 2 * s;
-    this.collapseZ = (Math.random() - 0.5) * 2 * s;
+    const vertices = this.gridVertices.flat();
+    const weights = vertices.map((v) => {
+      const psi = this._computeWave(v.x, v.z, this.time);
+      return psi.real * psi.real + psi.imag * psi.imag;
+    });
+    const point = Random.weighted(vertices, weights);
+    this.collapseX = point.x;
+    this.collapseZ = point.z;
   }
 
   _cancelCollapse() {
@@ -251,6 +263,34 @@ export class QuantumManifoldPlayground extends Game {
     return total;
   }
 
+  // ─── Surface Geometry ─────────────────────────────────────────────────
+
+  _computeSurface(x, z, t) {
+    switch (this._activeSurface) {
+      case "saddle":
+        return this._saddleSurface(x, z);
+      case "torusRidge":
+        return this._torusRidgeSurface(x, z);
+      default:
+        return 0;
+    }
+  }
+
+  _saddleSurface(x, z) {
+    const c = this._surfaceParams.curvature || 2.0;
+    const L = CONFIG.grid.size;
+    return c * (x * x - z * z) / (L * L);
+  }
+
+  _torusRidgeSurface(x, z) {
+    const R = this._surfaceParams.ringRadius || 5.0;
+    const w = this._surfaceParams.ringWidth || 1.5;
+    const amp = this._surfaceParams.ringAmplitude || 3.0;
+    const r = Math.sqrt(x * x + z * z);
+    const dr = r - R;
+    return amp * Math.exp(-(dr * dr) / (2 * w * w));
+  }
+
   // ─── Info Panel ──────────────────────────────────────────────────────
 
   _buildInfoPanel() {
@@ -261,10 +301,13 @@ export class QuantumManifoldPlayground extends Game {
       const preset = MANIFOLD_PRESETS[this._activePreset];
       const wellCount = this._gravityWells.length;
       const wellStr = wellCount > 0 ? ` | ${wellCount} well${wellCount > 1 ? "s" : ""}` : "";
+      const surfaceLabel = this._activeSurface !== "flat"
+        ? ` | ${SURFACE_PRESETS[this._activeSurface]?.label || ""}`
+        : "";
       if (this._activePreset === "superposition") {
-        statsText.text = `${preset.label} | ${this._waveParams.numPackets || 3} packets${wellStr}`;
+        statsText.text = `${preset.label} | ${this._waveParams.numPackets || 3} packets${surfaceLabel}${wellStr}`;
       } else {
-        statsText.text = `${preset.label} | t=${this.time.toFixed(1)}s${wellStr}`;
+        statsText.text = `${preset.label}${surfaceLabel}${wellStr}`;
       }
     };
     this.pipeline.add(this.infoPanel);
@@ -279,6 +322,11 @@ export class QuantumManifoldPlayground extends Game {
         this._waveParams.numPackets = v;
         this._superPackets = this._generateSuperPackets(v);
       },
+      onSpeedChange: () => {
+        this._superPackets = this._generateSuperPackets(
+          this._waveParams.numPackets || 3
+        );
+      },
       onNxChange: (v) => {
         this._waveParams.nx = v;
         if (this._activePreset === "standingWave") this._standingNx = v;
@@ -292,8 +340,11 @@ export class QuantumManifoldPlayground extends Game {
       onGridResChange: () => this._initGrid(),
     };
 
-    const { panel, controls, paramsSection, sections } = createControlPanel(this, {
+    const { panel, controls, paramsSection, surfaceGeomSection, sections } = createControlPanel(this, {
       onPresetChange: (key) => this._onPresetChange(key),
+      onSurfaceChange: (key) => this._onSurfaceChange(key),
+      activeSurface: this._activeSurface,
+      surfaceParams: this._surfaceParams,
       buildParamSliders,
       addWell: () => this._addRandomWell(),
       clearWells: () => this._clearWells(),
@@ -326,6 +377,7 @@ export class QuantumManifoldPlayground extends Game {
     this.panel = panel;
     this._controls = controls;
     this._paramsSection = paramsSection;
+    this._surfaceGeomSection = surfaceGeomSection;
     this._sections = sections;
     this.pipeline.add(this.panel);
   }
@@ -414,6 +466,11 @@ export class QuantumManifoldPlayground extends Game {
           this._waveParams.numPackets = v;
           this._superPackets = this._generateSuperPackets(v);
         },
+        onSpeedChange: () => {
+          this._superPackets = this._generateSuperPackets(
+            this._waveParams.numPackets || 3
+          );
+        },
         onNxChange: (v) => {
           this._waveParams.nx = v;
           if (key === "standingWave") this._standingNx = v;
@@ -428,8 +485,29 @@ export class QuantumManifoldPlayground extends Game {
     );
   }
 
+  _onSurfaceChange(key) {
+    const preset = SURFACE_PRESETS[key];
+    if (!preset) return;
+
+    this._controls.surface.close();
+    this._activeSurface = key;
+    this._surfaceParams = { ...preset };
+
+    this._surfaceSliders = buildSurfaceSliders(
+      this,
+      this.panel,
+      this._surfaceGeomSection,
+      key,
+      this._surfaceParams,
+      {
+        getUpdatingSliders: () => this._updatingSliders,
+      }
+    );
+  }
+
   _resetToDefaults() {
     this._onPresetChange(this._activePreset);
+    this._onSurfaceChange(this._activeSurface);
   }
 
   // ─── Info Overlay ────────────────────────────────────────────────────
@@ -440,7 +518,8 @@ export class QuantumManifoldPlayground extends Game {
       info: getPresetExplanation(
         this._activePreset,
         this._waveParams,
-        this._gravityWells.length
+        this._gravityWells.length,
+        this._activeSurface
       ),
       width: this.width,
       height: this.height,
@@ -506,14 +585,15 @@ export class QuantumManifoldPlayground extends Game {
   }
 
   _generateSuperPackets(n) {
+    const speed = this._waveParams.speed || 0.3;
     const packets = [];
     for (let i = 0; i < n; i++) {
       const angle = (i / n) * Math.PI * 2 + 0.3;
       packets.push({
         kx: Math.cos(angle) * (3 + i * 1.5),
         kz: Math.sin(angle) * (3 + i * 1.5),
-        vx: Math.cos(angle) * 0.3,
-        vz: Math.sin(angle) * 0.3,
+        vx: Math.cos(angle) * speed,
+        vz: Math.sin(angle) * speed,
         phase: i * 1.2,
       });
     }
@@ -635,6 +715,25 @@ export class QuantumManifoldPlayground extends Game {
     return [r, g, b];
   }
 
+  _surfaceGeomColor(t) {
+    const grad = CONFIG.colors.surfaceGradient;
+
+    let i = 0;
+    while (i < grad.length - 1 && grad[i + 1].stop < t) i++;
+    if (i >= grad.length - 1) i = grad.length - 2;
+
+    const lo = grad[i];
+    const hi = grad[i + 1];
+    const range = hi.stop - lo.stop;
+    const f = range > 0 ? (t - lo.stop) / range : 0;
+
+    const r = Math.floor(lo.color[0] + (hi.color[0] - lo.color[0]) * f);
+    const g = Math.floor(lo.color[1] + (hi.color[1] - lo.color[1]) * f);
+    const b = Math.floor(lo.color[2] + (hi.color[2] - lo.color[2]) * f);
+
+    return [r, g, b];
+  }
+
   _gravityColor(normalizedDip) {
     const t = Math.min(1, normalizedDip);
     const r = Math.floor(20 + 235 * t);
@@ -695,8 +794,22 @@ export class QuantumManifoldPlayground extends Game {
         const gravityDip = this._computeGravityAt(v.x, v.z);
         v.gravityDip = gravityDip;
 
+        const surfaceH = this._computeSurface(v.x, v.z, t);
+        v.surfaceH = surfaceH;
         v.height = probDensity;
-        v.y = probDensity * amplitude - gravityDip;
+
+        // Barrier height (tunneling preset only)
+        let barrierH = 0;
+        if (this._activePreset === "tunneling") {
+          const bH = this._waveParams.barrierHeight || 0.6;
+          const bW = this._waveParams.barrierWidth || 0.8;
+          if (Math.abs(v.x) < bW) {
+            barrierH = bH * (1 - Math.abs(v.x) / bW);
+          }
+        }
+        v.barrierH = barrierH;
+
+        v.y = surfaceH + probDensity * amplitude + barrierH * amplitude * 0.5 - gravityDip;
       }
     }
   }
@@ -756,6 +869,8 @@ export class QuantumManifoldPlayground extends Game {
           z: p.z,
           height: v.height,
           gravityDip: v.gravityDip,
+          surfaceH: v.surfaceH || 0,
+          barrierH: v.barrierH || 0,
         };
       }
     }
@@ -770,7 +885,9 @@ export class QuantumManifoldPlayground extends Game {
         const avgZ = (p00.z + p10.z + p11.z + p01.z) * 0.25;
         const avgH = (p00.height + p10.height + p11.height + p01.height) * 0.25;
         const avgDip = (p00.gravityDip + p10.gravityDip + p11.gravityDip + p01.gravityDip) * 0.25;
-        quads.push({ p00, p10, p11, p01, avgZ, avgH, avgDip });
+        const avgSurfaceH = (p00.surfaceH + p10.surfaceH + p11.surfaceH + p01.surfaceH) * 0.25;
+        const avgBarrier = (p00.barrierH + p10.barrierH + p11.barrierH + p01.barrierH) * 0.25;
+        quads.push({ p00, p10, p11, p01, avgZ, avgH, avgDip, avgSurfaceH, avgBarrier });
       }
     }
 
@@ -785,22 +902,55 @@ export class QuantumManifoldPlayground extends Game {
     if (maxH < 0.001) maxH = 1;
     if (maxDip < 0.001) maxDip = 1;
 
+    let maxSurface = 0;
+    let minSurface = 0;
+    for (const q of quads) {
+      if (q.avgSurfaceH > maxSurface) maxSurface = q.avgSurfaceH;
+      if (q.avgSurfaceH < minSurface) minSurface = q.avgSurfaceH;
+    }
+    const surfaceRange = maxSurface - minSurface;
+
     Painter.useCtx((ctx) => {
       for (const q of quads) {
-        const t = Math.min(1, q.avgH / maxH);
+        const waveT = Math.min(1, q.avgH / maxH);
         const dipT = Math.min(1, q.avgDip / maxDip);
 
-        const [qr, qg, qb] = this._heightColor(t);
+        // Wave color (matter — green/cyan)
+        const [wr, wg, wb] = this._heightColor(waveT);
+        let r = wr, g = wg, b = wb;
+
+        // Surface geometry color (spacetime — purple/indigo)
+        if (surfaceRange > 0.01) {
+          const surfaceT = (q.avgSurfaceH - minSurface) / surfaceRange;
+          const [sr, sg, sb] = this._surfaceGeomColor(surfaceT);
+          // Blend: surface is the base, wave paints on top proportionally
+          const waveMix = Math.min(1, waveT * 1.5);
+          r = Math.floor(sr * (1 - waveMix) + wr * waveMix);
+          g = Math.floor(sg * (1 - waveMix) + wg * waveMix);
+          b = Math.floor(sb * (1 - waveMix) + wb * waveMix);
+        }
+
+        // Gravity well color (red/orange)
         if (dipT > 0.05) {
           const [gr, gg, gb] = this._gravityColor(dipT);
           const blend = dipT * 0.7;
-          const r = Math.floor(qr * (1 - blend) + gr * blend);
-          const g = Math.floor(qg * (1 - blend) + gg * blend);
-          const b = Math.floor(qb * (1 - blend) + gb * blend);
-          ctx.fillStyle = `rgba(${r},${g},${b},${CONFIG.surface.surfaceAlpha})`;
-        } else {
-          ctx.fillStyle = `rgba(${qr},${qg},${qb},${CONFIG.surface.surfaceAlpha})`;
+          r = Math.floor(r * (1 - blend) + gr * blend);
+          g = Math.floor(g * (1 - blend) + gg * blend);
+          b = Math.floor(b * (1 - blend) + gb * blend);
         }
+
+        // Barrier color (amber/gold wall)
+        if (q.avgBarrier > 0.01) {
+          const maxBarrier = this._waveParams.barrierHeight || 0.6;
+          const barrierT = Math.min(1, q.avgBarrier / maxBarrier);
+          const br = 255, bg = Math.floor(180 + 60 * barrierT), bb = Math.floor(40 * (1 - barrierT));
+          const blend = barrierT * 0.85;
+          r = Math.floor(r * (1 - blend) + br * blend);
+          g = Math.floor(g * (1 - blend) + bg * blend);
+          b = Math.floor(b * (1 - blend) + bb * blend);
+        }
+
+        ctx.fillStyle = `rgba(${r},${g},${b},${CONFIG.surface.surfaceAlpha})`;
 
         ctx.beginPath();
         ctx.moveTo(q.p00.x, q.p00.y);
@@ -900,13 +1050,33 @@ export class QuantumManifoldPlayground extends Game {
 
     const samples = [];
     let maxProb = 0;
+    const collapse = this.collapseAmount;
+    const sliceZ = collapse > 0.01 ? this.collapseZ * collapse : 0;
     for (let i = 0; i < numSamples; i++) {
       const x = (i / (numSamples - 1) - 0.5) * 2 * size;
-      const psi = this._computeWave(x, 0, this.time);
-      const prob = psi.real * psi.real + psi.imag * psi.imag;
-      const re = psi.real;
-      const grav = this._computeGravityAt(x, 0);
-      samples.push({ x, prob, re, grav });
+      const psi = this._computeWave(x, sliceZ, this.time);
+      let prob = psi.real * psi.real + psi.imag * psi.imag;
+      let re = psi.real;
+
+      if (collapse > 0.01) {
+        const cdx = x - this.collapseX;
+        const cr2 = cdx * cdx;
+        const collapsedProb = Math.exp(-cr2 / 0.3);
+        prob = prob * (1 - collapse) + collapsedProb * collapse;
+        re = re * (1 - collapse) + Math.sqrt(collapsedProb) * collapse;
+      }
+
+      const grav = this._computeGravityAt(x, sliceZ);
+      const surfH = this._computeSurface(x, sliceZ, this.time);
+      let barrierVal = 0;
+      if (this._activePreset === "tunneling") {
+        const bH = this._waveParams.barrierHeight || 0.6;
+        const bW = this._waveParams.barrierWidth || 0.8;
+        if (Math.abs(x) < bW) {
+          barrierVal = bH * (1 - Math.abs(x) / bW);
+        }
+      }
+      samples.push({ x, prob, re, grav, surfH, barrierVal });
       if (prob > maxProb) maxProb = prob;
     }
     if (maxProb < 0.001) maxProb = 1;
@@ -916,14 +1086,28 @@ export class QuantumManifoldPlayground extends Game {
       if (s.grav > maxGrav) maxGrav = s.grav;
     }
 
+    // Collapse-dependent colors (computed before any draw calls)
+    const collapseBlend = Math.min(1, collapse / 0.5);
+    const envColor = collapse > 0.01
+      ? `rgba(${Math.floor(255 * collapseBlend)}, ${Math.floor(200 + 55 * collapseBlend)}, ${Math.floor(180 + 75 * collapseBlend)}, ${0.3 + 0.4 * collapseBlend})`
+      : cs.envelopeColor;
+    const waveStrokeColor = collapse > 0.01
+      ? `rgba(${Math.floor(255 * collapseBlend)}, 255, ${Math.floor(204 + 51 * collapseBlend)}, 1)`
+      : cs.waveColor;
+
+    // Background + border
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = "rgba(0, 8, 16, 0.7)";
-      ctx.fillRect(plotX - 5, plotY - 5, plotW + 10, plotH + 10);
-      ctx.strokeStyle = "rgba(0, 200, 180, 0.3)";
+      ctx.fillStyle = "rgba(0, 8, 16, 0.75)";
+      ctx.fillRect(plotX - 8, plotY - 8, plotW + 16, plotH + 16);
+      const borderColor = collapse > 0.01
+        ? `rgba(${Math.floor(100 + 155 * collapseBlend)}, ${Math.floor(200 + 55 * collapseBlend)}, ${Math.floor(180 + 75 * collapseBlend)}, ${0.2 + 0.3 * collapseBlend})`
+        : "rgba(0, 200, 180, 0.15)";
+      ctx.strokeStyle = borderColor;
       ctx.lineWidth = 1;
-      ctx.strokeRect(plotX - 5, plotY - 5, plotW + 10, plotH + 10);
+      ctx.strokeRect(plotX - 8, plotY - 8, plotW + 16, plotH + 16);
     });
 
+    // Gravity fill
     if (maxGrav > 0.01) {
       Painter.useCtx((ctx) => {
         ctx.fillStyle = "rgba(255, 60, 40, 0.2)";
@@ -940,8 +1124,69 @@ export class QuantumManifoldPlayground extends Game {
       });
     }
 
+    // Barrier fill (tunneling preset)
+    if (this._activePreset === "tunneling") {
+      const maxBarrier = this._waveParams.barrierHeight || 0.6;
+      Painter.useCtx((ctx) => {
+        ctx.fillStyle = "rgba(255, 200, 40, 0.25)";
+        ctx.beginPath();
+        ctx.moveTo(plotX, plotY + plotH);
+        for (let i = 0; i < numSamples; i++) {
+          const sx = plotX + (i / (numSamples - 1)) * plotW;
+          const bNorm = samples[i].barrierVal / maxBarrier;
+          const sy = plotY + plotH - bNorm * plotH * 0.6;
+          ctx.lineTo(sx, sy);
+        }
+        ctx.lineTo(plotX + plotW, plotY + plotH);
+        ctx.closePath();
+        ctx.fill();
+
+        // Barrier outline
+        ctx.strokeStyle = "rgba(255, 200, 40, 0.7)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let i = 0; i < numSamples; i++) {
+          const sx = plotX + (i / (numSamples - 1)) * plotW;
+          const bNorm = samples[i].barrierVal / maxBarrier;
+          if (bNorm < 0.01) continue;
+          const sy = plotY + plotH - bNorm * plotH * 0.6;
+          if (i === 0 || samples[i - 1].barrierVal < 0.01) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+      });
+    }
+
+    // Surface geometry baseline
+    let maxSurfH = 0;
+    let minSurfH = 0;
+    for (const s of samples) {
+      if (s.surfH > maxSurfH) maxSurfH = s.surfH;
+      if (s.surfH < minSurfH) minSurfH = s.surfH;
+    }
+    const surfRange = maxSurfH - minSurfH;
+
+    if (surfRange > 0.01) {
+      Painter.useCtx((ctx) => {
+        ctx.strokeStyle = "rgba(180, 120, 255, 0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        for (let i = 0; i < numSamples; i++) {
+          const sx = plotX + (i / (numSamples - 1)) * plotW;
+          const normSurf = (surfRange > 0) ? (samples[i].surfH - minSurfH) / surfRange : 0.5;
+          const sy = plotY + plotH - normSurf * plotH * 0.5 - plotH * 0.1;
+          if (i === 0) ctx.moveTo(sx, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+    }
+
+    // |Ψ|² envelope fill
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = cs.envelopeColor;
+      ctx.fillStyle = envColor;
       ctx.beginPath();
       ctx.moveTo(plotX, plotY + plotH);
       for (let i = 0; i < numSamples; i++) {
@@ -954,8 +1199,9 @@ export class QuantumManifoldPlayground extends Game {
       ctx.fill();
     });
 
+    // Re(Ψ) wave line
     Painter.useCtx((ctx) => {
-      ctx.strokeStyle = cs.waveColor;
+      ctx.strokeStyle = waveStrokeColor;
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let i = 0; i < numSamples; i++) {
@@ -968,12 +1214,14 @@ export class QuantumManifoldPlayground extends Game {
       ctx.stroke();
     });
 
+    // Labels
     Painter.useCtx((ctx) => {
       ctx.font = "10px monospace";
       ctx.textAlign = "left";
-      ctx.fillStyle = "#888";
-      ctx.fillText("Cross-section (z=0)", plotX, plotY - 10);
-      ctx.fillStyle = cs.waveColor;
+      ctx.fillStyle = collapse > 0.01 ? `rgba(255,255,255,${0.5 + 0.5 * collapseBlend})` : "#888";
+      const sliceLabel = collapse > 0.01 ? `Cross-section (z=${sliceZ.toFixed(1)})` : "Cross-section (z=0)";
+      ctx.fillText(sliceLabel, plotX, plotY - 10);
+      ctx.fillStyle = collapse > 0.01 ? waveStrokeColor : cs.waveColor;
       ctx.fillText("Re(\u03A8)", plotX + plotW - 50, plotY - 10);
       ctx.fillStyle = "rgba(0, 200, 180, 0.6)";
       ctx.fillText("|\u03A8|\u00B2", plotX + plotW - 100, plotY - 10);
@@ -981,21 +1229,19 @@ export class QuantumManifoldPlayground extends Game {
         ctx.fillStyle = "rgba(255, 60, 40, 0.6)";
         ctx.fillText("\u03A6(r)", plotX + plotW - 150, plotY - 10);
       }
+      if (surfRange > 0.01) {
+        ctx.fillStyle = "rgba(180, 120, 255, 0.6)";
+        ctx.fillText("S(r)", plotX + plotW - 200, plotY - 10);
+      }
+      if (this._activePreset === "tunneling") {
+        ctx.fillStyle = "rgba(255, 200, 40, 0.7)";
+        ctx.fillText("V(x)", plotX + plotW - 250, plotY - 10);
+      }
     });
   }
 
-  _renderControls(w, h) {
-    Painter.useCtx((ctx) => {
-      ctx.fillStyle = "#555";
-      ctx.font = "10px monospace";
-      ctx.textAlign = "right";
-      ctx.fillText(
-        "drag to rotate  |  scroll to zoom  |  hold to collapse  |  double-click to reset",
-        w - 20,
-        h - 10
-      );
-      ctx.textAlign = "left";
-    });
+  _renderControls() {
+    // Hints are now rendered in the info panel (top-left)
   }
 
   // ─── Resize ──────────────────────────────────────────────────────────

@@ -8,10 +8,7 @@
  * where rs = 2GM/c² is the Schwarzschild radius
  */
 
-import { Game, Painter, Camera3D, Screen, Gesture } from "/gcanvas.es.min.js";
-import { GameObject } from "/gcanvas.es.min.js";
-import { Rectangle } from "/gcanvas.es.min.js";
-import { TextShape } from "/gcanvas.es.min.js";
+import { Game, Painter, Camera3D, Screen, Gesture, FPSCounter } from "/gcanvas.es.min.js";
 import { Position } from "/gcanvas.es.min.js";
 import { Tensor } from "/gcanvas.es.min.js";
 import { flammEmbeddingHeight } from "/gcanvas.es.min.js";
@@ -22,9 +19,11 @@ import {
   updateTrail,
   createTrailPoint,
 } from "/gcanvas.es.min.js";
-import { verticalLayout, applyLayout } from "/gcanvas.es.min.js";
 import { Tooltip } from "/gcanvas.es.min.js";
 import { Button } from "/gcanvas.es.min.js";
+import { ToggleButton } from "/gcanvas.es.min.js";
+import { Text, Scene, applyAnchor } from "/gcanvas.es.min.js";
+import { SchwarzschildInfoPanel } from "./schwarzschild.info.js";
 
 // Configuration
 const CONFIG = {
@@ -66,9 +65,8 @@ const CONFIG = {
   baseScreenSize: 600,
 
   // Black hole visualization - mass-proportional sizing (rubber sheet analogy)
-  // "Heavier objects dent the fabric more" - intuitive for users
-  blackHoleSizeBase: 8, // Base size of black hole sphere
-  blackHoleSizeMassScale: 6, // Additional size per unit mass
+  blackHoleSizeBase: 8,
+  blackHoleSizeMassScale: 6,
 
   // Visual
   gridColor: "rgba(0, 180, 255, 0.3)",
@@ -78,241 +76,16 @@ const CONFIG = {
   iscoColor: "rgba(50, 255, 150, 0.6)",
   orbiterColor: "#4af",
   orbiterGlow: "rgba(100, 180, 255, 0.6)",
+
+  // Button layout
+  btnMargin: 12,
+  btnSize: 44,
+  btnGap: 8,
 };
-
-/**
- * MetricPanelGO - Displays the Schwarzschild metric tensor components
- * Uses verticalLayout for automatic positioning
- * Responsive for mobile screens
- */
-class MetricPanelGO extends GameObject {
-  constructor(game, options = {}) {
-    // Responsive sizing
-    const isMobile = game.width < CONFIG.mobileWidth;
-    const panelWidth = isMobile ? 240 : 320;
-    const panelHeight = isMobile ? 130 : 150;
-    const lineHeight = isMobile ? 14 : 16;
-    const valueOffset = isMobile ? 125 : 160;
-
-    super(game, {
-      ...options,
-      width: panelWidth,
-      height: panelHeight,
-      originX: 0.5,
-      originY: 0.5,
-      anchor: Position.BOTTOM_LEFT,
-      anchorMargin: 20,
-    });
-
-    // Background with center origin
-    this.bgRect = new Rectangle({
-      width: panelWidth,
-      height: panelHeight,
-      color: "rgba(0, 0, 0, 0.7)",
-      origin: "center",
-    });
-
-    // Define all features as data with descriptions for tooltips
-    this.features = {
-      title: {
-        text: "Schwarzschild Metric Tensor",
-        font: "bold 13px monospace",
-        color: "#7af",
-        height: lineHeight + 4,
-        desc: "The Schwarzschild metric describes spacetime geometry around a non-rotating, spherically symmetric mass. It was the first exact solution to Einstein's field equations (1916).",
-      },
-      equation: {
-        text: "ds² = gμν dxμ dxν",
-        font: "12px monospace",
-        color: "#888",
-        height: lineHeight,
-        desc: "The line element ds² measures spacetime intervals. It uses the metric tensor gμν to convert coordinate differences into proper distances/times.",
-      },
-      mass: {
-        text: "M = 1.00",
-        font: "12px monospace",
-        color: "#888",
-        height: lineHeight + 8,
-        desc: "Mass of the black hole (in geometrized units where G = c = 1).\nClick anywhere to randomize between 1.0 and 4.0.",
-      },
-      gtt: {
-        text: "g_tt = -(1 - rs/r)",
-        font: "11px monospace",
-        color: "#f88",
-        height: lineHeight,
-        value: "= -0.800",
-        desc: "Time-time component: Controls how time flows.\nNegative sign indicates timelike direction.\nApproaches 0 at the event horizon (time freezes for distant observers).",
-      },
-      grr: {
-        text: "g_rr = (1 - rs/r)⁻¹",
-        font: "11px monospace",
-        color: "#8f8",
-        height: lineHeight,
-        value: "= 1.250",
-        desc: "Radial-radial component: Controls radial distances.\nDiverges at rs (coordinate singularity).\nRadial distances stretch near the black hole.",
-      },
-      gthth: {
-        text: "g_θθ = r²",
-        font: "11px monospace",
-        color: "#88f",
-        height: lineHeight,
-        value: "= 100.00",
-        desc: "Theta-theta component: Angular metric in the polar direction.\nSame as flat space - angles are unaffected by the mass.",
-      },
-      gphph: {
-        text: "g_φφ = r²sin²θ",
-        font: "11px monospace",
-        color: "#f8f",
-        height: lineHeight + 8,
-        value: "= 100.00",
-        desc: "Phi-phi component: Angular metric in azimuthal direction.\nAt equator (θ=π/2), sin²θ = 1.\nSpherical symmetry preserved.",
-      },
-      rs: {
-        text: "rs = 2M = 2.00",
-        font: "10px monospace",
-        color: "#f55",
-        height: lineHeight - 2,
-        desc: "Schwarzschild Radius (Event Horizon)\nThe point of no return - even light cannot escape from within.\nFor the Sun: rs ≈ 3 km. For Earth: rs ≈ 9 mm.",
-      },
-      rph: {
-        text: "r_photon = 1.5rs = 3.00",
-        font: "10px monospace",
-        color: "#fa5",
-        height: lineHeight - 2,
-        desc: "Photon Sphere\nUnstable circular orbit for light.\nPhotons can orbit here, but any perturbation sends them spiraling in or out.",
-      },
-      risco: {
-        text: "r_ISCO = 3rs = 6.00",
-        font: "10px monospace",
-        color: "#5f8",
-        height: lineHeight + 8,
-        desc: "Innermost Stable Circular Orbit (ISCO)\nThe closest stable orbit for massive particles.\nWithin this radius, orbits require constant thrust to maintain.",
-      },
-      pos: {
-        text: "Orbiter: r = 10.00, φ = 0.00",
-        font: "10px monospace",
-        color: "#aaa",
-        height: lineHeight,
-        desc: "Current position of the test particle in Schwarzschild coordinates.\nr = radial distance, φ = orbital angle.",
-      },
-    };
-
-    // Store panel dimensions for hit testing
-    this.panelWidth = panelWidth;
-    this.panelHeight = panelHeight;
-
-    // Create TextShapes from features
-    const rowItems = [];
-    for (const [key, config] of Object.entries(this.features)) {
-      config.shape = new TextShape(config.text, {
-        font: config.font,
-        color: config.color,
-        align: "left",
-        baseline: "top",
-        height: config.height,
-      });
-      rowItems.push(config.shape);
-
-      if (config.value) {
-        config.valueShape = new TextShape(config.value, {
-          font: config.font,
-          color: "#fff",
-          align: "left",
-          baseline: "top",
-        });
-      }
-    }
-
-    // Apply vertical layout
-    const layout = verticalLayout(rowItems, {
-      spacing: 5,
-      padding: 0,
-      align: "start",
-      centerItems: false,
-    });
-    applyLayout(rowItems, layout.positions, {
-      offsetX: -panelWidth / 2,
-      offsetY: -panelHeight / 2,
-    });
-
-    // Position value shapes next to their labels
-    for (const config of Object.values(this.features)) {
-      if (config.valueShape) {
-        config.valueShape.x = config.shape.x + valueOffset;
-        config.valueShape.y = config.shape.y;
-      }
-    }
-  }
-
-  setMetricValues(r, rs, mass, theta = Math.PI / 2) {
-    const metric = Tensor.schwarzschild(r, rs, theta);
-    const f = this.features;
-
-    f.gtt.valueShape.text = `= ${metric.get(0, 0).toFixed(4)}`;
-    f.grr.valueShape.text = `= ${metric.get(1, 1).toFixed(4)}`;
-    f.gthth.valueShape.text = `= ${metric.get(2, 2).toFixed(2)}`;
-    f.gphph.valueShape.text = `= ${metric.get(3, 3).toFixed(2)}`;
-
-    f.mass.shape.text = `M = ${mass.toFixed(2)}`;
-    f.rs.shape.text = `rs = 2M = ${rs.toFixed(2)}`;
-    f.rph.shape.text = `r_photon = 1.5rs = ${Tensor.photonSphereRadius(rs).toFixed(2)}`;
-    f.risco.shape.text = `r_ISCO = 3rs = ${Tensor.iscoRadius(rs).toFixed(2)}`;
-  }
-
-  setOrbiterPosition(r, phi) {
-    this.features.pos.shape.text = `Orbiter: r = ${r.toFixed(2)}, φ = ${(phi % (2 * Math.PI)).toFixed(2)}`;
-  }
-
-  /**
-   * Get the feature at a given screen position (for tooltip hit testing).
-   * @param {number} screenX - Screen X coordinate
-   * @param {number} screenY - Screen Y coordinate
-   * @returns {object|null} Feature config with desc, or null if not over panel
-   */
-  getFeatureAt(screenX, screenY) {
-    // Convert screen coords to local panel coords
-    const localX = screenX - this.x;
-    const localY = screenY - this.y;
-
-    // Check if within panel bounds
-    if (
-      localX < -this.panelWidth / 2 ||
-      localX > this.panelWidth / 2 ||
-      localY < -this.panelHeight / 2 ||
-      localY > this.panelHeight / 2
-    ) {
-      return null;
-    }
-
-    // Find which feature row we're over
-    for (const config of Object.values(this.features)) {
-      const shape = config.shape;
-      const rowTop = shape.y;
-      const rowBottom = shape.y + (config.height || 16);
-
-      if (localY >= rowTop && localY <= rowBottom) {
-        return config;
-      }
-    }
-
-    return null;
-  }
-
-  draw() {
-    super.draw();
-    this.bgRect.render();
-
-    for (const config of Object.values(this.features)) {
-      config.shape.render();
-      if (config.valueShape) config.valueShape.render();
-    }
-  }
-}
 
 class SchwarzschildDemo extends Game {
   constructor(canvas) {
     super(canvas);
-    // Black background - it's space!
     this.backgroundColor = "#000";
     this.enableFluidSize();
   }
@@ -335,9 +108,9 @@ class SchwarzschildDemo extends Game {
 
     // Mass (in geometrized units where G = c = 1)
     this.mass = 1.0;
-    this.rs = 2 * this.mass; // Schwarzschild radius
+    this.rs = 2 * this.mass;
 
-    // Initialize grid scale (will be updated for screen size)
+    // Initialize grid scale
     this.gridScale = CONFIG.baseGridScale;
 
     // Camera with inertia for smooth drag
@@ -362,7 +135,7 @@ class SchwarzschildDemo extends Game {
         this.targetZoom *= 1 + delta * CONFIG.zoomSpeed;
         this.targetZoom = Math.max(CONFIG.minZoom, Math.min(CONFIG.maxZoom, this.targetZoom));
       },
-      onPan: null, // Camera3D handles rotation via drag
+      onPan: null,
     });
 
     // Double-click to reset zoom and camera
@@ -374,8 +147,8 @@ class SchwarzschildDemo extends Game {
     // Orbital state (using r, phi in equatorial plane)
     this.orbitR = CONFIG.orbitSemiMajor;
     this.orbitPhi = 0;
-    this.orbitVr = 0; // Radial velocity
-    this.orbitL = CONFIG.angularMomentum; // Angular momentum per unit mass
+    this.orbitVr = 0;
+    this.orbitL = CONFIG.angularMomentum;
     this.precessionAngle = 0;
 
     // Trail stores actual positions
@@ -384,22 +157,32 @@ class SchwarzschildDemo extends Game {
     // Initialize grid vertices
     this.initGrid();
 
-    // Fixed grid scale (like spacetime.js)
+    // Fixed grid scale
     this.gridScale = CONFIG.baseGridScale;
 
-    // Create metric panel
-    this.metricPanel = new MetricPanelGO(this, { name: "metricPanel" });
-    this.pipeline.add(this.metricPanel);
+    // ── Info header (zeta-style, top-left) ──
+    this._buildInfoHeader();
+
+    // ── Buttons: settings (toggle) + shuffle mass, always visible ──
+    this._buildButtons();
+
+    // ── Info modal panel (rendered manually after all scene drawing) ──
+    this.infoPanel = new SchwarzschildInfoPanel(this);
+
+    // Panel emits "panel:dismiss" when user clicks outside — untoggle the button
+    this.events.on("panel:dismiss", () => {
+      this._settingsBtn.toggle(false);
+    });
 
     // Create tooltip for explanations (responsive)
-    const isMobileTooltip = this.width < CONFIG.mobileWidth;
+    const isMobile = this.width < CONFIG.mobileWidth;
     this.tooltip = new Tooltip(this, {
-      maxWidth: isMobileTooltip ? 200 : 280,
-      font: `${isMobileTooltip ? 9 : 11}px monospace`,
-      padding: isMobileTooltip ? 6 : 10,
+      maxWidth: isMobile ? 200 : 280,
+      font: `${isMobile ? 9 : 11}px monospace`,
+      padding: isMobile ? 6 : 10,
       bgColor: "rgba(20, 20, 30, 0.95)",
     });
-    this.pipeline.add(this.tooltip);
+    // NOT in pipeline — rendered manually after info panel
 
     // Track what's being hovered for tooltip
     this.hoveredFeature = null;
@@ -408,22 +191,109 @@ class SchwarzschildDemo extends Game {
     this.canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e));
     this.canvas.addEventListener("mouseleave", () => this.tooltip.hide());
 
-    // Button to shuffle parameters - positioned above the metric panel
-    const isMobile = this.width < CONFIG.mobileWidth;
-    const btnWidth = isMobile ? 120 : 140;
-    const btnHeight = isMobile ? 30 : 36;
+    // FPS counter
+    this.fpsCounter = new FPSCounter(this, {
+      color: "#00FF00",
+      anchor: isMobile ? "bottom-left" : "bottom-right",
+    });
+    this.pipeline.add(this.fpsCounter);
+  }
 
-    this.shuffleBtn = new Button(this, {
-      width: btnWidth,
-      height: btnHeight,
+  // ── Info Header ─────────────────────────────────────────────────────────
+
+  _buildInfoHeader() {
+    this._infoScene = new Scene(this, { x: 0, y: 0 });
+    applyAnchor(this._infoScene, {
       anchor: Position.TOP_LEFT,
-      anchorRelative: this.metricPanel,
-      anchorMargin: 0,
-      anchorOffsetX: 0,
-      anchorOffsetY: -btnHeight - 10,
-      text: "Shuffle Mass",
-      font: `${isMobile ? 10 : 12}px monospace`,
-      origin: "center",
+      anchorOffsetX: Screen.responsive(15, 30, 40),
+      anchorOffsetY: Screen.responsive(60, 80, 90),
+    });
+
+    this._titleText = new Text(this, "Schwarzschild Metric", {
+      font: `bold ${Screen.responsive(18, 24, 28)}px monospace`,
+      color: "#7af",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this._equationText = new Text(this, "ds\u00B2 = g\u03BC\u03BD dx\u03BC dx\u03BD", {
+      font: `${Screen.responsive(14, 18, 20)}px monospace`,
+      color: "#fff",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this._massText = new Text(this, "M = 1.00", {
+      font: `${Screen.responsive(9, 12, 13)}px monospace`,
+      color: "#667",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this._rsText = new Text(this, "rs = 2.00", {
+      font: `${Screen.responsive(9, 12, 13)}px monospace`,
+      color: "#667",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this._orbitText = new Text(this, "r = 10.00  \u03C6 = 0.00", {
+      font: `${Screen.responsive(9, 12, 13)}px monospace`,
+      color: "#667",
+      align: "left",
+      baseline: "middle",
+    });
+
+    const items = [this._titleText, this._equationText, this._massText, this._rsText, this._orbitText];
+    const spacing = Screen.responsive(14, 20, 24);
+    let y = 0;
+    for (const item of items) {
+      item.x = 0;
+      item.y = y;
+      y += spacing;
+      this._infoScene.add(item);
+    }
+    this.pipeline.add(this._infoScene);
+  }
+
+  _updateInfoHeader() {
+    const totalAngle = this.orbitPhi + this.precessionAngle;
+    const phi = (totalAngle % (2 * Math.PI)).toFixed(2);
+    this._massText.text = `M = ${this.mass.toFixed(2)}`;
+    this._rsText.text = `rs = 2M = ${this.rs.toFixed(2)}`;
+    this._orbitText.text = `r = ${this.orbitR.toFixed(2)}  \u03C6 = ${phi}`;
+  }
+
+  // ── Buttons ────────────────────────────────────────────────────────────
+
+  _buildButtons() {
+    const { btnMargin, btnSize, btnGap } = CONFIG;
+    const centerY = btnMargin + btnSize / 2;
+
+    // Settings toggle button (always visible)
+    this._settingsBtn = new ToggleButton(this, {
+      text: "\u2699",
+      width: btnSize,
+      height: btnSize,
+      font: "18px monospace",
+      onToggle: (isOn) => {
+        if (isOn) {
+          this.infoPanel.show();
+        } else {
+          this.infoPanel.hide();
+        }
+      },
+    });
+    this._settingsBtn.x = btnMargin + btnSize / 2;
+    this._settingsBtn.y = centerY;
+    this.pipeline.add(this._settingsBtn);
+
+    // Shuffle mass button (always visible, right of settings)
+    this._shuffleBtn = new Button(this, {
+      text: "\u21BB",
+      width: btnSize,
+      height: btnSize,
+      font: "18px monospace",
       colorDefaultBg: "rgba(20, 20, 40, 0.8)",
       colorDefaultStroke: "#7af",
       colorDefaultText: "#8af",
@@ -435,22 +305,28 @@ class SchwarzschildDemo extends Game {
       colorPressedText: "#fff",
       onClick: () => this.shuffleParameters(),
     });
-    this.pipeline.add(this.shuffleBtn);
+    this._shuffleBtn.x = btnMargin + btnSize + btnGap + btnSize / 2;
+    this._shuffleBtn.y = centerY;
+    this.pipeline.add(this._shuffleBtn);
   }
+
+  // ── Mouse / Tooltip ────────────────────────────────────────────────────
 
   handleMouseMove(e) {
     const rect = this.canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Check if over metric panel
-    const feature = this.metricPanel.getFeatureAt(mouseX, mouseY);
-    if (feature && feature.desc) {
-      if (this.hoveredFeature !== feature) {
-        this.hoveredFeature = feature;
-        this.tooltip.show(feature.desc, mouseX, mouseY);
+    // Check if over info panel (when visible)
+    if (this.infoPanel.visible) {
+      const feature = this.infoPanel.getFeatureAt(mouseX, mouseY);
+      if (feature && feature.desc) {
+        if (this.hoveredFeature !== feature) {
+          this.hoveredFeature = feature;
+          this.tooltip.show(feature.desc, mouseX, mouseY);
+        }
+        return;
       }
-      return;
     }
 
     // Check if over effective potential graph (responsive)
@@ -458,7 +334,7 @@ class SchwarzschildDemo extends Game {
     const graphW = isMobile ? 120 : 160;
     const graphH = isMobile ? 70 : 100;
     const graphX = this.width - graphW - (isMobile ? 15 : 20);
-    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
+    const graphY = isMobile ? 80 : 220;
 
     if (
       mouseX >= graphX - 10 &&
@@ -469,7 +345,7 @@ class SchwarzschildDemo extends Game {
       if (this.hoveredFeature !== "graph") {
         this.hoveredFeature = "graph";
         this.tooltip.show(
-          "Effective Potential V_eff(r)\n\nShows the combined gravitational and centrifugal potential.\n\nThe blue dot marks the orbiter's current position.\n\nLocal minima = stable orbits\nLocal maxima = unstable orbits\n\nThe GR term (-ML²/r³) creates the inner peak that doesn't exist in Newtonian gravity.",
+          "Effective Potential V_eff(r)\n\nShows the combined gravitational and centrifugal potential.\n\nThe blue dot marks the orbiter's current position.\n\nLocal minima = stable orbits\nLocal maxima = unstable orbits\n\nThe GR term (-ML\u00B2/r\u00B3) creates the inner peak that doesn't exist in Newtonian gravity.",
           mouseX,
           mouseY,
         );
@@ -500,26 +376,20 @@ class SchwarzschildDemo extends Game {
   }
 
   shuffleParameters() {
-    // Randomize mass
     this.mass =
       CONFIG.massRange[0] +
       Math.random() * (CONFIG.massRange[1] - CONFIG.massRange[0]);
     this.rs = 2 * this.mass;
 
-    // Randomize orbit (keep it outside ISCO using Tensor utility)
     const isco = Tensor.iscoRadius(this.rs);
     this.orbitR = isco + 2 + Math.random() * 8;
     this.orbitPhi = Math.random() * Math.PI * 2;
     this.orbitL = 3.5 + Math.random() * 2;
     this.precessionAngle = 0;
 
-    // Clear trail for fresh start
     this.orbitTrail = [];
   }
 
-  /**
-   * 3D projection with zoom applied
-   */
   project3D(x, y, z) {
     const proj = this.camera.project(x, y, z);
     return {
@@ -531,17 +401,27 @@ class SchwarzschildDemo extends Game {
   }
 
   onResize() {
-    // Recalculate default zoom for new screen size
     this.defaultZoom = Math.min(
       CONFIG.maxZoom,
       Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize)
     );
+
+    // Info header repositioning
+    if (this._infoScene) {
+      applyAnchor(this._infoScene, {
+        anchor: Position.TOP_LEFT,
+        anchorOffsetX: Screen.responsive(15, 30, 40),
+        anchorOffsetY: Screen.responsive(60, 80, 90),
+      });
+    }
+
+    // Close modal on resize (re-layout)
+    if (this.infoPanel && this.infoPanel.visible) {
+      this.infoPanel.hide();
+      if (this._settingsBtn) this._settingsBtn.toggle(false);
+    }
   }
 
-  /**
-   * Flamm's paraboloid embedding using shared gr.js module.
-   * Inverted so it looks like a gravity well going DOWN.
-   */
   getEmbeddingHeight(r) {
     const height = flammEmbeddingHeight(
       r,
@@ -550,44 +430,28 @@ class SchwarzschildDemo extends Game {
       CONFIG.gridSize,
       CONFIG.embeddingScale,
     );
-    // Clamp to non-negative to prevent grid lines appearing above the flat plane
     return Math.max(0, height);
   }
 
-  /**
-   * Effective potential for geodesic motion
-   * V_eff = -M/r + L²/(2r²) - ML²/r³
-   * Uses Tensor.effectivePotential static utility
-   */
   effectivePotential(r) {
     return Tensor.effectivePotential(this.mass, this.orbitL, r);
   }
 
-  /**
-   * Update geodesic motion using orbital.js utilities.
-   * Simplified for visualization while maintaining GR character.
-   */
   updateGeodesic(dt) {
     const r = this.orbitR;
 
-    // Kepler's 3rd law angular velocity
     const baseOmega = keplerianOmega(r, this.mass, CONFIG.orbitSpeed);
-
-    // Update orbital angle
     this.orbitPhi += baseOmega * dt;
 
-    // Radial oscillation for eccentricity effect
     this.orbitR = orbitalRadiusSimple(
       CONFIG.orbitSemiMajor,
       CONFIG.orbitEccentricity,
       this.orbitPhi,
     );
 
-    // Keep orbit bounded outside ISCO
     const minR = Tensor.iscoRadius(this.rs) + 1;
     if (this.orbitR < minR) this.orbitR = minR;
 
-    // GR precession: orbit doesn't close, rotates over time
     const precessionRate = schwarzschildPrecessionRate(
       r,
       this.rs,
@@ -595,7 +459,6 @@ class SchwarzschildDemo extends Game {
     );
     this.precessionAngle += precessionRate * dt;
 
-    // Store current position in trail
     const totalAngle = this.orbitPhi + this.precessionAngle;
     updateTrail(this.orbitTrail, createTrailPoint(this.orbitR, totalAngle), 80);
   }
@@ -605,10 +468,10 @@ class SchwarzschildDemo extends Game {
     this.time += dt;
 
     this.camera.update(dt);
-    
+
     // Ease zoom towards target
     this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoomEasing;
-    
+
     this.updateGeodesic(dt);
 
     // Update grid with Flamm's paraboloid embedding
@@ -616,24 +479,24 @@ class SchwarzschildDemo extends Game {
     for (let i = 0; i <= gridResolution; i++) {
       for (let j = 0; j <= gridResolution; j++) {
         const vertex = this.gridVertices[i][j];
-        // Function already clamps at horizon, no need for extra clamp here
         const r = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
         vertex.y = this.getEmbeddingHeight(r);
       }
     }
 
-    // Update metric panel
-    if (this.metricPanel) {
-      this.metricPanel.setMetricValues(this.orbitR, this.rs, this.mass);
-      this.metricPanel.setOrbiterPosition(this.orbitR, this.orbitPhi);
-    }
+    // Update info panel (even when hidden, so values are current when opened)
+    this.infoPanel.setMetricValues(this.orbitR, this.rs, this.mass);
+    this.infoPanel.setOrbiterPosition(this.orbitR, this.orbitPhi);
+
+    // Update info header
+    this._updateInfoHeader();
   }
 
   render() {
     const w = this.width;
     const h = this.height;
     const cx = w / 2;
-    const cy = h / 2; // Centered to see full well depth
+    const cy = h / 2;
 
     super.render();
 
@@ -649,8 +512,14 @@ class SchwarzschildDemo extends Game {
     // Draw effective potential graph
     this.drawEffectivePotential();
 
-    // Draw controls
+    // Draw controls hint
     this.drawControls(w, h);
+
+    // Info modal renders LAST so it overlays everything
+    this.infoPanel.render();
+
+    // Tooltip renders after info panel so it's always on top
+    this.tooltip.render();
   }
 
   drawKeyRadii(cx, cy) {
@@ -703,7 +572,6 @@ class SchwarzschildDemo extends Game {
       }),
     );
 
-    // Draw grid lines
     for (let i = 0; i <= gridResolution; i++) {
       const isMain = i % 5 === 0;
       Painter.useCtx((ctx) => {
@@ -736,30 +604,23 @@ class SchwarzschildDemo extends Game {
   }
 
   drawHorizon(cx, cy) {
-    // Draw filled event horizon - the BLACK hole
     const segments = 32;
     const r = this.rs;
     const y = this.getEmbeddingHeight(r + 0.1);
 
-    // Project center for black hole body
     const centerP = this.project3D(0, y + 10, 0);
     const centerX = cx + centerP.x;
     const centerY = cy + centerP.y;
 
-    // Mass-proportional sizing: heavier = bigger (rubber sheet intuition)
     const baseSize =
       CONFIG.blackHoleSizeBase + this.mass * CONFIG.blackHoleSizeMassScale;
     const size = baseSize * centerP.scale;
 
-    // Draw dark glow around black hole
+    // Dark glow
     Painter.useCtx((ctx) => {
       const gradient = ctx.createRadialGradient(
-        centerX,
-        centerY,
-        size,
-        centerX,
-        centerY,
-        size * 3,
+        centerX, centerY, size,
+        centerX, centerY, size * 3,
       );
       gradient.addColorStop(0, "rgba(80, 40, 120, 0.6)");
       gradient.addColorStop(1, "transparent");
@@ -769,14 +630,13 @@ class SchwarzschildDemo extends Game {
       ctx.fill();
     });
 
-    // Draw the black hole (actually black!)
+    // Black hole body
     Painter.useCtx((ctx) => {
       ctx.fillStyle = "#000";
       ctx.beginPath();
       ctx.arc(centerX, centerY, size, 0, Math.PI * 2);
       ctx.fill();
 
-      // Event horizon ring (accretion disk hint)
       ctx.strokeStyle = "rgba(150, 100, 200, 0.8)";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -784,7 +644,7 @@ class SchwarzschildDemo extends Game {
       ctx.stroke();
     });
 
-    // Draw event horizon circle on the grid
+    // Event horizon circle on the grid
     Painter.useCtx((ctx) => {
       ctx.strokeStyle = CONFIG.horizonColor;
       ctx.lineWidth = 2;
@@ -810,10 +670,8 @@ class SchwarzschildDemo extends Game {
   }
 
   drawOrbiter(cx, cy) {
-    // Apply precession to orbit
     const totalAngle = this.orbitPhi + this.precessionAngle;
 
-    // Position in orbital plane
     const orbiterX = Math.cos(totalAngle) * this.orbitR;
     const orbiterZ = Math.sin(totalAngle) * this.orbitR;
     const orbiterY = this.getEmbeddingHeight(this.orbitR);
@@ -831,12 +689,8 @@ class SchwarzschildDemo extends Game {
     // Glow
     Painter.useCtx((ctx) => {
       const gradient = ctx.createRadialGradient(
-        screenX,
-        screenY,
-        0,
-        screenX,
-        screenY,
-        size * 4,
+        screenX, screenY, 0,
+        screenX, screenY, size * 4,
       );
       gradient.addColorStop(0, CONFIG.orbiterGlow);
       gradient.addColorStop(1, "transparent");
@@ -849,12 +703,8 @@ class SchwarzschildDemo extends Game {
     // Body
     Painter.useCtx((ctx) => {
       const gradient = ctx.createRadialGradient(
-        screenX - size * 0.3,
-        screenY - size * 0.3,
-        0,
-        screenX,
-        screenY,
-        size,
+        screenX - size * 0.3, screenY - size * 0.3, 0,
+        screenX, screenY, size,
       );
       gradient.addColorStop(0, "#fff");
       gradient.addColorStop(0.5, CONFIG.orbiterColor);
@@ -865,10 +715,7 @@ class SchwarzschildDemo extends Game {
       ctx.fill();
     });
 
-    // Draw full orbital path
     this.drawOrbitPath(cx, cy);
-
-    // Draw trailing tail
     this.drawOrbitalTrail(cx, cy);
   }
 
@@ -881,11 +728,9 @@ class SchwarzschildDemo extends Game {
       ctx.beginPath();
 
       for (let i = 0; i <= segments; i++) {
-        // Full circle with precession applied
         const angle = (i / segments) * Math.PI * 2 + this.precessionAngle;
         const phi = (i / segments) * Math.PI * 2;
 
-        // Same radius formula as the orbiter
         const r = orbitalRadiusSimple(
           CONFIG.orbitSemiMajor,
           CONFIG.orbitEccentricity,
@@ -952,25 +797,21 @@ class SchwarzschildDemo extends Game {
   }
 
   drawEffectivePotential() {
-    // Responsive graph sizing
     const isMobile = this.width < CONFIG.mobileWidth;
     const graphW = isMobile ? 120 : 160;
     const graphH = isMobile ? 70 : 100;
     const graphX = this.width - graphW - (isMobile ? 15 : 20);
-    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
+    const graphY = isMobile ? 80 : 220;
 
     Painter.useCtx((ctx) => {
-      // Background
       ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
       ctx.fillRect(graphX - 10, graphY - 10, graphW + 20, graphH + 40);
 
-      // Title
       ctx.fillStyle = "#888";
       ctx.font = "10px monospace";
       ctx.textAlign = "center";
       ctx.fillText("Effective Potential V_eff(r)", graphX + graphW / 2, graphY);
 
-      // Axes
       ctx.strokeStyle = "#444";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -980,14 +821,12 @@ class SchwarzschildDemo extends Game {
       ctx.lineTo(graphX, graphY + graphH);
       ctx.stroke();
 
-      // Labels
       ctx.fillStyle = "#666";
       ctx.font = "8px monospace";
       ctx.textAlign = "left";
       ctx.fillText("r", graphX + graphW - 10, graphY + graphH + 12);
       ctx.fillText("V", graphX - 8, graphY + 15);
 
-      // Plot V_eff
       ctx.strokeStyle = "#8f8";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -1014,7 +853,6 @@ class SchwarzschildDemo extends Game {
       }
       ctx.stroke();
 
-      // Current position marker
       const currentPx =
         graphX + ((this.orbitR - rMin) / (rMax - rMin)) * graphW;
       const currentV = this.effectivePotential(this.orbitR);
@@ -1027,7 +865,6 @@ class SchwarzschildDemo extends Game {
         ctx.fill();
       }
 
-      // Mark ISCO
       const iscoPx = graphX + ((3 * this.rs - rMin) / (rMax - rMin)) * graphW;
       ctx.strokeStyle = CONFIG.iscoColor;
       ctx.setLineDash([2, 2]);
@@ -1041,34 +878,24 @@ class SchwarzschildDemo extends Game {
 
   drawControls(w, h) {
     const isMobile = w < CONFIG.mobileWidth;
-    const fontSize = isMobile ? 8 : 10;
-    const margin = isMobile ? 15 : 20;
 
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = "#999";
-      ctx.font = `${fontSize}px monospace`;
+      ctx.font = "10px monospace";
       ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+      ctx.fillStyle = "#556677";
 
       if (isMobile) {
-        ctx.fillText("drag to rotate | pinch to zoom", w - margin, h - 25);
-        ctx.fillStyle = "#777";
-        ctx.fillText("Curvature exaggerated", w - margin, h - 10);
+        ctx.fillText(
+          "drag to rotate \u00B7 pinch to zoom",
+          w - 15,
+          h - 10,
+        );
       } else {
         ctx.fillText(
-          "drag to rotate | scroll to zoom | double-click to reset",
-          w - margin,
-          h - 45,
-        );
-        ctx.fillText(
-          "Flamm's paraboloid embedding  |  Geodesic precession",
-          w - margin,
-          h - 30,
-        );
-        ctx.fillStyle = "#777";
-        ctx.fillText(
-          "Curvature exaggerated for visibility (rubber sheet analogy)",
-          w - margin,
-          h - 15,
+          "drag to rotate \u00B7 scroll to zoom \u00B7 double-click to reset",
+          w - 20,
+          h - 10,
         );
       }
     });

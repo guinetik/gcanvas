@@ -48,7 +48,6 @@ const CONFIG = {
   trailMaxAlpha: 0.85,
   trailMinWidth: 1,
   trailMaxWidth: 3,
-  trailFadeSpeed: 0.03,       // semi-transparent clear — lower = longer ghosting
 
   // Scaling
   scale: 120,               // pixels per unit in the complex output plane
@@ -136,22 +135,40 @@ const CONFIG = {
       harmonicVolume: 0.02,     // volume per harmonic
       fadeInTime: 0.8,          // seconds to fade in new harmonic
     },
-    // Zero burst — additive synthesis shimmer
+    // Zero burst — procedural composition from the math
     zeroBurst: {
-      baseFreq: 220,            // A3
+      baseFreq: 220,            // A3 — root frequency
       harmonics: [1, 0.5, 0.25, 0.12, 0.06, 0.03],  // gentler rolloff — warmer timbre
       duration: 2.2,            // seconds (longer tail)
-      volume: 0.2,              // louder
-      cycleLength: 30,          // every N zeros, return to Alap (one full raga cycle)
+      volume: 0.2,
+      ragaCycle: 30,             // every N zeros, return to raga phrase
+      ragaPhraseNotes: 4,       // notes in the ascending raga phrase
+      ragaPhraseGap: 0.18,      // seconds between phrase notes
+    },
+    // Glass ticks — inharmonic bell/glass partials as the ball travels
+    glass: {
+      interval: 0.4,            // seconds between ticks
+      freqHigh: 3200,           // upper range (near zeros)
+      freqLow: 1200,            // lower range (far from zeros)
+      duration: 0.15,           // short ring — percussive
+      volume: 0.008,            // subtle, ambient presence
     },
     // Whoosh — sweep triggered by large jumps in the spiral
     whoosh: {
-      speedThreshold: 0.8,      // trail speed above this triggers a whoosh
-      cooldown: 2.0,            // minimum seconds between whooshes
+      speedThreshold: 0.3,      // trail speed above this triggers a whoosh
+      cooldown: 1.5,            // minimum seconds between whooshes
       freqStart: 800,           // sweep start frequency
       freqEnd: 120,             // sweep end frequency
       duration: 1.2,            // seconds
       volume: 0.08,
+    },
+    // Jazz licks — fast improv phrases on spiral jumps (plays with whoosh)
+    jazzLick: {
+      noteGap: 0.12,            // seconds between lick notes
+      noteDuration: 0.2,        // each note's ring time
+      volume: 0.3,
+      flashDuration: 0.3,       // white screen flash duration (seconds)
+      flashAlpha: 0.25,         // peak flash opacity
     },
     // Delay effect on zero bursts
     delay: {
@@ -163,9 +180,9 @@ const CONFIG = {
     flanger: {
       baseDelay: 0.005,
       maxDelay: 0.02,
-      lfoFrequency: 0.3,        // moderate sweep
-      lfoDepth: 0.004,          // noticeable but not overpowering
-      feedback: 0.5,            // balanced resonance
+      lfoFrequency: 0.3,
+      lfoDepth: 0.004,
+      feedback: 0.5,
       wet: 0.45,
       dry: 0.75,
     },
@@ -187,24 +204,6 @@ class ZetaZerosDemo extends Game {
     super(canvas);
     this.backgroundColor = CONFIG.colors.background;
     this.enableFluidSize();
-    this._didFirstClear = false;
-  }
-
-  // Override clear — semi-transparent fill creates ghosting afterimage trails
-  clear() {
-    if (!this._didFirstClear) {
-      Painter.useCtx((ctx) => {
-        ctx.fillStyle = CONFIG.colors.background;
-        ctx.fillRect(0, 0, this.width, this.height);
-      });
-      this._didFirstClear = true;
-      return;
-    }
-    Painter.useCtx((ctx) => {
-      ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = `rgba(10, 10, 18, ${CONFIG.trailFadeSpeed})`;
-      ctx.fillRect(0, 0, this.width, this.height);
-    });
   }
 
   init() {
@@ -234,6 +233,12 @@ class ZetaZerosDemo extends Game {
     this.soundEnabled = false;
     this.harmonicOscs = [];
     this.lastWhooshTime = -10;
+    this.lastGlassTime = 0;
+    this.lastZeroScaleDeg = 0;    // Bhairav index of last zero's note
+    this.lastLickIdx = -1;        // last jazz lick pattern used
+
+    // Screen flash for jazz licks
+    this.screenFlash = 0;         // remaining flash time (seconds)
 
     // Cross-section: incremental sample buffer
     this.csSamples = [];       // { t, mag } — grows as t advances
@@ -342,6 +347,7 @@ class ZetaZerosDemo extends Game {
     this.detectedZeros = [];
     this.activeFlashes = [];
     this.lastZeroT = -10;
+    this.lastGlassTime = 0;
     this.csSamples = [];
     this.csLastSampledT = 0;
   }
@@ -402,8 +408,8 @@ class ZetaZerosDemo extends Game {
     this.droneFlanger = new Flanger(ctx, {
       baseDelay: fl.baseDelay,
       maxDelay: fl.maxDelay,
-      lfoFrequency: fl.lfoFrequency * 0.6,  // even slower
-      lfoDepth: fl.lfoDepth * 1.5,           // deeper sweep
+      lfoFrequency: fl.lfoFrequency * 0.6,
+      lfoDepth: fl.lfoDepth * 1.5,
       feedback: fl.feedback * 1.1,
       wet: fl.wet * 1.2,
       dry: fl.dry,
@@ -415,6 +421,12 @@ class ZetaZerosDemo extends Game {
     this.droneFlanger.connect(this.droneBus);
     this.droneFlanger.output.connect(this.reverbDry);
     this.droneFlanger.output.connect(this.reverbNode);
+
+    // Jazz lick bus — dry, center-panned, straight to reverb (no flanger/pan)
+    this.lickBus = ctx.createGain();
+    this.lickBus.gain.value = 1;
+    this.lickBus.connect(this.reverbDry);
+    this.lickBus.connect(this.reverbNode);
 
     // Create delay effect for zero bursts
     this.delayEffect = this.Synth.fx.delay(sc.delay.time, sc.delay.feedback, sc.delay.mix);
@@ -519,53 +531,78 @@ class ZetaZerosDemo extends Game {
     const now = ctx.currentTime;
     const sc = CONFIG.sound.zeroBurst;
 
-    // ── Raga Bhairav: cyclical Alap → Jor → Jhala ──
-    // Like a real raga performance that returns to its theme:
-    //   Alap  (1-5 in cycle):  pure ascending scale, simple tones — establish the raga
-    //   Jor   (6-9 in cycle):  add embellishments, FM bells, slight jitter
-    //   Jhala (10+ in cycle):  full improvisation, dyads, grace notes, wide variance
-    // Every cycleLength zeros, return to Alap — like a musician revisiting the theme
+    // ── Composition: math-driven melody with raga bookends ──
+    //
+    // The melody emerges from the zeros themselves:
+    //   - Each zero's t-value (14.134..., 21.022...) determines the note
+    //   - frac(t) maps to Bhairav scale degrees
+    //   - Same zeros every run = same piece every run
+    //   - Not random, not a loop — procedural from the Riemann zeta function
+    //
+    // Every ragaInterval zeros, a short ascending Bhairav phrase plays
+    // as a "theme return" — the raga anchor amid the experimental sections.
 
     const bhairav = [0, 1, 4, 5, 7, 8, 11, 12, 13, 16, 17, 19, 20, 23];
     const rootFreq = sc.baseFreq;
 
-    // Phase within the current cycle
-    const posInCycle = ((zeroIndex - 1) % sc.cycleLength) + 1;
-    const isAlap  = posInCycle <= 8;
-    const isJor   = posInCycle > 8 && posInCycle <= 18;
-    // jhala is 19+ in cycle
+    // ── Raga phrase logic ──
+    // Zeros 1..N are the opening raga phrase (one note per zero, ascending)
+    // Then procedural improvisation until the next cycle boundary
+    // At each cycle (30, 60, 90...) the phrase plays again for N zeros
+    const posInCycle = ((zeroIndex - 1) % sc.ragaCycle) + 1; // 1-based position
+    const isRagaPhrase = posInCycle <= sc.ragaPhraseNotes;
 
-    // Note selection — strict ascending in alap, increasing freedom after
-    let idx;
-    if (isAlap) {
-      // Pure ascending walk through the scale
-      idx = (posInCycle - 1) % bhairav.length;
-    } else if (isJor) {
-      // Mostly ascending, occasional step back
-      const jitter = Math.floor(Math.random() * 3) - 1; // -1 to +1
-      idx = ((posInCycle - 1) + jitter) % bhairav.length;
-      if (idx < 0) idx += bhairav.length;
-    } else {
-      // Free movement — wider leaps, full range
-      const jitter = Math.floor(Math.random() * 5) - 2; // -2 to +2
-      idx = ((posInCycle - 1) + jitter) % bhairav.length;
-      if (idx < 0) idx += bhairav.length;
+    if (isRagaPhrase) {
+      // ── Raga phrase: one ascending note per zero ──
+      // Which cycle are we in? Shifts the starting scale degree each time
+      const cycleNum = Math.floor((zeroIndex - 1) / sc.ragaCycle);
+      const startDeg = (cycleNum * 3) % bhairav.length;
+      const deg = (startDeg + (posInCycle - 1)) % bhairav.length;
+      const freq = rootFreq * Math.pow(2, bhairav[deg] / 12);
+      this.lastZeroScaleDeg = deg;
+
+      this.Synth.osc.additive(
+        freq,
+        sc.harmonics,
+        sc.duration * 0.7,
+        { volume: sc.volume * 0.8, startTime: now }
+      );
+
+      // Delay send on the last note of the phrase
+      if (posInCycle === sc.ragaPhraseNotes) {
+        this._sendToDelay(freq, sc.volume * 0.15, now, sc.duration * 0.5);
+      }
+      return;
     }
+
+    // ── Procedural note: derived from the zero's t-value ──
+    const zero = this.detectedZeros[this.detectedZeros.length - 1];
+    const tValue = zero ? zero.t : zeroIndex * 6.28;
+
+    // Map fractional part of t to a scale degree
+    const frac = tValue - Math.floor(tValue);
+    const idx = Math.floor(frac * bhairav.length);
+    this.lastZeroScaleDeg = idx;
     const baseFreq = rootFreq * Math.pow(2, bhairav[idx] / 12);
 
-    // ── Timbre: evolves with the performance ──
+    // ── Timbre evolves with zero index (not a fixed cycle) ──
+    // Early zeros: pure additive — establishing the sound
+    // Mid zeros: FM bells mix in — growing complexity
+    // Late zeros: dyads, wider shimmer, grace notes — full expression
+    const maturity = Math.min(1, zeroIndex / 40); // 0→1 over first 40 zeros
 
-    if (isAlap) {
-      // Simple, pure additive — let the raga speak
+    if (maturity < 0.25) {
+      // Pure additive — simple, clear
       this.Synth.osc.additive(
         baseFreq,
         sc.harmonics,
         sc.duration,
         { volume: sc.volume, startTime: now }
       );
-    } else if (isJor) {
-      // Alternate between additive and FM bells
-      if (zeroIndex % 2 === 0) {
+    } else if (maturity < 0.6) {
+      // Mix of additive and FM — alternating based on t-value digits
+      const digit = Math.floor(frac * 100) % 10;
+      if (digit < 5) {
         this.Synth.osc.additive(
           baseFreq,
           sc.harmonics,
@@ -573,7 +610,6 @@ class ZetaZerosDemo extends Game {
           { volume: sc.volume, startTime: now }
         );
       } else {
-        // FM bell — golden ratio modulator
         this.Synth.osc.fm(
           baseFreq,
           baseFreq * 1.618,
@@ -583,28 +619,27 @@ class ZetaZerosDemo extends Game {
         );
       }
     } else {
-      // Jhala — full palette: additive, FM, dyads
-      const burstType = Math.floor(Math.random() * 3);
-      if (burstType === 0) {
+      // Full palette — timbral choice from t-value digits
+      const digit = Math.floor(frac * 1000) % 10;
+      if (digit < 3) {
         this.Synth.osc.additive(
           baseFreq,
           sc.harmonics,
           sc.duration,
           { volume: sc.volume, startTime: now }
         );
-      } else if (burstType === 1) {
+      } else if (digit < 6) {
         this.Synth.osc.fm(
           baseFreq,
           baseFreq * 1.618,
-          baseFreq * (0.3 + Math.random() * 0.3),
+          baseFreq * (0.3 + (digit / 10) * 0.3),
           sc.duration,
           { volume: sc.volume * 0.7, startTime: now }
         );
       } else {
-        // Dyad — root + a raga-consonant interval
-        const dyadOffset = [4, 7, 5][Math.floor(Math.random() * 3)]; // 3rd, 5th, or 4th
-        const dyadIdx = Math.min(idx + dyadOffset, bhairav.length - 1);
-        const dyadFreq = rootFreq * Math.pow(2, bhairav[dyadIdx] / 12);
+        // Dyad — root + interval derived from the *next* digit of t
+        const nextDigit = Math.floor(frac * 10000) % bhairav.length;
+        const dyadFreq = rootFreq * Math.pow(2, bhairav[nextDigit] / 12);
         this.Synth.osc.additive(baseFreq, [1, 0.3, 0.15], sc.duration,
           { volume: sc.volume * 0.6, startTime: now });
         this.Synth.osc.additive(dyadFreq, [0.7, 0.2], sc.duration * 0.8,
@@ -612,45 +647,31 @@ class ZetaZerosDemo extends Game {
       }
     }
 
-    // ── Delay send — grows wetter over time ──
-    const burstOsc = ctx.createOscillator();
-    const burstGain = ctx.createGain();
-    burstOsc.type = "triangle";
-    burstOsc.frequency.value = baseFreq;
-    const delayVol = isAlap
-      ? sc.volume * 0.15
-      : sc.volume * (0.2 + Math.random() * 0.15);
-    burstGain.gain.setValueAtTime(delayVol, now);
-    burstGain.gain.exponentialRampToValueAtTime(0.001, now + sc.duration * 0.7);
-    burstOsc.connect(burstGain);
-    burstGain.connect(this.delayEffect.input);
-    burstOsc.start(now);
-    burstOsc.stop(now + sc.duration);
+    // ── Delay send — grows wetter as the piece matures ──
+    const delayVol = sc.volume * (0.1 + maturity * 0.2);
+    this._sendToDelay(baseFreq, delayVol, now, sc.duration * 0.7);
 
-    // ── Shimmer: absent in alap, subtle in jor, wide in jhala ──
-    if (!isAlap) {
-      const spread = isJor
-        ? 6 + Math.random() * 6    // subtle in jor
-        : 8 + Math.random() * 18;  // wide in jhala
+    // ── Shimmer: grows with maturity ──
+    if (maturity > 0.15) {
+      const spread = 4 + maturity * 16;
       for (const sign of [-1, 1]) {
         const shimmer = ctx.createOscillator();
         const shimGain = ctx.createGain();
         shimmer.type = "sine";
         shimmer.frequency.value = this.Synth.music.detune(baseFreq * 2, sign * spread);
-        const shimVol = sc.volume * (0.04 + Math.random() * 0.06);
+        const shimVol = sc.volume * (0.02 + maturity * 0.06);
         shimGain.gain.setValueAtTime(shimVol, now);
         shimGain.gain.exponentialRampToValueAtTime(0.001, now + sc.duration);
         shimmer.connect(shimGain);
         shimGain.connect(this.audioBus);
-        shimmer.start(now + 0.03 + Math.random() * 0.05);
+        shimmer.start(now + 0.03 + frac * 0.05);
         shimmer.stop(now + sc.duration + 0.1);
       }
     }
 
-    // ── Grace notes (meend): never in alap, rare in jor, frequent in jhala ──
-    const graceChance = isAlap ? 0 : isJor ? 0.15 : 0.4;
-    if (Math.random() < graceChance) {
-      const graceInterval = Math.random() < 0.5 ? -1 : -2;
+    // ── Grace notes (meend): emerge as maturity grows ──
+    if (maturity > 0.3 && (Math.floor(frac * 100) % 7 === 0)) {
+      const graceInterval = (Math.floor(frac * 10) % 2 === 0) ? -1 : -2;
       const graceFreq = baseFreq * Math.pow(2, graceInterval / 12);
       const grace = ctx.createOscillator();
       const graceGain = ctx.createGain();
@@ -664,6 +685,20 @@ class ZetaZerosDemo extends Game {
       grace.start(now);
       grace.stop(now + 0.25);
     }
+  }
+
+  _sendToDelay(freq, volume, startTime, duration) {
+    const ctx = this.Synth.ctx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(volume, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.connect(gain);
+    gain.connect(this.delayEffect.input);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.05);
   }
 
   _playWhoosh(speed) {
@@ -721,6 +756,125 @@ class ZetaZerosDemo extends Game {
     noiseGain.connect(this.audioBus);
     noise.start(now);
     noise.stop(now + wc.duration + 0.05);
+  }
+
+  _playJazzLick() {
+    if (!this.soundEnabled) return;
+    const ctx = this.Synth.ctx;
+    const now = ctx.currentTime;
+    const jl = CONFIG.sound.jazzLick;
+    const bhairav = [0, 1, 4, 5, 7, 8, 11, 12, 13, 16, 17, 19, 20, 23];
+    const rootFreq = CONFIG.sound.zeroBurst.baseFreq;
+    const anchor = this.lastZeroScaleDeg;
+
+    // 3 jazz improv techniques — each a short fast phrase rhyming
+    // with the last zero's note (anchor degree)
+    const licks = [
+      // 1. Bebop run — descending scale from anchor, quick turnaround
+      () => {
+        const notes = [];
+        for (let i = 0; i < 5; i++) {
+          const deg = ((anchor - i) % bhairav.length + bhairav.length) % bhairav.length;
+          notes.push(bhairav[deg]);
+        }
+        return notes;
+      },
+      // 2. Arpeggio burst — leap through scale tones then resolve
+      () => {
+        const notes = [];
+        const jumps = [0, 3, 5, 2, 0];
+        for (let i = 0; i < 5; i++) {
+          const deg = (anchor + jumps[i]) % bhairav.length;
+          notes.push(bhairav[deg]);
+        }
+        return notes;
+      },
+      // 3. Call and response — anchor, step up, anchor, step down, anchor
+      () => {
+        const a = bhairav[anchor % bhairav.length];
+        const up = bhairav[(anchor + 1) % bhairav.length];
+        const down = bhairav[((anchor - 1) + bhairav.length) % bhairav.length];
+        return [a, up, a, down, a];
+      },
+    ];
+
+    // Pick one at random, never the same twice in a row
+    let pick;
+    do {
+      pick = Math.floor(Math.random() * licks.length);
+    } while (pick === this.lastLickIdx && licks.length > 1);
+    this.lastLickIdx = pick;
+    const semitones = licks[pick]();
+
+    // Play the lick — own bus, no flanger/pan, just reverb
+    const harmonics = CONFIG.sound.zeroBurst.harmonics;
+    for (let i = 0; i < semitones.length; i++) {
+      const freq = rootFreq * Math.pow(2, semitones[i] / 12);
+      const t0 = now + i * jl.noteGap;
+      const noteVol = jl.volume / harmonics.length;
+
+      for (let h = 0; h < harmonics.length; h++) {
+        const hFreq = freq * (h + 1);
+        if (hFreq > 18000) break;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = hFreq;
+        gain.gain.setValueAtTime(noteVol * harmonics[h], t0);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + jl.noteDuration);
+        osc.connect(gain);
+        gain.connect(this.lickBus);
+        osc.start(t0);
+        osc.stop(t0 + jl.noteDuration + 0.01);
+      }
+    }
+
+    // Send last note to delay for a trailing echo
+    const lastFreq = rootFreq * Math.pow(2, semitones[semitones.length - 1] / 12);
+    const lastT = now + (semitones.length - 1) * jl.noteGap;
+    this._sendToDelay(lastFreq, jl.volume * 0.3, lastT, jl.noteDuration);
+  }
+
+  _playGlassTick(magnitude, speed) {
+    if (!this.soundEnabled) return;
+    const ctx = this.Synth.ctx;
+    const now = ctx.currentTime;
+    const gc = CONFIG.sound.glass;
+
+    // Glass: multiple inharmonic partials ringing at fixed frequencies
+    // Real glass doesn't sweep — it rings at specific resonant frequencies
+    // The partials are slightly inharmonic (ratios like 1, 2.76, 5.4) which
+    // gives that crystalline, metallic quality distinct from musical tones
+
+    const proximity = Math.max(0, 1 - magnitude / 3);
+    const baseFreq = gc.freqLow + (gc.freqHigh - gc.freqLow) * (0.3 + proximity * 0.7);
+
+    const speedFactor = Math.min(1, speed * 3);
+    const vol = gc.volume * (0.3 + speedFactor * 0.7);
+
+    // Inharmonic partial ratios — glass/bell-like spectrum
+    const partials = [1, 2.76, 5.4, 8.93];
+    const partialVols = [1, 0.5, 0.25, 0.12];
+
+    for (let i = 0; i < partials.length; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      // Fixed frequency — no sweep, just ring and decay
+      osc.frequency.value = baseFreq * partials[i];
+
+      // Instant attack, exponential decay — percussive glass hit
+      // Higher partials decay faster (natural damping)
+      const decay = gc.duration * (1 - i * 0.2);
+      gain.gain.setValueAtTime(vol * partialVols[i], now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+
+      osc.connect(gain);
+      gain.connect(this.audioBus);
+      osc.start(now);
+      osc.stop(now + decay + 0.01);
+    }
   }
 
   _playVerificationTone(zeroIndex) {
@@ -894,6 +1048,9 @@ class ZetaZerosDemo extends Game {
       this._updatePanner();
     }
 
+    // Decay screen flash
+    if (this.screenFlash > 0) this.screenFlash = Math.max(0, this.screenFlash - dt);
+
     // Update flash effects
     for (let i = this.activeFlashes.length - 1; i >= 0; i--) {
       this.activeFlashes[i].elapsed += dt;
@@ -933,11 +1090,22 @@ class ZetaZerosDemo extends Game {
 
     this.trail.push(point);
 
-    // Jump detection — large leaps in the spiral trigger a whoosh
+    // Glass ticks — crystalline pings as the ball travels
+    const gc = CONFIG.sound.glass;
+    if (this.soundEnabled && t - this.lastGlassTime > gc.interval) {
+      this.lastGlassTime = t;
+      this._playGlassTick(magnitude, speed);
+    }
+
+    // Jump detection — large leaps trigger whoosh + jazz lick + flash
     const wc = CONFIG.sound.whoosh;
     if (speed > wc.speedThreshold && t - this.lastWhooshTime > wc.cooldown) {
       this.lastWhooshTime = t;
       this._playWhoosh(speed);
+      if (this.detectedZeros.length > 0) {
+        this._playJazzLick();
+        this.screenFlash = CONFIG.sound.jazzLick.flashDuration;
+      }
     }
 
     // Zero detection
@@ -1069,6 +1237,16 @@ class ZetaZerosDemo extends Game {
 
     this._drawCrossSection();
 
+    // Screen flash on jazz licks
+    if (this.screenFlash > 0) {
+      const jl = CONFIG.sound.jazzLick;
+      const alpha = jl.flashAlpha * (this.screenFlash / jl.flashDuration);
+      Painter.useCtx((ctx) => {
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fillRect(0, 0, this.width, this.height);
+      });
+    }
+
     Painter.useCtx((ctx) => {
       this._drawZeroLog(ctx);
       this._drawStats(ctx);
@@ -1191,8 +1369,7 @@ class ZetaZerosDemo extends Game {
       const prev = this.trail[i - 1];
       const curr = this.trail[i];
 
-      // Skip drawing straight lines for large jumps
-      if (curr.speed > CONFIG.sound.whoosh.speedThreshold) continue;
+      // (cyan jump lines are kept visible — they trigger jazz licks)
 
       const age = 1 - i / len; // 0 = newest, 1 = oldest
       const alpha = CONFIG.trailMaxAlpha - age * (CONFIG.trailMaxAlpha - CONFIG.trailMinAlpha);
