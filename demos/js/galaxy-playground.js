@@ -70,8 +70,13 @@ export class GalaxyPlayground extends Game {
     });
     this.pipeline.add(this.fpsCounter);
 
+    this._didDrag = false;
+    this.canvas.addEventListener("mousedown", () => { this._didDrag = false; });
+    this.canvas.addEventListener("mousemove", () => {
+      if (this.camera._isDragging) this._didDrag = true;
+    });
     this.canvas.addEventListener("click", () => {
-      if (!this.camera._isDragging) {
+      if (!this._didDrag) {
         this.paused = !this.paused;
       }
     });
