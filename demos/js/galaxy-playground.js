@@ -319,9 +319,7 @@ export class GalaxyPlayground extends Game {
             const sy = cy + p.y * this.zoom;
             const radius = v.nebulaGlowRadius * p.scale * this.zoom;
 
-            const hue = sample.isHII
-                ? v.hiiHueRange[0] + Math.random() * 20
-                : v.dustHueRange[0] + (a * 30) % 40;
+            const hue = sample.hue;
             const alpha = v.nebulaGlowAlpha * Math.min(1, p.scale * this.zoom);
 
             const gradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
@@ -407,8 +405,9 @@ export class GalaxyPlayground extends Game {
       const screenX = cx + p.x * this.zoom;
       const screenY = cy + p.y * this.zoom;
 
-      const twinkle = 0.7 + 0.3 * Math.sin(this.time * 2.5 + star.twinklePhase);
-      const alpha = star.brightness * twinkle * Math.min(1, p.scale * this.zoom * 1.5);
+      const twinkle = star.layer === "dust" ? 1.0 :
+          0.7 + 0.3 * Math.sin(this.time * 2.5 + star.twinklePhase);
+      const alpha = (star.alpha || star.brightness) * twinkle * Math.min(1, p.scale * this.zoom * 1.5);
 
       const size = Math.max(0.4, star.size * p.scale * this.zoom);
 

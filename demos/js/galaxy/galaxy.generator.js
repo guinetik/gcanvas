@@ -193,7 +193,14 @@ function generateSpiral(p) {
 
       // Sample arm center points for nebular glow
       if (i % Math.max(1, Math.floor(starsPerArm / CONFIG.visual.nebulaGlowSamples)) === 0 && layer === "star") {
-        armSamples.push({ angle: baseAngle, r, isHII: hiiSegments.has(segment) });
+        armSamples.push({
+          angle: baseAngle,
+          r,
+          isHII: hiiSegments.has(segment),
+          hue: hiiSegments.has(segment)
+            ? CONFIG.visual.hiiHueRange[0] + Math.random() * 20
+            : CONFIG.visual.dustHueRange[0] + (arm * 30) % 40,
+        });
       }
     }
     armPoints.push(armSamples);
@@ -308,7 +315,14 @@ function generateBarredSpiral(p) {
       });
 
       if (i % Math.max(1, Math.floor(starsPerArm / CONFIG.visual.nebulaGlowSamples)) === 0 && layer === "star") {
-        armSamples.push({ angle: baseAngle, r, isHII: hiiSegments.has(segment) });
+        armSamples.push({
+          angle: baseAngle,
+          r,
+          isHII: hiiSegments.has(segment),
+          hue: hiiSegments.has(segment)
+            ? CONFIG.visual.hiiHueRange[0] + Math.random() * 20
+            : CONFIG.visual.dustHueRange[0] + (arm * 30) % 40,
+        });
       }
     }
     armPoints.push(armSamples);
