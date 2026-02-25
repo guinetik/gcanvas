@@ -445,9 +445,11 @@ export class GalaxyPlayground extends Game {
     ctx.globalCompositeOperation = "lighter";
 
     const diskGradient = ctx.createRadialGradient(0, 0, holeRadius, 0, 0, diskRadius);
-    diskGradient.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue + 20}, 100%, 70%, 0.9)`);
+    diskGradient.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue + 30}, 100%, 80%, 0.9)`);
+    diskGradient.addColorStop(0.15, `hsla(${CONFIG.blackHole.accretionHue + 20}, 100%, 70%, 0.8)`);
     diskGradient.addColorStop(0.3, `hsla(${CONFIG.blackHole.accretionHue}, 100%, 60%, 0.6)`);
-    diskGradient.addColorStop(0.6, `hsla(${CONFIG.blackHole.accretionHue - 10}, 90%, 50%, 0.3)`);
+    diskGradient.addColorStop(0.5, `hsla(${CONFIG.blackHole.accretionHue - 10}, 90%, 50%, 0.3)`);
+    diskGradient.addColorStop(0.75, `hsla(${CONFIG.blackHole.accretionHue - 20}, 80%, 40%, 0.15)`);
     diskGradient.addColorStop(1, "transparent");
 
     ctx.scale(1, Math.max(0.1, Math.abs(tilt)));
@@ -490,6 +492,44 @@ export class GalaxyPlayground extends Game {
     ctx.fill();
 
     ctx.restore();
+
+    // Relativistic jets
+    const jetLen = CONFIG.blackHole.jetLength * p.scale * this.zoom;
+    const jetW = CONFIG.blackHole.jetWidth * p.scale * this.zoom;
+    const jetAlpha = CONFIG.blackHole.jetAlpha;
+
+    ctx.save();
+    ctx.translate(screenX, screenY);
+    ctx.globalCompositeOperation = "lighter";
+
+    // Top jet
+    const topGrad = ctx.createLinearGradient(0, 0, 0, -jetLen);
+    topGrad.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue + 10}, 100%, 80%, ${jetAlpha})`);
+    topGrad.addColorStop(0.3, `hsla(${CONFIG.blackHole.accretionHue}, 80%, 60%, ${jetAlpha * 0.5})`);
+    topGrad.addColorStop(1, "transparent");
+    ctx.beginPath();
+    ctx.moveTo(-jetW, 0);
+    ctx.lineTo(0, -jetLen);
+    ctx.lineTo(jetW, 0);
+    ctx.closePath();
+    ctx.fillStyle = topGrad;
+    ctx.fill();
+
+    // Bottom jet
+    const botGrad = ctx.createLinearGradient(0, 0, 0, jetLen);
+    botGrad.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue + 10}, 100%, 80%, ${jetAlpha})`);
+    botGrad.addColorStop(0.3, `hsla(${CONFIG.blackHole.accretionHue}, 80%, 60%, ${jetAlpha * 0.5})`);
+    botGrad.addColorStop(1, "transparent");
+    ctx.beginPath();
+    ctx.moveTo(-jetW, 0);
+    ctx.lineTo(0, jetLen);
+    ctx.lineTo(jetW, 0);
+    ctx.closePath();
+    ctx.fillStyle = botGrad;
+    ctx.fill();
+
+    ctx.restore();
+
     ctx.globalCompositeOperation = "source-over";
   }
 
