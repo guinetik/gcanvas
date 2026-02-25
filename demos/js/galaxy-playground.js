@@ -262,6 +262,7 @@ export class GalaxyPlayground extends Game {
     ctx.fillRect(0, 0, w, h);
 
     this._drawGalacticHaze(ctx, cx, cy);
+    this._drawNebulaGlow(ctx, cx, cy);
     this._drawStars(ctx, cx, cy);
     this._drawBlackHole(ctx, cx, cy);
 
@@ -291,6 +292,50 @@ export class GalaxyPlayground extends Game {
     ctx.arc(0, 0, hazeRadius, 0, TAU);
     ctx.fillStyle = gradient;
     ctx.fill();
+    ctx.restore();
+  }
+
+  _drawNebulaGlow(ctx, cx, cy) {
+    const armPoints = this.stars._armPoints;
+    if (!armPoints || armPoints.length === 0) return;
+
+    const v = CONFIG.visual;
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+
+    for (let a = 0; a < armPoints.length; a++) {
+        const samples = armPoints[a];
+        for (const sample of samples) {
+            // Rotate arm sample point with galaxy
+            const angle = sample.angle + this.galaxyRotation;
+            const rx = Math.cos(angle) * sample.r;
+            const rz = Math.sin(angle) * sample.r;
+
+            const p = this.camera.project(rx, 0, rz);
+            if (p.scale < 0.05) continue;
+
+            const sx = cx + p.x * this.zoom;
+            const sy = cy + p.y * this.zoom;
+            const radius = v.nebulaGlowRadius * p.scale * this.zoom;
+
+            const hue = sample.isHII
+                ? v.hiiHueRange[0] + Math.random() * 20
+                : v.dustHueRange[0] + (a * 30) % 40;
+            const alpha = v.nebulaGlowAlpha * Math.min(1, p.scale * this.zoom);
+
+            const gradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, radius);
+            gradient.addColorStop(0, `hsla(${hue}, 60%, 50%, ${alpha})`);
+            gradient.addColorStop(0.4, `hsla(${hue}, 50%, 40%, ${alpha * 0.5})`);
+            gradient.addColorStop(1, "transparent");
+
+            ctx.beginPath();
+            ctx.arc(sx, sy, radius, 0, TAU);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+        }
+    }
+
     ctx.restore();
   }
 
