@@ -29,6 +29,7 @@ import {
 import { createTheme } from "../../src/game/ui/theme.js";
 import { WebGLParticleRenderer } from "../../src/webgl/webgl-particle-renderer.js";
 import { WebGLNebulaRenderer } from "../../src/webgl/webgl-nebula-renderer.js";
+import { WebGLBlackHoleRenderer } from "../../src/webgl/webgl-blackhole-renderer.js";
 
 const TAU = Math.PI * 2;
 
@@ -156,6 +157,11 @@ export class GalaxyPlayground extends Game {
       nebulaIntensity: CONFIG.nebula.intensity,
     });
     this.nebulaRenderer.init();
+
+    this.blackHoleRenderer = new WebGLBlackHoleRenderer({
+      size: CONFIG.blackHole.shaderSize,
+    });
+    this.blackHoleRenderer.init();
   }
 
   _regenerate() {
@@ -493,6 +499,45 @@ export class GalaxyPlayground extends Game {
   }
 
   _drawBlackHole(ctx, cx, cy) {
+    if (this.blackHoleRenderer && this.blackHoleRenderer.isAvailable()) {
+      this._drawBlackHoleWebGL(ctx, cx, cy);
+    } else {
+      this._drawBlackHoleCanvas2D(ctx, cx, cy);
+    }
+    this._drawJets(ctx, cx, cy);
+  }
+
+  _drawBlackHoleWebGL(ctx, cx, cy) {
+    const p = this.camera.project(0, 0, 0);
+    const screenX = cx + p.x * this.zoom;
+    const screenY = cy + p.y * this.zoom;
+
+    const regionSize = Math.round(CONFIG.blackHole.shaderSize * p.scale * this.zoom);
+    this.blackHoleRenderer.resize(regionSize);
+
+    this.blackHoleRenderer.render({
+      time: this.time,
+      tiltX: this.camera.rotationX,
+      rotY: this.camera.rotationY,
+    });
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    this.blackHoleRenderer.compositeOnto(ctx, screenX, screenY);
+    ctx.restore();
+
+    // Opaque black center
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    const holeRadius = CONFIG.blackHole.radius * p.scale * this.zoom;
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, holeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = "#000";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _drawBlackHoleCanvas2D(ctx, cx, cy) {
     const p = this.camera.project(0, 0, 0);
     const screenX = cx + p.x * this.zoom;
     const screenY = cy + p.y * this.zoom;
@@ -564,7 +609,14 @@ export class GalaxyPlayground extends Game {
 
     ctx.restore();
 
-    // Relativistic jets
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  _drawJets(ctx, cx, cy) {
+    const p = this.camera.project(0, 0, 0);
+    const screenX = cx + p.x * this.zoom;
+    const screenY = cy + p.y * this.zoom;
+
     const jetLen = CONFIG.blackHole.jetLength * p.scale * this.zoom;
     const jetW = CONFIG.blackHole.jetWidth * p.scale * this.zoom;
     const jetAlpha = CONFIG.blackHole.jetAlpha;
@@ -610,6 +662,9 @@ export class GalaxyPlayground extends Game {
     }
     if (this.nebulaRenderer) {
       this.nebulaRenderer.resize(this.width, this.height);
+    }
+    if (this.blackHoleRenderer) {
+      this.blackHoleRenderer.resize(CONFIG.blackHole.shaderSize);
     }
 
     if (this.panel) {
