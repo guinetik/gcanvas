@@ -93,6 +93,7 @@ export class GalaxyPlayground extends Game {
       sensitivity: CONFIG.camera.sensitivity,
       inertia: CONFIG.camera.inertia,
       friction: CONFIG.camera.friction,
+      clampX: false,
     });
     this.camera.enableMouseControl(this.canvas, {
       game: this,
@@ -264,12 +265,12 @@ export class GalaxyPlayground extends Game {
 
     this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoom.easing;
 
-    if (this.camera.rotationX > CONFIG.camera.maxTilt) {
-      this.camera.rotationX = CONFIG.camera.maxTilt;
-    }
-    if (this.camera.rotationX < -CONFIG.camera.maxTilt) {
-      this.camera.rotationX = -CONFIG.camera.maxTilt;
-    }
+    // if (this.camera.rotationX > CONFIG.camera.maxTilt) {
+    //   this.camera.rotationX = CONFIG.camera.maxTilt;
+    // }
+    // if (this.camera.rotationX < -CONFIG.camera.maxTilt) {
+    //   this.camera.rotationX = -CONFIG.camera.maxTilt;
+    // }
 
     this.camera.update(dt);
 
@@ -504,7 +505,7 @@ export class GalaxyPlayground extends Game {
     } else {
       this._drawBlackHoleCanvas2D(ctx, cx, cy);
     }
-    this._drawJets(ctx, cx, cy);
+    // this._drawJets(ctx, cx, cy);
   }
 
   _drawBlackHoleWebGL(ctx, cx, cy) {

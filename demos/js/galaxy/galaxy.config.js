@@ -263,7 +263,8 @@ export const CONFIG = {
     jetLength: 120,
     jetWidth: 8,
     jetAlpha: 0.15,
-    shaderSize: 160,           // WebGL render region size in pixels (before zoom)
+    shaderSize: 64,           // WebGL render region size in pixels (before zoom)
+    exclusionRadius: 25,      // Radius to clear stars around the black hole
   },
   visual: {
     armHue: 210,
@@ -302,7 +303,7 @@ export const CONFIG = {
   },
   zoom: {
     min: 0.3,
-    max: 2.5,
+    max: 5.0,
     speed: 0.5,
     easing: 0.12,
   },

@@ -33,10 +33,10 @@ uniform float uRotY;
 #define STEP_SIZE 0.05
 
 // Black Hole Parameters
-#define BH_RADIUS 0.35
-#define ACCRETION_INNER 0.6
-#define ACCRETION_OUTER 2.2
-#define DISK_HEIGHT 0.08
+#define BH_RADIUS 0.2
+#define ACCRETION_INNER 0.22
+#define ACCRETION_OUTER 0.8
+#define DISK_HEIGHT 0.04
 
 // Visuals
 #define COLOR_INNER vec3(1.0, 0.8, 0.5)
@@ -95,7 +95,8 @@ void main() {
     vec3 up = cross(fwd, right);
     
     // Ray Direction
-    vec3 rd = normalize(fwd * 2.0 + right * uv.x + up * uv.y);
+    // FOV adjustment: wider FOV to see more of the disk at close range
+    vec3 rd = normalize(fwd * 1.8 + right * uv.x + up * uv.y);
     
     // Raymarching State
     vec3 p = ro;
@@ -146,8 +147,9 @@ void main() {
                 float n = fbm(diskUV);
                 
                 // Radial fade edges
-                float fade = smoothstep(ACCRETION_INNER, ACCRETION_INNER + 0.5, dist) * 
-                             smoothstep(ACCRETION_OUTER, ACCRETION_OUTER - 1.0, dist);
+                // Fade out as we approach outer edge
+                float fade = smoothstep(ACCRETION_INNER, ACCRETION_INNER + 0.05, dist) * 
+                             (1.0 - smoothstep(ACCRETION_OUTER - 0.2, ACCRETION_OUTER, dist));
                 
                 // Doppler beaming (fake)
                 // Left side (approaching) brighter, right side (receding) dimmer
@@ -182,13 +184,20 @@ void main() {
         // The core itself is black (0,0,0).
         // Alpha should be 1.0 to obscure background stars.
         alpha = 1.0;
-        // col is just whatever disk we passed through *in front* of the horizon.
+        
+        // Ensure core is fully opaque black
+        col = col; // Keep accumulated disk color
     } else {
         // Space
         // Add a faint glow around the black hole
         // Based on impact parameter? Or just distance from center in screen space?
         // Let's use the accumulated alpha.
         alpha = clamp(alpha, 0.0, 1.0);
+        
+        // Soft edge fade for the entire shader box to prevent hard square edges
+        float edgeFade = smoothstep(1.0, 0.8, abs(uv.x)) * smoothstep(1.0, 0.8, abs(uv.y));
+        alpha *= edgeFade;
+        col *= edgeFade;
     }
     
     // Premultiplied alpha output
