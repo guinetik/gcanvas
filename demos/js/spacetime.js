@@ -165,43 +165,55 @@ class SpacetimeDemo extends Game {
   }
 
   setupInfoPanel() {
-    this.infoPanel = new Scene(this, { x: 0, y: 0, origin: "center" });
+    this.infoPanel = new Scene(this, { x: 0, y: 0 });
     applyAnchor(this.infoPanel, {
-      anchor: Position.TOP_CENTER,
-      anchorOffsetY: 150,
+      anchor: Position.TOP_LEFT,
+      anchorOffsetX: Screen.responsive(10, 10, 10),
+      anchorOffsetY: Screen.responsive(10, 10, 10),
     });
     this.pipeline.add(this.infoPanel);
 
     this.titleText = new Text(this, "Spacetime Curvature", {
-      font: "bold 16px monospace",
+      font: `bold ${Screen.responsive(18, 24, 28)}px monospace`,
       color: "#7af",
-      align: "center",
+      align: "left",
       baseline: "middle",
-      origin: "center",
     });
 
     this.equationText = new Text(
       this,
-      "gμν = ημν + hμν   |   Rμν - ½Rgμν = 8πGTμν",
+      "g\u03BC\u03BD = \u03B7\u03BC\u03BD + h\u03BC\u03BD   |   R\u03BC\u03BD - \u00BDRg\u03BC\u03BD = 8\u03C0GT\u03BC\u03BD",
       {
-        font: "12px monospace",
-        color: "#888",
-        align: "center",
+        font: `${Screen.responsive(14, 18, 20)}px monospace`,
+        color: "#fff",
+        align: "left",
         baseline: "middle",
-        origin: "center",
       },
     );
 
-    this.statsText = new Text(this, "Blackhole | Mass: 3.0 M☉", {
-      font: "12px monospace",
+    this.statsText = new Text(this, "Blackhole | Mass: 3.0 M\u2609", {
+      font: `${Screen.responsive(9, 12, 13)}px monospace`,
       color: "#6d8",
-      align: "center",
+      align: "left",
       baseline: "middle",
-      origin: "center",
     });
 
-    const textItems = [this.titleText, this.equationText, this.statsText];
-    const layout = verticalLayout(textItems, { spacing: 18, align: "center" });
+    this.hintsText = new Text(this, "click to shuffle \u00B7 drag to rotate \u00B7 scroll to zoom \u00B7 dbl-click to reset", {
+      font: `${Screen.responsive(8, 10, 11)}px monospace`,
+      color: "#889",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this.legendText = new Text(this, "Mass curves spacetime \u00B7 Objects follow geodesics", {
+      font: `${Screen.responsive(8, 10, 11)}px monospace`,
+      color: "#889",
+      align: "left",
+      baseline: "middle",
+    });
+
+    const textItems = [this.titleText, this.equationText, this.statsText, this.hintsText, this.legendText];
+    const layout = verticalLayout(textItems, { spacing: Screen.responsive(18, 26, 30), align: "left" });
     applyLayout(textItems, layout.positions);
     textItems.forEach((item) => this.infoPanel.add(item));
   }
@@ -344,8 +356,6 @@ class SpacetimeDemo extends Game {
     // Draw stellar body
     this.drawBody(cx, cy);
 
-    // Draw controls hint
-    this.drawControls(w, h);
   }
 
   drawGrid(cx, cy) {
@@ -598,24 +608,6 @@ class SpacetimeDemo extends Game {
     });
   }
 
-  drawControls(w, h) {
-    Painter.useCtx((ctx) => {
-      ctx.fillStyle = "#999";
-      ctx.font = "10px monospace";
-      ctx.textAlign = "right";
-      ctx.fillText(
-        "click to shuffle  |  drag to rotate  |  scroll to zoom  |  double-click to reset",
-        w - 20,
-        h - 30,
-      );
-      ctx.fillText(
-        "Mass curves spacetime  |  Objects follow geodesics",
-        w - 20,
-        h - 15,
-      );
-      ctx.textAlign = "left";
-    });
-  }
 }
 
 window.addEventListener("load", () => {

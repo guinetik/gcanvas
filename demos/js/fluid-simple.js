@@ -16,11 +16,11 @@ import {
   Screen,
 } from "../../src/index.js";
 
-const PARTICLE_SIZE = 32;
+const PARTICLE_SIZE = Screen.responsive(14, 22, 32);
 
 const CONFIG = {
   particleSize: PARTICLE_SIZE,
-  maxParticles: 500,
+  maxParticles: Screen.responsive(200, 350, 500),
   gravity: 200,
   container: {
     marginX: 80,
