@@ -121,11 +121,12 @@ class SchrodingerDemo extends Game {
     // Setup collapse detection (hold without dragging = measure/collapse)
     this.setupCollapseInteraction();
 
-    // Create info panel container anchored to top center
+    // Create info panel container anchored to top left
     this.infoPanel = new Scene(this, { x: 0, y: 0 });
     applyAnchor(this.infoPanel, {
-      anchor: Position.TOP_CENTER,
-      anchorOffsetY: 150,
+      anchor: Position.TOP_LEFT,
+      anchorOffsetX: Screen.responsive(10, 10, 10),
+      anchorOffsetY: Screen.responsive(10, 10, 10),
     });
     this.pipeline.add(this.infoPanel);
 
@@ -133,36 +134,50 @@ class SchrodingerDemo extends Game {
     const { amplitude, sigma, k, omega, velocity } = CONFIG;
 
     this.titleText = new Text(this, "Gaussian Wave Packet", {
-      font: "bold 16px monospace",
+      font: `bold ${Screen.responsive(18, 24, 28)}px monospace`,
       color: "#7af",
-      align: "center",
+      align: "left",
       baseline: "middle",
     });
 
     this.equationText = new Text(this, "\u03A8(x,t) = A\u00B7e^(-(x-vt)\u00B2/4\u03C3\u00B2) \u00B7 e^(i(kx-\u03C9t))", {
-      font: "14px monospace",
+      font: `${Screen.responsive(7, 9, 10)}px monospace`,
       color: "#fff",
-      align: "center",
+      align: "left",
       baseline: "middle",
     });
 
     this.paramsText = new Text(this, `A=${amplitude}  \u03C3=${sigma}  k=${k}  \u03C9=${omega}  v=${velocity}`, {
-      font: "12px monospace",
+      font: `${Screen.responsive(9, 12, 13)}px monospace`,
       color: "#6d8",
-      align: "center",
+      align: "left",
       baseline: "middle",
     });
 
     this.liveText = new Text(this, "t=0.00s  x\u2080=0.00", {
-      font: "12px monospace",
+      font: `${Screen.responsive(9, 12, 13)}px monospace`,
       color: "#fa6",
-      align: "center",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this.hintsText = new Text(this, "drag to rotate \u00B7 scroll to zoom \u00B7 hold to collapse \u00B7 dbl-click to reset", {
+      font: `${Screen.responsive(8, 10, 11)}px monospace`,
+      color: "#889",
+      align: "left",
+      baseline: "middle",
+    });
+
+    this.legendText = new Text(this, "Helix = \u03A8  \u00B7  Blue = Re(\u03A8)  \u00B7  Red = |\u03A8|\u00B2", {
+      font: `${Screen.responsive(8, 10, 11)}px monospace`,
+      color: "#889",
+      align: "left",
       baseline: "middle",
     });
 
     // Use vertical layout to position items
-    const textItems = [this.titleText, this.equationText, this.paramsText, this.liveText];
-    const layout = verticalLayout(textItems, { spacing: 20, align: "center" });
+    const textItems = [this.titleText, this.equationText, this.paramsText, this.liveText, this.hintsText, this.legendText];
+    const layout = verticalLayout(textItems, { spacing: Screen.responsive(18, 26, 30), align: "left" });
     applyLayout(textItems, layout.positions);
 
     // Add all to panel
@@ -431,9 +446,6 @@ class SchrodingerDemo extends Game {
     if (this.isCollapsed) {
       this.drawCollapseIndicator(cx, cy);
     }
-
-    // Info text
-    this.drawInfo(w, h);
   }
 
   /**
@@ -684,19 +696,6 @@ class SchrodingerDemo extends Game {
     });
   }
 
-  drawInfo(w, h) {
-    Painter.useCtx((ctx) => {
-      // Controls hint (bottom right)
-      ctx.fillStyle = "#999";
-      ctx.font = "10px monospace";
-      ctx.textAlign = "right";
-      ctx.fillText("drag to rotate  |  scroll to zoom  |  hold to collapse  |  double-click to reset", w - 20, h - 30);
-
-      // Legend
-      ctx.fillText("Helix = Ψ  |  Blue = Re(Ψ)  |  Red = |Ψ|²", w - 20, h - 15);
-      ctx.textAlign = "left";
-    });
-  }
 }
 
 window.addEventListener("load", () => {

@@ -219,8 +219,8 @@ class KerrDemo extends Game {
     this._infoScene = new Scene(this, { x: 0, y: 0 });
     applyAnchor(this._infoScene, {
       anchor: Position.TOP_LEFT,
-      anchorOffsetX: Screen.responsive(15, 30, 40),
-      anchorOffsetY: Screen.responsive(60, 80, 90),
+      anchorOffsetX: Screen.responsive(10, 10, 10),
+      anchorOffsetY: 66,
     });
 
     this._titleText = new Text(this, "Kerr Metric", {
@@ -259,7 +259,7 @@ class KerrDemo extends Game {
     });
 
     const items = [this._titleText, this._equationText, this._massText, this._spinText, this._orbitText];
-    const spacing = Screen.responsive(14, 20, 24);
+    const spacing = Screen.responsive(18, 26, 30);
     let y = 0;
     for (const item of items) {
       item.x = 0;
@@ -345,8 +345,8 @@ class KerrDemo extends Game {
     if (this._infoScene) {
       applyAnchor(this._infoScene, {
         anchor: Position.TOP_LEFT,
-        anchorOffsetX: Screen.responsive(15, 30, 40),
-        anchorOffsetY: Screen.responsive(60, 80, 90),
+        anchorOffsetX: Screen.responsive(10, 10, 10),
+        anchorOffsetY: 66,
       });
     }
 
@@ -376,8 +376,9 @@ class KerrDemo extends Game {
     const isMobile = this.width < CONFIG.mobileWidth;
     const graphW = isMobile ? 120 : 160;
     const graphH = isMobile ? 70 : 100;
-    const graphX = this.width - graphW - (isMobile ? 15 : 20);
-    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
+    const graphMargin = isMobile ? 15 : 20;
+    const graphX = (this.width - graphW) / 2;
+    const graphY = this.height - graphH - graphMargin - 30;
 
     if (
       mouseX >= graphX - 10 &&
@@ -677,39 +678,11 @@ class KerrDemo extends Game {
     // Draw formation progress indicator
     this.drawFormationProgress(w, h);
 
-    // Draw controls hint
-    this.drawControls(w, h);
-
     // Info modal renders LAST so it overlays everything
     this.infoPanel.render();
 
     // Tooltip renders after info panel so it's always on top
     this.tooltip.render();
-  }
-
-  drawControls(w, h) {
-    const isMobile = w < CONFIG.mobileWidth;
-
-    Painter.useCtx((ctx) => {
-      ctx.font = "10px monospace";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "bottom";
-      ctx.fillStyle = "#556677";
-
-      if (isMobile) {
-        ctx.fillText(
-          "drag to rotate \u00B7 pinch to zoom",
-          w - 15,
-          h - 10,
-        );
-      } else {
-        ctx.fillText(
-          "drag to rotate \u00B7 scroll to zoom \u00B7 double-click to reset",
-          w - 20,
-          h - 10,
-        );
-      }
-    });
   }
 
   drawFormationProgress(w, h) {
@@ -719,8 +692,10 @@ class KerrDemo extends Game {
     // Position above the chart (same x alignment as chart)
     const isMobile = w < CONFIG.mobileWidth;
     const graphW = isMobile ? 120 : 160;
-    const graphX = w - graphW - (isMobile ? 15 : 20);
-    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
+    const graphH = isMobile ? 70 : 100;
+    const graphMargin = isMobile ? 15 : 20;
+    const graphX = (w - graphW) / 2;
+    const graphY = h - graphH - graphMargin - 30;
 
     const barWidth = graphW; // Same width as chart
     const barHeight = 6;
@@ -1295,8 +1270,9 @@ class KerrDemo extends Game {
     const isMobile = this.width < CONFIG.mobileWidth;
     const graphW = isMobile ? 120 : 160;
     const graphH = isMobile ? 70 : 100;
-    const graphX = this.width - graphW - (isMobile ? 15 : 20);
-    const graphY = isMobile ? 80 : 220; // Desktop moved down to avoid info div
+    const graphMargin = isMobile ? 15 : 20;
+    const graphX = (this.width - graphW) / 2;
+    const graphY = this.height - graphH - graphMargin - 30;
     const M = this.mass;
     const a = this.spin;
 

@@ -29,8 +29,10 @@ import {
 import { createTheme } from "/gcanvas.es.min.js";
 import { WebGLParticleRenderer } from "/gcanvas.es.min.js";
 import { WebGLNebulaRenderer } from "/gcanvas.es.min.js";
+import { WebGLBlackHoleRenderer } from "/gcanvas.es.min.js";
 
 const TAU = Math.PI * 2;
+const BLACK_HOLE_VISUAL_SCALE = 1.45;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GALAXY PLAYGROUND
@@ -92,6 +94,7 @@ export class GalaxyPlayground extends Game {
       sensitivity: CONFIG.camera.sensitivity,
       inertia: CONFIG.camera.inertia,
       friction: CONFIG.camera.friction,
+      clampX: false,
     });
     this.camera.enableMouseControl(this.canvas, {
       game: this,
@@ -156,6 +159,11 @@ export class GalaxyPlayground extends Game {
       nebulaIntensity: CONFIG.nebula.intensity,
     });
     this.nebulaRenderer.init();
+
+    this.blackHoleRenderer = new WebGLBlackHoleRenderer({
+      size: CONFIG.blackHole.shaderSize,
+    });
+    this.blackHoleRenderer.init();
   }
 
   _regenerate() {
@@ -258,12 +266,12 @@ export class GalaxyPlayground extends Game {
 
     this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoom.easing;
 
-    if (this.camera.rotationX > CONFIG.camera.maxTilt) {
-      this.camera.rotationX = CONFIG.camera.maxTilt;
-    }
-    if (this.camera.rotationX < -CONFIG.camera.maxTilt) {
-      this.camera.rotationX = -CONFIG.camera.maxTilt;
-    }
+    // if (this.camera.rotationX > CONFIG.camera.maxTilt) {
+    //   this.camera.rotationX = CONFIG.camera.maxTilt;
+    // }
+    // if (this.camera.rotationX < -CONFIG.camera.maxTilt) {
+    //   this.camera.rotationX = -CONFIG.camera.maxTilt;
+    // }
 
     this.camera.update(dt);
 
@@ -301,12 +309,10 @@ export class GalaxyPlayground extends Game {
     const screenX = cx + p.x * this.zoom;
     const screenY = cy + p.y * this.zoom;
 
-    const tilt = Math.cos(this.camera.rotationX);
-    const hazeRadius = (this._galaxyParams.galaxyRadius || 350) * p.scale * this.zoom * 0.9;
+    const hazeRadius = (this._galaxyParams.galaxyRadius || 350) * p.scale * this.zoom * 0.4;
 
     ctx.save();
     ctx.translate(screenX, screenY);
-    ctx.scale(1, Math.max(0.15, Math.abs(tilt)));
 
     const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, hazeRadius);
     gradient.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue}, 70%, 50%, 0.1)`);
@@ -345,6 +351,7 @@ export class GalaxyPlayground extends Game {
         zoom: this.zoom,
         seed: this._nebulaSeed,
         galaxyRotation: this.galaxyRotation,
+        axisRatio: this._galaxyParams.axisRatio ?? 1.0,
       });
 
       ctx.save();
@@ -426,7 +433,7 @@ export class GalaxyPlayground extends Game {
         ? Math.max(0.3, star.alpha || star.brightness)
         : (star.alpha || star.brightness);
       const alpha = Math.max(0.15, baseAlpha * twinkle * Math.min(1, scale * 1.5));
-      const size = Math.max(1.2, star.size * scale * 1.4);
+      const size = Math.max(1.5, star.size * scale * 1.8);
 
       // Convert hue to RGB
       const lightness = 50 + star.brightness * 40;
@@ -494,12 +501,57 @@ export class GalaxyPlayground extends Game {
   }
 
   _drawBlackHole(ctx, cx, cy) {
+    if (this.blackHoleRenderer && this.blackHoleRenderer.isAvailable()) {
+      this._drawBlackHoleWebGL(ctx, cx, cy);
+    } else {
+      this._drawBlackHoleCanvas2D(ctx, cx, cy);
+    }
+    // this._drawJets(ctx, cx, cy);
+  }
+
+  _drawBlackHoleWebGL(ctx, cx, cy) {
     const p = this.camera.project(0, 0, 0);
     const screenX = cx + p.x * this.zoom;
     const screenY = cy + p.y * this.zoom;
 
-    const diskRadius = CONFIG.blackHole.accretionDiskRadius * p.scale * this.zoom;
-    const holeRadius = CONFIG.blackHole.radius * p.scale * this.zoom;
+    const regionSize = Math.max(
+      1,
+      Math.round(CONFIG.blackHole.shaderSize * p.scale * this.zoom * BLACK_HOLE_VISUAL_SCALE)
+    );
+    this.blackHoleRenderer.resize(regionSize);
+
+    // Keep the accretion disk bounded by the galaxy core scale (bulge/bar/inner radius)
+    // so the black hole remains small at full-galaxy view.
+    const galaxyRadius = Math.max(1, this._galaxyParams.galaxyRadius || 350);
+    const coreRadius = Math.max(
+      this._galaxyParams.bulgeRadius || 0,
+      (this._galaxyParams.spiralStart || 0) * 0.7,
+      (this._galaxyParams.barWidth || 0) * 1.2,
+      18
+    );
+    const coreRatio = coreRadius / galaxyRadius;
+    const diskOuterLimit = Math.max(0.285, Math.min(0.53, 0.285 + coreRatio * 1.08));
+
+    this.blackHoleRenderer.render({
+      time: this.time,
+      tiltX: this.camera.rotationX,
+      rotY: this.camera.rotationY,
+      diskOuterLimit,
+    });
+
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    this.blackHoleRenderer.compositeOnto(ctx, screenX, screenY);
+    ctx.restore();
+  }
+
+  _drawBlackHoleCanvas2D(ctx, cx, cy) {
+    const p = this.camera.project(0, 0, 0);
+    const screenX = cx + p.x * this.zoom;
+    const screenY = cy + p.y * this.zoom;
+
+    const diskRadius = CONFIG.blackHole.accretionDiskRadius * p.scale * this.zoom * BLACK_HOLE_VISUAL_SCALE;
+    const holeRadius = CONFIG.blackHole.radius * p.scale * this.zoom * BLACK_HOLE_VISUAL_SCALE;
     const tilt = Math.cos(this.camera.rotationX);
 
     ctx.save();
@@ -507,12 +559,23 @@ export class GalaxyPlayground extends Game {
 
     ctx.globalCompositeOperation = "lighter";
 
-    const diskGradient = ctx.createRadialGradient(0, 0, holeRadius, 0, 0, diskRadius);
-    diskGradient.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue + 30}, 100%, 80%, 0.9)`);
-    diskGradient.addColorStop(0.15, `hsla(${CONFIG.blackHole.accretionHue + 20}, 100%, 70%, 0.8)`);
-    diskGradient.addColorStop(0.3, `hsla(${CONFIG.blackHole.accretionHue}, 100%, 60%, 0.6)`);
-    diskGradient.addColorStop(0.5, `hsla(${CONFIG.blackHole.accretionHue - 10}, 90%, 50%, 0.3)`);
-    diskGradient.addColorStop(0.75, `hsla(${CONFIG.blackHole.accretionHue - 20}, 80%, 40%, 0.15)`);
+    // Spherical glow around black hole (does NOT tilt with camera)
+    const glowRadius = holeRadius * 3.5;
+    const glowGradient = ctx.createRadialGradient(0, 0, holeRadius, 0, 0, glowRadius);
+    glowGradient.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue + 30}, 100%, 80%, 0.7)`);
+    glowGradient.addColorStop(0.3, `hsla(${CONFIG.blackHole.accretionHue + 10}, 90%, 60%, 0.3)`);
+    glowGradient.addColorStop(0.7, `hsla(${CONFIG.blackHole.accretionHue}, 70%, 45%, 0.08)`);
+    glowGradient.addColorStop(1, "transparent");
+    ctx.beginPath();
+    ctx.arc(0, 0, glowRadius, 0, TAU);
+    ctx.fillStyle = glowGradient;
+    ctx.fill();
+
+    // Accretion disk (tilts with camera)
+    const diskGradient = ctx.createRadialGradient(0, 0, holeRadius * 1.2, 0, 0, diskRadius);
+    diskGradient.addColorStop(0, `hsla(${CONFIG.blackHole.accretionHue + 20}, 100%, 70%, 0.6)`);
+    diskGradient.addColorStop(0.3, `hsla(${CONFIG.blackHole.accretionHue}, 100%, 55%, 0.4)`);
+    diskGradient.addColorStop(0.6, `hsla(${CONFIG.blackHole.accretionHue - 15}, 80%, 40%, 0.15)`);
     diskGradient.addColorStop(1, "transparent");
 
     ctx.scale(1, Math.max(0.1, Math.abs(tilt)));
@@ -554,7 +617,14 @@ export class GalaxyPlayground extends Game {
 
     ctx.restore();
 
-    // Relativistic jets
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  _drawJets(ctx, cx, cy) {
+    const p = this.camera.project(0, 0, 0);
+    const screenX = cx + p.x * this.zoom;
+    const screenY = cy + p.y * this.zoom;
+
     const jetLen = CONFIG.blackHole.jetLength * p.scale * this.zoom;
     const jetW = CONFIG.blackHole.jetWidth * p.scale * this.zoom;
     const jetAlpha = CONFIG.blackHole.jetAlpha;
@@ -600,6 +670,9 @@ export class GalaxyPlayground extends Game {
     }
     if (this.nebulaRenderer) {
       this.nebulaRenderer.resize(this.width, this.height);
+    }
+    if (this.blackHoleRenderer) {
+      this.blackHoleRenderer.resize(CONFIG.blackHole.shaderSize);
     }
 
     if (this.panel) {

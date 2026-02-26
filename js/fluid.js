@@ -30,7 +30,8 @@ import { zoneTemperature } from "/gcanvas.es.min.js";
 import { Easing } from "/gcanvas.es.min.js";
 
 // Base particle size - all proportional values derive from this
-const PARTICLE_SIZE = Math.PI * 10;
+// Responsive: smaller on mobile so particles fit in the smaller bounding box
+const PARTICLE_SIZE = Screen.responsive(Math.PI * 5, Math.PI * 7, Math.PI * 10);
 
 const CONFIG = {
   particleSize: PARTICLE_SIZE,

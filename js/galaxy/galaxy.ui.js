@@ -37,8 +37,8 @@ export function createInfoPanel(game) {
   const panel = new Scene(game, { x: 0, y: 0 });
   applyAnchor(panel, {
     anchor: Position.TOP_LEFT,
-    anchorOffsetX: Screen.responsive(15, 30, 40),
-    anchorOffsetY: Screen.responsive(60, 80, 90),
+    anchorOffsetX: Screen.responsive(10, 10, 10),
+    anchorOffsetY: Screen.responsive(66, 10, 10),
   });
 
   const titleText = new Text(game, "Galaxy Playground", {
@@ -50,7 +50,7 @@ export function createInfoPanel(game) {
 
   const statsText = new Text(game, "Spiral (S) | 3000 stars", {
     font: `${Screen.responsive(9, 12, 13)}px monospace`,
-    color: "#667",
+    color: "#99a",
     align: "left",
     baseline: "middle",
   });
@@ -60,14 +60,14 @@ export function createInfoPanel(game) {
     "drag to tilt \u00B7 scroll to zoom \u00B7 click to pause \u00B7 double-click to reset",
     {
       font: `${Screen.responsive(8, 10, 11)}px monospace`,
-      color: "#445",
+      color: "#889",
       align: "left",
       baseline: "middle",
     }
   );
 
   const textItems = [titleText, statsText, hintsText];
-  const spacing = Screen.responsive(14, 20, 24);
+  const spacing = Screen.responsive(18, 26, 30);
   let y = 0;
   for (const item of textItems) {
     item.x = 0;

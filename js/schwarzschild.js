@@ -205,8 +205,8 @@ class SchwarzschildDemo extends Game {
     this._infoScene = new Scene(this, { x: 0, y: 0 });
     applyAnchor(this._infoScene, {
       anchor: Position.TOP_LEFT,
-      anchorOffsetX: Screen.responsive(15, 30, 40),
-      anchorOffsetY: Screen.responsive(60, 80, 90),
+      anchorOffsetX: Screen.responsive(10, 10, 10),
+      anchorOffsetY: 66,
     });
 
     this._titleText = new Text(this, "Schwarzschild Metric", {
@@ -245,7 +245,7 @@ class SchwarzschildDemo extends Game {
     });
 
     const items = [this._titleText, this._equationText, this._massText, this._rsText, this._orbitText];
-    const spacing = Screen.responsive(14, 20, 24);
+    const spacing = Screen.responsive(18, 26, 30);
     let y = 0;
     for (const item of items) {
       item.x = 0;
@@ -333,8 +333,9 @@ class SchwarzschildDemo extends Game {
     const isMobile = this.width < CONFIG.mobileWidth;
     const graphW = isMobile ? 120 : 160;
     const graphH = isMobile ? 70 : 100;
-    const graphX = this.width - graphW - (isMobile ? 15 : 20);
-    const graphY = isMobile ? 80 : 220;
+    const graphMargin = isMobile ? 15 : 20;
+    const graphX = (this.width - graphW) / 2;
+    const graphY = this.height - graphH - graphMargin - 30;
 
     if (
       mouseX >= graphX - 10 &&
@@ -410,8 +411,8 @@ class SchwarzschildDemo extends Game {
     if (this._infoScene) {
       applyAnchor(this._infoScene, {
         anchor: Position.TOP_LEFT,
-        anchorOffsetX: Screen.responsive(15, 30, 40),
-        anchorOffsetY: Screen.responsive(60, 80, 90),
+        anchorOffsetX: Screen.responsive(10, 10, 10),
+        anchorOffsetY: 66,
       });
     }
 
@@ -511,9 +512,6 @@ class SchwarzschildDemo extends Game {
 
     // Draw effective potential graph
     this.drawEffectivePotential();
-
-    // Draw controls hint
-    this.drawControls(w, h);
 
     // Info modal renders LAST so it overlays everything
     this.infoPanel.render();
@@ -800,8 +798,9 @@ class SchwarzschildDemo extends Game {
     const isMobile = this.width < CONFIG.mobileWidth;
     const graphW = isMobile ? 120 : 160;
     const graphH = isMobile ? 70 : 100;
-    const graphX = this.width - graphW - (isMobile ? 15 : 20);
-    const graphY = isMobile ? 80 : 220;
+    const graphMargin = isMobile ? 15 : 20;
+    const graphX = (this.width - graphW) / 2;
+    const graphY = this.height - graphH - graphMargin - 30;
 
     Painter.useCtx((ctx) => {
       ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
@@ -876,30 +875,6 @@ class SchwarzschildDemo extends Game {
     });
   }
 
-  drawControls(w, h) {
-    const isMobile = w < CONFIG.mobileWidth;
-
-    Painter.useCtx((ctx) => {
-      ctx.font = "10px monospace";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "bottom";
-      ctx.fillStyle = "#556677";
-
-      if (isMobile) {
-        ctx.fillText(
-          "drag to rotate \u00B7 pinch to zoom",
-          w - 15,
-          h - 10,
-        );
-      } else {
-        ctx.fillText(
-          "drag to rotate \u00B7 scroll to zoom \u00B7 double-click to reset",
-          w - 20,
-          h - 10,
-        );
-      }
-    });
-  }
 }
 
 window.addEventListener("load", () => {
