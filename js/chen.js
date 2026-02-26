@@ -17,8 +17,8 @@ Attractor3DDemo.run("chen", {
   },
 
   particles: {
-    count: Screen.responsive(250, 400, 500),
-    trailLength: Screen.responsive(150, 200, 250),
+    count: Screen.responsive(250, 400, 550),
+    trailLength: Screen.responsive(150, 200, 300),
     spawnRange: 10,
   },
 
@@ -54,7 +54,7 @@ Attractor3DDemo.run("chen", {
     alphaBoost: 1.25,
   },
 
-  warmupSteps: 0,
+  warmupSteps: 1,
 
   zoom: { min: 0.2, max: 2.5 },
 
@@ -64,7 +64,7 @@ Attractor3DDemo.run("chen", {
   spawnOffset: { z: 8.7 },
 
   // Each particle gets unique params (±3%) to desync orbits and fill vortex eyes
-  paramVariation: { params: { alpha: 5, beta: -10, delta: -0.38 }, range: 0.03 },
+  paramVariation: { params: { alpha: 5, beta: -20, delta: -0.38 }, range: 0.05 },
 
   maxDistance: 50,
   respawnChance: 0.001,
