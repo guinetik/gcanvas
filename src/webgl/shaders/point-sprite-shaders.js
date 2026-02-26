@@ -94,11 +94,16 @@ void main() {
     // Combine: core dominates center, halo provides glow
     float intensity = max(core, halo * 0.6) * edge;
 
+    // vColor is premultiplied alpha in our renderers; recover base RGB for lighting.
+    float baseAlpha = max(vColor.a, 0.0001);
+    vec3 baseRgb = clamp(vColor.rgb / baseAlpha, 0.0, 1.0);
+
     // Core shifts toward white, halo carries the star color
-    vec3 color = mix(vColor.rgb, vec3(1.0), core * 0.6);
+    vec3 litRgb = mix(baseRgb, vec3(1.0), core * 0.6);
     float alpha = vColor.a * intensity;
 
-    gl_FragColor = vec4(color * alpha, alpha);
+    // Output premultiplied alpha (single premultiply, avoids darkening from double alpha).
+    gl_FragColor = vec4(litRgb * alpha, alpha);
 }
 `;
 
