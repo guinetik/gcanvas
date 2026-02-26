@@ -29,14 +29,14 @@ uniform float uTiltX;
 uniform float uRotY;
 
 #define PI 3.14159265359
-#define MAX_STEPS 300
-#define STEP_SIZE 0.05
+#define MAX_STEPS 600
+#define STEP_SIZE 0.025
 
 // Black Hole Parameters
-#define BH_RADIUS 0.2
-#define ACCRETION_INNER 0.22
-#define ACCRETION_OUTER 0.8
-#define DISK_HEIGHT 0.04
+#define BH_RADIUS 0.18
+#define ACCRETION_INNER 0.14
+#define ACCRETION_OUTER 0.6
+#define DISK_HEIGHT 0.005
 
 // Visuals
 #define COLOR_INNER vec3(1.0, 0.8, 0.5)
@@ -77,8 +77,8 @@ void main() {
     vec2 uv = vUV * 2.0 - 1.0;
     
     // Camera Setup
-    // We orbit around 0,0,0 at distance 5.0
-    float camDist = 5.0;
+    // We orbit around 0,0,0 at distance 9.0
+    float camDist = 9.0;
     
     // Convert Euler angles to camera position
     // uTiltX is pitch (up/down), uRotY is yaw (around Y)
@@ -96,7 +96,7 @@ void main() {
     
     // Ray Direction
     // FOV adjustment: wider FOV to see more of the disk at close range
-    vec3 rd = normalize(fwd * 1.8 + right * uv.x + up * uv.y);
+    vec3 rd = normalize(fwd * 3.5 + right * uv.x + up * uv.y);
     
     // Raymarching State
     vec3 p = ro;
@@ -140,7 +140,7 @@ void main() {
                 float angle = atan(intersect.z, intersect.x);
                 
                 // Texture coordinates
-                float speed = 2.0 / (dist * dist); // Keplerian-ish
+                float speed = 12.0 / (dist * dist + 0.05); // Faster rotation, stronger gradient
                 vec2 diskUV = vec2(dist * 2.0, angle * 3.0 + uTime * speed);
                 
                 // Noise pattern
@@ -157,12 +157,16 @@ void main() {
                 // Velocity vector at (x,0,z) is (-z, 0, x)
                 vec3 diskVel = normalize(vec3(-intersect.z, 0.0, intersect.x));
                 // View vector is roughly -v (ray direction)
-                float doppler = dot(diskVel, -normalize(v)) * 0.5 + 0.5;
-                doppler = pow(doppler, 3.0) * 2.0 + 0.2;
+                float vDot = dot(diskVel, -normalize(v)); // -1 (receding) to 1 (approaching)
+                float doppler = pow(vDot * 0.5 + 0.5, 2.5) * 3.0 + 0.2;
+                
+                // Color shift (Redshift/Blueshift)
+                // Receding: Red/Orange. Approaching: Blue/White.
+                vec3 shiftColor = mix(vec3(1.0, 0.4, 0.2), vec3(0.7, 0.9, 1.0), vDot * 0.5 + 0.5);
                 
                 // Color mixing
                 vec3 diskCol = mix(COLOR_OUTER, COLOR_INNER, n * fade);
-                diskCol *= doppler * fade * 2.5; // Intensity
+                diskCol *= shiftColor * doppler * fade * 2.0; // Intensity
                 
                 // Accumulate (additive blending for gas)
                 // Since this is a single plane intersection, we add it once.
@@ -187,6 +191,27 @@ void main() {
         
         // Ensure core is fully opaque black
         col = col; // Keep accumulated disk color
+        
+        // Add subtle rotation texture to the black hole mass itself
+        // Mapping sphere surface to UVs
+        // Point p is on the event horizon sphere
+        vec3 normal = normalize(p);
+        float u = 0.5 + atan(normal.z, normal.x) / (2.0 * PI);
+        float v = 0.5 + asin(normal.y) / PI;
+        
+        // Rotating noise texture
+        vec2 bhUV = vec2(u * 20.0 + uTime * 2.0, v * 10.0);
+        float bhNoise = fbm(bhUV);
+        
+        // Very subtle modulation of the black color (dark grey details)
+        // Only visible if there's some ambient light or if we want to fake "surface" details
+        // Since it's a black hole, it should be black. But user asked for texture to perceive rotation.
+        // Let's add a very faint, dark grey swirl.
+        vec3 bhColor = vec3(0.08) * bhNoise * (0.5 + 0.5 * sin(u * PI * 2.0 + uTime));
+        
+        // Add to existing color (which might be foreground disk)
+        col += bhColor;
+        
     } else {
         // Space
         // Add a faint glow around the black hole
