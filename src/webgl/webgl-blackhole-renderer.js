@@ -95,6 +95,7 @@ export class WebGLBlackHoleRenderer {
    * @param {number} params.time - Elapsed time in seconds
    * @param {number} params.tiltX - Camera tilt around X axis
    * @param {number} params.rotY - Camera rotation around Y axis
+   * @param {number} [params.diskOuterLimit=0.24] - Normalized disk outer radius clamp in shader space
    */
   render(params) {
     if (!this.available) return;
@@ -112,6 +113,7 @@ export class WebGLBlackHoleRenderer {
     gl.uniform1f(u.uTime, params.time || 0);
     gl.uniform1f(u.uTiltX, params.tiltX || 0);
     gl.uniform1f(u.uRotY, params.rotY || 0);
+    gl.uniform1f(u.uDiskOuterLimit, params.diskOuterLimit || 0.24);
 
     this._bindQuad();
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -184,7 +186,7 @@ export class WebGLBlackHoleRenderer {
   _cacheUniforms() {
     const gl = this.gl;
     const p = this.program;
-    const names = ["uResolution", "uTime", "uTiltX", "uRotY"];
+    const names = ["uResolution", "uTime", "uTiltX", "uRotY", "uDiskOuterLimit"];
     for (const name of names) {
       this.uniforms[name] = gl.getUniformLocation(p, name);
     }

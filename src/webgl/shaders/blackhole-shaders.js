@@ -27,21 +27,17 @@ uniform vec2 uResolution;
 uniform float uTime;
 uniform float uTiltX;
 uniform float uRotY;
+uniform float uDiskOuterLimit;
 
 #define PI 3.14159265359
-#define MAX_STEPS 600
-#define STEP_SIZE 0.025
+#define MAX_STEPS 420
+#define STEP_SIZE 0.02
 
-// Black Hole Parameters
-#define BH_RADIUS 0.18
-#define ACCRETION_INNER 0.14
-#define ACCRETION_OUTER 0.6
-#define DISK_HEIGHT 0.005
-
-// Visuals
-#define COLOR_INNER vec3(1.0, 0.8, 0.5)
-#define COLOR_OUTER vec3(0.8, 0.2, 0.05)
-#define GLOW_COLOR vec3(0.2, 0.4, 1.0)
+// Black hole and disk profile.
+#define BH_RADIUS 0.2
+#define DISK_INNER 0.25
+#define DISK_HALF_THICKNESS 0.013
+#define GRAVITY_STRENGTH 0.12
 
 // -----------------------------------------------------------------------------
 // Noise
@@ -69,164 +65,137 @@ float fbm(vec2 p) {
     return total;
 }
 
+vec3 accretionColor(float dist, float diskOuter, float angle, vec3 rayDir) {
+    float radial = clamp((dist - DISK_INNER) / max(diskOuter - DISK_INNER, 0.001), 0.0, 1.0);
+    float orbitSpeed = 7.0 / (dist * dist + 0.04);
+    vec2 flowUv = vec2(dist * 18.0, angle * 2.6 - uTime * orbitSpeed);
+    float swirl = fbm(flowUv);
+    float bands = 0.65 + 0.35 * sin(dist * 72.0 - uTime * 4.2 + swirl * 2.4);
+
+    vec3 outerCol = vec3(0.95, 0.36, 0.10);
+    vec3 innerCol = vec3(1.00, 0.90, 0.72);
+    vec3 baseCol = mix(innerCol, outerCol, radial);
+
+    vec3 tangent = normalize(vec3(-sin(angle), 0.0, cos(angle)));
+    float approach = dot(tangent, -rayDir) * 0.5 + 0.5;
+    float beaming = mix(0.55, 1.9, pow(approach, 2.2));
+    vec3 shift = mix(vec3(1.0, 0.58, 0.30), vec3(0.72, 0.92, 1.15), approach);
+
+    float edgeFalloff = 1.0 - smoothstep(0.78, 1.0, radial);
+    float density = mix(0.45, 1.35, swirl) * bands * edgeFalloff;
+
+    return baseCol * shift * beaming * density;
+}
+
 // -----------------------------------------------------------------------------
 // Main
 // -----------------------------------------------------------------------------
 void main() {
-    // UV centered at 0,0
     vec2 uv = vUV * 2.0 - 1.0;
-    
-    // Camera Setup
-    // We orbit around 0,0,0 at distance 9.0
-    float camDist = 9.0;
-    
-    // Convert Euler angles to camera position
-    // uTiltX is pitch (up/down), uRotY is yaw (around Y)
+    uv.x *= uResolution.x / max(uResolution.y, 1.0);
+
+    float diskOuter = clamp(uDiskOuterLimit, 0.285, 0.53);
+    float camDist = 4.8;
+
     float cy = camDist * sin(uTiltX);
     float hDist = camDist * cos(uTiltX);
     float cx = hDist * sin(uRotY);
     float cz = hDist * cos(uRotY);
     vec3 ro = vec3(cx, cy, cz);
-    
-    // Target is origin
+
     vec3 ta = vec3(0.0);
     vec3 fwd = normalize(ta - ro);
     vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
     vec3 up = cross(fwd, right);
-    
-    // Ray Direction
-    // FOV adjustment: wider FOV to see more of the disk at close range
-    vec3 rd = normalize(fwd * 3.5 + right * uv.x + up * uv.y);
-    
-    // Raymarching State
+
+    vec3 rd = normalize(fwd * 2.3 + right * uv.x + up * uv.y);
+
     vec3 p = ro;
     vec3 v = rd;
     vec3 col = vec3(0.0);
     float alpha = 0.0;
-    
+    float transmittance = 1.0;
+    int diskHits = 0;
     bool hitHorizon = false;
-    
+
     for (int i = 0; i < MAX_STEPS; i++) {
         float r = length(p);
-        
-        // 1. Event Horizon Hit
+
         if (r < BH_RADIUS) {
             hitHorizon = true;
             break;
         }
-        
-        // 2. Escape
-        if (r > 15.0) break;
-        
-        // 3. Gravity (Newtonian approx for visual bending)
-        // Force ~ 1/r^2 towards center
-        vec3 accel = -normalize(p) * (1.5 / (r * r));
-        v += accel * STEP_SIZE;
-        // v = normalize(v); // Keep speed constant (c)
-        
+
+        if (r > 10.0 || transmittance < 0.02 || diskHits > 3) break;
+
+        vec3 accel = -p * (GRAVITY_STRENGTH / max(r * r * r, 0.02));
+        v = normalize(v + accel * STEP_SIZE);
         vec3 nextP = p + v * STEP_SIZE;
-        
-        // 4. Accretion Disk Intersection
-        // Check if we crossed the Y plane (approximate disk)
-        // We use a "thick" plane check or exact crossing
-        if (p.y * nextP.y < 0.0) {
-            // Exact intersection time t
-            float t = -p.y / (nextP.y - p.y);
-            vec3 intersect = mix(p, nextP, t);
-            float dist = length(intersect);
-            
-            if (dist > ACCRETION_INNER && dist < ACCRETION_OUTER) {
-                // We hit the disk!
-                float angle = atan(intersect.z, intersect.x);
-                
-                // Texture coordinates
-                float speed = 12.0 / (dist * dist + 0.05); // Faster rotation, stronger gradient
-                vec2 diskUV = vec2(dist * 2.0, angle * 3.0 + uTime * speed);
-                
-                // Noise pattern
-                float n = fbm(diskUV);
-                
-                // Radial fade edges
-                // Fade out as we approach outer edge
-                float fade = smoothstep(ACCRETION_INNER, ACCRETION_INNER + 0.05, dist) * 
-                             (1.0 - smoothstep(ACCRETION_OUTER - 0.2, ACCRETION_OUTER, dist));
-                
-                // Doppler beaming (fake)
-                // Left side (approaching) brighter, right side (receding) dimmer
-                // Assuming rotation is counter-clockwise around Y
-                // Velocity vector at (x,0,z) is (-z, 0, x)
-                vec3 diskVel = normalize(vec3(-intersect.z, 0.0, intersect.x));
-                // View vector is roughly -v (ray direction)
-                float vDot = dot(diskVel, -normalize(v)); // -1 (receding) to 1 (approaching)
-                float doppler = pow(vDot * 0.5 + 0.5, 2.5) * 3.0 + 0.2;
-                
-                // Color shift (Redshift/Blueshift)
-                // Receding: Red/Orange. Approaching: Blue/White.
-                vec3 shiftColor = mix(vec3(1.0, 0.4, 0.2), vec3(0.7, 0.9, 1.0), vDot * 0.5 + 0.5);
-                
-                // Color mixing
-                vec3 diskCol = mix(COLOR_OUTER, COLOR_INNER, n * fade);
-                diskCol *= shiftColor * doppler * fade * 2.0; // Intensity
-                
-                // Accumulate (additive blending for gas)
-                // Since this is a single plane intersection, we add it once.
-                // But wait, with bending light, we might hit the disk multiple times!
-                // (Front and back).
-                // So we accumulate.
-                col += diskCol * 0.4;
-                alpha += fade * 0.6;
+
+        if (p.y * nextP.y <= 0.0 || abs(p.y) < DISK_HALF_THICKNESS || abs(nextP.y) < DISK_HALF_THICKNESS) {
+            float denom = nextP.y - p.y;
+            float t = abs(denom) > 0.00001 ? (-p.y / denom) : 0.5;
+            t = clamp(t, 0.0, 1.0);
+            vec3 hitPos = mix(p, nextP, t);
+            float diskRadius = length(hitPos);
+
+            if (diskRadius > DISK_INNER && diskRadius < diskOuter) {
+                float angle = atan(hitPos.z, hitPos.x);
+                vec3 diskCol = accretionColor(diskRadius, diskOuter, angle, v);
+                float edgeMask = smoothstep(DISK_INNER, DISK_INNER + 0.015, diskRadius) *
+                                 (1.0 - smoothstep(diskOuter - 0.03, diskOuter, diskRadius));
+
+                col += diskCol * edgeMask * transmittance * 0.25;
+                alpha += edgeMask * transmittance * 0.28;
+                transmittance *= 0.72;
+                diskHits++;
             }
         }
-        
+
         p = nextP;
     }
-    
-    // Final Composition
+
+    // Apparent lensing ring.
+    float impact = length(cross(ro, rd));
+    float photonCenter = BH_RADIUS * 2.45;
+    float photonWidth = BH_RADIUS * 0.9;
+    float photonRing = exp(-pow((impact - photonCenter) / max(photonWidth, 0.001), 2.0));
+    photonRing *= 1.0 - float(hitHorizon);
+
+    vec3 ringCol = mix(vec3(0.92, 0.66, 0.38), vec3(0.72, 0.8, 0.88), 0.35);
+    col += ringCol * photonRing * 0.4;
+    alpha += photonRing * 0.2;
+
+    // Subtle gravitational halo: thinner and dimmer to avoid a washed cream ring.
+    float screenR = length(uv);
+    float halo = smoothstep(0.88, 0.56, screenR) * exp(-impact * 8.2);
+    col += vec3(0.52, 0.4, 0.28) * halo * 0.05;
+    alpha += halo * 0.03;
+
+    // Shadow core.
+    float shadowMask = smoothstep(BH_RADIUS * 2.0, BH_RADIUS * 0.95, impact);
     if (hitHorizon) {
-        // Black hole core
-        // If we have foreground disk (accumulated before hit), we see it.
-        // The core itself is black (0,0,0).
-        // Alpha should be 1.0 to obscure background stars.
-        alpha = 1.0;
-        
-        // Ensure core is fully opaque black
-        col = col; // Keep accumulated disk color
-        
-        // Add subtle rotation texture to the black hole mass itself
-        // Mapping sphere surface to UVs
-        // Point p is on the event horizon sphere
-        vec3 normal = normalize(p);
-        float u = 0.5 + atan(normal.z, normal.x) / (2.0 * PI);
-        float v = 0.5 + asin(normal.y) / PI;
-        
-        // Rotating noise texture
-        vec2 bhUV = vec2(u * 20.0 + uTime * 2.0, v * 10.0);
-        float bhNoise = fbm(bhUV);
-        
-        // Very subtle modulation of the black color (dark grey details)
-        // Only visible if there's some ambient light or if we want to fake "surface" details
-        // Since it's a black hole, it should be black. But user asked for texture to perceive rotation.
-        // Let's add a very faint, dark grey swirl.
-        vec3 bhColor = vec3(0.08) * bhNoise * (0.5 + 0.5 * sin(u * PI * 2.0 + uTime));
-        
-        // Add to existing color (which might be foreground disk)
-        col += bhColor;
-        
-    } else {
-        // Space
-        // Add a faint glow around the black hole
-        // Based on impact parameter? Or just distance from center in screen space?
-        // Let's use the accumulated alpha.
-        alpha = clamp(alpha, 0.0, 1.0);
-        
-        // Soft edge fade for the entire shader box to prevent hard square edges
-        float edgeFade = smoothstep(1.0, 0.8, abs(uv.x)) * smoothstep(1.0, 0.8, abs(uv.y));
-        alpha *= edgeFade;
-        col *= edgeFade;
+        alpha = max(alpha, shadowMask);
     }
-    
-    // Premultiplied alpha output
-    // col is already accumulated light (premultiplied intensity)
-    gl_FragColor = vec4(col, alpha);
+    col *= (1.0 - shadowMask);
+
+    // Thick warm rim just outside the shadow for a stronger orange outline.
+    float warmRim = smoothstep(BH_RADIUS * 1.0, BH_RADIUS * 1.3, impact) *
+                    (1.0 - smoothstep(BH_RADIUS * 1.7, BH_RADIUS * 2.2, impact));
+    col += vec3(1.0, 0.55, 0.2) * warmRim * 0.55;
+    alpha += warmRim * 0.22;
+
+    float edgeFade = smoothstep(1.2, 0.82, screenR);
+    col *= edgeFade;
+    alpha *= edgeFade;
+
+    col = clamp(col, 0.0, 1.2);
+    alpha = clamp(alpha, 0.0, 1.0);
+
+    if (alpha < 0.001) {
+        gl_FragColor = vec4(0.0);
+    } else {
+        gl_FragColor = vec4(col, alpha);
+    }
 }
 `;

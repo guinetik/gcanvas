@@ -32,6 +32,7 @@ import { WebGLNebulaRenderer } from "../../src/webgl/webgl-nebula-renderer.js";
 import { WebGLBlackHoleRenderer } from "../../src/webgl/webgl-blackhole-renderer.js";
 
 const TAU = Math.PI * 2;
+const BLACK_HOLE_VISUAL_SCALE = 1.45;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GALAXY PLAYGROUND
@@ -513,13 +514,29 @@ export class GalaxyPlayground extends Game {
     const screenX = cx + p.x * this.zoom;
     const screenY = cy + p.y * this.zoom;
 
-    const regionSize = Math.max(1, Math.round(CONFIG.blackHole.shaderSize * p.scale * this.zoom));
+    const regionSize = Math.max(
+      1,
+      Math.round(CONFIG.blackHole.shaderSize * p.scale * this.zoom * BLACK_HOLE_VISUAL_SCALE)
+    );
     this.blackHoleRenderer.resize(regionSize);
+
+    // Keep the accretion disk bounded by the galaxy core scale (bulge/bar/inner radius)
+    // so the black hole remains small at full-galaxy view.
+    const galaxyRadius = Math.max(1, this._galaxyParams.galaxyRadius || 350);
+    const coreRadius = Math.max(
+      this._galaxyParams.bulgeRadius || 0,
+      (this._galaxyParams.spiralStart || 0) * 0.7,
+      (this._galaxyParams.barWidth || 0) * 1.2,
+      18
+    );
+    const coreRatio = coreRadius / galaxyRadius;
+    const diskOuterLimit = Math.max(0.285, Math.min(0.53, 0.285 + coreRatio * 1.08));
 
     this.blackHoleRenderer.render({
       time: this.time,
       tiltX: this.camera.rotationX,
       rotY: this.camera.rotationY,
+      diskOuterLimit,
     });
 
     ctx.save();
@@ -533,8 +550,8 @@ export class GalaxyPlayground extends Game {
     const screenX = cx + p.x * this.zoom;
     const screenY = cy + p.y * this.zoom;
 
-    const diskRadius = CONFIG.blackHole.accretionDiskRadius * p.scale * this.zoom;
-    const holeRadius = CONFIG.blackHole.radius * p.scale * this.zoom;
+    const diskRadius = CONFIG.blackHole.accretionDiskRadius * p.scale * this.zoom * BLACK_HOLE_VISUAL_SCALE;
+    const holeRadius = CONFIG.blackHole.radius * p.scale * this.zoom * BLACK_HOLE_VISUAL_SCALE;
     const tilt = Math.cos(this.camera.rotationX);
 
     ctx.save();

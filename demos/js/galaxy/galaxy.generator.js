@@ -125,23 +125,68 @@ function pickHue(layer, distFactor, isHII) {
  */
 export function generateGalaxy(params) {
   const type = params.type || "spiral";
+  let stars;
 
   switch (type) {
     case "spiral":
     case "grandDesign":
     case "flocculent":
-      return generateSpiral(params);
+      stars = generateSpiral(params);
+      break;
     case "barred":
-      return generateBarredSpiral(params);
+      stars = generateBarredSpiral(params);
+      break;
     case "lenticular":
-      return generateLenticular(params);
+      stars = generateLenticular(params);
+      break;
     case "elliptical":
-      return generateElliptical(params);
+      stars = generateElliptical(params);
+      break;
     case "irregular":
-      return generateIrregular(params);
+      stars = generateIrregular(params);
+      break;
     default:
-      return generateSpiral(params);
+      stars = generateSpiral(params);
+      break;
   }
+
+  return applyCentralClearZone(stars, params);
+}
+
+/**
+ * Computes the central exclusion radius used to keep visual space around the black hole.
+ *
+ * @param {Object} params - Active galaxy parameters
+ * @param {number} [params.bulgeRadius] - Bulge size
+ * @param {number} [params.spiralStart] - Spiral inner radius
+ * @param {number} [params.barWidth] - Bar half-width proxy
+ * @returns {number} Central clear radius in galaxy units
+ */
+function getCentralClearRadius(params) {
+  const base = (CONFIG.blackHole.exclusionRadius || 25) * 0.82;
+  const bulge = params.bulgeRadius || 0;
+  const spiralStart = params.spiralStart || 0;
+  const barWidth = params.barWidth || 0;
+
+  const coreDrivenBoost = Math.max(bulge * 0.12, spiralStart * 0.075, barWidth * 0.26, 0);
+  return base + coreDrivenBoost;
+}
+
+/**
+ * Removes stars and arm glow samples too close to galaxy center, preserving metadata.
+ *
+ * @param {Object[]} stars - Generated stars array
+ * @param {Object} params - Active galaxy parameters
+ * @returns {Object[]} Filtered stars array with cleaned `_armPoints`
+ */
+function applyCentralClearZone(stars, params) {
+  const clearRadius = getCentralClearRadius(params);
+  const filtered = stars.filter((star) => star.radius >= clearRadius);
+
+  const armPoints = stars._armPoints || [];
+  filtered._armPoints = armPoints.map((samples) => samples.filter((sample) => sample.r >= clearRadius));
+
+  return filtered;
 }
 
 /**
