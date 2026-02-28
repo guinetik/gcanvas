@@ -511,6 +511,11 @@ class Attractor3DDemo extends Game {
     // ── Keyboard ─────────────────────────────────────────────────────────
     Keys.init(this);
     this.events.on(Keys.R, () => this.restart());
+    this.events.on("keydown", (e) => {
+      if (e.code === "KeyP" && !e.repeat) {
+        this.restart({ preserveView: true });
+      }
+    });
 
     // ── Dev helpers (camera / barycenter logging) ────────────────────────
     this.canvas.addEventListener("mouseup", () => {
@@ -941,10 +946,28 @@ class Attractor3DDemo extends Game {
 
   /**
    * Restart the simulation: fade to black, wait, then respawn particles
-   * and fade back in. Resets camera, zoom, and time.
+   * and fade back in.
+   *
+   * @param {Object} [options={}]
+   * @param {boolean} [options.preserveView=false] - Keep camera rotation and
+   * current zoom from the moment restart is triggered (useful for quick resets
+   * without losing the current framing).
    */
-  restart() {
+  restart(options = {}) {
     const cfg = this.config;
+    const { preserveView = false } = options;
+    const viewState = preserveView
+      ? {
+          rotationX: this.camera.rotationX,
+          rotationY: this.camera.rotationY,
+          rotationZ: this.camera.rotationZ,
+          screenRotation: this.camera.screenRotation,
+          velocityX: this.camera.velocityX,
+          velocityY: this.camera.velocityY,
+          zoom: this.zoom,
+          targetZoom: this.targetZoom,
+        }
+      : null;
 
     // Kill any existing fade tweens
     Tweenetik.killTarget(this);
@@ -959,16 +982,28 @@ class Attractor3DDemo extends Game {
         this.particles.push(this.createParticle());
       }
 
-      // Reset camera to initial angles
-      this.camera.rotationX = cfg.camera.rotationX;
-      this.camera.rotationY = cfg.camera.rotationY;
-      this.camera.velocityX = 0;
-      this.camera.velocityY = 0;
+      if (preserveView && viewState) {
+        // Restore the exact framing from when restart was triggered.
+        this.camera.rotationX = viewState.rotationX;
+        this.camera.rotationY = viewState.rotationY;
+        this.camera.rotationZ = viewState.rotationZ;
+        this.camera.screenRotation = viewState.screenRotation;
+        this.camera.velocityX = viewState.velocityX;
+        this.camera.velocityY = viewState.velocityY;
+        this.zoom = viewState.zoom;
+        this.targetZoom = viewState.targetZoom;
+      } else {
+        // Reset camera to initial angles
+        this.camera.rotationX = cfg.camera.rotationX;
+        this.camera.rotationY = cfg.camera.rotationY;
+        this.camera.velocityX = 0;
+        this.camera.velocityY = 0;
 
-      // Reset zoom and time
-      this.zoom = this.defaultZoom;
-      this.targetZoom = this.defaultZoom;
-      this.time = 0;
+        // Reset zoom and time
+        this.zoom = this.defaultZoom;
+        this.targetZoom = this.defaultZoom;
+        this.time = 0;
+      }
 
       // Fade-in
       Tweenetik.to(

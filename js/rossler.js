@@ -20,13 +20,12 @@ Attractor3DDemo.run("rossler", {
   },
 
   particles: {
-    count: Screen.responsive(200, 300, 400),
+    count: Screen.responsive(200, 300, 500),
     trailLength: Screen.responsive(150, 200, 250),
-    spawnRange: 4,
+    spawnRange: .2,
   },
 
-  // Rössler spirals in x-y, spikes in z — centroid of trajectory
-  center: { x: 0.5, y: -2.5, z: 2.5 },
+  center: { x: 0, y: 0, z: 0 },
 
   camera: {
     perspective: 500,
@@ -39,9 +38,18 @@ Attractor3DDemo.run("rossler", {
     maxHue: 280,  // Purple (slow)
     maxSpeed: 20,
     saturation: 85,
-    lightness: 55,
-    maxAlpha: 0.85,
+    lightness: 15,
+    maxAlpha: 0.5,
     hueShiftSpeed: 10,
+  },
+
+  bloom: {
+    threshold: 0.15,
+    strength: 0.1,
+  },
+
+  glow: {
+    intensity: 0.01,
   },
 
   blink: {
@@ -54,12 +62,12 @@ Attractor3DDemo.run("rossler", {
   zoom: { min: 0.2, max: 2.5 },
 
   // XZY with inverted screen-Y for best visual orientation
-  axisMapping: { x: "x", y: "z", z: "y", sx: 1, sy: -1, sz: 1 },
+  axisMapping: { x: "x", y: "z", z: "y", sx: 1, sy: -0.72, sz: 1 },
   warmupSteps: 0,
   // Each particle gets unique params (±2%) to prevent sync
   paramVariation: { params: { a: 0.2, b: 0.2, c: 5.7 }, range: 0.02 },
 
-  respawnChance: 0.01,
+  respawnChance: 0.001,
 
-  autoRotation: { enabled: true, speed: 0.15, axis: "y" },
+  autoRotation: { enabled: true, speed: 0.5, axis: "y" },
 });
