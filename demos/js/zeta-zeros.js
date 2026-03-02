@@ -29,6 +29,7 @@ import {
   KNOWN_ZEROS,
 } from "../../src/math/zeta.js";
 import { Flanger } from "../../src/sound/effects.js";
+import { Synth } from "../../src/sound/synth.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION
@@ -355,16 +356,15 @@ class ZetaZerosDemo extends Game {
   // ── Sound ──────────────────────────────────────────────────────────────
 
   _initAudio() {
-    return import("../../src/sound/synth.js").then(({ Synth }) => {
-      this.Synth = Synth;
-      if (!Synth.isInitialized) {
-        Synth.init({ masterVolume: 0.3 });
-      }
-      Synth.resume();
-      this.soundEnabled = true;
-      this._buildAudioGraph();
-      this._startDrone();
-    });
+    this.Synth = Synth;
+    if (!Synth.isInitialized) {
+      Synth.init({ masterVolume: 0.3 });
+    }
+    Synth.resume();
+    this.soundEnabled = true;
+    this._buildAudioGraph();
+    this._startDrone();
+    return Promise.resolve();
   }
 
   _buildAudioGraph() {
