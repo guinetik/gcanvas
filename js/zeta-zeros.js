@@ -29,6 +29,7 @@ import {
   KNOWN_ZEROS,
 } from "/gcanvas.es.min.js";
 import { Flanger } from "/gcanvas.es.min.js";
+import { Synth } from "/gcanvas.es.min.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURATION
@@ -355,16 +356,15 @@ class ZetaZerosDemo extends Game {
   // ── Sound ──────────────────────────────────────────────────────────────
 
   _initAudio() {
-    return import("../../src/sound/synth.js").then(({ Synth }) => {
-      this.Synth = Synth;
-      if (!Synth.isInitialized) {
-        Synth.init({ masterVolume: 0.3 });
-      }
-      Synth.resume();
-      this.soundEnabled = true;
-      this._buildAudioGraph();
-      this._startDrone();
-    });
+    this.Synth = Synth;
+    if (!Synth.isInitialized) {
+      Synth.init({ masterVolume: 0.3 });
+    }
+    Synth.resume();
+    this.soundEnabled = true;
+    this._buildAudioGraph();
+    this._startDrone();
+    return Promise.resolve();
   }
 
   _buildAudioGraph() {
