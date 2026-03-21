@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Harmonic Geometries</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Harmonic Geometries</strong> — Polygon epicycle playground.<br />
+    <span style="color:#CCC">
+      <li>Nested oscillators trace polygon perimeters instead of circles</li>
+      <li>Adjust number of arms, speed, and polygon shape</li>
+      <li>Scroll to zoom · Double-click to reset zoom</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { HarmonicGeometriesDemo } from "./js/harmonic-geometries.js";
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new HarmonicGeometriesDemo(canvas);
+      game.enablePauseOnBlur(true);
+      game.setFPS(60);
+      game.start();
+    });
+  </script>
+</body>
+
+</html>
