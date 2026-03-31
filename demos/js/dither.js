@@ -106,7 +106,7 @@ let selected = null;
 let animFrameId = null;
 let imageGraySource = null;  // Float32Array grayscale 0-1
 let imageColorSource = null; // Float32Array RGB 0-1
-let activeSource = "image";  // "image" or "procedural"
+let activeSource = "procedural";  // "image" or "procedural"
 
 // Pre-generate blue noise once
 const blueNoise = Dither.generateBlueNoise(64);
@@ -358,6 +358,6 @@ function renderProceduralPreview() {
 // Load image, render previews, then render dithers
 renderProceduralPreview();
 loadSourceImage().then(() => {
-  // Default to image if loaded, procedural otherwise
-  setActiveSource(imageGraySource ? "image" : "procedural");
+  // Start with procedural, image is ready if user clicks it
+  setActiveSource("procedural");
 });
