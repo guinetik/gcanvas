@@ -346,6 +346,122 @@ export class Dither {
     return out;
   }
 
+  /**
+   * Generic error diffusion dithering using a configurable kernel.
+   * @param {Float32Array} source - Grayscale values 0-1
+   * @param {number} width
+   * @param {number} height
+   * @param {{ offsets: number[][], weights: number[], divisor: number }} kernel
+   * @returns {Uint8ClampedArray} RGBA pixel data
+   */
+  static errorDiffusion(source, width, height, kernel) {
+    const { offsets, weights, divisor } = kernel;
+    const err = new Float32Array(source);
+    const out = new Uint8ClampedArray(width * height * 4);
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = y * width + x;
+        const old = err[i];
+        const newVal = old > 0.5 ? 1.0 : 0.0;
+        const e = old - newVal;
+
+        const pixel = newVal * 255;
+        const idx = i * 4;
+        out[idx] = pixel;
+        out[idx + 1] = pixel;
+        out[idx + 2] = pixel;
+        out[idx + 3] = 255;
+
+        for (let k = 0; k < offsets.length; k++) {
+          const nx = x + offsets[k][0];
+          const ny = y + offsets[k][1];
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            err[ny * width + nx] += (e * weights[k]) / divisor;
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Stucki error diffusion dithering.
+   * @param {Float32Array} source - Grayscale values 0-1
+   * @param {number} width
+   * @param {number} height
+   * @returns {Uint8ClampedArray} RGBA pixel data
+   */
+  static stucki(source, width, height) {
+    return Dither.errorDiffusion(source, width, height, Dither.STUCKI);
+  }
+
+  /**
+   * Jarvis-Judice-Ninke error diffusion dithering.
+   * @param {Float32Array} source - Grayscale values 0-1
+   * @param {number} width
+   * @param {number} height
+   * @returns {Uint8ClampedArray} RGBA pixel data
+   */
+  static jarvis(source, width, height) {
+    return Dither.errorDiffusion(source, width, height, Dither.JARVIS);
+  }
+
+  /**
+   * Atkinson error diffusion dithering.
+   * @param {Float32Array} source - Grayscale values 0-1
+   * @param {number} width
+   * @param {number} height
+   * @returns {Uint8ClampedArray} RGBA pixel data
+   */
+  static atkinson(source, width, height) {
+    return Dither.errorDiffusion(source, width, height, Dither.ATKINSON);
+  }
+
+  /**
+   * Sierra error diffusion dithering.
+   * @param {Float32Array} source - Grayscale values 0-1
+   * @param {number} width
+   * @param {number} height
+   * @returns {Uint8ClampedArray} RGBA pixel data
+   */
+  static sierra(source, width, height) {
+    return Dither.errorDiffusion(source, width, height, Dither.SIERRA);
+  }
+
+  /**
+   * Sierra Two-Row error diffusion dithering.
+   * @param {Float32Array} source - Grayscale values 0-1
+   * @param {number} width
+   * @param {number} height
+   * @returns {Uint8ClampedArray} RGBA pixel data
+   */
+  static sierraTwoRow(source, width, height) {
+    return Dither.errorDiffusion(source, width, height, Dither.SIERRA_TWO_ROW);
+  }
+
+  /**
+   * Sierra Lite error diffusion dithering.
+   * @param {Float32Array} source - Grayscale values 0-1
+   * @param {number} width
+   * @param {number} height
+   * @returns {Uint8ClampedArray} RGBA pixel data
+   */
+  static sierraLite(source, width, height) {
+    return Dither.errorDiffusion(source, width, height, Dither.SIERRA_LITE);
+  }
+
+  /**
+   * Burkes error diffusion dithering.
+   * @param {Float32Array} source - Grayscale values 0-1
+   * @param {number} width
+   * @param {number} height
+   * @returns {Uint8ClampedArray} RGBA pixel data
+   */
+  static burkes(source, width, height) {
+    return Dither.errorDiffusion(source, width, height, Dither.BURKES);
+  }
+
   /** @private */
   static _getBlueNoise(size) {
     if (!Dither._blueNoiseCache || Dither._blueNoiseCacheSize !== size) {
@@ -367,3 +483,59 @@ Dither.CGA_PALETTE = [
   [255, 85, 255],
   [255, 255, 85],
 ];
+
+/** Floyd-Steinberg error diffusion kernel */
+Dither.FLOYD_STEINBERG = {
+  offsets: [[1, 0], [-1, 1], [0, 1], [1, 1]],
+  weights: [7, 3, 5, 1],
+  divisor: 16,
+};
+
+/** Stucki error diffusion kernel */
+Dither.STUCKI = {
+  offsets: [[1,0],[2,0],[-2,1],[-1,1],[0,1],[1,1],[2,1],[-2,2],[-1,2],[0,2],[1,2],[2,2]],
+  weights: [8,4,2,4,8,4,2,1,2,4,2,1],
+  divisor: 42,
+};
+
+/** Jarvis-Judice-Ninke error diffusion kernel */
+Dither.JARVIS = {
+  offsets: [[1,0],[2,0],[-2,1],[-1,1],[0,1],[1,1],[2,1],[-2,2],[-1,2],[0,2],[1,2],[2,2]],
+  weights: [7,5,3,5,7,5,3,1,3,5,3,1],
+  divisor: 48,
+};
+
+/** Atkinson error diffusion kernel */
+Dither.ATKINSON = {
+  offsets: [[1,0],[2,0],[-1,1],[0,1],[1,1],[0,2]],
+  weights: [1,1,1,1,1,1],
+  divisor: 8,
+};
+
+/** Sierra error diffusion kernel */
+Dither.SIERRA = {
+  offsets: [[1,0],[2,0],[-2,1],[-1,1],[0,1],[1,1],[2,1],[-1,2],[0,2],[1,2]],
+  weights: [5,3,2,4,5,4,2,2,3,2],
+  divisor: 32,
+};
+
+/** Sierra Two-Row error diffusion kernel */
+Dither.SIERRA_TWO_ROW = {
+  offsets: [[1,0],[2,0],[-2,1],[-1,1],[0,1],[1,1],[2,1]],
+  weights: [4,3,1,2,3,2,1],
+  divisor: 16,
+};
+
+/** Sierra Lite error diffusion kernel */
+Dither.SIERRA_LITE = {
+  offsets: [[1,0],[-1,1],[0,1]],
+  weights: [2,1,1],
+  divisor: 4,
+};
+
+/** Burkes error diffusion kernel */
+Dither.BURKES = {
+  offsets: [[1,0],[2,0],[-2,1],[-1,1],[0,1],[1,1],[2,1]],
+  weights: [8,4,2,4,8,4,2],
+  divisor: 32,
+};
