@@ -18,7 +18,7 @@ const DEG = Math.PI / 180;
 export const SUN = {
   name: "Sun",
   display: {
-    radius: 0.025,
+    radius: 0.0275,
     shaderType: "star",
     shaderUniforms: {
       uStarColor: [1.0, 0.85, 0.4],
@@ -49,7 +49,7 @@ export const PLANETS = [
       period: 87.97,
     },
     display: {
-      radius: 0.004,
+      radius: 0.0044,
       shaderType: "rockyPlanet",
       shaderUniforms: {
         uBaseColor: [0.55, 0.52, 0.50],
@@ -70,7 +70,7 @@ export const PLANETS = [
       period: 224.7,
     },
     display: {
-      radius: 0.006,
+      radius: 0.0066,
       shaderType: "rockyPlanet",
       shaderUniforms: {
         uBaseColor: [0.85, 0.65, 0.30],
@@ -91,7 +91,7 @@ export const PLANETS = [
       period: 365.25,
     },
     display: {
-      radius: 0.007,
+      radius: 0.0077,
       shaderType: "rockyPlanet",
       shaderUniforms: {
         uBaseColor: [0.2, 0.4, 0.8],
@@ -111,7 +111,7 @@ export const PLANETS = [
           period: 27.32,
         },
         display: {
-          radius: 0.003,
+          radius: 0.0033,
           shaderType: "rockyPlanet",
           shaderUniforms: {
             uBaseColor: [0.7, 0.7, 0.7],
@@ -133,7 +133,7 @@ export const PLANETS = [
       period: 686.97,
     },
     display: {
-      radius: 0.005,
+      radius: 0.0055,
       shaderType: "rockyPlanet",
       shaderUniforms: {
         uBaseColor: [0.75, 0.35, 0.15],
@@ -154,7 +154,7 @@ export const PLANETS = [
       period: 4332.59,
     },
     display: {
-      radius: 0.015,
+      radius: 0.0165,
       shaderType: "gasGiant",
       shaderUniforms: {
         uBaseColor: [0.85, 0.65, 0.45],
@@ -175,7 +175,7 @@ export const PLANETS = [
           period: 1.769,
         },
         display: {
-          radius: 0.003,
+          radius: 0.0033,
           shaderType: "rockyPlanet",
           shaderUniforms: {
             uBaseColor: [0.9, 0.85, 0.35],
@@ -197,7 +197,7 @@ export const PLANETS = [
       period: 10759.22,
     },
     display: {
-      radius: 0.012,
+      radius: 0.0132,
       shaderType: "gasGiant",
       shaderUniforms: {
         uBaseColor: [0.85, 0.75, 0.50],
@@ -224,7 +224,7 @@ export const PLANETS = [
           period: 15.945,
         },
         display: {
-          radius: 0.004,
+          radius: 0.0044,
           shaderType: "rockyPlanet",
           shaderUniforms: {
             uBaseColor: [0.85, 0.70, 0.40],
@@ -246,7 +246,7 @@ export const PLANETS = [
       period: 30688.5,
     },
     display: {
-      radius: 0.010,
+      radius: 0.011,
       shaderType: "gasGiant",
       shaderUniforms: {
         uBaseColor: [0.55, 0.75, 0.85],
@@ -268,7 +268,7 @@ export const PLANETS = [
       period: 60182.0,
     },
     display: {
-      radius: 0.009,
+      radius: 0.0099,
       shaderType: "gasGiant",
       shaderUniforms: {
         uBaseColor: [0.25, 0.35, 0.75],
