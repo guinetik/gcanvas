@@ -8,6 +8,7 @@ import { Dither } from "../../src/math/dither.js";
 
 const CONFIG = {
   canvasSize: 200,
+  sourceImage: "https://cdn.britannica.com/58/2958-050-C1B86BCF/nebulosity-Pleiades-distance-clouds-Cluster-stars-light.jpg",
   animation: { step: 1, shiftStep: 20 },
   stipple: { numDotsRatio: 0.08, seed: 42 },
   techniques: [
@@ -103,9 +104,65 @@ let time = 0;
 let isAnimating = false;
 let selected = null;
 let animFrameId = null;
+let imageGraySource = null;  // Float32Array grayscale 0-1
+let imageColorSource = null; // Float32Array RGB 0-1
 
 // Pre-generate blue noise once
 const blueNoise = Dither.generateBlueNoise(64);
+
+// Load source image and extract pixel data
+function loadSourceImage() {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const sz = CONFIG.canvasSize;
+      const oc = document.createElement("canvas");
+      oc.width = sz;
+      oc.height = sz;
+      const octx = oc.getContext("2d");
+      // Crop to square from center
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      const sy = (img.height - side) / 2;
+      octx.drawImage(img, sx, sy, side, side, 0, 0, sz, sz);
+
+      // Show source preview
+      const preview = document.getElementById("source-preview");
+      if (preview) {
+        preview.width = sz;
+        preview.height = sz;
+        preview.getContext("2d").drawImage(oc, 0, 0);
+      }
+
+      const imgData = octx.getImageData(0, 0, sz, sz);
+      const pixels = imgData.data;
+
+      // Extract grayscale source (0-1)
+      imageGraySource = new Float32Array(sz * sz);
+      for (let i = 0; i < imageGraySource.length; i++) {
+        const idx = i * 4;
+        imageGraySource[i] = (pixels[idx] * 0.299 + pixels[idx + 1] * 0.587 + pixels[idx + 2] * 0.114) / 255;
+      }
+
+      // Extract color source (0-1, width*height*3)
+      imageColorSource = new Float32Array(sz * sz * 3);
+      for (let i = 0; i < sz * sz; i++) {
+        const idx = i * 4;
+        imageColorSource[i * 3] = pixels[idx] / 255;
+        imageColorSource[i * 3 + 1] = pixels[idx + 1] / 255;
+        imageColorSource[i * 3 + 2] = pixels[idx + 2] / 255;
+      }
+
+      resolve();
+    };
+    img.onerror = () => {
+      // Fallback to procedural if image fails to load
+      resolve();
+    };
+    img.src = CONFIG.sourceImage;
+  });
+}
 
 // Build panels
 const grid = document.getElementById("grid");
@@ -161,10 +218,10 @@ function renderDithers() {
     let pixelData;
 
     if (tech.id === "quantize") {
-      const colorSrc = Dither.generateColorSource(sz, sz, time);
+      const colorSrc = imageColorSource || Dither.generateColorSource(sz, sz, time);
       pixelData = Dither.colorQuantize(colorSrc, sz, sz);
     } else {
-      const source = Dither.generateSource(sz, sz, time);
+      const source = imageGraySource || Dither.generateSource(sz, sz, time);
       switch (tech.id) {
         case "bayer":
           pixelData = Dither.bayer(source, sz, sz);
@@ -255,5 +312,5 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-// Initial render
-renderDithers();
+// Load image then render
+loadSourceImage().then(() => renderDithers());
