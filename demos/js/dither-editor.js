@@ -123,9 +123,15 @@ export class DitherEditor extends Game {
     this.canvas.addEventListener("wheel", (e) => {
       if (this._uiHandledInput) return;
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -CONFIG.zoom.speed : CONFIG.zoom.speed;
-      this._targetZoom *= 1 + delta;
-      this._targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this._targetZoom));
+      if (this._freePixelsActive && this._camera) {
+        // Zoom by adjusting camera perspective
+        const delta = e.deltaY > 0 ? 1.1 : 0.9;
+        this._camera.perspective = Math.max(100, Math.min(3000, this._camera.perspective * delta));
+      } else {
+        const delta = e.deltaY > 0 ? -CONFIG.zoom.speed : CONFIG.zoom.speed;
+        this._targetZoom *= 1 + delta;
+        this._targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this._targetZoom));
+      }
     }, { passive: false });
 
     // Pan via drag — use game.events so we run AFTER pipeline sets _uiHandledInput
