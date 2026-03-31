@@ -67,12 +67,11 @@ const CONFIG = {
   debounceMs: 50,
   freePixels: {
     particleSize: 2,
-    springStrength: 3.0,
-    springDamping: 0.92,
+    springStrength: 8.0,
+    springDamping: 0.88,
     repulsionRadius: 120,
-    repulsionStrength: 800,
+    repulsionStrength: 1200,
     perspective: 600,
-    autoRotateSpeed: 0.1,
     friction: 0.95,
     maxParticles: 80000,
   },
@@ -493,8 +492,6 @@ export class DitherEditor extends Game {
     // Camera for 3D rotation
     this._camera = new Camera3D({
       perspective: cfg.perspective,
-      autoRotate: true,
-      autoRotateSpeed: cfg.autoRotateSpeed,
       inertia: true,
       friction: cfg.friction,
     });
