@@ -69,7 +69,7 @@ const CONFIG = {
 export class DitherEditor extends Game {
   constructor(canvas) {
     super(canvas);
-    this.backgroundColor = "#1a1a1a";
+    this.backgroundColor = "#000";
     this.enableFluidSize();
     setTheme("monochrome");
   }
@@ -98,13 +98,40 @@ export class DitherEditor extends Game {
     this._generateDefaultImage();
   }
 
+  _isOverPanel(x, y) {
+    if (!this.panel) return false;
+    const px = this.panel.x;
+    const py = this.panel.y;
+    const pw = this.panel.width;
+    const ph = this.panel.height || 600; // approximate if not set
+    return x >= px && x <= px + pw && y >= py && y <= py + ph;
+  }
+
+  _imageExceedsCanvas() {
+    if (!this._sourceImage) return false;
+    const dw = this._sourceImage.width * this._zoom;
+    const dh = this._sourceImage.height * this._zoom;
+    return dw > this.width || dh > this.height;
+  }
+
   _setupGesture() {
+    this._mouseX = 0;
+    this._mouseY = 0;
+    this.canvas.addEventListener("mousemove", (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      this._mouseX = e.clientX - rect.left;
+      this._mouseY = e.clientY - rect.top;
+    });
+
     this.gesture = new Gesture(this.canvas, {
       onZoom: (delta) => {
+        if (this._isOverPanel(this._mouseX, this._mouseY)) return;
         this._targetZoom *= 1 + delta * CONFIG.zoom.speed;
         this._targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this._targetZoom));
       },
       onPan: (dx, dy) => {
+        if (this._isOverPanel(this._mouseX, this._mouseY)) return;
+        if (!this._imageExceedsCanvas()) return;
         this._panX += dx;
         this._panY += dy;
       },
