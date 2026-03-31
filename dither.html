@@ -44,6 +44,40 @@
       display: flex;
       gap: 8px;
       margin-bottom: 24px;
+      align-items: center;
+    }
+    .source-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-right: 8px;
+      cursor: pointer;
+      opacity: 0.4;
+      transition: opacity 0.2s;
+    }
+    .source-wrap:hover {
+      opacity: 0.7;
+    }
+    .source-wrap.active {
+      opacity: 1;
+    }
+    .source-wrap canvas {
+      width: 40px;
+      height: 40px;
+      border: 1px solid #333;
+      image-rendering: auto;
+    }
+    .source-wrap.active canvas {
+      border-color: #fff;
+    }
+    .source-label {
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: #444;
+      margin-top: 2px;
+    }
+    .source-wrap.active .source-label {
+      color: #888;
     }
     .controls button {
       background: transparent;
@@ -69,7 +103,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin-bottom: 32px;
     }
@@ -175,12 +209,20 @@
   <header>
     <div class="brand">guinetik</div>
     <h1>Dither Studies</h1>
-    <p class="subtitle">5 techniques for approximating continuous tone with discrete values</p>
+    <p class="subtitle">12 techniques for approximating continuous tone with discrete values</p>
   </header>
 
   <div class="controls">
-    <button id="btn-animate">&#9654; Animate</button>
-    <button id="btn-shift">&#8635; Shift</button>
+    <div class="source-wrap">
+      <canvas id="source-procedural"></canvas>
+      <span class="source-label">PROCEDURAL</span>
+    </div>
+    <div class="source-wrap">
+      <canvas id="source-preview"></canvas>
+      <span class="source-label">IMAGE</span>
+    </div>
+    <button id="btn-animate" style="display:none">&#9654; Animate</button>
+    <button id="btn-shift" style="display:none">&#8635; Shift</button>
   </div>
 
   <div class="grid" id="grid"></div>
