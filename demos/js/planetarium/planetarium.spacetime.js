@@ -17,7 +17,7 @@ const GRID_RESOLUTION = 160;
 
 // Base grid color (flat regions)
 const BASE_R = 0, BASE_G = 100, BASE_B = 200;
-const BASE_ALPHA = 0.12;
+const BASE_ALPHA = 0.22;
 // Curvature color (deformed regions)
 const CURVE_R = 80, CURVE_G = 200, CURVE_B = 255;
 const MAX_CURVE_ALPHA = 0.55;
