@@ -73,7 +73,7 @@ const CONFIG = {
     repulsionStrength: 1200,
     perspective: 600,
     friction: 0.95,
-    maxParticles: 80000,
+    maxParticles: 300000,
   },
 };
 
@@ -456,8 +456,8 @@ export class DitherEditor extends Game {
         const g = img.data[idx + 1];
         const b = img.data[idx + 2];
 
-        // Skip near-black pixels
-        if (r + g + b < 15) continue;
+        // Skip fully transparent pixels
+        if (img.data[idx + 3] === 0) continue;
 
         this._particles.push({
           // Home position (centered at origin for 3D rotation)
