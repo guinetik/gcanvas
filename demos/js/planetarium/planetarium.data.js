@@ -206,9 +206,9 @@ export const PLANETS = [
         uRotationSpeed: 1.0,
       },
       ring: {
-        innerRadius: 1.5,
-        outerRadius: 2.4,
-        color: "rgba(210, 180, 120, 0.35)",
+        innerRadius: 1.15,
+        outerRadius: 1.6,
+        color: "rgba(220, 195, 140, 0.5)",
         tilt: 26.73 * DEG,
       },
     },

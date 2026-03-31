@@ -129,51 +129,52 @@ export class CelestialBody {
   }
 
   /**
-   * Draw Saturn-style ring by projecting 3D ring points through camera.
+   * Draw Saturn-style ring as a filled band projected through camera.
    * @param {CanvasRenderingContext2D} ctx
    */
   drawRing(ctx) {
     const segments = 64;
     const outerR = this.ring.outerRadius * this.displayRadius;
     const innerR = this.ring.innerRadius * this.displayRadius;
-    const midR = (outerR + innerR) / 2;
     const tilt = this.ring.tilt;
     const zoom = this._zoom;
     const cx = this._centerX;
     const cy = this._centerY;
 
-    ctx.save();
-    ctx.strokeStyle = this.ring.color;
-    ctx.globalAlpha = 0.35;
-    ctx.beginPath();
-
-    let firstLineWidth = 1;
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * Math.PI * 2;
-      // Ring lies in local XZ plane, tilted by axial tilt around X
-      const lx = Math.cos(angle) * midR;
-      const ly = Math.sin(angle) * midR * Math.sin(tilt);
-      const lz = Math.sin(angle) * midR * Math.cos(tilt);
-
+    // Project ring point at given radius and angle
+    const projectRingPoint = (radius, angle) => {
+      const lx = Math.cos(angle) * radius;
+      const ly = Math.sin(angle) * radius * Math.sin(tilt);
+      const lz = Math.sin(angle) * radius * Math.cos(tilt);
       const proj = this.camera.project(
         this.worldX + lx,
         this.worldY + ly,
         this.worldZ + lz
       );
-      const sx = cx + proj.x * zoom;
-      const sy = cy + proj.y * zoom;
+      return { x: cx + proj.x * zoom, y: cy + proj.y * zoom };
+    };
 
-      if (i === 0) {
-        ctx.moveTo(sx, sy);
-        firstLineWidth = Math.max(1, (outerR - innerR) * proj.scale * zoom * 0.4);
-      } else {
-        ctx.lineTo(sx, sy);
-      }
+    ctx.save();
+    ctx.fillStyle = this.ring.color;
+    ctx.beginPath();
+
+    // Outer edge forward
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const p = projectRingPoint(outerR, angle);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
     }
 
-    ctx.lineWidth = firstLineWidth;
+    // Inner edge backward (creates a ring shape)
+    for (let i = segments; i >= 0; i--) {
+      const angle = (i / segments) * Math.PI * 2;
+      const p = projectRingPoint(innerR, angle);
+      ctx.lineTo(p.x, p.y);
+    }
+
     ctx.closePath();
-    ctx.stroke();
+    ctx.fill();
     ctx.restore();
   }
 
