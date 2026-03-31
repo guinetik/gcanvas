@@ -7,10 +7,9 @@
 export const CONFIG = {
   camera: {
     perspective: 800,
-    rotationX: -0.6,        // look down at orbital plane (~-TAU/10)
+    rotationX: 0.6,         // look down at orbital plane
     rotationY: 0,
-    minRotationX: -1.5,
-    maxRotationX: 0.2,
+    clampX: false,           // free rotation, no clamping
     inertia: true,
     friction: 0.95,
     autoRotate: true,
