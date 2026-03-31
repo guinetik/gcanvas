@@ -127,6 +127,7 @@ export class PlanetariumDemo extends Game {
   }
 
   onResize() {
+    if (!this.allBodies) return; // enableFluidSize fires before init
     const minDim = Math.min(this.width, this.height);
     for (const body of this.allBodies) {
       body.resize(minDim);
