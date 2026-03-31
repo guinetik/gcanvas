@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dither Editor</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+  <meta name="description" content="Dither Editor - Load images, apply adjustments and dithering algorithms. Built with GCanvas." />
+</head>
+<body>
+  <div id="info">
+    <strong>Dither Editor</strong> — Load an image, apply adjustments and dithering algorithms in real-time.<br/>
+    <span style="color:#CCC">
+      <li>Drag & drop or click Load Image to open a file</li>
+      <li>Adjust contrast, highlights, shadows, gamma, grain</li>
+      <li>Choose from 11 dithering algorithms</li>
+      <li>Mouse wheel to zoom, drag to pan</li>
+      <li>Compare toggle to see original vs processed</li>
+      <li>Export result as PNG</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module">
+    import { DitherEditor } from "./js/dither-editor.js";
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new DitherEditor(canvas);
+      game.start();
+    });
+  </script>
+</body>
+</html>
