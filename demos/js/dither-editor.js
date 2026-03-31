@@ -91,7 +91,7 @@ export class DitherEditor extends Game {
     this._dirty = true;
     this._imgCanvas = null;
 
-    // this._setupGesture();
+    this._setupGesture();
     this._setupDragDrop();
     this._buildUI();
     this._generateDefaultImage();
