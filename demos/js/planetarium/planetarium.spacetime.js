@@ -4,6 +4,9 @@
  * Renders a 3D grid that warps around the Sun and planets, showing how
  * mass curves spacetime (the "rubber sheet" analogy).
  *
+ * Grid segments are colored by curvature intensity — more deformation = brighter.
+ * From a top-down view this creates visible circles of color around each mass.
+ *
  * @module planetarium/spacetime
  */
 
@@ -11,15 +14,21 @@ import { Painter } from "../../../src/index.js";
 
 const GRID_SIZE = 1300;
 const GRID_RESOLUTION = 160;
-const GRID_COLOR = "rgba(0, 160, 255, 0.25)";
+
+// Base grid color (flat regions)
+const BASE_R = 0, BASE_G = 100, BASE_B = 200;
+const BASE_ALPHA = 0.12;
+// Curvature color (deformed regions)
+const CURVE_R = 80, CURVE_G = 200, CURVE_B = 255;
+const MAX_CURVE_ALPHA = 0.55;
 
 // Sun well parameters
-const SUN_DEPTH = 120;
+const SUN_DEPTH = 70;
 const SUN_WIDTH = 80;
 
 // Planet well parameters (exaggerated so they're visible)
-const PLANET_DEPTH_SCALE = 25;  // base depth for planets
-const PLANET_WIDTH_SCALE = 20;  // base width for planet wells
+const PLANET_DEPTH_SCALE = 25;
+const PLANET_WIDTH_SCALE = 20;
 
 export class SpacetimeGrid {
   constructor() {
@@ -58,16 +67,15 @@ export class SpacetimeGrid {
         const r2 = v.x * v.x + v.z * v.z;
         let y = sunDepth * Math.exp(-r2 / sunSigma2);
 
-        // Planet wells — each planet creates a smaller well at its position
+        // Planet wells
         if (planets) {
           for (let p = 0; p < planets.length; p++) {
             const body = planets[p];
             const dx = v.x - body.worldX;
             const dz = v.z - body.worldZ;
             const dr2 = dx * dx + dz * dz;
-            // Scale well size by display radius (bigger planet = bigger well)
             const pRadius = body.data.display.radius;
-            const pDepth = PLANET_DEPTH_SCALE * (pRadius / 0.007); // normalized to Earth
+            const pDepth = PLANET_DEPTH_SCALE * (pRadius / 0.007);
             const pWidth = PLANET_WIDTH_SCALE * (pRadius / 0.007);
             const pSigma2 = pWidth * pWidth * 2;
             y += pDepth * Math.exp(-dr2 / pSigma2);
@@ -80,45 +88,73 @@ export class SpacetimeGrid {
   }
 
   /**
-   * Render the curved grid.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {Camera3D} camera
-   * @param {number} centerX - Screen center X
-   * @param {number} centerY - Screen center Y
-   * @param {number} zoom - Current zoom
+   * Get curvature intensity at a vertex (0 = flat, 1 = max deformation).
+   * Normalized against sun depth as the maximum expected value.
+   */
+  _curvature(v) {
+    return Math.min(1, v.y / SUN_DEPTH);
+  }
+
+  /**
+   * Get color string for a curvature value.
+   * Flat = dim base blue, curved = bright cyan.
+   */
+  _curveColor(t) {
+    const r = BASE_R + (CURVE_R - BASE_R) * t;
+    const g = BASE_G + (CURVE_G - BASE_G) * t;
+    const b = BASE_B + (CURVE_B - BASE_B) * t;
+    const a = BASE_ALPHA + (MAX_CURVE_ALPHA - BASE_ALPHA) * t;
+    return `rgba(${r | 0},${g | 0},${b | 0},${a.toFixed(3)})`;
+  }
+
+  /**
+   * Render the curved grid with curvature-based coloring.
+   * Each segment is colored by the average curvature of its two endpoints.
    */
   draw(ctx, camera, centerX, centerY, zoom) {
-    const projected = this.vertices.map(row =>
-      row.map(v => {
-        const proj = camera.project(v.x, v.y, v.z);
-        return {
-          x: centerX + proj.x * zoom,
-          y: centerY + proj.y * zoom,
+    // Project all vertices and compute curvature
+    const N = GRID_RESOLUTION;
+    const proj = new Array(N + 1);
+    const curv = new Array(N + 1);
+
+    for (let i = 0; i <= N; i++) {
+      proj[i] = new Array(N + 1);
+      curv[i] = new Array(N + 1);
+      for (let j = 0; j <= N; j++) {
+        const v = this.vertices[i][j];
+        const p = camera.project(v.x, v.y, v.z);
+        proj[i][j] = {
+          x: centerX + p.x * zoom,
+          y: centerY + p.y * zoom,
         };
-      })
-    );
-
-    ctx.strokeStyle = GRID_COLOR;
-    ctx.lineWidth = 0.4;
-
-    for (let i = 0; i <= GRID_RESOLUTION; i++) {
-      ctx.beginPath();
-      for (let j = 0; j <= GRID_RESOLUTION; j++) {
-        const p = projected[i][j];
-        if (j === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
+        curv[i][j] = this._curvature(v);
       }
-      ctx.stroke();
     }
 
-    for (let j = 0; j <= GRID_RESOLUTION; j++) {
-      ctx.beginPath();
-      for (let i = 0; i <= GRID_RESOLUTION; i++) {
-        const p = projected[i][j];
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
+    ctx.lineWidth = 0.4;
+
+    // Draw lines along X — segment by segment for per-segment color
+    for (let i = 0; i <= N; i++) {
+      for (let j = 0; j < N; j++) {
+        const t = (curv[i][j] + curv[i][j + 1]) * 0.5;
+        ctx.strokeStyle = this._curveColor(t);
+        ctx.beginPath();
+        ctx.moveTo(proj[i][j].x, proj[i][j].y);
+        ctx.lineTo(proj[i][j + 1].x, proj[i][j + 1].y);
+        ctx.stroke();
       }
-      ctx.stroke();
+    }
+
+    // Draw lines along Z — segment by segment
+    for (let j = 0; j <= N; j++) {
+      for (let i = 0; i < N; i++) {
+        const t = (curv[i][j] + curv[i + 1][j]) * 0.5;
+        ctx.strokeStyle = this._curveColor(t);
+        ctx.beginPath();
+        ctx.moveTo(proj[i][j].x, proj[i][j].y);
+        ctx.lineTo(proj[i + 1][j].x, proj[i + 1][j].y);
+        ctx.stroke();
+      }
     }
   }
 }
