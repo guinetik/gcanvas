@@ -286,8 +286,68 @@ export function createTheme(accentHex) {
   };
 }
 
+/**
+ * Named theme registry. Ships with "default" and "monochrome".
+ */
+export const THEMES = {
+  default: { ...structuredClone(UI_THEME) },
+  monochrome: createTheme("#ffffff"),
+};
+
+// Override monochrome backgrounds for better contrast
+Object.assign(THEMES.monochrome.colors, {
+  darkBg: "rgba(30, 30, 30, 0.85)",
+  darkerBg: "rgba(20, 20, 20, 0.92)",
+  darkText: "#000",
+  hoverBg: "#ffffff",
+});
+
+/**
+ * Get the current active theme (same reference as UI_THEME).
+ * @returns {Object}
+ */
+export function getTheme() {
+  return UI_THEME;
+}
+
+/**
+ * Switch the active theme. Mutates UI_THEME in place so existing references stay valid.
+ * @param {string|Object} nameOrConfig - A registered theme name or a full theme object
+ */
+export function setTheme(nameOrConfig) {
+  const source =
+    typeof nameOrConfig === "string" ? THEMES[nameOrConfig] : nameOrConfig;
+  if (!source) {
+    console.warn(`Theme "${nameOrConfig}" not found`);
+    return;
+  }
+  _deepAssign(UI_THEME, source);
+}
+
+/**
+ * Register a custom theme under a name.
+ * @param {string} name
+ * @param {Object} themeConfig
+ */
+export function registerTheme(name, themeConfig) {
+  THEMES[name] = themeConfig;
+}
+
+/** Deep assign source into target, recursing into plain objects. */
+function _deepAssign(target, source) {
+  for (const key of Object.keys(source)) {
+    if (
+      source[key] &&
+      typeof source[key] === "object" &&
+      !Array.isArray(source[key]) &&
+      target[key] &&
+      typeof target[key] === "object"
+    ) {
+      _deepAssign(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+}
+
 export default UI_THEME;
-
-
-
-
