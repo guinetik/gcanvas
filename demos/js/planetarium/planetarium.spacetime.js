@@ -12,7 +12,6 @@ import { Painter } from "../../../src/index.js";
 const GRID_SIZE = 1300;
 const GRID_RESOLUTION = 160;
 const GRID_COLOR = "rgba(0, 140, 255, 0.12)";
-const GRID_HIGHLIGHT = "rgba(60, 180, 255, 0.25)";
 
 // Sun well parameters
 const SUN_DEPTH = 120;
@@ -99,10 +98,10 @@ export class SpacetimeGrid {
       })
     );
 
+    ctx.strokeStyle = GRID_COLOR;
+    ctx.lineWidth = 0.4;
+
     for (let i = 0; i <= GRID_RESOLUTION; i++) {
-      const isMain = i % 20 === 0;
-      ctx.strokeStyle = isMain ? GRID_HIGHLIGHT : GRID_COLOR;
-      ctx.lineWidth = isMain ? 0.8 : 0.4;
       ctx.beginPath();
       for (let j = 0; j <= GRID_RESOLUTION; j++) {
         const p = projected[i][j];
@@ -113,9 +112,6 @@ export class SpacetimeGrid {
     }
 
     for (let j = 0; j <= GRID_RESOLUTION; j++) {
-      const isMain = j % 20 === 0;
-      ctx.strokeStyle = isMain ? GRID_HIGHLIGHT : GRID_COLOR;
-      ctx.lineWidth = isMain ? 0.8 : 0.4;
       ctx.beginPath();
       for (let i = 0; i <= GRID_RESOLUTION; i++) {
         const p = projected[i][j];
