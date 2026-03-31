@@ -12,7 +12,6 @@ import {
   Gesture,
   Screen,
   FPSCounter,
-  Keys,
 } from "../../../src/index.js";
 import { CONFIG } from "./planetarium.config.js";
 import { SUN, PLANETS } from "./planetarium.data.js";
@@ -93,9 +92,11 @@ export class PlanetariumDemo extends Game {
     });
 
     // Spacebar pause
-    this.keys = new Keys();
-    this.keys.on("Space", () => {
-      this.paused = !this.paused;
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        this.paused = !this.paused;
+      }
     });
 
     // Create celestial bodies
