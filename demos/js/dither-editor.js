@@ -8,7 +8,6 @@ import {
   Game,
   Painter,
   Screen,
-  Gesture,
   Dither,
   AccordionGroup,
   Slider,
@@ -98,43 +97,50 @@ export class DitherEditor extends Game {
     this._generateDefaultImage();
   }
 
-  _isOverPanel(x, y) {
-    if (!this.panel) return false;
-    const px = this.panel.x;
-    const py = this.panel.y;
-    const pw = this.panel.width;
-    const ph = this.panel.height || 600; // approximate if not set
-    return x >= px && x <= px + pw && y >= py && y <= py + ph;
-  }
-
-  _imageExceedsCanvas() {
-    if (!this._sourceImage) return false;
-    const dw = this._sourceImage.width * this._zoom;
-    const dh = this._sourceImage.height * this._zoom;
-    return dw > this.width || dh > this.height;
-  }
-
   _setupGesture() {
-    this._mouseX = 0;
-    this._mouseY = 0;
-    this.canvas.addEventListener("mousemove", (e) => {
-      const rect = this.canvas.getBoundingClientRect();
-      this._mouseX = e.clientX - rect.left;
-      this._mouseY = e.clientY - rect.top;
+    // Wheel zoom — only when UI didn't handle the area
+    this.canvas.addEventListener("wheel", (e) => {
+      if (this._uiHandledInput) return;
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -CONFIG.zoom.speed : CONFIG.zoom.speed;
+      this._targetZoom *= 1 + delta;
+      this._targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this._targetZoom));
+    }, { passive: false });
+
+    // Pan via drag — only when UI didn't handle the mousedown
+    let dragging = false;
+    let lastX = 0, lastY = 0;
+
+    this.canvas.addEventListener("mousedown", (e) => {
+      // Let the Game's input system process first (it runs synchronously)
+      // _uiHandledInput is set by pipeline.dispatchInputEvent
+      requestAnimationFrame(() => {
+        if (this._uiHandledInput) return;
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
     });
 
-    this.gesture = new Gesture(this.canvas, {
-      onZoom: (delta) => {
-        if (this._isOverPanel(this._mouseX, this._mouseY)) return;
-        this._targetZoom *= 1 + delta * CONFIG.zoom.speed;
-        this._targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this._targetZoom));
-      },
-      onPan: (dx, dy) => {
-        if (this._isOverPanel(this._mouseX, this._mouseY)) return;
-        if (!this._imageExceedsCanvas()) return;
-        this._panX += dx;
-        this._panY += dy;
-      },
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      // Only pan if zoomed image exceeds canvas
+      if (this._sourceImage) {
+        const dw = this._sourceImage.width * this._zoom;
+        const dh = this._sourceImage.height * this._zoom;
+        if (dw > this.width || dh > this.height) {
+          this._panX += dx;
+          this._panY += dy;
+        }
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      dragging = false;
     });
   }
 
