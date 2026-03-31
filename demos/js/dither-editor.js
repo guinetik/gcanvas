@@ -98,7 +98,7 @@ export class DitherEditor extends Game {
   }
 
   _setupGesture() {
-    // Wheel zoom — only when UI didn't handle the area
+    // Wheel zoom — only when UI didn't consume the input
     this.canvas.addEventListener("wheel", (e) => {
       if (this._uiHandledInput) return;
       e.preventDefault();
@@ -107,27 +107,24 @@ export class DitherEditor extends Game {
       this._targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this._targetZoom));
     }, { passive: false });
 
-    // Pan via drag — only when UI didn't handle the mousedown
-    let dragging = false;
-    let lastX = 0, lastY = 0;
+    // Pan via drag — use game.events so we run AFTER pipeline sets _uiHandledInput
+    this._draggingCanvas = false;
+    this._lastDragX = 0;
+    this._lastDragY = 0;
 
-    this.canvas.addEventListener("mousedown", (e) => {
-      // Let the Game's input system process first (it runs synchronously)
-      // _uiHandledInput is set by pipeline.dispatchInputEvent
-      requestAnimationFrame(() => {
-        if (this._uiHandledInput) return;
-        dragging = true;
-        lastX = e.clientX;
-        lastY = e.clientY;
-      });
+    this.events.on("inputdown", (e) => {
+      if (this._uiHandledInput) return;
+      this._draggingCanvas = true;
+      this._lastDragX = e.x;
+      this._lastDragY = e.y;
     });
 
-    window.addEventListener("mousemove", (e) => {
-      if (!dragging) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      lastX = e.clientX;
-      lastY = e.clientY;
+    this.events.on("inputmove", (e) => {
+      if (!this._draggingCanvas) return;
+      const dx = e.x - this._lastDragX;
+      const dy = e.y - this._lastDragY;
+      this._lastDragX = e.x;
+      this._lastDragY = e.y;
       // Only pan if zoomed image exceeds canvas
       if (this._sourceImage) {
         const dw = this._sourceImage.width * this._zoom;
@@ -139,8 +136,8 @@ export class DitherEditor extends Game {
       }
     });
 
-    window.addEventListener("mouseup", () => {
-      dragging = false;
+    this.events.on("inputup", () => {
+      this._draggingCanvas = false;
     });
   }
 
