@@ -22,9 +22,9 @@ const BASE_ALPHA = 0.3;
 const CURVE_R = 80, CURVE_G = 200, CURVE_B = 255;
 const MAX_CURVE_ALPHA = 0.55;
 
-// Sun well parameters
+// Sun well parameters — tight width so it doesn't bleed into planet orbits
 const SUN_DEPTH = 70;
-const SUN_WIDTH = 80;
+const SUN_WIDTH = 35;
 
 // Planet well parameters (exaggerated so they're visible)
 const PLANET_DEPTH_SCALE = 25;
