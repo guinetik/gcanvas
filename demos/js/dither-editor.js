@@ -123,15 +123,9 @@ export class DitherEditor extends Game {
     this.canvas.addEventListener("wheel", (e) => {
       if (this._uiHandledInput) return;
       e.preventDefault();
-      if (this._freePixelsActive && this._camera) {
-        // Zoom by adjusting camera perspective
-        const delta = e.deltaY > 0 ? 1.1 : 0.9;
-        this._camera.perspective = Math.max(100, Math.min(3000, this._camera.perspective * delta));
-      } else {
-        const delta = e.deltaY > 0 ? -CONFIG.zoom.speed : CONFIG.zoom.speed;
-        this._targetZoom *= 1 + delta;
-        this._targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this._targetZoom));
-      }
+      const delta = e.deltaY > 0 ? -CONFIG.zoom.speed : CONFIG.zoom.speed;
+      this._targetZoom *= 1 + delta;
+      this._targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this._targetZoom));
     }, { passive: false });
 
     // Pan via drag — use game.events so we run AFTER pipeline sets _uiHandledInput
@@ -557,10 +551,11 @@ export class DitherEditor extends Game {
       p.vy += dy * cfg.springStrength * dt;
       p.vz += dz * cfg.springStrength * dt;
 
-      // Mouse repulsion (in projected screen space)
+      // Mouse repulsion (in projected screen space, zoom-adjusted)
+      const zoom = this._zoom;
       const proj = this._camera.project(p.x, p.y, p.z);
-      const screenX = cx + proj.x;
-      const screenY = cy + proj.y;
+      const screenX = cx + proj.x * zoom;
+      const screenY = cy + proj.y * zoom;
       const rdx = screenX - this._mouseX;
       const rdy = screenY - this._mouseY;
       const distSq = rdx * rdx + rdy * rdy;
@@ -594,6 +589,7 @@ export class DitherEditor extends Game {
 
     const cx = this.width / 2;
     const cy = this.height / 2;
+    const zoom = this._zoom;
 
     // Project particles and feed to WebGL renderer
     const projected = [];
@@ -602,9 +598,9 @@ export class DitherEditor extends Game {
       const proj = this._camera.project(p.x, p.y, p.z);
       if (proj.scale <= 0) continue;
       projected.push({
-        x: cx + proj.x,
-        y: cy + proj.y,
-        size: p.size * proj.scale,
+        x: cx + proj.x * zoom,
+        y: cy + proj.y * zoom,
+        size: p.size * proj.scale * zoom,
         color: { r: p.r, g: p.g, b: p.b, a: Math.min(1, proj.scale) },
       });
     }
@@ -652,11 +648,11 @@ export class DitherEditor extends Game {
   update(dt) {
     super.update(dt);
 
+    this._zoom += (this._targetZoom - this._zoom) * CONFIG.zoom.easing;
+
     if (this._freePixelsActive) {
       this._updateFreePixels(dt);
     } else {
-      this._zoom += (this._targetZoom - this._zoom) * CONFIG.zoom.easing;
-
       // Center image when it fits within the canvas
       if (this._sourceImage) {
         const dw = this._sourceImage.width * this._zoom;
