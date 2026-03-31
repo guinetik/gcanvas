@@ -1,9 +1,9 @@
 /**
  * Planetarium — Solar system data.
  *
- * Real orbital elements from NASA/JPL with aesthetic scaling for visualization.
- * Distances are log-compressed so inner planets are visible alongside gas giants.
- * Sizes are exaggerated but preserve relative proportions.
+ * Real orbital elements from NASA/JPL with aesthetic linear spacing.
+ * Distances use ZDog-style linear spacing for visual clarity.
+ * Sizes are small — planets are dots, gas giants slightly larger.
  * Periods use real ratios.
  *
  * @module planetarium/data
@@ -12,32 +12,13 @@
 const DEG = Math.PI / 180;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SCALING
-// ─────────────────────────────────────────────────────────────────────────────
-
-const DISTANCE_SCALE = 180;
-const DISTANCE_MIN = 40;
-
-function scaleDistance(au) {
-  return DISTANCE_SCALE * Math.log(au + 1) + DISTANCE_MIN;
-}
-
-const RADIUS_BASE = 0.01;
-const RADIUS_SCALE = 0.012;
-const RADIUS_MIN = 0.008;
-
-function scaleRadius(realRadiusKm) {
-  return Math.max(RADIUS_MIN, RADIUS_BASE + RADIUS_SCALE * Math.log(realRadiusKm / 2440 + 1));
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // SUN
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const SUN = {
   name: "Sun",
   display: {
-    radius: 0.06,
+    radius: 0.025,
     shaderType: "star",
     shaderUniforms: {
       uStarColor: [1.0, 0.85, 0.4],
@@ -52,11 +33,15 @@ export const SUN = {
 // PLANETS
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Aesthetic linear distances (pixels) — inspired by ZDog layout.
+// Inner planets well-spaced, gas giants progressively farther.
+// Real orbital elements (eccentricity, inclination, etc.) preserved.
+
 export const PLANETS = [
   {
     name: "Mercury",
     orbit: {
-      semiMajorAxis: scaleDistance(0.387),
+      semiMajorAxis: 60,
       eccentricity: 0.2056,
       inclination: 7.005 * DEG,
       longitudeOfAscendingNode: 48.331 * DEG,
@@ -64,7 +49,7 @@ export const PLANETS = [
       period: 87.97,
     },
     display: {
-      radius: scaleRadius(2440),
+      radius: 0.004,
       shaderType: "rockyPlanet",
       shaderUniforms: {
         uBaseColor: [0.55, 0.52, 0.50],
@@ -77,7 +62,7 @@ export const PLANETS = [
   {
     name: "Venus",
     orbit: {
-      semiMajorAxis: scaleDistance(0.723),
+      semiMajorAxis: 85,
       eccentricity: 0.0068,
       inclination: 3.395 * DEG,
       longitudeOfAscendingNode: 76.680 * DEG,
@@ -85,7 +70,7 @@ export const PLANETS = [
       period: 224.7,
     },
     display: {
-      radius: scaleRadius(6052),
+      radius: 0.006,
       shaderType: "rockyPlanet",
       shaderUniforms: {
         uBaseColor: [0.85, 0.65, 0.30],
@@ -98,7 +83,7 @@ export const PLANETS = [
   {
     name: "Earth",
     orbit: {
-      semiMajorAxis: scaleDistance(1.0),
+      semiMajorAxis: 115,
       eccentricity: 0.0167,
       inclination: 0.0,
       longitudeOfAscendingNode: 0.0,
@@ -106,7 +91,7 @@ export const PLANETS = [
       period: 365.25,
     },
     display: {
-      radius: scaleRadius(6371),
+      radius: 0.007,
       shaderType: "rockyPlanet",
       shaderUniforms: {
         uBaseColor: [0.2, 0.4, 0.8],
@@ -118,7 +103,7 @@ export const PLANETS = [
       {
         name: "Moon",
         orbit: {
-          semiMajorAxis: 12,
+          semiMajorAxis: 14,
           eccentricity: 0.0549,
           inclination: 5.145 * DEG,
           longitudeOfAscendingNode: 0,
@@ -126,7 +111,7 @@ export const PLANETS = [
           period: 27.32,
         },
         display: {
-          radius: 0.007,
+          radius: 0.003,
           shaderType: "rockyPlanet",
           shaderUniforms: {
             uBaseColor: [0.7, 0.7, 0.7],
@@ -140,7 +125,7 @@ export const PLANETS = [
   {
     name: "Mars",
     orbit: {
-      semiMajorAxis: scaleDistance(1.524),
+      semiMajorAxis: 145,
       eccentricity: 0.0934,
       inclination: 1.850 * DEG,
       longitudeOfAscendingNode: 49.558 * DEG,
@@ -148,7 +133,7 @@ export const PLANETS = [
       period: 686.97,
     },
     display: {
-      radius: scaleRadius(3390),
+      radius: 0.005,
       shaderType: "rockyPlanet",
       shaderUniforms: {
         uBaseColor: [0.75, 0.35, 0.15],
@@ -161,7 +146,7 @@ export const PLANETS = [
   {
     name: "Jupiter",
     orbit: {
-      semiMajorAxis: scaleDistance(5.203),
+      semiMajorAxis: 210,
       eccentricity: 0.0489,
       inclination: 1.303 * DEG,
       longitudeOfAscendingNode: 100.464 * DEG,
@@ -169,7 +154,7 @@ export const PLANETS = [
       period: 4332.59,
     },
     display: {
-      radius: scaleRadius(69911),
+      radius: 0.015,
       shaderType: "gasGiant",
       shaderUniforms: {
         uBaseColor: [0.85, 0.65, 0.45],
@@ -182,7 +167,7 @@ export const PLANETS = [
       {
         name: "Io",
         orbit: {
-          semiMajorAxis: 10,
+          semiMajorAxis: 18,
           eccentricity: 0.0041,
           inclination: 0.036 * DEG,
           longitudeOfAscendingNode: 0,
@@ -190,7 +175,7 @@ export const PLANETS = [
           period: 1.769,
         },
         display: {
-          radius: 0.006,
+          radius: 0.003,
           shaderType: "rockyPlanet",
           shaderUniforms: {
             uBaseColor: [0.9, 0.85, 0.35],
@@ -204,7 +189,7 @@ export const PLANETS = [
   {
     name: "Saturn",
     orbit: {
-      semiMajorAxis: scaleDistance(9.537),
+      semiMajorAxis: 290,
       eccentricity: 0.0565,
       inclination: 2.485 * DEG,
       longitudeOfAscendingNode: 113.665 * DEG,
@@ -212,7 +197,7 @@ export const PLANETS = [
       period: 10759.22,
     },
     display: {
-      radius: scaleRadius(58232),
+      radius: 0.012,
       shaderType: "gasGiant",
       shaderUniforms: {
         uBaseColor: [0.85, 0.75, 0.50],
@@ -223,7 +208,7 @@ export const PLANETS = [
       ring: {
         innerRadius: 1.5,
         outerRadius: 2.4,
-        color: "rgba(210, 180, 120, 0.25)",
+        color: "rgba(210, 180, 120, 0.35)",
         tilt: 26.73 * DEG,
       },
     },
@@ -231,7 +216,7 @@ export const PLANETS = [
       {
         name: "Titan",
         orbit: {
-          semiMajorAxis: 16,
+          semiMajorAxis: 22,
           eccentricity: 0.0288,
           inclination: 0.33 * DEG,
           longitudeOfAscendingNode: 0,
@@ -239,7 +224,7 @@ export const PLANETS = [
           period: 15.945,
         },
         display: {
-          radius: 0.007,
+          radius: 0.004,
           shaderType: "rockyPlanet",
           shaderUniforms: {
             uBaseColor: [0.85, 0.70, 0.40],
@@ -253,7 +238,7 @@ export const PLANETS = [
   {
     name: "Uranus",
     orbit: {
-      semiMajorAxis: scaleDistance(19.19),
+      semiMajorAxis: 370,
       eccentricity: 0.0457,
       inclination: 0.773 * DEG,
       longitudeOfAscendingNode: 74.006 * DEG,
@@ -261,7 +246,7 @@ export const PLANETS = [
       period: 30688.5,
     },
     display: {
-      radius: scaleRadius(25362),
+      radius: 0.010,
       shaderType: "gasGiant",
       shaderUniforms: {
         uBaseColor: [0.55, 0.75, 0.85],
@@ -275,7 +260,7 @@ export const PLANETS = [
   {
     name: "Neptune",
     orbit: {
-      semiMajorAxis: scaleDistance(30.07),
+      semiMajorAxis: 440,
       eccentricity: 0.0113,
       inclination: 1.770 * DEG,
       longitudeOfAscendingNode: 131.784 * DEG,
@@ -283,7 +268,7 @@ export const PLANETS = [
       period: 60182.0,
     },
     display: {
-      radius: scaleRadius(24622),
+      radius: 0.009,
       shaderType: "gasGiant",
       shaderUniforms: {
         uBaseColor: [0.25, 0.35, 0.75],

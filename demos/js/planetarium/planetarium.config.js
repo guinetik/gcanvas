@@ -6,15 +6,15 @@
 
 export const CONFIG = {
   camera: {
-    perspective: 1200,
-    rotationX: 0.35,
-    rotationY: -0.5,
+    perspective: 800,
+    rotationX: 0.55,
+    rotationY: -0.4,
     minRotationX: -1.2,
     maxRotationX: 1.2,
     inertia: true,
     friction: 0.94,
     autoRotate: true,
-    autoRotateSpeed: 0.15,
+    autoRotateSpeed: 0.1,
     autoRotateAxis: "y",
     velocityScale: 2.0,
   },
@@ -38,10 +38,10 @@ export const CONFIG = {
 
   display: {
     orbitPathSegments: 128,
-    orbitPathColor: "rgba(255, 255, 255, 0.10)",
-    orbitPathLineWidth: 0.6,
-    moonOrbitPathColor: "rgba(255, 255, 255, 0.06)",
-    moonOrbitPathLineWidth: 0.4,
+    orbitPathColor: "rgba(255, 255, 255, 0.18)",
+    orbitPathLineWidth: 1.0,
+    moonOrbitPathColor: "rgba(255, 255, 255, 0.10)",
+    moonOrbitPathLineWidth: 0.6,
 
     sunGlow: {
       layers: 3,
