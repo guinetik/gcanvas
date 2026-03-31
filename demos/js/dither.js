@@ -14,10 +14,10 @@ const CONFIG = {
   techniques: [
     {
       id: "bayer",
-      title: "Ordered Dithering",
-      subtitle: "Bayer Matrix 8\u00d78",
+      title: "Bayer Matrix",
+      subtitle: "Ordered Dithering",
       description:
-        "Pixels are compared against a repeating threshold matrix. The 8\u00d78 Bayer pattern creates a characteristic cross-hatch texture. Computationally cheap and GPU-friendly \u2014 no dependencies between pixels.",
+        "Pixels are compared against a repeating 8\u00d78 threshold matrix. Creates a characteristic cross-hatch texture. Computationally cheap and GPU-friendly \u2014 no dependencies between pixels.",
     },
     {
       id: "bluenoise",
@@ -28,8 +28,8 @@ const CONFIG = {
     },
     {
       id: "floyd",
-      title: "Error Diffusion",
-      subtitle: "Floyd-Steinberg",
+      title: "Floyd-Steinberg",
+      subtitle: "Error Diffusion",
       description:
         "Quantization error at each pixel is distributed to unprocessed neighbors using a specific kernel (7/16, 3/16, 5/16, 1/16). Produces smooth gradients but is inherently sequential \u2014 each pixel depends on previous results.",
     },
@@ -42,57 +42,57 @@ const CONFIG = {
     },
     {
       id: "stucki",
-      title: "Error Diffusion",
-      subtitle: "Stucki",
+      title: "Stucki",
+      subtitle: "Error Diffusion",
       description:
         "A 12-neighbor error diffusion kernel with sharper results than Floyd-Steinberg. Distributes error over a 3\u00d75 area, reducing banding artifacts while preserving edge detail.",
     },
     {
       id: "atkinson",
-      title: "Error Diffusion",
-      subtitle: "Atkinson",
+      title: "Atkinson",
+      subtitle: "Error Diffusion",
       description:
         "Only diffuses 3/4 of the quantization error, discarding the rest. This produces higher contrast results with less blurring \u2014 famously used in early Macintosh software.",
     },
     {
       id: "jarvis",
-      title: "Error Diffusion",
-      subtitle: "Jarvis-Judice-Ninke",
+      title: "Jarvis-Judice-Ninke",
+      subtitle: "Error Diffusion",
       description:
         "A wide 12-neighbor kernel distributing error over 3 rows. Produces very smooth gradients with minimal patterning, at the cost of more diffusion blur.",
     },
     {
       id: "sierra",
-      title: "Error Diffusion",
-      subtitle: "Sierra",
+      title: "Sierra",
+      subtitle: "Error Diffusion",
       description:
         "A balanced 10-neighbor kernel offering a good compromise between the smoothness of Jarvis and the sharpness of Floyd-Steinberg.",
     },
     {
       id: "sierra-two-row",
-      title: "Error Diffusion",
-      subtitle: "Sierra Two-Row",
+      title: "Sierra Two-Row",
+      subtitle: "Error Diffusion",
       description:
         "A faster variant of Sierra using only 2 rows instead of 3. Slightly less smooth but noticeably faster for large images.",
     },
     {
       id: "sierra-lite",
-      title: "Error Diffusion",
-      subtitle: "Sierra Lite",
+      title: "Sierra Lite",
+      subtitle: "Error Diffusion",
       description:
         "The minimal Sierra variant \u2014 only 3 neighbors, similar to Floyd-Steinberg but with different weights. Fastest error diffusion option.",
     },
     {
       id: "burkes",
-      title: "Error Diffusion",
-      subtitle: "Burkes",
+      title: "Burkes",
+      subtitle: "Error Diffusion",
       description:
         "A 7-neighbor, 2-row kernel similar to Stucki but faster. Produces results between Floyd-Steinberg and Stucki in quality.",
     },
     {
       id: "quantize",
       title: "Color Quantize",
-      subtitle: "Palette + Dither",
+      subtitle: "CGA Palette",
       description:
         "The synthesis: reduce colors to an 8-color CGA palette, then apply Floyd-Steinberg error diffusion across all three channels. The dither creates the illusion of colors that don't exist in the palette.",
     },
