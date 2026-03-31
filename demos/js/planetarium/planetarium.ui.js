@@ -179,7 +179,7 @@ export function buildControlPanel(game, callbacks) {
   const physSection = panel.addSection("Physics", { expanded: true });
 
   controls.gr = new ToggleButton(game, {
-    text: "GR Precession",
+    text: "Spacetime Grid",
     width: sliderW,
     height: 32,
     onToggle: (toggled) => callbacks.onGR(toggled),

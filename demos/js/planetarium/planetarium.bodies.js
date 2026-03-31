@@ -12,12 +12,6 @@ import { Sphere3D, Painter } from "../../../src/index.js";
 import { orbitalPosition3D, orbitPathPoints } from "../../../src/math/kepler.js";
 import { CONFIG } from "./planetarium.config.js";
 
-// GR precession — degrees per orbit, exaggerated for visibility.
-// Real Mercury: 43 arcsec/century ≈ 0.0001°/orbit. We use ~2°/orbit
-// so it's visible over a few orbits without looking broken.
-const GR_DEG_PER_ORBIT = 2.0;
-const GR_RAD_PER_ORBIT = GR_DEG_PER_ORBIT * (Math.PI / 180);
-
 /**
  * Swap Kepler XY-plane output to Camera3D XZ-plane (Y=up).
  * Kepler: orbits in XY, Z = inclination out-of-plane
@@ -72,9 +66,6 @@ export class CelestialBody {
     // Ring data (Saturn)
     this.ring = data.display.ring || null;
 
-    // Store base argument of periapsis for GR precession
-    this._baseArgPeriapsis = data.orbit ? data.orbit.argumentOfPeriapsis : 0;
-
     // Randomize starting epoch so planets don't all start aligned
     if (data.orbit) {
       data.orbit.epoch = -Math.random() * data.orbit.period;
@@ -86,19 +77,8 @@ export class CelestialBody {
    * @param {number} simTime - Simulation time in days
    * @param {boolean} grEnabled - Apply GR precession to argument of periapsis
    */
-  update(simTime, grEnabled) {
+  update(simTime) {
     if (!this.data.orbit) return; // Sun stays at origin
-
-    // GR precession: slowly advance argument of periapsis each orbit.
-    // Scales as 1/r — Mercury precesses most, Neptune barely at all.
-    if (grEnabled && !this.parent) {
-      const orbit = this.data.orbit;
-      const orbitsElapsed = simTime / orbit.period;
-      // Precession rate scales inversely with distance (rs/r dependence)
-      const mercuryDist = 75; // Mercury's semiMajorAxis for normalization
-      const distFactor = mercuryDist / orbit.semiMajorAxis;
-      orbit.argumentOfPeriapsis = this._baseArgPeriapsis + GR_RAD_PER_ORBIT * distFactor * orbitsElapsed;
-    }
 
     const pos = keplerToWorld(orbitalPosition3D(this.data.orbit, simTime));
     if (this.parent) {

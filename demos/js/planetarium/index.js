@@ -25,6 +25,7 @@ import {
   buildControlPanel,
   positionPanel,
 } from "./planetarium.ui.js";
+import { SpacetimeGrid } from "./planetarium.spacetime.js";
 
 export class PlanetariumDemo extends Game {
   constructor(canvas) {
@@ -110,6 +111,9 @@ export class PlanetariumDemo extends Game {
 
     this.allBodies = [this.sun, ...this.planets, ...this.moons];
 
+    // Spacetime curvature grid (toggled via panel)
+    this.spacetimeGrid = new SpacetimeGrid();
+
     // Starfield
     this.stars = generateStarfield(this.width, this.height);
 
@@ -163,12 +167,17 @@ export class PlanetariumDemo extends Game {
       this.simTime += dt * this.timeScale;
     }
 
-    // Update orbital positions (planets first, then moons)
+    // Update orbital positions
     for (const planet of this.planets) {
-      planet.update(this.simTime, this.grEnabled);
+      planet.update(this.simTime);
     }
     for (const moon of this.moons) {
-      moon.update(this.simTime, this.grEnabled);
+      moon.update(this.simTime);
+    }
+
+    // Update spacetime grid (subtle breathing even when visible)
+    if (this.grEnabled) {
+      this.spacetimeGrid.update(this.simTime / 365.25);
     }
   }
 
@@ -181,6 +190,11 @@ export class PlanetariumDemo extends Game {
 
     // 1. Starfield
     drawStarfield(ctx, this.stars);
+
+    // 1.5. Spacetime curvature grid (when GR enabled)
+    if (this.grEnabled) {
+      this.spacetimeGrid.draw(ctx, this.camera, centerX, centerY, this.zoom);
+    }
 
     // 2. Orbit paths
     for (const planet of this.planets) {
