@@ -175,9 +175,9 @@ export class PlanetariumDemo extends Game {
       moon.update(this.simTime);
     }
 
-    // Update spacetime grid (subtle breathing even when visible)
+    // Update spacetime grid with Sun + planet gravity wells
     if (this.grEnabled) {
-      this.spacetimeGrid.update(this.simTime / 365.25);
+      this.spacetimeGrid.update(this.simTime / 365.25, this.planets);
     }
   }
 

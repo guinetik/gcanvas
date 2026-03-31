@@ -1,20 +1,26 @@
 /**
  * Planetarium — Spacetime curvature grid.
  *
- * Renders a 3D grid that warps around the Sun showing how mass curves
- * spacetime (the "rubber sheet" analogy). Based on the spacetime demo.
+ * Renders a 3D grid that warps around the Sun and planets, showing how
+ * mass curves spacetime (the "rubber sheet" analogy).
  *
  * @module planetarium/spacetime
  */
 
 import { Painter } from "../../../src/index.js";
 
-const GRID_SIZE = 1300;      // Grid covers full solar system (Neptune at 580)
-const GRID_RESOLUTION = 50;  // Number of grid lines per axis
-const WELL_DEPTH = 120;      // Depth of the gravity well (pixels)
-const WELL_WIDTH = 80;       // Width of the Gaussian well (pixels)
-const GRID_COLOR = "rgba(0, 140, 255, 0.15)";
-const GRID_HIGHLIGHT = "rgba(60, 180, 255, 0.3)";
+const GRID_SIZE = 1300;
+const GRID_RESOLUTION = 80;
+const GRID_COLOR = "rgba(0, 140, 255, 0.12)";
+const GRID_HIGHLIGHT = "rgba(60, 180, 255, 0.25)";
+
+// Sun well parameters
+const SUN_DEPTH = 120;
+const SUN_WIDTH = 80;
+
+// Planet well parameters (exaggerated so they're visible)
+const PLANET_DEPTH_SCALE = 25;  // base depth for planets
+const PLANET_WIDTH_SCALE = 20;  // base width for planet wells
 
 export class SpacetimeGrid {
   constructor() {
@@ -24,8 +30,6 @@ export class SpacetimeGrid {
 
   _initGrid() {
     this.vertices = [];
-    const half = GRID_SIZE / 2;
-
     for (let i = 0; i <= GRID_RESOLUTION; i++) {
       const row = [];
       for (let j = 0; j <= GRID_RESOLUTION; j++) {
@@ -38,21 +42,40 @@ export class SpacetimeGrid {
   }
 
   /**
-   * Update vertex Y values based on Sun's gravity well.
-   * Gaussian profile: y = depth * exp(-r² / 2σ²)
+   * Update vertex Y values based on Sun + planet gravity wells.
    * @param {number} time - for subtle breathing animation
+   * @param {Array} planets - array of CelestialBody (worldX/Z positions)
    */
-  update(time) {
+  update(time, planets) {
     const pulse = 1 + 0.03 * Math.sin(time * 1.5);
-    const depth = WELL_DEPTH * pulse;
-    const sigma2 = WELL_WIDTH * WELL_WIDTH * 2;
+    const sunDepth = SUN_DEPTH * pulse;
+    const sunSigma2 = SUN_WIDTH * SUN_WIDTH * 2;
 
     for (let i = 0; i <= GRID_RESOLUTION; i++) {
       for (let j = 0; j <= GRID_RESOLUTION; j++) {
         const v = this.vertices[i][j];
+
+        // Sun well
         const r2 = v.x * v.x + v.z * v.z;
-        // Positive Y = upward in camera space; we want the well to sink down
-        v.y = depth * Math.exp(-r2 / sigma2);
+        let y = sunDepth * Math.exp(-r2 / sunSigma2);
+
+        // Planet wells — each planet creates a smaller well at its position
+        if (planets) {
+          for (let p = 0; p < planets.length; p++) {
+            const body = planets[p];
+            const dx = v.x - body.worldX;
+            const dz = v.z - body.worldZ;
+            const dr2 = dx * dx + dz * dz;
+            // Scale well size by display radius (bigger planet = bigger well)
+            const pRadius = body.data.display.radius;
+            const pDepth = PLANET_DEPTH_SCALE * (pRadius / 0.007); // normalized to Earth
+            const pWidth = PLANET_WIDTH_SCALE * (pRadius / 0.007);
+            const pSigma2 = pWidth * pWidth * 2;
+            y += pDepth * Math.exp(-dr2 / pSigma2);
+          }
+        }
+
+        v.y = y;
       }
     }
   }
@@ -66,7 +89,6 @@ export class SpacetimeGrid {
    * @param {number} zoom - Current zoom
    */
   draw(ctx, camera, centerX, centerY, zoom) {
-    // Project all vertices
     const projected = this.vertices.map(row =>
       row.map(v => {
         const proj = camera.project(v.x, v.y, v.z);
@@ -77,11 +99,10 @@ export class SpacetimeGrid {
       })
     );
 
-    // Draw grid lines along X
     for (let i = 0; i <= GRID_RESOLUTION; i++) {
-      const isMain = i % 5 === 0;
+      const isMain = i % 10 === 0;
       ctx.strokeStyle = isMain ? GRID_HIGHLIGHT : GRID_COLOR;
-      ctx.lineWidth = isMain ? 1.0 : 0.5;
+      ctx.lineWidth = isMain ? 0.8 : 0.4;
       ctx.beginPath();
       for (let j = 0; j <= GRID_RESOLUTION; j++) {
         const p = projected[i][j];
@@ -91,11 +112,10 @@ export class SpacetimeGrid {
       ctx.stroke();
     }
 
-    // Draw grid lines along Z
     for (let j = 0; j <= GRID_RESOLUTION; j++) {
-      const isMain = j % 5 === 0;
+      const isMain = j % 10 === 0;
       ctx.strokeStyle = isMain ? GRID_HIGHLIGHT : GRID_COLOR;
-      ctx.lineWidth = isMain ? 1.0 : 0.5;
+      ctx.lineWidth = isMain ? 0.8 : 0.4;
       ctx.beginPath();
       for (let i = 0; i <= GRID_RESOLUTION; i++) {
         const p = projected[i][j];
