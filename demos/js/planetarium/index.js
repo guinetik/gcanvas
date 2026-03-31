@@ -22,6 +22,8 @@ import {
   drawSunGlow,
   drawLabels,
   drawHUD,
+  buildControlPanel,
+  positionPanel,
 } from "./planetarium.ui.js";
 
 export class PlanetariumDemo extends Game {
@@ -35,12 +37,13 @@ export class PlanetariumDemo extends Game {
     super.init();
     Screen.init(this);
 
-    // Simulation time (days)
+    // Simulation state
     this.simTime = 0;
     this.timeScale = CONFIG.time.scale;
     this.paused = false;
+    this.grEnabled = false;
 
-    // Camera — looking down at the orbital plane (XZ) from above-ish
+    // Camera
     this.camera = new Camera3D({
       perspective: CONFIG.camera.perspective,
       rotationX: CONFIG.camera.rotationX,
@@ -55,7 +58,7 @@ export class PlanetariumDemo extends Game {
     });
     this.camera.enableMouseControl(this.canvas);
 
-    // Zoom — only wheel/pinch, no pan (drag = camera rotation)
+    // Zoom
     const initialZoom = Math.min(
       CONFIG.zoom.max,
       Math.max(CONFIG.zoom.min, Screen.minDimension() / CONFIG.zoom.baseScreenSize)
@@ -69,7 +72,7 @@ export class PlanetariumDemo extends Game {
         this.targetZoom *= 1 + delta * CONFIG.zoom.speed;
         this.targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this.targetZoom));
       },
-      onPan: null, // Camera3D handles drag rotation
+      onPan: null,
     });
 
     // Double-click reset
@@ -83,6 +86,9 @@ export class PlanetariumDemo extends Game {
       if (e.code === "Space") {
         e.preventDefault();
         this.paused = !this.paused;
+        if (this._controls && this._controls.pause) {
+          this._controls.pause.toggle(this.paused);
+        }
       }
     });
 
@@ -104,11 +110,26 @@ export class PlanetariumDemo extends Game {
       }
     }
 
-    // All bodies flat list for rendering
     this.allBodies = [this.sun, ...this.planets, ...this.moons];
 
     // Starfield
     this.stars = generateStarfield(this.width, this.height);
+
+    // Control panel
+    const { panel, controls } = buildControlPanel(this, {
+      onTimeScale: (v) => { this.timeScale = v; },
+      onPause: (toggled) => { this.paused = toggled; },
+      onGR: (toggled) => { this.grEnabled = toggled; },
+      onAutoRotate: (v) => { this.camera.autoRotateSpeed = v; },
+      onReset: () => {
+        this.targetZoom = this.defaultZoom;
+        this.camera.reset();
+      },
+    });
+    this._panel = panel;
+    this._controls = controls;
+    this.pipeline.add(panel);
+    positionPanel(panel, this.width);
 
     // FPS counter
     this.pipeline.add(new FPSCounter(this, { anchor: "bottom-right" }));
@@ -127,6 +148,10 @@ export class PlanetariumDemo extends Game {
       Math.max(CONFIG.zoom.min, Screen.minDimension() / CONFIG.zoom.baseScreenSize)
     );
     this.defaultZoom = newDefaultZoom;
+
+    if (this._panel) {
+      positionPanel(this._panel, this.width);
+    }
   }
 
   update(dt) {
@@ -143,10 +168,10 @@ export class PlanetariumDemo extends Game {
 
     // Update orbital positions (planets first, then moons)
     for (const planet of this.planets) {
-      planet.update(this.simTime);
+      planet.update(this.simTime, this.grEnabled);
     }
     for (const moon of this.moons) {
-      moon.update(this.simTime);
+      moon.update(this.simTime, this.grEnabled);
     }
   }
 

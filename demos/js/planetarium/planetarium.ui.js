@@ -1,14 +1,26 @@
 /**
- * Planetarium — UI rendering.
+ * Planetarium — UI rendering and control panel.
  *
- * Handles planet labels, starfield background, sun glow, and info text.
- * All functions are stateless renderers that take the current state.
+ * Handles planet labels, starfield background, sun glow, info text,
+ * and the accordion control panel for simulation parameters.
  *
  * @module planetarium/ui
  */
 
-import { Painter } from "../../../src/index.js";
+import {
+  Painter,
+  Screen,
+  AccordionGroup,
+  Slider,
+  ToggleButton,
+  Button,
+  setTheme,
+} from "../../../src/index.js";
 import { CONFIG } from "./planetarium.config.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STARFIELD
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Generate a static starfield (call once, reuse the array).
@@ -43,13 +55,12 @@ export function drawStarfield(ctx, stars) {
   ctx.globalAlpha = 1;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SUN GLOW
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Render sun glow (additive blended concentric circles).
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} screenX - Sun screen X
- * @param {number} screenY - Sun screen Y
- * @param {number} displayRadius - Sun display radius (already scaled)
- * @param {number} scale - Projection scale
  */
 export function drawSunGlow(ctx, screenX, screenY, displayRadius, scale) {
   const { layers, baseAlpha, baseSize, color } = CONFIG.display.sunGlow;
@@ -77,10 +88,12 @@ export function drawSunGlow(ctx, screenX, screenY, displayRadius, scale) {
   ctx.restore();
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LABELS + HUD
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
  * Render planet name labels below each body.
- * @param {CanvasRenderingContext2D} ctx
- * @param {Array<CelestialBody>} bodies - All bodies to label (already projected)
  */
 export function drawLabels(ctx, bodies) {
   const { font, color, offsetY } = CONFIG.display.labels;
@@ -98,10 +111,6 @@ export function drawLabels(ctx, bodies) {
 
 /**
  * Render HUD info text.
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} simTime - Current simulation time in days
- * @param {number} timeScale - Current time scale
- * @param {boolean} paused - Whether simulation is paused
  */
 export function drawHUD(ctx, simTime, timeScale, paused) {
   const years = (simTime / 365.25).toFixed(1);
@@ -113,4 +122,103 @@ export function drawHUD(ctx, simTime, timeScale, paused) {
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.fillText(text, 12, 12);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTROL PANEL
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Build the accordion control panel for simulation parameters.
+ * Returns an object with the panel and callbacks the demo wires to state.
+ *
+ * @param {Game} game - The PlanetariumDemo instance
+ * @param {Object} callbacks - { onTimeScale, onPause, onGR, onAutoRotate, onReset }
+ * @returns {{ panel: AccordionGroup, controls: Object }}
+ */
+export function buildControlPanel(game, callbacks) {
+  setTheme("monochrome");
+
+  const panelWidth = Screen.responsive(200, 230, CONFIG.panel.width);
+  const padding = Screen.responsive(10, 12, CONFIG.panel.padding);
+  const sliderW = panelWidth - padding * 2;
+
+  const panel = new AccordionGroup(game, {
+    width: panelWidth,
+    padding,
+    spacing: CONFIG.panel.spacing,
+    headerHeight: CONFIG.panel.headerHeight,
+  });
+  panel.interactive = true;
+
+  const controls = {};
+
+  // ── Simulation section ──
+  const simSection = panel.addSection("Simulation", { expanded: true });
+
+  controls.timeScale = new Slider(game, {
+    label: "Time Scale",
+    min: 1, max: 100, value: CONFIG.time.scale, step: 1,
+    width: sliderW,
+    formatValue: (v) => `×${v.toFixed(0)}`,
+    onChange: (v) => callbacks.onTimeScale(v),
+  });
+  simSection.addItem(controls.timeScale);
+
+  controls.pause = new ToggleButton(game, {
+    text: "Pause",
+    width: sliderW,
+    height: 32,
+    onToggle: (toggled) => callbacks.onPause(toggled),
+  });
+  simSection.addItem(controls.pause);
+
+  panel.commitSection(simSection);
+
+  // ── Physics section ──
+  const physSection = panel.addSection("Physics", { expanded: true });
+
+  controls.gr = new ToggleButton(game, {
+    text: "GR Precession",
+    width: sliderW,
+    height: 32,
+    onToggle: (toggled) => callbacks.onGR(toggled),
+  });
+  physSection.addItem(controls.gr);
+
+  panel.commitSection(physSection);
+
+  // ── Camera section ──
+  const camSection = panel.addSection("Camera", { expanded: false });
+
+  controls.autoRotateSpeed = new Slider(game, {
+    label: "Auto-Rotate",
+    min: 0, max: 0.5, value: CONFIG.camera.autoRotateSpeed, step: 0.01,
+    width: sliderW,
+    formatValue: (v) => v.toFixed(2),
+    onChange: (v) => callbacks.onAutoRotate(v),
+  });
+  camSection.addItem(controls.autoRotateSpeed);
+
+  controls.reset = new Button(game, {
+    text: "Reset Camera",
+    width: sliderW,
+    height: 32,
+    onClick: () => callbacks.onReset(),
+  });
+  camSection.addItem(controls.reset);
+
+  panel.commitSection(camSection);
+
+  panel.layoutAll();
+
+  return { panel, controls };
+}
+
+/**
+ * Position the panel at top-right.
+ */
+export function positionPanel(panel, gameWidth) {
+  panel.x = gameWidth - panel.width - CONFIG.panel.marginRight;
+  panel.y = CONFIG.panel.marginTop;
 }

@@ -30,6 +30,15 @@ export const CONFIG = {
     scale: 12.0,
   },
 
+  panel: {
+    width: 240,
+    padding: 12,
+    spacing: 8,
+    headerHeight: 28,
+    marginRight: 14,
+    marginTop: 14,
+  },
+
   display: {
     orbitPathSegments: 128,
     orbitPathColor: "rgba(255, 255, 255, 0.18)",

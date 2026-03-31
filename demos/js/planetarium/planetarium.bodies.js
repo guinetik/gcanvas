@@ -10,7 +10,13 @@
 
 import { Sphere3D, Painter } from "../../../src/index.js";
 import { orbitalPosition3D, orbitPathPoints } from "../../../src/math/kepler.js";
+import { schwarzschildPrecessionRate } from "../../../src/math/orbital.js";
 import { CONFIG } from "./planetarium.config.js";
+
+// GR precession factor — exaggerated for visibility.
+// Real Mercury precession is 43 arcseconds/century, invisible at this scale.
+// We amplify it so you can actually see the orbit precess.
+const GR_PRECESSION_AMPLIFY = 500;
 
 /**
  * Swap Kepler XY-plane output to Camera3D XZ-plane (Y=up).
@@ -66,6 +72,9 @@ export class CelestialBody {
     // Ring data (Saturn)
     this.ring = data.display.ring || null;
 
+    // Store base argument of periapsis for GR precession
+    this._baseArgPeriapsis = data.orbit ? data.orbit.argumentOfPeriapsis : 0;
+
     // Randomize starting epoch so planets don't all start aligned
     if (data.orbit) {
       data.orbit.epoch = -Math.random() * data.orbit.period;
@@ -75,9 +84,19 @@ export class CelestialBody {
   /**
    * Update world position from orbital mechanics.
    * @param {number} simTime - Simulation time in days
+   * @param {boolean} grEnabled - Apply GR precession to argument of periapsis
    */
-  update(simTime) {
+  update(simTime, grEnabled) {
     if (!this.data.orbit) return; // Sun stays at origin
+
+    // GR precession: advance argument of periapsis over time
+    if (grEnabled && !this.parent) {
+      const orbit = this.data.orbit;
+      // Schwarzschild precession scales as rs/r — inner planets precess more
+      const rs = 2; // Schwarzschild radius of Sun in geometric units (arbitrary scale)
+      const rate = schwarzschildPrecessionRate(orbit.semiMajorAxis, rs, GR_PRECESSION_AMPLIFY);
+      orbit.argumentOfPeriapsis = this._baseArgPeriapsis + rate * simTime;
+    }
 
     const pos = keplerToWorld(orbitalPosition3D(this.data.orbit, simTime));
     if (this.parent) {
