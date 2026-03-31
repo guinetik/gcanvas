@@ -67,13 +67,13 @@ const CONFIG = {
   debounceMs: 50,
   freePixels: {
     particleSize: 2,
-    springStrength: 8.0,
-    springDamping: 0.88,
+    springStrength: 12.0,
+    springDamping: 0.92,
     repulsionRadius: 120,
-    repulsionStrength: 1200,
+    repulsionStrength: 1800,
     perspective: 600,
     friction: 0.95,
-    maxParticles: 80000,
+    maxParticles: 300000,
   },
 };
 
@@ -119,13 +119,20 @@ export class DitherEditor extends Game {
 
   _setupGesture() {
     // Wheel zoom — only when UI didn't consume the input
-    this.canvas.addEventListener("wheel", (e) => {
-      if (this._uiHandledInput) return;
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -CONFIG.zoom.speed : CONFIG.zoom.speed;
-      this._targetZoom *= 1 + delta;
-      this._targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this._targetZoom));
-    }, { passive: false });
+    this.canvas.addEventListener(
+      "wheel",
+      (e) => {
+        if (this._uiHandledInput) return;
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -CONFIG.zoom.speed : CONFIG.zoom.speed;
+        this._targetZoom *= 1 + delta;
+        this._targetZoom = Math.max(
+          CONFIG.zoom.min,
+          Math.min(CONFIG.zoom.max, this._targetZoom),
+        );
+      },
+      { passive: false },
+    );
 
     // Pan via drag — use game.events so we run AFTER pipeline sets _uiHandledInput
     this._draggingCanvas = false;
@@ -252,42 +259,72 @@ export class DitherEditor extends Game {
 
     this._controls.contrast = new Slider(this, {
       label: "Contrast",
-      min: -100, max: 100, value: 0, step: 1,
+      min: -100,
+      max: 100,
+      value: 0,
+      step: 1,
       width: sliderW,
-      onChange: (v) => { this._settings.contrast = v / 100; this._scheduleProcess(); },
+      onChange: (v) => {
+        this._settings.contrast = v / 100;
+        this._scheduleProcess();
+      },
     });
     adjSection.addItem(this._controls.contrast);
 
     this._controls.highlights = new Slider(this, {
       label: "Highlights",
-      min: -100, max: 100, value: 0, step: 1,
+      min: -100,
+      max: 100,
+      value: 0,
+      step: 1,
       width: sliderW,
-      onChange: (v) => { this._settings.highlights = v / 100; this._scheduleProcess(); },
+      onChange: (v) => {
+        this._settings.highlights = v / 100;
+        this._scheduleProcess();
+      },
     });
     adjSection.addItem(this._controls.highlights);
 
     this._controls.shadows = new Slider(this, {
       label: "Shadows",
-      min: -100, max: 100, value: 0, step: 1,
+      min: -100,
+      max: 100,
+      value: 0,
+      step: 1,
       width: sliderW,
-      onChange: (v) => { this._settings.shadows = v / 100; this._scheduleProcess(); },
+      onChange: (v) => {
+        this._settings.shadows = v / 100;
+        this._scheduleProcess();
+      },
     });
     adjSection.addItem(this._controls.shadows);
 
     this._controls.gamma = new Slider(this, {
       label: "Gamma",
-      min: 0.1, max: 3.0, value: 1.0, step: 0.05,
+      min: 0.1,
+      max: 3.0,
+      value: 1.0,
+      step: 0.05,
       width: sliderW,
       formatValue: (v) => v.toFixed(2),
-      onChange: (v) => { this._settings.gamma = v; this._scheduleProcess(); },
+      onChange: (v) => {
+        this._settings.gamma = v;
+        this._scheduleProcess();
+      },
     });
     adjSection.addItem(this._controls.gamma);
 
     this._controls.grain = new Slider(this, {
       label: "Grain",
-      min: 0, max: 100, value: 0, step: 1,
+      min: 0,
+      max: 100,
+      value: 0,
+      step: 1,
       width: sliderW,
-      onChange: (v) => { this._settings.grain = v; this._scheduleProcess(); },
+      onChange: (v) => {
+        this._settings.grain = v;
+        this._scheduleProcess();
+      },
     });
     adjSection.addItem(this._controls.grain);
 
@@ -311,9 +348,15 @@ export class DitherEditor extends Game {
 
     this._controls.pixelSize = new Slider(this, {
       label: "Pixel Size",
-      min: 1, max: 16, value: 1, step: 1,
+      min: 1,
+      max: 16,
+      value: 1,
+      step: 1,
       width: sliderW,
-      onChange: (v) => { this._settings.pixelSize = v; this._scheduleProcess(); },
+      onChange: (v) => {
+        this._settings.pixelSize = v;
+        this._scheduleProcess();
+      },
     });
     ditherSection.addItem(this._controls.pixelSize);
 
@@ -399,23 +442,50 @@ export class DitherEditor extends Game {
     const gray = new Float32Array(width * height);
     for (let i = 0; i < gray.length; i++) {
       const idx = i * 4;
-      gray[i] = (img.data[idx] * 0.299 + img.data[idx + 1] * 0.587 + img.data[idx + 2] * 0.114) / 255;
+      gray[i] =
+        (img.data[idx] * 0.299 +
+          img.data[idx + 1] * 0.587 +
+          img.data[idx + 2] * 0.114) /
+        255;
     }
 
     let rgba;
     switch (algorithm) {
-      case "floyd-steinberg": rgba = Dither.floydSteinberg(gray, width, height); break;
-      case "bayer": rgba = Dither.bayer(gray, width, height); break;
-      case "blue-noise": rgba = Dither.blueNoise(gray, width, height); break;
-      case "stucki": rgba = Dither.stucki(gray, width, height); break;
-      case "atkinson": rgba = Dither.atkinson(gray, width, height); break;
-      case "jarvis": rgba = Dither.jarvis(gray, width, height); break;
-      case "sierra": rgba = Dither.sierra(gray, width, height); break;
-      case "sierra-two-row": rgba = Dither.sierraTwoRow(gray, width, height); break;
-      case "sierra-lite": rgba = Dither.sierraLite(gray, width, height); break;
-      case "burkes": rgba = Dither.burkes(gray, width, height); break;
-      case "stipple": rgba = Dither.stipple(gray, width, height); break;
-      default: return img;
+      case "floyd-steinberg":
+        rgba = Dither.floydSteinberg(gray, width, height);
+        break;
+      case "bayer":
+        rgba = Dither.bayer(gray, width, height);
+        break;
+      case "blue-noise":
+        rgba = Dither.blueNoise(gray, width, height);
+        break;
+      case "stucki":
+        rgba = Dither.stucki(gray, width, height);
+        break;
+      case "atkinson":
+        rgba = Dither.atkinson(gray, width, height);
+        break;
+      case "jarvis":
+        rgba = Dither.jarvis(gray, width, height);
+        break;
+      case "sierra":
+        rgba = Dither.sierra(gray, width, height);
+        break;
+      case "sierra-two-row":
+        rgba = Dither.sierraTwoRow(gray, width, height);
+        break;
+      case "sierra-lite":
+        rgba = Dither.sierraLite(gray, width, height);
+        break;
+      case "burkes":
+        rgba = Dither.burkes(gray, width, height);
+        break;
+      case "stipple":
+        rgba = Dither.stipple(gray, width, height);
+        break;
+      default:
+        return img;
     }
 
     return { data: rgba, width, height };
@@ -438,41 +508,50 @@ export class DitherEditor extends Game {
 
     const cfg = CONFIG.freePixels;
     const ps = Math.max(1, this._settings.pixelSize);
-    const cols = Math.ceil(img.width / ps);
-    const rows = Math.ceil(img.height / ps);
-    const count = Math.min(cols * rows, cfg.maxParticles);
+
+    // Downsample large images so particle count stays within budget
+    // Find the step size that keeps total pixels <= maxParticles
+    const totalPixels = Math.ceil(img.width / ps) * Math.ceil(img.height / ps);
+    const scale =
+      totalPixels > cfg.maxParticles
+        ? Math.sqrt(totalPixels / cfg.maxParticles)
+        : 1;
+    const step = ps * scale;
+    const cols = Math.floor(img.width / step);
+    const rows = Math.floor(img.height / step);
 
     // Build particles from image pixels
     this._particles = [];
-    const halfW = (cols * ps) / 2;
-    const halfH = (rows * ps) / 2;
+    const halfW = img.width / 2;
+    const halfH = img.height / 2;
+    const particleSize = Math.max(1, step * 0.9);
 
-    for (let row = 0; row < rows && this._particles.length < count; row++) {
-      for (let col = 0; col < cols && this._particles.length < count; col++) {
-        const sx = col * ps;
-        const sy = row * ps;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const sx = Math.floor(col * step);
+        const sy = Math.floor(row * step);
         const idx = (sy * img.width + sx) * 4;
         const r = img.data[idx];
         const g = img.data[idx + 1];
         const b = img.data[idx + 2];
 
-        // Skip near-black pixels
-        if (r + g + b < 15) continue;
+        // Skip fully transparent pixels
+        if (img.data[idx + 3] === 0) continue;
 
         this._particles.push({
-          // Home position (centered at origin for 3D rotation)
           homeX: sx - halfW,
           homeY: sy - halfH,
           homeZ: 0,
-          // Current position
           x: sx - halfW,
           y: sy - halfH,
           z: 0,
-          // Velocity
-          vx: 0, vy: 0, vz: 0,
-          // Color
-          r, g, b,
-          size: Math.max(1, ps * 0.8),
+          vx: 0,
+          vy: 0,
+          vz: 0,
+          r,
+          g,
+          b,
+          size: particleSize,
         });
       }
     }
@@ -501,16 +580,24 @@ export class DitherEditor extends Game {
         if (!this.panel) return false;
         const px = this.panel.x;
         const py = this.panel.y;
-        return x >= px && x <= px + this.panel.width && y >= py && y <= py + (this.panel.height || 600);
+        return (
+          x >= px &&
+          x <= px + this.panel.width &&
+          y >= py &&
+          y <= py + (this.panel.height || 600)
+        );
       },
     });
 
     // Track mouse for repulsion
-    this.canvas.addEventListener("mousemove", this._onFreePixelsMouseMove = (e) => {
-      const rect = this.canvas.getBoundingClientRect();
-      this._mouseX = e.clientX - rect.left;
-      this._mouseY = e.clientY - rect.top;
-    });
+    this.canvas.addEventListener(
+      "mousemove",
+      (this._onFreePixelsMouseMove = (e) => {
+        const rect = this.canvas.getBoundingClientRect();
+        this._mouseX = e.clientX - rect.left;
+        this._mouseY = e.clientY - rect.top;
+      }),
+    );
   }
 
   _destroyFreePixels() {
@@ -615,7 +702,11 @@ export class DitherEditor extends Game {
     oc.width = img.width;
     oc.height = img.height;
     const octx = oc.getContext("2d");
-    const imageData = new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
+    const imageData = new ImageData(
+      new Uint8ClampedArray(img.data),
+      img.width,
+      img.height,
+    );
     octx.putImageData(imageData, 0, 0);
     oc.toBlob((blob) => {
       const url = URL.createObjectURL(blob);
@@ -675,9 +766,17 @@ export class DitherEditor extends Game {
     const img = this._comparing ? this._sourceImage : this._processedImage;
     if (!img) return;
 
-    const imageData = new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
+    const imageData = new ImageData(
+      new Uint8ClampedArray(img.data),
+      img.width,
+      img.height,
+    );
 
-    if (!this._imgCanvas || this._imgCanvas.width !== img.width || this._imgCanvas.height !== img.height) {
+    if (
+      !this._imgCanvas ||
+      this._imgCanvas.width !== img.width ||
+      this._imgCanvas.height !== img.height
+    ) {
       this._imgCanvas = document.createElement("canvas");
       this._imgCanvas.width = img.width;
       this._imgCanvas.height = img.height;
