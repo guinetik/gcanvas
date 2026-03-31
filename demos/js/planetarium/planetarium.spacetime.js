@@ -9,8 +9,8 @@
 
 import { Painter } from "../../../src/index.js";
 
-const GRID_SIZE = 600;       // Grid extends from -GRID_SIZE/2 to +GRID_SIZE/2
-const GRID_RESOLUTION = 40;  // Number of grid lines per axis
+const GRID_SIZE = 1300;      // Grid covers full solar system (Neptune at 580)
+const GRID_RESOLUTION = 50;  // Number of grid lines per axis
 const WELL_DEPTH = 120;      // Depth of the gravity well (pixels)
 const WELL_WIDTH = 80;       // Width of the Gaussian well (pixels)
 const GRID_COLOR = "rgba(0, 140, 255, 0.15)";
