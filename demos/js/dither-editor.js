@@ -431,7 +431,6 @@ export class DitherEditor extends Game {
   }
 
   onResize() {
-    super.onResize();
     if (this.panel) this._positionPanel();
   }
 }
