@@ -438,19 +438,27 @@ export class DitherEditor extends Game {
 
     const cfg = CONFIG.freePixels;
     const ps = Math.max(1, this._settings.pixelSize);
-    const cols = Math.ceil(img.width / ps);
-    const rows = Math.ceil(img.height / ps);
-    const count = Math.min(cols * rows, cfg.maxParticles);
+
+    // Downsample large images so particle count stays within budget
+    // Find the step size that keeps total pixels <= maxParticles
+    const totalPixels = Math.ceil(img.width / ps) * Math.ceil(img.height / ps);
+    const scale = totalPixels > cfg.maxParticles
+      ? Math.sqrt(totalPixels / cfg.maxParticles)
+      : 1;
+    const step = ps * scale;
+    const cols = Math.floor(img.width / step);
+    const rows = Math.floor(img.height / step);
 
     // Build particles from image pixels
     this._particles = [];
-    const halfW = (cols * ps) / 2;
-    const halfH = (rows * ps) / 2;
+    const halfW = img.width / 2;
+    const halfH = img.height / 2;
+    const particleSize = Math.max(1, step * 0.9);
 
-    for (let row = 0; row < rows && this._particles.length < count; row++) {
-      for (let col = 0; col < cols && this._particles.length < count; col++) {
-        const sx = col * ps;
-        const sy = row * ps;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const sx = Math.floor(col * step);
+        const sy = Math.floor(row * step);
         const idx = (sy * img.width + sx) * 4;
         const r = img.data[idx];
         const g = img.data[idx + 1];
@@ -460,19 +468,15 @@ export class DitherEditor extends Game {
         if (img.data[idx + 3] === 0) continue;
 
         this._particles.push({
-          // Home position (centered at origin for 3D rotation)
           homeX: sx - halfW,
           homeY: sy - halfH,
           homeZ: 0,
-          // Current position
           x: sx - halfW,
           y: sy - halfH,
           z: 0,
-          // Velocity
           vx: 0, vy: 0, vz: 0,
-          // Color
           r, g, b,
-          size: Math.max(1, ps * 0.8),
+          size: particleSize,
         });
       }
     }
