@@ -13,7 +13,7 @@
 import { Painter } from "../../../src/index.js";
 
 const GRID_SIZE = 1300;
-const GRID_RESOLUTION = 160;
+const GRID_RESOLUTION = 100;
 
 // Base grid color (flat regions)
 const BASE_R = 0, BASE_G = 100, BASE_B = 200;
