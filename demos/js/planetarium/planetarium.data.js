@@ -41,7 +41,7 @@ export const PLANETS = [
   {
     name: "Mercury",
     orbit: {
-      semiMajorAxis: 60,
+      semiMajorAxis: 75,
       eccentricity: 0.2056,
       inclination: 7.005 * DEG,
       longitudeOfAscendingNode: 48.331 * DEG,
@@ -62,7 +62,7 @@ export const PLANETS = [
   {
     name: "Venus",
     orbit: {
-      semiMajorAxis: 85,
+      semiMajorAxis: 110,
       eccentricity: 0.0068,
       inclination: 3.395 * DEG,
       longitudeOfAscendingNode: 76.680 * DEG,
@@ -83,7 +83,7 @@ export const PLANETS = [
   {
     name: "Earth",
     orbit: {
-      semiMajorAxis: 115,
+      semiMajorAxis: 150,
       eccentricity: 0.0167,
       inclination: 0.0,
       longitudeOfAscendingNode: 0.0,
@@ -125,7 +125,7 @@ export const PLANETS = [
   {
     name: "Mars",
     orbit: {
-      semiMajorAxis: 145,
+      semiMajorAxis: 195,
       eccentricity: 0.0934,
       inclination: 1.850 * DEG,
       longitudeOfAscendingNode: 49.558 * DEG,
@@ -146,7 +146,7 @@ export const PLANETS = [
   {
     name: "Jupiter",
     orbit: {
-      semiMajorAxis: 210,
+      semiMajorAxis: 280,
       eccentricity: 0.0489,
       inclination: 1.303 * DEG,
       longitudeOfAscendingNode: 100.464 * DEG,
@@ -189,7 +189,7 @@ export const PLANETS = [
   {
     name: "Saturn",
     orbit: {
-      semiMajorAxis: 290,
+      semiMajorAxis: 380,
       eccentricity: 0.0565,
       inclination: 2.485 * DEG,
       longitudeOfAscendingNode: 113.665 * DEG,
@@ -238,7 +238,7 @@ export const PLANETS = [
   {
     name: "Uranus",
     orbit: {
-      semiMajorAxis: 370,
+      semiMajorAxis: 490,
       eccentricity: 0.0457,
       inclination: 0.773 * DEG,
       longitudeOfAscendingNode: 74.006 * DEG,
@@ -260,7 +260,7 @@ export const PLANETS = [
   {
     name: "Neptune",
     orbit: {
-      semiMajorAxis: 440,
+      semiMajorAxis: 580,
       eccentricity: 0.0113,
       inclination: 1.770 * DEG,
       longitudeOfAscendingNode: 131.784 * DEG,
