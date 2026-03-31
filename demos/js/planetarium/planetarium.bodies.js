@@ -102,9 +102,13 @@ export class CelestialBody {
   draw(ctx) {
     if (this.scale <= 0) return; // behind camera
 
+    // Use a damped scale — keep depth ordering but prevent size blowup.
+    // sqrt brings the scale closer to 1.0 while preserving relative depth.
+    const drawScale = Math.sqrt(this.scale);
+
     ctx.save();
     ctx.translate(this.screenX, this.screenY);
-    ctx.scale(this.scale, this.scale);
+    ctx.scale(drawScale, drawScale);
     this.sphere.draw();
     ctx.restore();
 
