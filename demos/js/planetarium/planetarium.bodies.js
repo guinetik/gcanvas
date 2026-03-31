@@ -10,13 +10,13 @@
 
 import { Sphere3D, Painter } from "../../../src/index.js";
 import { orbitalPosition3D, orbitPathPoints } from "../../../src/math/kepler.js";
-import { schwarzschildPrecessionRate } from "../../../src/math/orbital.js";
 import { CONFIG } from "./planetarium.config.js";
 
-// GR precession factor — exaggerated for visibility.
-// Real Mercury precession is 43 arcseconds/century, invisible at this scale.
-// We amplify it so you can actually see the orbit precess.
-const GR_PRECESSION_AMPLIFY = 500;
+// GR precession — degrees per orbit, exaggerated for visibility.
+// Real Mercury: 43 arcsec/century ≈ 0.0001°/orbit. We use ~2°/orbit
+// so it's visible over a few orbits without looking broken.
+const GR_DEG_PER_ORBIT = 2.0;
+const GR_RAD_PER_ORBIT = GR_DEG_PER_ORBIT * (Math.PI / 180);
 
 /**
  * Swap Kepler XY-plane output to Camera3D XZ-plane (Y=up).
@@ -89,13 +89,15 @@ export class CelestialBody {
   update(simTime, grEnabled) {
     if (!this.data.orbit) return; // Sun stays at origin
 
-    // GR precession: advance argument of periapsis over time
+    // GR precession: slowly advance argument of periapsis each orbit.
+    // Scales as 1/r — Mercury precesses most, Neptune barely at all.
     if (grEnabled && !this.parent) {
       const orbit = this.data.orbit;
-      // Schwarzschild precession scales as rs/r — inner planets precess more
-      const rs = 2; // Schwarzschild radius of Sun in geometric units (arbitrary scale)
-      const rate = schwarzschildPrecessionRate(orbit.semiMajorAxis, rs, GR_PRECESSION_AMPLIFY);
-      orbit.argumentOfPeriapsis = this._baseArgPeriapsis + rate * simTime;
+      const orbitsElapsed = simTime / orbit.period;
+      // Precession rate scales inversely with distance (rs/r dependence)
+      const mercuryDist = 75; // Mercury's semiMajorAxis for normalization
+      const distFactor = mercuryDist / orbit.semiMajorAxis;
+      orbit.argumentOfPeriapsis = this._baseArgPeriapsis + GR_RAD_PER_ORBIT * distFactor * orbitsElapsed;
     }
 
     const pos = keplerToWorld(orbitalPosition3D(this.data.orbit, simTime));

@@ -25,7 +25,7 @@ export const CONFIG = {
   },
 
   time: {
-    scale: 12.0,
+    scale: 1.0,
   },
 
   panel: {
