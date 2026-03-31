@@ -51,6 +51,15 @@
       flex-direction: column;
       align-items: center;
       margin-right: 8px;
+      cursor: pointer;
+      opacity: 0.4;
+      transition: opacity 0.2s;
+    }
+    .source-wrap:hover {
+      opacity: 0.7;
+    }
+    .source-wrap.active {
+      opacity: 1;
     }
     .source-wrap canvas {
       width: 40px;
@@ -58,11 +67,17 @@
       border: 1px solid #333;
       image-rendering: auto;
     }
+    .source-wrap.active canvas {
+      border-color: #fff;
+    }
     .source-label {
       font-size: 8px;
       letter-spacing: 2px;
       color: #444;
       margin-top: 2px;
+    }
+    .source-wrap.active .source-label {
+      color: #888;
     }
     .controls button {
       background: transparent;
@@ -198,12 +213,16 @@
   </header>
 
   <div class="controls">
-    <div class="source-wrap">
+    <div class="source-wrap active">
       <canvas id="source-preview"></canvas>
-      <span class="source-label">SOURCE</span>
+      <span class="source-label">IMAGE</span>
     </div>
-    <button id="btn-animate">&#9654; Animate</button>
-    <button id="btn-shift">&#8635; Shift</button>
+    <div class="source-wrap">
+      <canvas id="source-procedural"></canvas>
+      <span class="source-label">PROCEDURAL</span>
+    </div>
+    <button id="btn-animate" style="display:none">&#9654; Animate</button>
+    <button id="btn-shift" style="display:none">&#8635; Shift</button>
   </div>
 
   <div class="grid" id="grid"></div>

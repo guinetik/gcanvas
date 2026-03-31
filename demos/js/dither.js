@@ -8,7 +8,7 @@ import { Dither } from "../../src/math/dither.js";
 
 const CONFIG = {
   canvasSize: 200,
-  sourceImage: "https://cdn.britannica.com/58/2958-050-C1B86BCF/nebulosity-Pleiades-distance-clouds-Cluster-stars-light.jpg",
+  sourceImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Milky_Way_Galaxy.jpg/1280px-Milky_Way_Galaxy.jpg",
   animation: { step: 1, shiftStep: 20 },
   stipple: { numDotsRatio: 0.08, seed: 42 },
   techniques: [
@@ -106,6 +106,7 @@ let selected = null;
 let animFrameId = null;
 let imageGraySource = null;  // Float32Array grayscale 0-1
 let imageColorSource = null; // Float32Array RGB 0-1
+let activeSource = "image";  // "image" or "procedural"
 
 // Pre-generate blue noise once
 const blueNoise = Dither.generateBlueNoise(64);
@@ -217,11 +218,13 @@ function renderDithers() {
     const ctx = canvas.getContext("2d");
     let pixelData;
 
+    const useProcedural = activeSource === "procedural" || !imageGraySource;
+
     if (tech.id === "quantize") {
-      const colorSrc = imageColorSource || Dither.generateColorSource(sz, sz, time);
+      const colorSrc = useProcedural ? Dither.generateColorSource(sz, sz, time) : imageColorSource;
       pixelData = Dither.colorQuantize(colorSrc, sz, sz);
     } else {
-      const source = imageGraySource || Dither.generateSource(sz, sz, time);
+      const source = useProcedural ? Dither.generateSource(sz, sz, time) : imageGraySource;
       switch (tech.id) {
         case "bayer":
           pixelData = Dither.bayer(source, sz, sz);
@@ -301,6 +304,27 @@ btnShift.addEventListener("click", () => {
   }
 });
 
+// Source selection
+const srcProcedural = document.getElementById("source-procedural");
+const srcImage = document.getElementById("source-preview");
+
+function setActiveSource(mode) {
+  activeSource = mode;
+  srcProcedural.classList.toggle("active", mode === "procedural");
+  srcImage.parentElement.classList.toggle("active", mode === "image");
+  // Show animate buttons only for procedural
+  btnAnimate.style.display = mode === "procedural" ? "" : "none";
+  btnShift.style.display = mode === "procedural" && !isAnimating ? "" : "none";
+  // Stop animation when switching to image
+  if (mode === "image" && isAnimating) {
+    btnAnimate.click();
+  }
+  renderDithers();
+}
+
+srcProcedural.addEventListener("click", () => setActiveSource("procedural"));
+srcImage.addEventListener("click", () => setActiveSource("image"));
+
 // Keyboard shortcuts
 window.addEventListener("keydown", (e) => {
   if (e.code === "Space") {
@@ -312,5 +336,28 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-// Load image then render
-loadSourceImage().then(() => renderDithers());
+// Render procedural preview
+function renderProceduralPreview() {
+  const sz = CONFIG.canvasSize;
+  const canvas = document.getElementById("source-procedural");
+  if (!canvas) return;
+  canvas.width = sz;
+  canvas.height = sz;
+  const source = Dither.generateSource(sz, sz, 0);
+  const data = new Uint8ClampedArray(sz * sz * 4);
+  for (let i = 0; i < source.length; i++) {
+    const v = Math.round(source[i] * 255);
+    data[i * 4] = v;
+    data[i * 4 + 1] = v;
+    data[i * 4 + 2] = v;
+    data[i * 4 + 3] = 255;
+  }
+  canvas.getContext("2d").putImageData(new ImageData(data, sz, sz), 0, 0);
+}
+
+// Load image, render previews, then render dithers
+renderProceduralPreview();
+loadSourceImage().then(() => {
+  // Default to image if loaded, procedural otherwise
+  setActiveSource(imageGraySource ? "image" : "procedural");
+});
