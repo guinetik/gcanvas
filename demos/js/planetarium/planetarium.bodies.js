@@ -12,6 +12,15 @@ import { Sphere3D, Painter } from "../../../src/index.js";
 import { orbitalPosition3D, orbitPathPoints } from "../../../src/math/kepler.js";
 import { CONFIG } from "./planetarium.config.js";
 
+/**
+ * Swap Kepler XY-plane output to Camera3D XZ-plane (Y=up).
+ * Kepler: orbits in XY, Z = inclination out-of-plane
+ * Camera3D: Y is up, XZ is the ground plane
+ */
+function keplerToWorld(pos) {
+  return { x: pos.x, y: pos.z, z: pos.y };
+}
+
 export class CelestialBody {
   /**
    * @param {Object} data - Body definition from planetarium.data.js
@@ -36,7 +45,7 @@ export class CelestialBody {
     this.sphere = new Sphere3D(radius, sphereOpts);
     this.displayRadius = radius;
 
-    // 3D world position
+    // 3D world position (camera space: X=right, Y=up, Z=into screen)
     this.worldX = 0;
     this.worldY = 0;
     this.worldZ = 0;
@@ -47,10 +56,11 @@ export class CelestialBody {
     this.depth = 0;
     this.scale = 1;
 
-    // Orbit path cache (recomputed on resize, not per frame)
+    // Orbit path cache — pre-convert to world coords
     this.orbitPathCache = null;
     if (data.orbit) {
-      this.orbitPathCache = orbitPathPoints(data.orbit, CONFIG.display.orbitPathSegments);
+      const keplerPoints = orbitPathPoints(data.orbit, CONFIG.display.orbitPathSegments);
+      this.orbitPathCache = keplerPoints.map(keplerToWorld);
     }
 
     // Ring data (Saturn)
@@ -69,17 +79,15 @@ export class CelestialBody {
   update(simTime) {
     if (!this.data.orbit) return; // Sun stays at origin
 
-    const pos = orbitalPosition3D(this.data.orbit, simTime);
-    // Kepler outputs in XY plane. Swap Y↔Z so orbits lie in XZ plane
-    // (Y=up), which makes Camera3D Y-rotation orbit around the system.
+    const pos = keplerToWorld(orbitalPosition3D(this.data.orbit, simTime));
     if (this.parent) {
       this.worldX = this.parent.worldX + pos.x;
-      this.worldY = this.parent.worldY + pos.z;
-      this.worldZ = this.parent.worldZ + pos.y;
+      this.worldY = this.parent.worldY + pos.y;
+      this.worldZ = this.parent.worldZ + pos.z;
     } else {
       this.worldX = pos.x;
-      this.worldY = pos.z;
-      this.worldZ = pos.y;
+      this.worldY = pos.y;
+      this.worldZ = pos.z;
     }
   }
 
@@ -95,6 +103,10 @@ export class CelestialBody {
     this.screenY = centerY + proj.y * zoom;
     this.depth = proj.z;
     this.scale = proj.scale * zoom;
+    // Store for ring/label drawing
+    this._centerX = centerX;
+    this._centerY = centerY;
+    this._zoom = zoom;
   }
 
   /**
@@ -110,31 +122,58 @@ export class CelestialBody {
     this.sphere.draw();
     ctx.restore();
 
-    // Saturn ring
+    // Saturn ring — drawn as projected 3D ellipse
     if (this.ring) {
       this.drawRing(ctx);
     }
   }
 
   /**
-   * Draw Saturn-style ring as a projected 3D ellipse.
+   * Draw Saturn-style ring by projecting 3D ring points through camera.
    * @param {CanvasRenderingContext2D} ctx
    */
   drawRing(ctx) {
-    const ringRadius = this.displayRadius * this.ring.outerRadius * this.scale;
-    const innerRadius = this.displayRadius * this.ring.innerRadius * this.scale;
-    const tiltFactor = Math.abs(Math.cos(this.ring.tilt + this.camera.rotationX));
+    const segments = 64;
+    const outerR = this.ring.outerRadius * this.displayRadius;
+    const innerR = this.ring.innerRadius * this.displayRadius;
+    const midR = (outerR + innerR) / 2;
+    const tilt = this.ring.tilt;
+    const zoom = this._zoom;
+    const cx = this._centerX;
+    const cy = this._centerY;
 
     ctx.save();
-    ctx.translate(this.screenX, this.screenY);
-    ctx.globalAlpha = 0.25;
-
-    ctx.beginPath();
-    ctx.ellipse(0, 0, ringRadius, ringRadius * tiltFactor, 0, 0, Math.PI * 2);
     ctx.strokeStyle = this.ring.color;
-    ctx.lineWidth = Math.max(1, (ringRadius - innerRadius) * 0.5);
-    ctx.stroke();
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
 
+    let firstLineWidth = 1;
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      // Ring lies in local XZ plane, tilted by axial tilt around X
+      const lx = Math.cos(angle) * midR;
+      const ly = Math.sin(angle) * midR * Math.sin(tilt);
+      const lz = Math.sin(angle) * midR * Math.cos(tilt);
+
+      const proj = this.camera.project(
+        this.worldX + lx,
+        this.worldY + ly,
+        this.worldZ + lz
+      );
+      const sx = cx + proj.x * zoom;
+      const sy = cy + proj.y * zoom;
+
+      if (i === 0) {
+        ctx.moveTo(sx, sy);
+        firstLineWidth = Math.max(1, (outerR - innerR) * proj.scale * zoom * 0.4);
+      } else {
+        ctx.lineTo(sx, sy);
+      }
+    }
+
+    ctx.lineWidth = firstLineWidth;
+    ctx.closePath();
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -153,6 +192,7 @@ export class CelestialBody {
     const color = isMoon ? CONFIG.display.moonOrbitPathColor : CONFIG.display.orbitPathColor;
     const lineWidth = isMoon ? CONFIG.display.moonOrbitPathLineWidth : CONFIG.display.orbitPathLineWidth;
 
+    // For moons, offset to parent's current world position
     const offsetX = isMoon ? this.parent.worldX : 0;
     const offsetY = isMoon ? this.parent.worldY : 0;
     const offsetZ = isMoon ? this.parent.worldZ : 0;
@@ -165,11 +205,10 @@ export class CelestialBody {
     let started = false;
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
-      // Same Y↔Z swap as update() — orbit points are in Kepler XY plane
       const proj = this.camera.project(
         p.x + offsetX,
-        p.z + offsetZ,
-        p.y + offsetY
+        p.y + offsetY,
+        p.z + offsetZ
       );
       const sx = centerX + proj.x * zoom;
       const sy = centerY + proj.y * zoom;
