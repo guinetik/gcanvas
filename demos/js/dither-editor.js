@@ -430,6 +430,15 @@ export class DitherEditor extends Game {
   update(dt) {
     super.update(dt);
     this._zoom += (this._targetZoom - this._zoom) * CONFIG.zoom.easing;
+
+    // Center image when it fits within the canvas
+    if (this._sourceImage) {
+      const dw = this._sourceImage.width * this._zoom;
+      const dh = this._sourceImage.height * this._zoom;
+      if (dw <= this.width) this._panX = 0;
+      if (dh <= this.height) this._panY = 0;
+    }
+
     if (this._dirty) {
       this._processImage();
     }
