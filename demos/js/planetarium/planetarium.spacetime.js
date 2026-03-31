@@ -51,8 +51,8 @@ export class SpacetimeGrid {
       for (let j = 0; j <= GRID_RESOLUTION; j++) {
         const v = this.vertices[i][j];
         const r2 = v.x * v.x + v.z * v.z;
-        // Positive Y = downward well (camera looks down, so well goes "into" the screen)
-        v.y = -depth * Math.exp(-r2 / sigma2);
+        // Positive Y = upward in camera space; we want the well to sink down
+        v.y = depth * Math.exp(-r2 / sigma2);
       }
     }
   }
