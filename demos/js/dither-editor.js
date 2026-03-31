@@ -22,7 +22,9 @@ import {
   addGrain,
   desaturate,
   scalePixels,
+  Camera3D,
 } from "../../src/index.js";
+import { WebGLParticleRenderer } from "../../src/webgl/webgl-particle-renderer.js";
 
 const CONFIG = {
   panel: {
@@ -63,6 +65,17 @@ const CONFIG = {
     { label: "Stipple", value: "stipple" },
   ],
   debounceMs: 50,
+  freePixels: {
+    particleSize: 2,
+    springStrength: 3.0,
+    springDamping: 0.92,
+    repulsionRadius: 120,
+    repulsionStrength: 800,
+    perspective: 600,
+    autoRotateSpeed: 0.1,
+    friction: 0.95,
+    maxParticles: 80000,
+  },
 };
 
 export class DitherEditor extends Game {
@@ -90,6 +103,14 @@ export class DitherEditor extends Game {
     this._debounceTimer = null;
     this._dirty = true;
     this._imgCanvas = null;
+
+    // Free pixels state
+    this._freePixelsActive = false;
+    this._particles = null;
+    this._glRenderer = null;
+    this._camera = null;
+    this._mouseX = 0;
+    this._mouseY = 0;
 
     this._setupGesture();
     this._setupDragDrop();
@@ -312,6 +333,14 @@ export class DitherEditor extends Game {
     });
     outputSection.addItem(this._controls.compare);
 
+    this._controls.freePixels = new ToggleButton(this, {
+      text: "Free Pixels",
+      width: sliderW,
+      height: 36,
+      onToggle: (toggled) => this._toggleFreePixels(toggled),
+    });
+    outputSection.addItem(this._controls.freePixels);
+
     this._controls.export = new Button(this, {
       text: "Export PNG",
       width: sliderW,
@@ -393,6 +422,193 @@ export class DitherEditor extends Game {
     return { data: rgba, width, height };
   }
 
+  // ─── Free Pixels ─────────────────────────────────────────────
+
+  _toggleFreePixels(active) {
+    this._freePixelsActive = active;
+    if (active) {
+      this._initFreePixels();
+    } else {
+      this._destroyFreePixels();
+    }
+  }
+
+  _initFreePixels() {
+    const img = this._processedImage || this._sourceImage;
+    if (!img) return;
+
+    const cfg = CONFIG.freePixels;
+    const ps = Math.max(1, this._settings.pixelSize);
+    const cols = Math.ceil(img.width / ps);
+    const rows = Math.ceil(img.height / ps);
+    const count = Math.min(cols * rows, cfg.maxParticles);
+
+    // Build particles from image pixels
+    this._particles = [];
+    const halfW = (cols * ps) / 2;
+    const halfH = (rows * ps) / 2;
+
+    for (let row = 0; row < rows && this._particles.length < count; row++) {
+      for (let col = 0; col < cols && this._particles.length < count; col++) {
+        const sx = col * ps;
+        const sy = row * ps;
+        const idx = (sy * img.width + sx) * 4;
+        const r = img.data[idx];
+        const g = img.data[idx + 1];
+        const b = img.data[idx + 2];
+
+        // Skip near-black pixels
+        if (r + g + b < 15) continue;
+
+        this._particles.push({
+          // Home position (centered at origin for 3D rotation)
+          homeX: sx - halfW,
+          homeY: sy - halfH,
+          homeZ: 0,
+          // Current position
+          x: sx - halfW,
+          y: sy - halfH,
+          z: 0,
+          // Velocity
+          vx: 0, vy: 0, vz: 0,
+          // Color
+          r, g, b,
+          size: Math.max(1, ps * 0.8),
+        });
+      }
+    }
+
+    // WebGL renderer
+    if (!this._glRenderer) {
+      this._glRenderer = new WebGLParticleRenderer(cfg.maxParticles, {
+        width: this.width,
+        height: this.height,
+        shape: "square",
+        blendMode: "alpha",
+      });
+    } else {
+      this._glRenderer.resize(this.width, this.height);
+    }
+
+    // Camera for 3D rotation
+    this._camera = new Camera3D({
+      perspective: cfg.perspective,
+      autoRotate: true,
+      autoRotateSpeed: cfg.autoRotateSpeed,
+      inertia: true,
+      friction: cfg.friction,
+    });
+    this._camera.enableMouseControl(this.canvas, {
+      game: this,
+      isOverPanel: (x, y) => {
+        if (!this.panel) return false;
+        const px = this.panel.x;
+        const py = this.panel.y;
+        return x >= px && x <= px + this.panel.width && y >= py && y <= py + (this.panel.height || 600);
+      },
+    });
+
+    // Track mouse for repulsion
+    this.canvas.addEventListener("mousemove", this._onFreePixelsMouseMove = (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      this._mouseX = e.clientX - rect.left;
+      this._mouseY = e.clientY - rect.top;
+    });
+  }
+
+  _destroyFreePixels() {
+    this._particles = null;
+    if (this._camera) {
+      this._camera.disableMouseControl();
+      this._camera = null;
+    }
+    if (this._onFreePixelsMouseMove) {
+      this.canvas.removeEventListener("mousemove", this._onFreePixelsMouseMove);
+      this._onFreePixelsMouseMove = null;
+    }
+  }
+
+  _updateFreePixels(dt) {
+    if (!this._particles || !this._camera) return;
+    const cfg = CONFIG.freePixels;
+
+    this._camera.update(dt);
+
+    // Project mouse into 3D space (approximate: use center of canvas as origin)
+    const cx = this.width / 2;
+    const cy = this.height / 2;
+    const mx = this._mouseX - cx;
+    const my = this._mouseY - cy;
+
+    for (let i = 0; i < this._particles.length; i++) {
+      const p = this._particles[i];
+
+      // Spring force toward home position
+      const dx = p.homeX - p.x;
+      const dy = p.homeY - p.y;
+      const dz = p.homeZ - p.z;
+      p.vx += dx * cfg.springStrength * dt;
+      p.vy += dy * cfg.springStrength * dt;
+      p.vz += dz * cfg.springStrength * dt;
+
+      // Mouse repulsion (in projected screen space)
+      const proj = this._camera.project(p.x, p.y, p.z);
+      const screenX = cx + proj.x;
+      const screenY = cy + proj.y;
+      const rdx = screenX - this._mouseX;
+      const rdy = screenY - this._mouseY;
+      const distSq = rdx * rdx + rdy * rdy;
+      const radius = cfg.repulsionRadius;
+
+      if (distSq < radius * radius && distSq > 1) {
+        const dist = Math.sqrt(distSq);
+        const force = (1 - dist / radius) * cfg.repulsionStrength * dt;
+        // Push in 3D along the screen-space direction
+        const nx = rdx / dist;
+        const ny = rdy / dist;
+        p.vx += nx * force;
+        p.vy += ny * force;
+        p.vz += (Math.random() - 0.5) * force * 0.5;
+      }
+
+      // Damping
+      p.vx *= cfg.springDamping;
+      p.vy *= cfg.springDamping;
+      p.vz *= cfg.springDamping;
+
+      // Integrate
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+    }
+  }
+
+  _renderFreePixels() {
+    if (!this._particles || !this._camera || !this._glRenderer) return;
+
+    const cx = this.width / 2;
+    const cy = this.height / 2;
+
+    // Project particles and feed to WebGL renderer
+    const projected = [];
+    for (let i = 0; i < this._particles.length; i++) {
+      const p = this._particles[i];
+      const proj = this._camera.project(p.x, p.y, p.z);
+      if (proj.scale <= 0) continue;
+      projected.push({
+        x: cx + proj.x,
+        y: cy + proj.y,
+        size: p.size * proj.scale,
+        color: { r: p.r, g: p.g, b: p.b, a: Math.min(1, proj.scale) },
+      });
+    }
+
+    this._glRenderer.clear();
+    const count = this._glRenderer.updateParticles(projected);
+    this._glRenderer.render(count);
+    this._glRenderer.compositeOnto(Painter.ctx, 0, 0, this.width, this.height);
+  }
+
   _exportPNG() {
     const img = this._processedImage || this._sourceImage;
     if (!img) return;
@@ -429,14 +645,19 @@ export class DitherEditor extends Game {
 
   update(dt) {
     super.update(dt);
-    this._zoom += (this._targetZoom - this._zoom) * CONFIG.zoom.easing;
 
-    // Center image when it fits within the canvas
-    if (this._sourceImage) {
-      const dw = this._sourceImage.width * this._zoom;
-      const dh = this._sourceImage.height * this._zoom;
-      if (dw <= this.width) this._panX = 0;
-      if (dh <= this.height) this._panY = 0;
+    if (this._freePixelsActive) {
+      this._updateFreePixels(dt);
+    } else {
+      this._zoom += (this._targetZoom - this._zoom) * CONFIG.zoom.easing;
+
+      // Center image when it fits within the canvas
+      if (this._sourceImage) {
+        const dw = this._sourceImage.width * this._zoom;
+        const dh = this._sourceImage.height * this._zoom;
+        if (dw <= this.width) this._panX = 0;
+        if (dh <= this.height) this._panY = 0;
+      }
     }
 
     if (this._dirty) {
@@ -446,6 +667,12 @@ export class DitherEditor extends Game {
 
   render() {
     super.render();
+
+    if (this._freePixelsActive) {
+      this._renderFreePixels();
+      return;
+    }
+
     const img = this._comparing ? this._sourceImage : this._processedImage;
     if (!img) return;
 
@@ -472,5 +699,6 @@ export class DitherEditor extends Game {
 
   onResize() {
     if (this.panel) this._positionPanel();
+    if (this._glRenderer) this._glRenderer.resize(this.width, this.height);
   }
 }
