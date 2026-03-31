@@ -1,7 +1,7 @@
 /**
  * Dither Studies Demo
  *
- * 5 techniques for approximating continuous tone with discrete values.
+ * 12 techniques for approximating continuous tone with discrete values.
  * Uses the Dither library module for all algorithms.
  */
 import { Dither } from "../../src/math/dither.js";
@@ -38,6 +38,55 @@ const CONFIG = {
       subtitle: "Density Mapping",
       description:
         "Points are placed probabilistically weighted by brightness \u2014 denser in bright areas, sparser in dark. Connects digital dithering to centuries of printmaking and pointillist painting technique.",
+    },
+    {
+      id: "stucki",
+      title: "Error Diffusion",
+      subtitle: "Stucki",
+      description:
+        "A 12-neighbor error diffusion kernel with sharper results than Floyd-Steinberg. Distributes error over a 3\u00d75 area, reducing banding artifacts while preserving edge detail.",
+    },
+    {
+      id: "atkinson",
+      title: "Error Diffusion",
+      subtitle: "Atkinson",
+      description:
+        "Only diffuses 3/4 of the quantization error, discarding the rest. This produces higher contrast results with less blurring \u2014 famously used in early Macintosh software.",
+    },
+    {
+      id: "jarvis",
+      title: "Error Diffusion",
+      subtitle: "Jarvis-Judice-Ninke",
+      description:
+        "A wide 12-neighbor kernel distributing error over 3 rows. Produces very smooth gradients with minimal patterning, at the cost of more diffusion blur.",
+    },
+    {
+      id: "sierra",
+      title: "Error Diffusion",
+      subtitle: "Sierra",
+      description:
+        "A balanced 10-neighbor kernel offering a good compromise between the smoothness of Jarvis and the sharpness of Floyd-Steinberg.",
+    },
+    {
+      id: "sierra-two-row",
+      title: "Error Diffusion",
+      subtitle: "Sierra Two-Row",
+      description:
+        "A faster variant of Sierra using only 2 rows instead of 3. Slightly less smooth but noticeably faster for large images.",
+    },
+    {
+      id: "sierra-lite",
+      title: "Error Diffusion",
+      subtitle: "Sierra Lite",
+      description:
+        "The minimal Sierra variant \u2014 only 3 neighbors, similar to Floyd-Steinberg but with different weights. Fastest error diffusion option.",
+    },
+    {
+      id: "burkes",
+      title: "Error Diffusion",
+      subtitle: "Burkes",
+      description:
+        "A 7-neighbor, 2-row kernel similar to Stucki but faster. Produces results between Floyd-Steinberg and Stucki in quality.",
     },
     {
       id: "quantize",
@@ -131,6 +180,27 @@ function renderDithers() {
           break;
         case "stipple":
           pixelData = Dither.stipple(source, sz, sz, CONFIG.stipple);
+          break;
+        case "stucki":
+          pixelData = Dither.stucki(source, sz, sz);
+          break;
+        case "atkinson":
+          pixelData = Dither.atkinson(source, sz, sz);
+          break;
+        case "jarvis":
+          pixelData = Dither.jarvis(source, sz, sz);
+          break;
+        case "sierra":
+          pixelData = Dither.sierra(source, sz, sz);
+          break;
+        case "sierra-two-row":
+          pixelData = Dither.sierraTwoRow(source, sz, sz);
+          break;
+        case "sierra-lite":
+          pixelData = Dither.sierraLite(source, sz, sz);
+          break;
+        case "burkes":
+          pixelData = Dither.burkes(source, sz, sz);
           break;
       }
     }
