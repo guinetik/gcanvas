@@ -91,7 +91,7 @@ export class DitherEditor extends Game {
     this._dirty = true;
     this._imgCanvas = null;
 
-    this._setupGesture();
+    // this._setupGesture();
     this._setupDragDrop();
     this._buildUI();
     this._generateDefaultImage();
@@ -212,6 +212,8 @@ export class DitherEditor extends Game {
       spacing: CONFIG.panel.spacing,
       headerHeight: CONFIG.panel.headerHeight,
     });
+    this.panel.interactive = true;
+    this.pipeline.add(this.panel);
 
     // --- Image section ---
     const imageSection = this.panel.addSection("Image", { expanded: true });
@@ -328,7 +330,6 @@ export class DitherEditor extends Game {
 
     this.panel.commitSection(outputSection);
     this.panel.layoutAll();
-    this.pipeline.add(this.panel);
     this._positionPanel();
   }
 
