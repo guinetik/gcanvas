@@ -18,3 +18,4 @@ export * from "./heat.js";
 export * from "./fluid.js";
 export * from "./hydrogen.js";
 export * from "./zeta.js";
+export * from "./kepler.js";
