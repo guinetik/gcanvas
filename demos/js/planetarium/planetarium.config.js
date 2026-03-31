@@ -7,15 +7,15 @@
 export const CONFIG = {
   camera: {
     perspective: 800,
-    rotationX: 0.55,
-    rotationY: -0.4,
-    minRotationX: -1.2,
-    maxRotationX: 1.2,
+    rotationX: -0.6,        // look down at orbital plane (~-TAU/10)
+    rotationY: 0,
+    minRotationX: -1.5,
+    maxRotationX: 0.2,
     inertia: true,
-    friction: 0.94,
+    friction: 0.95,
     autoRotate: true,
-    autoRotateSpeed: 0.1,
-    autoRotateAxis: "y",
+    autoRotateSpeed: 0.08,   // gentle spin
+    autoRotateAxis: "y",     // orbit around Y (vertical)
     velocityScale: 2.0,
   },
 
@@ -25,11 +25,6 @@ export const CONFIG = {
     speed: 0.5,
     easing: 0.1,
     baseScreenSize: 900,
-  },
-
-  pan: {
-    speed: 1.5,
-    easing: 0.1,
   },
 
   time: {

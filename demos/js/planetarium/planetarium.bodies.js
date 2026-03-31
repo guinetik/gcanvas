@@ -70,14 +70,16 @@ export class CelestialBody {
     if (!this.data.orbit) return; // Sun stays at origin
 
     const pos = orbitalPosition3D(this.data.orbit, simTime);
+    // Kepler outputs in XY plane. Swap Y↔Z so orbits lie in XZ plane
+    // (Y=up), which makes Camera3D Y-rotation orbit around the system.
     if (this.parent) {
       this.worldX = this.parent.worldX + pos.x;
-      this.worldY = this.parent.worldY + pos.y;
-      this.worldZ = this.parent.worldZ + pos.z;
+      this.worldY = this.parent.worldY + pos.z;
+      this.worldZ = this.parent.worldZ + pos.y;
     } else {
       this.worldX = pos.x;
-      this.worldY = pos.y;
-      this.worldZ = pos.z;
+      this.worldY = pos.z;
+      this.worldZ = pos.y;
     }
   }
 
@@ -102,13 +104,9 @@ export class CelestialBody {
   draw(ctx) {
     if (this.scale <= 0) return; // behind camera
 
-    // Use a damped scale — keep depth ordering but prevent size blowup.
-    // sqrt brings the scale closer to 1.0 while preserving relative depth.
-    const drawScale = Math.sqrt(this.scale);
-
     ctx.save();
     ctx.translate(this.screenX, this.screenY);
-    ctx.scale(drawScale, drawScale);
+    ctx.scale(this.scale, this.scale);
     this.sphere.draw();
     ctx.restore();
 
@@ -167,10 +165,11 @@ export class CelestialBody {
     let started = false;
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
+      // Same Y↔Z swap as update() — orbit points are in Kepler XY plane
       const proj = this.camera.project(
         p.x + offsetX,
-        p.y + offsetY,
-        p.z + offsetZ
+        p.z + offsetZ,
+        p.y + offsetY
       );
       const sx = centerX + proj.x * zoom;
       const sy = centerY + proj.y * zoom;

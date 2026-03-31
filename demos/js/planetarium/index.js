@@ -40,7 +40,7 @@ export class PlanetariumDemo extends Game {
     this.timeScale = CONFIG.time.scale;
     this.paused = false;
 
-    // Camera
+    // Camera — looking down at the orbital plane (XZ) from above-ish
     this.camera = new Camera3D({
       perspective: CONFIG.camera.perspective,
       rotationX: CONFIG.camera.rotationX,
@@ -56,7 +56,7 @@ export class PlanetariumDemo extends Game {
     });
     this.camera.enableMouseControl(this.canvas);
 
-    // Zoom
+    // Zoom — only wheel/pinch, no pan (drag = camera rotation)
     const initialZoom = Math.min(
       CONFIG.zoom.max,
       Math.max(CONFIG.zoom.min, Screen.minDimension() / CONFIG.zoom.baseScreenSize)
@@ -65,29 +65,17 @@ export class PlanetariumDemo extends Game {
     this.targetZoom = initialZoom;
     this.defaultZoom = initialZoom;
 
-    // Pan
-    this.panX = 0;
-    this.panY = 0;
-    this.targetPanX = 0;
-    this.targetPanY = 0;
-
-    // Gesture (zoom + pan)
     this.gesture = new Gesture(this.canvas, {
       onZoom: (delta) => {
         this.targetZoom *= 1 + delta * CONFIG.zoom.speed;
         this.targetZoom = Math.max(CONFIG.zoom.min, Math.min(CONFIG.zoom.max, this.targetZoom));
       },
-      onPan: (dx, dy) => {
-        this.targetPanX += dx * CONFIG.pan.speed;
-        this.targetPanY += dy * CONFIG.pan.speed;
-      },
+      onPan: null, // Camera3D handles drag rotation
     });
 
     // Double-click reset
     this.canvas.addEventListener("dblclick", () => {
       this.targetZoom = this.defaultZoom;
-      this.targetPanX = 0;
-      this.targetPanY = 0;
       this.camera.reset();
     });
 
@@ -128,7 +116,7 @@ export class PlanetariumDemo extends Game {
   }
 
   onResize() {
-    if (!this.allBodies) return; // enableFluidSize fires before init
+    if (!this.allBodies) return;
     const minDim = Math.min(this.width, this.height);
     for (const body of this.allBodies) {
       body.resize(minDim);
@@ -146,10 +134,8 @@ export class PlanetariumDemo extends Game {
     super.update(dt);
     this.camera.update(dt);
 
-    // Ease zoom and pan
+    // Ease zoom
     this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoom.easing;
-    this.panX += (this.targetPanX - this.panX) * CONFIG.pan.easing;
-    this.panY += (this.targetPanY - this.panY) * CONFIG.pan.easing;
 
     // Advance simulation
     if (!this.paused) {
@@ -166,16 +152,16 @@ export class PlanetariumDemo extends Game {
   }
 
   render() {
-    super.render(); // clears canvas + pipeline (FPS counter)
+    super.render();
 
     const ctx = this.ctx;
-    const centerX = this.width / 2 + this.panX;
-    const centerY = this.height / 2 + this.panY;
+    const centerX = this.width / 2;
+    const centerY = this.height / 2;
 
     // 1. Starfield
     drawStarfield(ctx, this.stars);
 
-    // 2. Orbit paths (planets, then moons)
+    // 2. Orbit paths
     for (const planet of this.planets) {
       planet.drawOrbitPath(ctx, centerX, centerY, this.zoom);
     }
@@ -199,7 +185,7 @@ export class PlanetariumDemo extends Game {
       body.draw(ctx);
     }
 
-    // 6. Labels (always on top)
+    // 6. Labels
     drawLabels(ctx, this.allBodies);
 
     // 7. HUD
