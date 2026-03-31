@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planetarium</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+
+<body>
+  <div id="info">
+    <strong>Planetarium</strong> — Solar system with Keplerian orbital mechanics.<br />
+    <span style="color:#CCC">
+      <li>Drag to rotate view</li>
+      <li>Scroll / pinch to zoom</li>
+      <li>Two-finger drag to pan</li>
+      <li>Space to pause, double-click to reset</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+
+  <script type="module">
+    import { PlanetariumDemo } from "./js/planetarium/index.js";
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("game");
+      const game = new PlanetariumDemo(canvas);
+      game.enablePauseOnBlur(true);
+      game.setFPS(60);
+      game.start();
+    });
+  </script>
+</body>
+
+</html>
