@@ -11,7 +11,7 @@ import { Painter } from "../../../src/index.js";
 
 const GRID_SIZE = 1300;
 const GRID_RESOLUTION = 160;
-const GRID_COLOR = "rgba(0, 140, 255, 0.12)";
+const GRID_COLOR = "rgba(0, 160, 255, 0.25)";
 
 // Sun well parameters
 const SUN_DEPTH = 120;
