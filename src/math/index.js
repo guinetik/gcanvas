@@ -4,6 +4,16 @@ export {Complex} from "./complex.js";
 export {Fractals} from "./fractal.js";
 export {Patterns} from "./patterns.js";
 export {Dither} from "./dither.js";
+export {
+  adjustContrast,
+  adjustBrightness,
+  adjustHighlights,
+  adjustShadows,
+  adjustGamma,
+  addGrain,
+  desaturate,
+  scalePixels,
+} from "./image-processor.js";
 export {Noise} from "./noise.js";
 export {Tensor} from "./tensor.js";
 export {generatePenroseTilingPixels} from "./penrose.js";
