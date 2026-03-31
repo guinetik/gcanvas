@@ -52,8 +52,6 @@ export class PlanetariumDemo extends Game {
       inertia: CONFIG.camera.inertia,
       friction: CONFIG.camera.friction,
       autoRotate: CONFIG.camera.autoRotate,
-      autoRotateSpeed: CONFIG.camera.autoRotateSpeed,
-      autoRotateAxis: CONFIG.camera.autoRotateAxis,
       velocityScale: CONFIG.camera.velocityScale,
     });
     this.camera.enableMouseControl(this.canvas);
@@ -120,7 +118,6 @@ export class PlanetariumDemo extends Game {
       onTimeScale: (v) => { this.timeScale = v; },
       onPause: (toggled) => { this.paused = toggled; },
       onGR: (toggled) => { this.grEnabled = toggled; },
-      onAutoRotate: (v) => { this.camera.autoRotateSpeed = v; },
       onReset: () => {
         this.targetZoom = this.defaultZoom;
         this.camera.reset();

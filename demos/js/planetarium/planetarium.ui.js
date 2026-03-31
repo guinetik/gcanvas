@@ -191,15 +191,6 @@ export function buildControlPanel(game, callbacks) {
   // ── Camera section ──
   const camSection = panel.addSection("Camera", { expanded: false });
 
-  controls.autoRotateSpeed = new Slider(game, {
-    label: "Auto-Rotate",
-    min: 0, max: 0.5, value: CONFIG.camera.autoRotateSpeed, step: 0.01,
-    width: sliderW,
-    formatValue: (v) => v.toFixed(2),
-    onChange: (v) => callbacks.onAutoRotate(v),
-  });
-  camSection.addItem(controls.autoRotateSpeed);
-
   controls.reset = new Button(game, {
     text: "Reset Camera",
     width: sliderW,

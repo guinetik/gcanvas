@@ -12,9 +12,7 @@ export const CONFIG = {
     clampX: false,           // free rotation, no clamping
     inertia: true,
     friction: 0.95,
-    autoRotate: true,
-    autoRotateSpeed: 0.08,   // gentle spin
-    autoRotateAxis: "y",     // orbit around Y (vertical)
+    autoRotate: false,
     velocityScale: 2.0,
   },
 
