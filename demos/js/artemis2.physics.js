@@ -19,11 +19,15 @@ const STRIDE         = 9;
 const FLYBY_THRESH   = 280000;  // km — Orion enters Moon's sphere of influence
 const REENTRY_THRESH = 50000;   // km
 
+const FALLBACK_FLYBY_FRAC        = 0.30;
+const FALLBACK_FREE_RETURN_FRAC  = 0.35;
+const FALLBACK_REENTRY_FRAC      = 0.90;
+
 // Initial conditions
-// Moon: circular orbit at 384,400 km, velocity in +Y
+// Moon: circular orbit at 384,400 km (vy = sqrt(MU_EARTH/r)), velocity in +Y
 // Orion: TLI from 185 km LEO at 25° from Moon line, tuned for free-return arc in 10 days
 const INIT = {
-  moon:  { x: 384400, y: 0,     z: 0, vx: 0,        vy: 1.022,       vz: 0 },
+  moon:  { x: 384400, y: 0,     z: 0, vx: 0,        vy: Math.sqrt(MU_EARTH / 384400), vz: 0 },
   orion: { x: 6556,   y: 0,     z: 0,
            vx: 10.8 * Math.cos(25 * Math.PI / 180),
            vy: 10.8 * Math.sin(25 * Math.PI / 180),
@@ -82,7 +86,7 @@ function writeFrame(frames, i, mx,my,mz, ox,oy,oz, ovx,ovy,ovz) {
 export function interpolateState(frames, t, dt) {
   const frameF = t / dt;
   const i = Math.min(Math.floor(frameF), COUNT - 2);
-  const alpha = frameF - i;
+  const alpha = Math.min(frameF - i, 1.0);
   const a = readFrame(frames, i);
   const b = readFrame(frames, i + 1);
   return {
@@ -113,6 +117,7 @@ export function computeTrajectory() {
   ];
 
   let prevOrionMoonDist = Infinity;
+  let prevOrionEarthDist = Infinity;
   let flybyDetected = false;
   let freeReturnDetected = false;
   let returnLeg = false;
@@ -144,18 +149,20 @@ export function computeTrajectory() {
       phaseTimestamps.FREE_RETURN = t;
     }
 
-    if (returnLeg && phaseTimestamps.REENTRY < 0 && orionEarthDist < REENTRY_THRESH) {
+    if (returnLeg && phaseTimestamps.REENTRY < 0 &&
+        orionEarthDist < REENTRY_THRESH && orionEarthDist < prevOrionEarthDist) {
       phaseTimestamps.REENTRY = t;
     }
 
     prevOrionMoonDist = orionMoonDist;
+    prevOrionEarthDist = orionEarthDist;
     state = rk4Step(state, DT);
   }
 
   // Fallbacks if trajectory didn't reach expected phases
-  if (phaseTimestamps.LUNAR_FLYBY < 0) phaseTimestamps.LUNAR_FLYBY = DURATION * 0.3;
-  if (phaseTimestamps.FREE_RETURN < 0) phaseTimestamps.FREE_RETURN = DURATION * 0.35;
-  if (phaseTimestamps.REENTRY    < 0) phaseTimestamps.REENTRY    = DURATION * 0.9;
+  if (phaseTimestamps.LUNAR_FLYBY < 0) phaseTimestamps.LUNAR_FLYBY = DURATION * FALLBACK_FLYBY_FRAC;
+  if (phaseTimestamps.FREE_RETURN < 0) phaseTimestamps.FREE_RETURN = DURATION * FALLBACK_FREE_RETURN_FRAC;
+  if (phaseTimestamps.REENTRY    < 0) phaseTimestamps.REENTRY    = DURATION * FALLBACK_REENTRY_FRAC;
 
   return { frames, phaseTimestamps, count: COUNT, dt: DT };
 }

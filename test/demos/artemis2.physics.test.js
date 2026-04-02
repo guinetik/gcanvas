@@ -19,14 +19,14 @@ describe("Artemis II Physics", () => {
       const { phaseTimestamps: p } = traj;
       expect(p.TRANS_LUNAR).toBe(0);
       expect(p.LUNAR_FLYBY).toBeGreaterThan(p.TRANS_LUNAR);
-      expect(p.FREE_RETURN).toBeGreaterThanOrEqual(p.LUNAR_FLYBY);
+      expect(p.FREE_RETURN).toBeGreaterThan(p.LUNAR_FLYBY);
       expect(p.REENTRY).toBeGreaterThan(p.FREE_RETURN);
     });
 
-    it("Orion returns to Earth (distance < 50,000 km) by end of simulation", () => {
+    it("Orion returns to Earth (distance < 15,000 km) by end of simulation", () => {
       const last = readFrame(traj.frames, traj.count - 1);
       const dist = Math.hypot(last.orion.x, last.orion.y, last.orion.z);
-      expect(dist).toBeLessThan(50000);
+      expect(dist).toBeLessThan(15000);
     });
 
     it("Moon stays near its expected orbital radius throughout", () => {
@@ -43,13 +43,20 @@ describe("Artemis II Physics", () => {
   describe("readFrame()", () => {
     it("frame 0 has Moon at initial position", () => {
       const f = readFrame(traj.frames, 0);
-      expect(f.moon.x).toBeCloseTo(384400, -2);
+      expect(f.moon.x).toBe(384400);
       expect(f.moon.y).toBeCloseTo(0, 1);
     });
 
     it("frame 0 has Orion at initial position", () => {
       const f = readFrame(traj.frames, 0);
       expect(f.orion.x).toBeCloseTo(6556, 0);
+    });
+
+    it("frame 0 has Orion velocity matching INIT", () => {
+      const f = readFrame(traj.frames, 0);
+      // vx = 10.8 * cos(25°) ≈ 9.788, vy = 10.8 * sin(25°) ≈ 4.562
+      expect(f.orion.vx).toBeCloseTo(9.79, 1);
+      expect(f.orion.vy).toBeGreaterThan(4);
     });
   });
 
@@ -66,6 +73,13 @@ describe("Artemis II Physics", () => {
       const s = interpolateState(traj.frames, traj.dt * 0.5, traj.dt);
       const expected = (f0.orion.x + f1.orion.x) / 2;
       expect(s.orion.x).toBeCloseTo(expected, 3);
+    });
+
+    it("at last valid time does not extrapolate", () => {
+      const lastT = (traj.count - 1) * traj.dt;
+      const s = interpolateState(traj.frames, lastT, traj.dt);
+      const f = readFrame(traj.frames, traj.count - 1);
+      expect(s.orion.x).toBeCloseTo(f.orion.x, 1);
     });
   });
 });
