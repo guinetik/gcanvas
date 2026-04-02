@@ -38,10 +38,13 @@ const CONFIG = {
   },
 
   earth: {
-    color:       '#1a6faf',
-    glowColor:   'rgba(80,160,255,0.35)',
-    glowRadius:  38,
-    radius:      24,
+    color:              '#1a6faf',
+    glowColor:          'rgba(80,160,255,0.35)',
+    glowRadius:         38,
+    radius:             24,
+    atmosphereOffset:   3,
+    atmosphereColor:    'rgba(100,180,255,0.4)',
+    atmosphereWidth:    2,
   },
   moon: {
     color:       '#888',
@@ -83,7 +86,7 @@ class Artemis2Demo extends Game {
     Screen.init(this);
 
     // Resolve responsive star count now that Screen is initialized
-    CONFIG.stars.count = Screen.responsive(300, 400, 500);
+    this._starCount = Screen.responsive(300, 400, 500);
 
     // Precompute trajectory (~100ms)
     this._traj = computeTrajectory();
@@ -120,7 +123,7 @@ class Artemis2Demo extends Game {
     });
 
     // Starfield (static)
-    this._stars = this._generateStars(CONFIG.stars.count);
+    this._stars = this._generateStars(this._starCount);
 
     // Phase state machine
     this._phaseFSM = StateMachine.fromSequence([
@@ -134,13 +137,15 @@ class Artemis2Demo extends Game {
     this._hud = new Artemis2HUD(this);
     this.pipeline.add(this._hud);
 
+    // Extract maxT for reuse
+    this._maxT = this._traj.count * this._traj.dt;
+
     // Controls
     this._controls = new Artemis2Controls(this, {
       onPlay:        () => { this._playing = true; },
       onPause:       () => { this._playing = false; },
       onSeek:        (t) => {
-        const maxT = this._traj.count * this._traj.dt;
-        this._simClock = Math.max(0, Math.min(maxT, t));
+        this._simClock = Math.max(0, Math.min(this._maxT, t));
       },
       onSpeedChange: (spd) => { this._speed = spd; },
     });
@@ -152,7 +157,10 @@ class Artemis2Demo extends Game {
 
     // Resize handler
     if (this.events) {
-      this.events.on('screenresize', () => this._positionControls());
+      this.events.on('screenresize', () => {
+        this._positionControls();
+        this._stars = this._generateStars(this._starCount);
+      });
     }
   }
 
@@ -165,10 +173,9 @@ class Artemis2Demo extends Game {
     super.update(dt);
 
     if (this._playing) {
-      const maxT = this._traj.dt * this._traj.count;
       this._simClock += dt * this._speed;
-      if (this._simClock >= maxT) {
-        this._simClock = maxT;
+      if (this._simClock >= this._maxT) {
+        this._simClock = this._maxT;
         this._playing = false;
       }
     }
@@ -181,7 +188,7 @@ class Artemis2Demo extends Game {
 
     // Push to HUD and controls
     this._hud.setMissionState(this._hudState());
-    this._controls.setCurrentTime(this._simClock, this._traj.dt * this._traj.count);
+    this._controls.setCurrentTime(this._simClock, this._maxT);
 
     // Ease zoom
     this.zoom += (this.targetZoom - this.zoom) * CONFIG.zoomEasing;
@@ -248,10 +255,12 @@ class Artemis2Demo extends Game {
 
   _generateStars(n) {
     const stars = [];
+    const w = this.width  || 1920;
+    const h = this.height || 1080;
     for (let i = 0; i < n; i++) {
       stars.push({
-        x: Math.random() * 2000, // oversized to stay stable on resize
-        y: Math.random() * 2000,
+        x: Math.random() * w,
+        y: Math.random() * h,
         r: Math.random() * 1.2 + 0.2,
         a: Math.random() * 0.7 + 0.3,
       });
@@ -292,10 +301,9 @@ class Artemis2Demo extends Game {
 
   _drawTrajectoryTraveled() {
     const { frames, dt } = this._traj;
-    const currentFrame = Math.min(
-      Math.floor(this._simClock / dt),
-      this._traj.count - 1
-    );
+    const currentFrame = dt > 0
+      ? Math.min(Math.floor(this._simClock / dt), this._traj.count - 1)
+      : 0;
     if (currentFrame < 1) return;
 
     Painter.useCtx((ctx) => {
@@ -339,7 +347,7 @@ class Artemis2Demo extends Game {
       ctx.fill();
     }, { saveState: true });
     Painter.shapes.fillCircle(p.x, p.y, E.radius, E.color);
-    Painter.shapes.strokeCircle(p.x, p.y, E.radius + 3, 'rgba(100,180,255,0.4)', 2);
+    Painter.shapes.strokeCircle(p.x, p.y, E.radius + E.atmosphereOffset, E.atmosphereColor, E.atmosphereWidth);
   }
 
   _drawMoon(p) {
