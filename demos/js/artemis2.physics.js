@@ -15,7 +15,7 @@ const MU_MOON  = 4902;     // km³/s²
 const DT             = 30;
 const DURATION       = 864000;  // 10 days
 const COUNT          = Math.round(DURATION / DT);  // 28800
-const STRIDE         = 9;
+export const STRIDE  = 9;
 const FLYBY_THRESH   = 280000;  // km — Orion enters Moon's sphere of influence
 const REENTRY_THRESH = 50000;   // km
 
@@ -165,4 +165,18 @@ export function computeTrajectory() {
   if (phaseTimestamps.REENTRY    < 0) phaseTimestamps.REENTRY    = DURATION * FALLBACK_REENTRY_FRAC;
 
   return { frames, phaseTimestamps, count: COUNT, dt: DT };
+}
+
+/**
+ * Format simulation seconds as T+DD:HH:MM:SS.
+ * @param {number} seconds
+ * @returns {string}
+ */
+export function formatElapsed(seconds) {
+  const s = Math.max(0, Math.floor(seconds));
+  const ss = s % 60;
+  const mm = Math.floor(s / 60) % 60;
+  const hh = Math.floor(s / 3600) % 24;
+  const dd = Math.floor(s / 86400);
+  return `T+${String(dd).padStart(2,'0')}:${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
 }

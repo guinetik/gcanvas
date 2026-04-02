@@ -13,6 +13,7 @@ import {
   Button,
   Painter,
 } from "../../src/index.js";
+import { formatElapsed } from "./artemis2.physics.js";
 
 const CTRL_CONFIG = {
   panelWidth:    520,
@@ -251,11 +252,3 @@ export class Artemis2Controls extends Scene {
   }
 }
 
-function formatElapsed(seconds) {
-  const s = Math.max(0, Math.floor(seconds));
-  const ss = s % 60;
-  const mm = Math.floor(s / 60) % 60;
-  const hh = Math.floor(s / 3600) % 24;
-  const dd = Math.floor(s / 86400);
-  return `T+${String(dd).padStart(2,'0')}:${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
-}

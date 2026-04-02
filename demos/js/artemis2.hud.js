@@ -12,6 +12,7 @@ import {
   verticalLayout,
   applyLayout,
 } from "../../src/index.js";
+import { formatElapsed } from "./artemis2.physics.js";
 
 const HUD_CONFIG = {
   padding:     12,
@@ -25,16 +26,6 @@ const HUD_CONFIG = {
   panelBg:     "rgba(0,8,20,0.78)",
   panelBorder: "rgba(70,150,220,0.35)",
 };
-
-/** Format seconds as T+DD:HH:MM:SS */
-function formatElapsed(seconds) {
-  const s  = Math.max(0, Math.floor(seconds));
-  const ss = s % 60;
-  const mm = Math.floor(s / 60) % 60;
-  const hh = Math.floor(s / 3600) % 24;
-  const dd = Math.floor(s / 86400);
-  return `T+${String(dd).padStart(2, "0")}:${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
-}
 
 /** Format a distance number with thousands separator */
 function fmtKm(km) {

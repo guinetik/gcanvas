@@ -16,7 +16,7 @@ import {
   FPSCounter,
   StateMachine,
 } from "../../src/index.js";
-import { computeTrajectory, interpolateState } from "./artemis2.physics.js";
+import { computeTrajectory, interpolateState, STRIDE } from "./artemis2.physics.js";
 import { Artemis2HUD } from "./artemis2.hud.js";
 import { Artemis2Controls } from "./artemis2.controls.js";
 
@@ -66,7 +66,6 @@ const CONFIG = {
     staticStep:    10,
   },
 
-  stars: { count: 400 }, // computed in init() if Screen.responsive requires Screen.init()
   controls: { bottomPad: 20 },
 
   // Must match CTRL_CONFIG.panelWidth and panelHeight in controls.js
@@ -229,14 +228,20 @@ class Artemis2Demo extends Game {
   }
 
   render() {
-    super.render(); // MUST be first: clears canvas + renders pipeline (HUD, controls, FPS)
+    // Set Painter context (required before any Painter calls)
+    Painter.setContext(this.ctx);
+    this.clear();
 
+    // Draw 3D scene layers bottom-to-top
     this._drawStarfield();
     this._drawTrajectoryStatic();
     if (this._state) {
       this._drawTrajectoryTraveled();
       this._drawBodies();
     }
+
+    // Pipeline (HUD, controls, FPS) renders on top
+    this.pipeline.render();
   }
 
   // Project physics coords (km) to screen (px) via Camera3D + zoom
@@ -290,7 +295,7 @@ class Artemis2Demo extends Game {
       ctx.beginPath();
       let first = true;
       for (let i = 0; i < count; i += step) {
-        const off = i * 9;
+        const off = i * STRIDE;
         const p = this._project(frames[off + 3], frames[off + 4], frames[off + 5]);
         if (first) { ctx.moveTo(p.x, p.y); first = false; }
         else        ctx.lineTo(p.x, p.y);
@@ -311,7 +316,7 @@ class Artemis2Demo extends Game {
       ctx.lineWidth = CONFIG.trail.traveledWidth;
       ctx.beginPath();
       for (let i = 0; i <= currentFrame; i++) {
-        const off = i * 9;
+        const off = i * STRIDE;
         const p = this._project(frames[off + 3], frames[off + 4], frames[off + 5]);
         if (i === 0) ctx.moveTo(p.x, p.y);
         else         ctx.lineTo(p.x, p.y);
