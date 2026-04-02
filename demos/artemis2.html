@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Artemis II Trajectory</title>
+  <link rel="stylesheet" href="demos.css" />
+  <script src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Artemis II Trajectory</strong> — Physics-accurate free-return flight path simulation.<br/>
+    <span style="color:#CCC">
+      <li>RK4 n-body integration: Earth + Moon + Orion over 10 days</li>
+      <li>28,800 precomputed frames at 30-second resolution</li>
+      <li>Drag to rotate · Scroll / pinch to zoom</li>
+      <li>Use the slider to scrub through the mission</li>
+    </span>
+  </div>
+  <canvas id="game"></canvas>
+  <script type="module" src="./js/artemis2.js"></script>
+</body>
+</html>
