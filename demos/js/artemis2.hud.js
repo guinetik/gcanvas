@@ -28,7 +28,7 @@ const HUD_CONFIG = {
 
 /** Format seconds as T+DD:HH:MM:SS */
 function formatElapsed(seconds) {
-  const s  = Math.floor(seconds);
+  const s  = Math.max(0, Math.floor(seconds));
   const ss = s % 60;
   const mm = Math.floor(s / 60) % 60;
   const hh = Math.floor(s / 3600) % 24;
@@ -75,7 +75,7 @@ export class Artemis2HUD extends Scene {
     items.forEach((item) => this.add(item));
 
     // Panel height: number of items * line height + top/bottom padding
-    this._panelHeight = items.length * C.lineHeight + C.padding * 2;
+    this._panelHeight = (items.length - 1) * C.lineHeight + C.padding * 2;
   }
 
   /**
@@ -83,7 +83,7 @@ export class Artemis2HUD extends Scene {
    * @param {{ phase: string, elapsed: number, distE: number, distM: number, velocity: number }} state
    *   elapsed is in seconds; velocity is in km/s — HUD displays it as m/s
    */
-  update(state) {
+  setMissionState(state) {
     this._phase.text    = `PHASE     ${state.phase}`;
     this._elapsed.text  = `ELAPSED   ${formatElapsed(state.elapsed)}`;
     this._distE.text    = `DIST/E    ${fmtKm(state.distE)}`;
@@ -107,7 +107,7 @@ export class Artemis2HUD extends Scene {
       );
       ctx.fill();
       ctx.stroke();
-    });
+    }, { saveState: true });
     super.draw(); // renders all child Text GameObjects
   }
 }
