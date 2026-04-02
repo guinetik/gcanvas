@@ -24,6 +24,7 @@ const CTRL_CONFIG = {
   trackHeight:   4,
   thumbColor:    '#4ab4ff',
   thumbRadius:   8,
+  sliderHitRadius: 16,
   sliderY:       62,   // y of slider track center within panel (local coords)
   clockFont:     '11px monospace',
   clockColor:    'rgba(100,180,220,0.8)',
@@ -155,8 +156,19 @@ export class Artemis2Controls extends Scene {
 
     // Thumb
     const thumbX = trackX + trackW * progress;
-    Painter.shapes.fillCircle(thumbX, trackY, C.thumbRadius, C.thumbColor);
-    Painter.shapes.strokeCircle(thumbX, trackY, C.thumbRadius, 'rgba(200,230,255,0.6)', 1.5);
+    Painter.useCtx((ctx) => {
+      // filled thumb
+      ctx.fillStyle = C.thumbColor;
+      ctx.beginPath();
+      ctx.arc(thumbX, trackY, C.thumbRadius, 0, Math.PI * 2);
+      ctx.fill();
+      // outline
+      ctx.strokeStyle = 'rgba(200,230,255,0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(thumbX, trackY, C.thumbRadius, 0, Math.PI * 2);
+      ctx.stroke();
+    }, { saveState: true });
 
     super.draw(); // renders Buttons and clock Text
   }
@@ -164,36 +176,55 @@ export class Artemis2Controls extends Scene {
   _attachCanvasListeners() {
     const canvas = this.game.canvas;
 
-    canvas.addEventListener('mousedown', (e) => {
+    this._onMouseDown = (e) => {
       const pos = this._canvasPos(e);
       if (this._hitSlider(pos.x, pos.y)) {
         this._draggingSlider = true;
         this._cb.onSeek?.(this._sliderValue(pos.x));
       }
-    });
-    canvas.addEventListener('mousemove', (e) => {
+    };
+    this._onMouseMove = (e) => {
       if (!this._draggingSlider) return;
       const pos = this._canvasPos(e);
       this._cb.onSeek?.(this._sliderValue(pos.x));
-    });
-    canvas.addEventListener('mouseup',    () => { this._draggingSlider = false; });
-    canvas.addEventListener('mouseleave', () => { this._draggingSlider = false; });
+    };
+    this._onMouseUp    = () => { this._draggingSlider = false; };
+    this._onMouseLeave = () => { this._draggingSlider = false; };
 
-    canvas.addEventListener('touchstart', (e) => {
+    this._onTouchStart = (e) => {
       const pos = this._canvasPos(e.touches[0]);
       if (this._hitSlider(pos.x, pos.y)) {
         e.preventDefault();
         this._draggingSlider = true;
         this._cb.onSeek?.(this._sliderValue(pos.x));
       }
-    }, { passive: false });
-    canvas.addEventListener('touchmove', (e) => {
+    };
+    this._onTouchMove = (e) => {
       if (!this._draggingSlider) return;
       e.preventDefault();
       const pos = this._canvasPos(e.touches[0]);
       this._cb.onSeek?.(this._sliderValue(pos.x));
-    }, { passive: false });
-    canvas.addEventListener('touchend', () => { this._draggingSlider = false; });
+    };
+    this._onTouchEnd = () => { this._draggingSlider = false; };
+
+    canvas.addEventListener('mousedown',  this._onMouseDown);
+    canvas.addEventListener('mousemove',  this._onMouseMove);
+    canvas.addEventListener('mouseup',    this._onMouseUp);
+    canvas.addEventListener('mouseleave', this._onMouseLeave);
+    canvas.addEventListener('touchstart', this._onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove',  this._onTouchMove,  { passive: false });
+    canvas.addEventListener('touchend',   this._onTouchEnd);
+  }
+
+  destroy() {
+    const canvas = this.game.canvas;
+    canvas.removeEventListener('mousedown',  this._onMouseDown);
+    canvas.removeEventListener('mousemove',  this._onMouseMove);
+    canvas.removeEventListener('mouseup',    this._onMouseUp);
+    canvas.removeEventListener('mouseleave', this._onMouseLeave);
+    canvas.removeEventListener('touchstart', this._onTouchStart);
+    canvas.removeEventListener('touchmove',  this._onTouchMove);
+    canvas.removeEventListener('touchend',   this._onTouchEnd);
   }
 
   _canvasPos(e) {
@@ -206,15 +237,15 @@ export class Artemis2Controls extends Scene {
     const trackLeft  = this.x + C.padding;
     const trackRight = this.x + C.panelWidth - C.padding;
     const trackY     = this.y + C.sliderY;
-    const hitRadius  = 16;
     return cx >= trackLeft && cx <= trackRight &&
-           cy >= trackY - hitRadius && cy <= trackY + hitRadius;
+           cy >= trackY - C.sliderHitRadius && cy <= trackY + C.sliderHitRadius;
   }
 
   _sliderValue(cx) {
     const C = CTRL_CONFIG;
     const trackLeft = this.x + C.padding;
     const trackW    = C.panelWidth - C.padding * 2;
+    if (trackW <= 0) return 0;
     const norm = Math.max(0, Math.min(1, (cx - trackLeft) / trackW));
     return norm * this._duration;
   }
