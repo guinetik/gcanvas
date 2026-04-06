@@ -1,3 +1,12 @@
+@import url("https://fonts.googleapis.com/css2?family=Datatype:wdth,wght@50..150,100..900&display=swap");
+
+/**
+ * Shared stack for page chrome and canvas demos (matches FONT_FAMILY_STACK in src/game/ui/theme.js).
+ */
+:root {
+    --gcanvas-font-family: Datatype, ui-monospace, monospace;
+}
+
 /* General layout */
 body {
     margin: 0;
@@ -26,7 +35,7 @@ nav {
     overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: #0f0 #1a1a1a;
-    font-family: monospace;
+    font-family: var(--gcanvas-font-family);
     border-right: 1px solid #1a1a1a;
     flex-shrink: 0; /* Prevent nav from shrinking on desktop */
 }
@@ -98,7 +107,7 @@ nav a:not(.helix-link):not(.helix-external).active {
     background: none;
     border: none;
     color: #666;
-    font-family: monospace;
+    font-family: var(--gcanvas-font-family);
     font-size: 0.95em;
     font-weight: bold;
     letter-spacing: 1.5px;
@@ -239,7 +248,7 @@ nav a:not(.helix-link):not(.helix-external).active {
     display: block;
     color: #0f0;
     text-decoration: none;
-    font-family: monospace;
+    font-family: var(--gcanvas-font-family);
     font-size: 0.95em;
     font-weight: bold;
     letter-spacing: 1.5px;
@@ -295,7 +304,7 @@ code {
 /* #info overlay (optional) - hidden by default to spark curiosity */
 #info {
     position: absolute;
-    font-family: monospace;
+    font-family: var(--gcanvas-font-family);
     top: 0;
     left: 0;
     right: 0;
@@ -334,7 +343,7 @@ code {
     border: 1px solid #333;
     border-radius: 4px;
     color: #0f0;
-    font-family: monospace;
+    font-family: var(--gcanvas-font-family);
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
@@ -382,7 +391,7 @@ path {
 }
 
 .mobile-title {
-    font-family: monospace;
+    font-family: var(--gcanvas-font-family);
     font-size: 1.4em;
     color: #ccc;
     letter-spacing: 2px;
