@@ -785,26 +785,27 @@ export class CaosPlayground extends Attractor3DDemo {
       ctx.globalAlpha = prevAlpha;
     };
 
-    const titleFont = isMobile ? "bold 22px monospace" : "bold 30px monospace";
-    const taglineFont = isMobile ? "15px monospace" : "17px monospace";
-    const equationFont = isMobile ? "13px monospace" : "15px monospace";
+    const titleSize = Screen.responsive(22, 28, 36);
+    const taglineSize = Screen.responsive(15, 17, 22);
+    const equationSize = Screen.responsive(13, 15, 18);
+    const align = isMobile ? "center" : "left";
 
     this._infoTitle = new Text(this, "", {
-      font: titleFont,
+      font: `bold ${titleSize}px monospace`,
       color: "rgba(255,255,255,0.6)",
-      align: isMobile ? "center" : "left",
+      align,
     });
 
     this._infoTagline = new Text(this, "", {
-      font: taglineFont,
+      font: `${taglineSize}px monospace`,
       color: "rgba(255,255,255,0.4)",
-      align: isMobile ? "center" : "left",
+      align,
     });
 
     this._infoEquations = new Text(this, "", {
-      font: equationFont,
+      font: `${equationSize}px monospace`,
       color: "rgba(255,255,255,0.3)",
-      align: isMobile ? "center" : "left",
+      align,
     });
 
     this._infoScene.add(this._infoTitle);
@@ -825,16 +826,12 @@ export class CaosPlayground extends Attractor3DDemo {
     this._infoTagline.text = info.tagline;
     this._infoEquations.text = info.equations;
 
-    // Stack vertically with spacing
+    // Stack vertically with responsive spacing
+    const gap1 = Screen.responsive(30, 36, 46);
+    const gap2 = Screen.responsive(52, 62, 78);
     this._infoTitle.y = 0;
-    this._infoTagline.y = 38;
-    this._infoEquations.y = 64;
-
-    if (Screen.isMobile) {
-      this._infoTitle.y = 0;
-      this._infoTagline.y = 30;
-      this._infoEquations.y = 52;
-    }
+    this._infoTagline.y = gap1;
+    this._infoEquations.y = gap2;
   }
 
   _layoutInfoOverlay() {
@@ -845,9 +842,11 @@ export class CaosPlayground extends Attractor3DDemo {
       this._infoScene.x = this.width / 2;
       this._infoScene.y = 60;
     } else {
-      // Bottom-left
-      this._infoScene.x = 28;
-      this._infoScene.y = this.height - 110;
+      // Bottom-left with responsive margin
+      const margin = Screen.responsive(20, 28, 40);
+      const blockHeight = Screen.responsive(70, 80, 100);
+      this._infoScene.x = margin;
+      this._infoScene.y = this.height - blockHeight - margin;
     }
   }
 
