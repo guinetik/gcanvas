@@ -6,3 +6,4 @@
  */
 
 export { WebGPURenderTarget } from "./webgpu-render-target.js";
+export { WebGPUAttractorPipeline } from "./webgpu-attractor-pipeline.js";
