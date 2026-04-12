@@ -24,6 +24,7 @@ import {
   Screen,
   Text,
   Scene,
+  Tooltip,
   Tweenetik,
   Easing,
 } from "../../src/index";
@@ -204,58 +205,92 @@ const ATTRACTOR_PRESETS = {
 
 const ATTRACTOR_PARAMS = {
   lorenz: [
-    { key: "sigma", label: "\u03C3 (sigma)",  default: 10,       min: 0,   max: 30,  step: 0.1  },
-    { key: "rho",   label: "\u03C1 (rho)",    default: 28,       min: 0,   max: 60,  step: 0.1  },
-    { key: "beta",  label: "\u03B2 (beta)",   default: 8 / 3,    min: 0,   max: 10,  step: 0.01 },
+    { key: "sigma", label: "\u03C3 (sigma)",  default: 10,       min: 0,   max: 30,  step: 0.1,
+      tip: "Prandtl number — controls how fast heat diffuses vs. fluid viscosity. Higher values widen the butterfly wings." },
+    { key: "rho",   label: "\u03C1 (rho)",    default: 28,       min: 0,   max: 60,  step: 0.1,
+      tip: "Rayleigh number — drives convection intensity. Below ~24.7 the system stabilizes; above it, chaos emerges." },
+    { key: "beta",  label: "\u03B2 (beta)",   default: 8 / 3,    min: 0,   max: 10,  step: 0.01,
+      tip: "Geometric factor of the convection cell. Affects how quickly trajectories spiral inward on each lobe." },
   ],
   rossler: [
-    { key: "a", label: "a", default: 0.2,  min: 0, max: 1,  step: 0.01 },
-    { key: "b", label: "b", default: 0.2,  min: 0, max: 1,  step: 0.01 },
-    { key: "c", label: "c", default: 5.7,  min: 0, max: 20, step: 0.1  },
+    { key: "a", label: "a", default: 0.2,  min: 0, max: 1,  step: 0.01,
+      tip: "Controls the speed of rotation in the x-y plane. Increasing it stretches the spiral outward." },
+    { key: "b", label: "b", default: 0.2,  min: 0, max: 1,  step: 0.01,
+      tip: "Couples x into the z dynamics. Small changes subtly affect the folding mechanism." },
+    { key: "c", label: "c", default: 5.7,  min: 0, max: 20, step: 0.1,
+      tip: "Controls the height of the z-axis spike. Higher values create a taller, sharper fold where reinjection occurs." },
   ],
   chen: [
-    { key: "alpha", label: "\u03B1 (alpha)", default: 5,     min: -10, max: 20,  step: 0.1  },
-    { key: "beta",  label: "\u03B2 (beta)",  default: -20,   min: -30, max: 10,  step: 0.1  },
-    { key: "delta", label: "\u03B4 (delta)", default: -0.38, min: -2,  max: 2,   step: 0.01 },
+    { key: "alpha", label: "\u03B1 (alpha)", default: 5,     min: -10, max: 20,  step: 0.1,
+      tip: "Linear coupling strength. Controls how strongly x and y influence each other's rate of change." },
+    { key: "beta",  label: "\u03B2 (beta)",  default: -20,   min: -30, max: 10,  step: 0.1,
+      tip: "Damping/amplification of z. Negative values sustain the double-scroll structure." },
+    { key: "delta", label: "\u03B4 (delta)", default: -0.38, min: -2,  max: 2,   step: 0.01,
+      tip: "Fine-tunes the attractor shape. Small shifts can collapse or expand the two lobes." },
   ],
   chua: [
-    { key: "alpha", label: "\u03B1 (alpha)", default: 15.6,  min: 5,  max: 30,  step: 0.1 },
-    { key: "gamma", label: "\u03B3 (gamma)", default: 25.58, min: 10, max: 50,  step: 0.1 },
-    { key: "m0",    label: "m\u2080",        default: -2,    min: -5, max: 0,   step: 0.1 },
-    { key: "m1",    label: "m\u2081",        default: 0,     min: -3, max: 3,   step: 0.1 },
+    { key: "alpha", label: "\u03B1 (alpha)", default: 15.6,  min: 5,  max: 30,  step: 0.1,
+      tip: "Ratio of capacitances C2/C1. Controls how energy transfers between the two capacitor stages." },
+    { key: "gamma", label: "\u03B3 (gamma)", default: 25.58, min: 10, max: 50,  step: 0.1,
+      tip: "Ratio of C2 to the inductor. Higher values speed up oscillation in the LC resonant loop." },
+    { key: "m0",    label: "m\u2080",        default: -2,    min: -5, max: 0,   step: 0.1,
+      tip: "Inner slope of Chua's diode. Controls the negative resistance in the central voltage region." },
+    { key: "m1",    label: "m\u2081",        default: 0,     min: -3, max: 3,   step: 0.1,
+      tip: "Outer slope of Chua's diode. Determines behavior at high voltages — affects scroll size." },
   ],
   threeScroll: [
-    { key: "a", label: "a", default: 32.48, min: 20,  max: 50,  step: 0.01 },
-    { key: "b", label: "b", default: 45.84, min: 30,  max: 60,  step: 0.01 },
-    { key: "c", label: "c", default: 1.18,  min: 0,   max: 5,   step: 0.01 },
-    { key: "d", label: "d", default: 0.13,  min: 0,   max: 1,   step: 0.01 },
-    { key: "e", label: "e", default: 0.57,  min: 0,   max: 2,   step: 0.01 },
-    { key: "f", label: "f", default: 14.7,  min: 5,   max: 25,  step: 0.1  },
+    { key: "a", label: "a", default: 32.48, min: 20,  max: 50,  step: 0.01,
+      tip: "Primary coupling coefficient. Drives the x-y interaction that forms the three scroll wings." },
+    { key: "b", label: "b", default: 45.84, min: 30,  max: 60,  step: 0.01,
+      tip: "Secondary coupling. Balances against 'a' to maintain the three-fold symmetry." },
+    { key: "c", label: "c", default: 1.18,  min: 0,   max: 5,   step: 0.01,
+      tip: "Damping on z-axis. Controls how tightly trajectories are pulled back to the x-y plane." },
+    { key: "d", label: "d", default: 0.13,  min: 0,   max: 1,   step: 0.01,
+      tip: "Nonlinear coupling strength (xz term). Affects the twisting between scrolls." },
+    { key: "e", label: "e", default: 0.57,  min: 0,   max: 2,   step: 0.01,
+      tip: "Quadratic damping (x\u00B2 term). Prevents trajectories from escaping to infinity." },
+    { key: "f", label: "f", default: 14.7,  min: 5,   max: 25,  step: 0.1,
+      tip: "Linear feedback on y. Shifts the balance between the three scroll centers." },
   ],
   rabinovichFabrikant: [
-    { key: "alpha", label: "\u03B1 (alpha)", default: 0.14, min: 0, max: 1.5, step: 0.01 },
-    { key: "gamma", label: "\u03B3 (gamma)", default: 0.10, min: 0, max: 1.5, step: 0.01 },
+    { key: "alpha", label: "\u03B1 (alpha)", default: 0.14, min: 0, max: 1.5, step: 0.01,
+      tip: "Dissipation rate. Low values allow long chaotic transients; too high and the system decays to a fixed point." },
+    { key: "gamma", label: "\u03B3 (gamma)", default: 0.10, min: 0, max: 1.5, step: 0.01,
+      tip: "Cross-coupling strength. Controls the energy exchange between oscillation modes in the plasma model." },
   ],
   aizawa: [
-    { key: "a", label: "a", default: 0.95, min: 0,   max: 2,  step: 0.01 },
-    { key: "b", label: "b", default: 0.7,  min: 0,   max: 2,  step: 0.01 },
-    { key: "c", label: "c", default: 0.6,  min: 0,   max: 2,  step: 0.01 },
-    { key: "d", label: "d", default: 3.5,  min: 0,   max: 8,  step: 0.1  },
-    { key: "e", label: "e", default: 0.25, min: 0,   max: 1,  step: 0.01 },
-    { key: "f", label: "f", default: 0.1,  min: 0,   max: 1,  step: 0.01 },
+    { key: "a", label: "a", default: 0.95, min: 0,   max: 2,  step: 0.01,
+      tip: "Controls the torus structure. Near 0.95 the attractor sits at the edge of order and chaos." },
+    { key: "b", label: "b", default: 0.7,  min: 0,   max: 2,  step: 0.01,
+      tip: "Rotational damping. Affects how tightly trajectories wind around the torus core." },
+    { key: "c", label: "c", default: 0.6,  min: 0,   max: 2,  step: 0.01,
+      tip: "Vertical drift rate. Shifts the attractor up or down and affects the mushroom cap shape." },
+    { key: "d", label: "d", default: 3.5,  min: 0,   max: 8,  step: 0.1,
+      tip: "Nonlinear coupling strength. Higher values expand the chaotic region of the torus." },
+    { key: "e", label: "e", default: 0.25, min: 0,   max: 1,  step: 0.01,
+      tip: "z-dependent modulation. Fine-tunes the symmetry breaking that makes Aizawa unique." },
+    { key: "f", label: "f", default: 0.1,  min: 0,   max: 1,  step: 0.01,
+      tip: "Cubic x-z coupling. A subtle term that affects the attractor's vertical extent." },
   ],
   thomas: [
-    { key: "b", label: "b", default: 0.208186, min: 0, max: 1, step: 0.001 },
+    { key: "b", label: "b", default: 0.208186, min: 0, max: 1, step: 0.001,
+      tip: "Friction coefficient. At b=0 the system is conservative; as b increases, chaos gives way to stable limit cycles." },
   ],
   halvorsen: [
-    { key: "a", label: "a", default: 1.89, min: 0, max: 5, step: 0.01 },
+    { key: "a", label: "a", default: 1.89, min: 0, max: 5, step: 0.01,
+      tip: "Dissipation parameter. At 1.89 the three-fold symmetric attractor is fully chaotic; lower values simplify it." },
   ],
   dadras: [
-    { key: "a", label: "a", default: 3,   min: 0, max: 10, step: 0.1 },
-    { key: "b", label: "b", default: 2.7, min: 0, max: 10, step: 0.1 },
-    { key: "c", label: "c", default: 1.7, min: 0, max: 10, step: 0.1 },
-    { key: "d", label: "d", default: 2,   min: 0, max: 10, step: 0.1 },
-    { key: "e", label: "e", default: 9,   min: 0, max: 20, step: 0.1 },
+    { key: "a", label: "a", default: 3,   min: 0, max: 10, step: 0.1,
+      tip: "Controls the y-x coupling. Affects the width of the three butterfly wings." },
+    { key: "b", label: "b", default: 2.7, min: 0, max: 10, step: 0.1,
+      tip: "Nonlinear coupling (yz term). Drives the folding that creates the multi-wing structure." },
+    { key: "c", label: "c", default: 1.7, min: 0, max: 10, step: 0.1,
+      tip: "Damping on y. Balances against 'a' to determine the attractor's overall scale." },
+    { key: "d", label: "d", default: 2,   min: 0, max: 10, step: 0.1,
+      tip: "x-y product coupling into z. Controls how trajectories transfer between wings." },
+    { key: "e", label: "e", default: 9,   min: 0, max: 20, step: 0.1,
+      tip: "Damping on z. Higher values compress the attractor vertically; lower values let it expand." },
   ],
 };
 
@@ -373,6 +408,12 @@ export class CaosPlayground extends Attractor3DDemo {
 
     // ─── Mobile: Screen detection ─────────────────────────────────────
     Screen.init(this);
+
+    this._tooltip = new Tooltip(this, {
+      textColor: "#fff",
+      maxWidth: 280,
+    });
+    this.pipeline.add(this._tooltip);
 
     this._buildPanel();
     this._buildToggleButton();
@@ -954,6 +995,16 @@ export class CaosPlayground extends Attractor3DDemo {
           this.updateAttractorParams(this._uiParams);
         },
       });
+
+      // Wire tooltip on hover
+      if (def.tip) {
+        slider.on("mouseover", (e) => {
+          this._tooltip.show(def.tip, e.x, e.y);
+        });
+        slider.on("mouseout", () => {
+          this._tooltip.hide();
+        });
+      }
 
       this._paramsSection.addItem(slider);
       this._paramSliders.push(slider);
