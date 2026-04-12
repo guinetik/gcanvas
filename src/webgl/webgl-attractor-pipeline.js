@@ -846,12 +846,22 @@ export class WebGLAttractorPipeline {
   compositeOnto(ctx, x = 0, y = 0) {
     if (!this.available) return;
 
-    // Outer glow: draw a blurred copy behind the sharp image
+    // Neon glow: multiple additive-blended blur layers at increasing radii
     if (this.glowConfig.enabled && this.glowConfig.radius > 0) {
+      const r = this.glowConfig.radius;
+      const intensity = this.glowConfig.intensity;
+      const layers = [
+        { blur: r,     alpha: intensity * 0.8 },
+        { blur: r * 2, alpha: intensity * 0.5 },
+        { blur: r * 3, alpha: intensity * 0.3 },
+      ];
       ctx.save();
-      ctx.filter = `blur(${this.glowConfig.radius}px)`;
-      ctx.globalAlpha = this.glowConfig.intensity;
-      ctx.drawImage(this.canvas, x, y);
+      ctx.globalCompositeOperation = "lighter";
+      for (const layer of layers) {
+        ctx.filter = `blur(${layer.blur}px)`;
+        ctx.globalAlpha = layer.alpha;
+        ctx.drawImage(this.canvas, x, y);
+      }
       ctx.restore();
     }
 
