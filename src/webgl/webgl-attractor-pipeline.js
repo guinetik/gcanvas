@@ -849,19 +849,21 @@ export class WebGLAttractorPipeline {
     // Neon glow: multiple additive-blended blur layers at increasing radii
     if (this.glowConfig.enabled && this.glowConfig.radius > 0) {
       const r = this.glowConfig.radius;
-      const intensity = this.glowConfig.intensity;
-      const layers = [
-        { blur: r,     alpha: intensity * 0.8 },
-        { blur: r * 2, alpha: intensity * 0.5 },
-        { blur: r * 3, alpha: intensity * 0.3 },
-      ];
+      const a = this.glowConfig.intensity;
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      for (const layer of layers) {
-        ctx.filter = `blur(${layer.blur}px)`;
-        ctx.globalAlpha = layer.alpha;
-        ctx.drawImage(this.canvas, x, y);
-      }
+      // Tight bright core
+      ctx.filter = `blur(${r * 0.5}px)`;
+      ctx.globalAlpha = a;
+      ctx.drawImage(this.canvas, x, y);
+      // Mid spread
+      ctx.filter = `blur(${r}px)`;
+      ctx.globalAlpha = a * 0.7;
+      ctx.drawImage(this.canvas, x, y);
+      // Wide soft halo
+      ctx.filter = `blur(${r * 2.5}px)`;
+      ctx.globalAlpha = a * 0.4;
+      ctx.drawImage(this.canvas, x, y);
       ctx.restore();
     }
 

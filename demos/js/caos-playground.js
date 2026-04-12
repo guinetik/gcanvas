@@ -46,7 +46,7 @@ const ATTRACTOR_PRESETS = {
     center: { x: 0, y: 2, z: 27 },
     camera: { perspective: 800, rotationX: -1.8, rotationY: -3 },
     visual: { minHue: 30, maxHue: 200, maxSpeed: 50, saturation: 85, lightness: 55, maxAlpha: 0.85, hueShiftSpeed: 15 },
-    glow: { enabled: true, radius: 25, intensity: 0.25 },
+    glow: { enabled: true, radius: 50, intensity: 0.6 },
     blink: { chance: 0.015, intensityBoost: 1.4 },
     mouseControl: { horizontalAxis: "rotationZ" },
     zoom: { min: 0.2, max: 2.5 },
@@ -605,7 +605,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
     this._controls.glowRadius = new Slider(this, {
       label: "GLOW RADIUS", width: sw,
-      min: 0, max: 100, value: cfg.glow.radius, step: 5,
+      min: 0, max: 200, value: cfg.glow.radius, step: 5,
       formatValue: (v) => v.toFixed(0),
       onChange: (v) => {
         if (this._updatingSliders) return;
