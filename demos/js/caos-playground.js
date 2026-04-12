@@ -375,10 +375,12 @@ export class CaosPlayground extends Attractor3DDemo {
     this.panel.addItem(this._controls.attractor);
 
     // ── Renderer Dropdown (top-level, not in a section) ──────────
+    const hasWebGPU = !!navigator.gpu;
     const rendererOptions = [{ label: "WebGL", value: "webgl" }];
-    if (navigator.gpu) {
+    if (hasWebGPU) {
       rendererOptions.push({ label: "WebGPU", value: "webgpu" });
     }
+    const defaultRenderer = hasWebGPU ? "webgpu" : "webgl";
 
     this._activeRenderer = "webgl";
     this._switchingRenderer = false;
@@ -387,10 +389,15 @@ export class CaosPlayground extends Attractor3DDemo {
       label: "RENDERER",
       width: sw,
       options: rendererOptions,
-      value: "webgl",
+      value: defaultRenderer,
       onChange: (v) => this._onRendererChange(v),
     });
     this.panel.addItem(this._controls.renderer);
+
+    // Auto-switch to WebGPU if available
+    if (hasWebGPU) {
+      this._onRendererChange("webgpu");
+    }
 
     // ── Parameters (dynamic, rebuilt per attractor) ─────────────────
     this._paramsSection = this.panel.addSection("Parameters", { expanded: !isMobile });
