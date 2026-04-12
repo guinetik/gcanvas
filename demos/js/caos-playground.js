@@ -411,7 +411,9 @@ export class CaosPlayground extends Attractor3DDemo {
 
     this._tooltip = new Tooltip(this, {
       textColor: "#fff",
-      maxWidth: 280,
+      font: `${Screen.responsive(12, 14, 18)}px monospace`,
+      maxWidth: Screen.responsive(220, 280, 380),
+      padding: Screen.responsive(6, 8, 12),
     });
     this.pipeline.add(this._tooltip);
 
