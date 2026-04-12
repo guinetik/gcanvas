@@ -609,9 +609,11 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
 
     if (!this.bloomConfig.enabled) {
       if (postEnabled) {
+        // No bloom, but post-process: scene → postRT (composite with zero bloom), then post → screen
         this._renderCompositeToRT(this.postRT, this.sceneRT, this.sceneRT, 0.0);
         this._renderPostProcess(this.postRT);
       } else {
+        // No bloom, no post-process: blit scene directly
         this._blitToScreen(this.sceneRT);
       }
     } else {
@@ -620,11 +622,13 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
       this._renderBlur();
 
       if (postEnabled) {
+        // Bloom + post-process: composite → postRT, then post → screen
         this._renderCompositeToRT(this.postRT, this.sceneRT, this.blurPongRT, this.bloomConfig.strength);
         this._renderPostProcess(this.postRT);
       } else {
-        this._renderCompositeToRT(this.sceneRT, this.sceneRT, this.blurPongRT, this.bloomConfig.strength);
-        this._blitToScreen(this.sceneRT);
+        // Bloom, no post-process: composite → postRT (not sceneRT! can't read+write same texture), then blit
+        this._renderCompositeToRT(this.postRT, this.sceneRT, this.blurPongRT, this.bloomConfig.strength);
+        this._blitToScreen(this.postRT);
       }
     }
 
