@@ -25,6 +25,8 @@ import {
 } from "../../src/index";
 import { StateMachine } from "../../src/state/state-machine.js";
 import { Attractor3DDemo, DEFAULTS, deepMerge } from "./attractor-3d-demo.js";
+import { WebGPUAttractorPipeline } from "../../src/webgpu/webgpu-attractor-pipeline.js";
+import { WebGLAttractorPipeline } from "../../src/webgl/webgl-attractor-pipeline.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Full nested Attractor3DDemo configs per attractor
@@ -371,6 +373,24 @@ export class CaosPlayground extends Attractor3DDemo {
       onChange: (v) => this._onAttractorChange(v),
     });
     this.panel.addItem(this._controls.attractor);
+
+    // ── Renderer Dropdown (top-level, not in a section) ──────────
+    const rendererOptions = [{ label: "WebGL", value: "webgl" }];
+    if (navigator.gpu) {
+      rendererOptions.push({ label: "WebGPU", value: "webgpu" });
+    }
+
+    this._activeRenderer = "webgl";
+    this._switchingRenderer = false;
+
+    this._controls.renderer = new Dropdown(this, {
+      label: "RENDERER",
+      width: sw,
+      options: rendererOptions,
+      value: "webgl",
+      onChange: (v) => this._onRendererChange(v),
+    });
+    this.panel.addItem(this._controls.renderer);
 
     // ── Parameters (dynamic, rebuilt per attractor) ─────────────────
     this._paramsSection = this.panel.addSection("Parameters", { expanded: !isMobile });
@@ -770,6 +790,79 @@ export class CaosPlayground extends Attractor3DDemo {
     this._buildParamSliders(key);
 
     console.log(`Switched to ${preset.label}`);
+  }
+
+  // ─── Renderer Swap ──────────────────────────────────────────────────
+
+  async _onRendererChange(rendererType) {
+    if (rendererType === this._activeRenderer) return;
+    if (this._switchingRenderer) return;
+
+    this._switchingRenderer = true;
+    this._controls.renderer.close();
+
+    // Destroy old pipeline
+    this.attractorPipeline?.destroy();
+
+    const cfg = this.config;
+    const maxSegments = cfg.maxSegments || cfg.particles.count * cfg.particles.trailLength;
+    const pipelineOptions = {
+      bloom: cfg.bloom,
+      background: {
+        ...cfg.background,
+        baseColor: cfg.background.baseColor || this._computeBackgroundColor(),
+      },
+      visual: cfg.visual,
+      blink: cfg.blink,
+      energyFlow: cfg.energyFlow,
+      depthFog: cfg.depthFog,
+      iridescence: cfg.iridescence,
+      chromaticAberration: cfg.chromaticAberration,
+      colorGrading: cfg.colorGrading,
+      glow: cfg.glow,
+    };
+
+    if (rendererType === "webgpu") {
+      const pipeline = new WebGPUAttractorPipeline(
+        this.width, this.height, maxSegments, pipelineOptions
+      );
+      const ok = await pipeline.init();
+      if (ok) {
+        this.attractorPipeline = pipeline;
+        this.useWebGL = true; // Flag used by base class to choose WebGL path vs Canvas2D
+        this._activeRenderer = "webgpu";
+        console.log("Switched to WebGPU renderer");
+      } else {
+        console.warn("WebGPU init failed, reverting to WebGL");
+        this._revertToWebGL(maxSegments, pipelineOptions);
+      }
+    } else {
+      this._revertToWebGL(maxSegments, pipelineOptions);
+    }
+
+    this._switchingRenderer = false;
+  }
+
+  /** @private Rebuild WebGL pipeline */
+  _revertToWebGL(maxSegments, pipelineOptions) {
+    const pipeline = new WebGLAttractorPipeline(
+      this.width, this.height, maxSegments, pipelineOptions
+    );
+    const ok = pipeline.init();
+    this.attractorPipeline = pipeline;
+    this.useWebGL = ok;
+    this._activeRenderer = "webgl";
+    if (ok) {
+      console.log("Switched to WebGL renderer");
+    } else {
+      console.warn("WebGL init also failed, using Canvas 2D fallback");
+    }
+  }
+
+  /** @override — skip attractor rendering while switching renderer */
+  _renderAttractor() {
+    if (this._switchingRenderer) return;
+    super._renderAttractor();
   }
 
   // ─── Reset to Preset Defaults ─────────────────────────────────────
