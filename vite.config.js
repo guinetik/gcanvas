@@ -7,6 +7,8 @@ export default defineConfig(({ mode }) => {
   const isDebug = mode === "debug";
 
   return {
+    // Enable ?raw imports for WGSL shader files
+    assetsInclude: ["**/*.wgsl"],
     server: {
       port: 9195,
       strictPort: true, // Don't try other ports if 9195 is in use
