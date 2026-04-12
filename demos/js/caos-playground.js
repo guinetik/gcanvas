@@ -378,6 +378,7 @@ export class CaosPlayground extends Attractor3DDemo {
     this._buildToggleButton();
     this._initPanelStateMachine();
     this._buildInfoOverlay();
+    this._initRightClickPan();
   }
 
   // ─── Render override: attractor behind, UI on top ───────────────────
@@ -765,6 +766,40 @@ export class CaosPlayground extends Attractor3DDemo {
       this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
       this.panel.y = CONFIG.panel.marginTop;
     }
+  }
+
+  // ─── Right-Click Pan ────────────────────────────────────────────────
+
+  _initRightClickPan() {
+    this._panning = false;
+    this._panLastX = 0;
+    this._panLastY = 0;
+
+    // Disable context menu on the canvas so right-click works for panning
+    this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    this.canvas.addEventListener("mousedown", (e) => {
+      if (e.button !== 2) return; // Right-click only
+      this._panning = true;
+      this._panLastX = e.clientX;
+      this._panLastY = e.clientY;
+    });
+
+    this.canvas.addEventListener("mousemove", (e) => {
+      if (!this._panning) return;
+      const dx = e.clientX - this._panLastX;
+      const dy = e.clientY - this._panLastY;
+      this._panLastX = e.clientX;
+      this._panLastY = e.clientY;
+
+      // Convert pixel delta to screenOffset fraction
+      this.config.screenOffset.x += dx / this.width;
+      this.config.screenOffset.y += dy / this.height;
+    });
+
+    this.canvas.addEventListener("mouseup", (e) => {
+      if (e.button === 2) this._panning = false;
+    });
   }
 
   // ─── Info Overlay (attractor title card) ───────────────────────────
