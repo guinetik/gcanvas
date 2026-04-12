@@ -849,9 +849,13 @@ class Attractor3DDemo extends Game {
           varied[k] = v * (1 + (Math.random() - 0.5) * range);
         }
         p.stepFn = this.attractor.createStepper(varied);
+        p.respawn();
       }
     } else {
-      for (const p of this.particles) p.stepFn = this.stepFn;
+      for (const p of this.particles) {
+        p.stepFn = this.stepFn;
+        p.respawn();
+      }
     }
   }
 
