@@ -22,6 +22,10 @@ import {
   AccordionGroup,
   Painter,
   Screen,
+  Text,
+  Scene,
+  Tweenetik,
+  Easing,
 } from "../../src/index";
 import { StateMachine } from "../../src/state/state-machine.js";
 import { Attractor3DDemo, DEFAULTS, deepMerge } from "./attractor-3d-demo.js";
@@ -256,6 +260,63 @@ const ATTRACTOR_PARAMS = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Per-attractor display info (title card overlay)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ATTRACTOR_INFO = {
+  lorenz: {
+    title: "LORENZ ATTRACTOR",
+    tagline: "The butterfly effect — atmospheric convection, 1963",
+    equations: "dx/dt = σ(y−x)   dy/dt = x(ρ−z)−y   dz/dt = xy−βz",
+  },
+  rossler: {
+    title: "RÖSSLER ATTRACTOR",
+    tagline: "Simplest chaotic flow — chemical kinetics, 1976",
+    equations: "dx/dt = −y−z   dy/dt = x+ay   dz/dt = b+z(x−c)",
+  },
+  chen: {
+    title: "CHEN ATTRACTOR",
+    tagline: "Dual of Lorenz — not topologically equivalent, 1999",
+    equations: "dx/dt = α(y−x)   dy/dt = (c−α)x−xz+cy   dz/dt = xy−βz",
+  },
+  chua: {
+    title: "CHUA'S CIRCUIT",
+    tagline: "First physical chaotic circuit — piecewise-linear, 1983",
+    equations: "dx/dt = α(y−x−f(x))   dy/dt = x−y+z   dz/dt = −γy",
+  },
+  threeScroll: {
+    title: "THREE-SCROLL ATTRACTOR",
+    tagline: "Unified chaotic system — three intertwined scrolls",
+    equations: "dx/dt = a(y−x)+dxz   dy/dt = bx−xz+fy   dz/dt = cz+xy−ex²",
+  },
+  rabinovichFabrikant: {
+    title: "RABINOVICH-FABRIKANT",
+    tagline: "Plasma instabilities — nonlinear oscillation, 1979",
+    equations: "dx/dt = y(z−1+x²)+γx   dy/dt = x(3z+1−x²)+γy   dz/dt = −2z(α+xy)",
+  },
+  aizawa: {
+    title: "AIZAWA ATTRACTOR",
+    tagline: "Torus-to-chaos transition — delicate symmetry breaking",
+    equations: "dx/dt = (z−b)x−dy   dy/dt = dx+(z−b)y   dz/dt = c+az−z³/3−(x²+y²)(1+ez)+fzx³",
+  },
+  thomas: {
+    title: "THOMAS ATTRACTOR",
+    tagline: "Cyclically symmetric — bounded chaos with friction, 1999",
+    equations: "dx/dt = sin(y)−bx   dy/dt = sin(z)−by   dz/dt = sin(x)−bz",
+  },
+  halvorsen: {
+    title: "HALVORSEN ATTRACTOR",
+    tagline: "Cyclic symmetry — three-fold rotational structure",
+    equations: "dx/dt = −ax−4y−4z−y²   dy/dt = −ay−4z−4x−z²   dz/dt = −az−4x−4y−x²",
+  },
+  dadras: {
+    title: "DADRAS ATTRACTOR",
+    tagline: "Three-wing butterfly — asymmetric strange attractor, 2010",
+    equations: "dx/dt = y−ax+byz   dy/dt = cy−xz+z   dz/dt = dxy−ez",
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // UI CONFIG
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -316,6 +377,7 @@ export class CaosPlayground extends Attractor3DDemo {
     this._buildPanel();
     this._buildToggleButton();
     this._initPanelStateMachine();
+    this._buildInfoOverlay();
   }
 
   // ─── Render override: attractor behind, UI on top ───────────────────
@@ -705,6 +767,116 @@ export class CaosPlayground extends Attractor3DDemo {
     }
   }
 
+  // ─── Info Overlay (attractor title card) ───────────────────────────
+
+  _buildInfoOverlay() {
+    const isMobile = Screen.isMobile;
+
+    this._infoScene = new Scene(this, { x: 0, y: 0 });
+    this._infoScene._alpha = 1; // Custom alpha for fade animation
+
+    // Wrap draw to apply fade alpha
+    const originalDraw = this._infoScene.draw.bind(this._infoScene);
+    this._infoScene.draw = () => {
+      const ctx = this.ctx;
+      const prevAlpha = ctx.globalAlpha;
+      ctx.globalAlpha = this._infoScene._alpha;
+      originalDraw();
+      ctx.globalAlpha = prevAlpha;
+    };
+
+    const titleFont = isMobile ? "bold 22px monospace" : "bold 30px monospace";
+    const taglineFont = isMobile ? "15px monospace" : "17px monospace";
+    const equationFont = isMobile ? "13px monospace" : "15px monospace";
+
+    this._infoTitle = new Text(this, "", {
+      font: titleFont,
+      color: "rgba(255,255,255,0.6)",
+      align: isMobile ? "center" : "left",
+    });
+
+    this._infoTagline = new Text(this, "", {
+      font: taglineFont,
+      color: "rgba(255,255,255,0.4)",
+      align: isMobile ? "center" : "left",
+    });
+
+    this._infoEquations = new Text(this, "", {
+      font: equationFont,
+      color: "rgba(255,255,255,0.3)",
+      align: isMobile ? "center" : "left",
+    });
+
+    this._infoScene.add(this._infoTitle);
+    this._infoScene.add(this._infoTagline);
+    this._infoScene.add(this._infoEquations);
+    this.pipeline.add(this._infoScene);
+
+    // Set initial content and position
+    this._updateInfoContent(this._activePreset);
+    this._layoutInfoOverlay();
+  }
+
+  _updateInfoContent(attractorKey) {
+    const info = ATTRACTOR_INFO[attractorKey];
+    if (!info) return;
+
+    this._infoTitle.text = info.title;
+    this._infoTagline.text = info.tagline;
+    this._infoEquations.text = info.equations;
+
+    // Stack vertically with spacing
+    this._infoTitle.y = 0;
+    this._infoTagline.y = 38;
+    this._infoEquations.y = 64;
+
+    if (Screen.isMobile) {
+      this._infoTitle.y = 0;
+      this._infoTagline.y = 30;
+      this._infoEquations.y = 52;
+    }
+  }
+
+  _layoutInfoOverlay() {
+    if (!this._infoScene) return;
+
+    if (Screen.isMobile) {
+      // Top center
+      this._infoScene.x = this.width / 2;
+      this._infoScene.y = 60;
+    } else {
+      // Bottom-left
+      this._infoScene.x = 28;
+      this._infoScene.y = this.height - 110;
+    }
+  }
+
+  _fadeInfoOverlay(attractorKey) {
+    if (!this._infoScene) return;
+
+    // Kill any in-progress fade
+    Tweenetik.killTarget(this._infoScene);
+
+    // Fade out, then swap content, then fade in
+    Tweenetik.to(
+      this._infoScene,
+      { _alpha: 0 },
+      0.3,
+      Easing.easeOutCubic,
+      {
+        onComplete: () => {
+          this._updateInfoContent(attractorKey);
+          Tweenetik.to(
+            this._infoScene,
+            { _alpha: 1 },
+            0.3,
+            Easing.easeInCubic
+          );
+        },
+      }
+    );
+  }
+
   // ─── Dynamic Parameter Sliders ─────────────────────────────────────
 
   _buildParamSliders(attractorKey) {
@@ -795,6 +967,9 @@ export class CaosPlayground extends Attractor3DDemo {
 
     // Rebuild per-attractor parameter sliders
     this._buildParamSliders(key);
+
+    // Fade the info overlay to the new attractor
+    this._fadeInfoOverlay(key);
 
     console.log(`Switched to ${preset.label}`);
   }
@@ -905,5 +1080,7 @@ export class CaosPlayground extends Attractor3DDemo {
     } else if (Screen.isMobile && this._panelFSM) {
       this._panelFSM.setState("panel-hidden");
     }
+
+    this._layoutInfoOverlay();
   }
 }
