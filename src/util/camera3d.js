@@ -338,6 +338,8 @@ export class Camera3D {
     // Create bound handlers so we can remove them later
     this._boundHandlers = {
       mousedown: (e) => {
+        // Only rotate on left-click (button 0)
+        if (e.button !== 0) return;
         // Skip camera drag if a UI element handled this pointer event
         if (this._game?._uiHandledInput) return;
         // Skip if pointer is over panel (dual-layer guard for demos with side panels)
