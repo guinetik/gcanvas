@@ -1,10 +1,17 @@
 export class Input {
+  // Track which games have been initialized to prevent duplicate listeners
+  static _initializedGames = new WeakSet();
+
   static init(game) {
     // Set defaults for last initialized game (backwards compatibility)
     Input.game = game;
     Input.x = 0;
     Input.y = 0;
     Input.down = false;
+
+    // Guard: only attach event listeners once per game instance
+    if (Input._initializedGames.has(game)) return;
+    Input._initializedGames.add(game);
 
     // Create bound handlers that know which game they belong to
     game.events.on("mousedown", (e) => Input._onDown(e, game));

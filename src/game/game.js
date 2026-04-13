@@ -58,6 +58,14 @@ export class Game {
     /** @internal Flag set by Pipeline when a UI element handles a pointer event. */
     this._uiHandledInput = false;
     /**
+     * Set synchronously on each wheel event (after Mouse updates position): true if the
+     * pointer is over any interactive UI (same hit-test as pointer dispatch). Games can
+     * skip scene zoom when this is true even when `_uiHandledInput` is false (no button press).
+     * @type {boolean}
+     * @internal
+     */
+    this._uiPointerOverInteractive = false;
+    /**
      * The pipeline is a collection of GameObjects that are updated and rendered each frame.
      * @type {Cursor}
      */
@@ -307,6 +315,19 @@ export class Game {
   }
 
   /**
+   * Resumes the game loop without re-initializing.
+   * Used when returning from a paused state (e.g. tab visibility change).
+   * Unlike start(), this does not call init() again.
+   */
+  resume() {
+    this.running = true;
+    this.lastTime = performance.now();
+    this._accumulator = 0;
+    requestAnimationFrame(this.loop);
+    this.logger.log("[Game] Resumed");
+  }
+
+  /**
    * Clears the pipeline, calls init() again, and restarts the game loop.
    * Useful for resetting the game state.
    */
@@ -474,7 +495,7 @@ export class Game {
     } else {
       if (this._isPaused) {
         this._isPaused = false;
-        this.start();
+        this.resume();
         this.logger.log("Resumed after tab visibility change");
       }
     }
