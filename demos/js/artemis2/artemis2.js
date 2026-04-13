@@ -542,8 +542,8 @@ class Artemis2Demo extends Game {
         if (zFilter(p.z)) {
           if (!drawing) { ctx.beginPath(); ctx.moveTo(p.x, p.y); drawing = true; }
           else ctx.lineTo(p.x, p.y);
-        } else if (drawing) {
-          ctx.stroke(); drawing = false;
+        } else {
+          if (drawing) { ctx.lineTo(p.x, p.y); ctx.stroke(); drawing = false; }
         }
       }
       if (drawing) ctx.stroke();
@@ -566,8 +566,8 @@ class Artemis2Demo extends Game {
         if (zFilter(p.z)) {
           if (!drawing) { ctx.beginPath(); ctx.moveTo(p.x, p.y); drawing = true; }
           else ctx.lineTo(p.x, p.y);
-        } else if (drawing) {
-          ctx.stroke(); drawing = false;
+        } else {
+          if (drawing) { ctx.lineTo(p.x, p.y); ctx.stroke(); drawing = false; }
         }
       }
       if (drawing) ctx.stroke();
