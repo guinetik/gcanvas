@@ -315,17 +315,15 @@ export class TweetFeed extends Scene {
           ctx.drawImage(slot.img, pad, imgY, imgW, slot.imgH);
           ctx.restore();
 
-          // Play button overlay for video/gif
+          // Play button overlay (center) for video/gif
           if (slot.videoUrl) {
             const cx = pad + imgW / 2;
             const cy = imgY + slot.imgH / 2;
             const btnR = Screen.responsive(14, 18, 22);
-            // Circle bg
             ctx.fillStyle = 'rgba(0,0,0,0.55)';
             ctx.beginPath();
             ctx.arc(cx, cy, btnR, 0, Math.PI * 2);
             ctx.fill();
-            // Triangle
             ctx.fillStyle = '#fff';
             ctx.beginPath();
             const triR = btnR * 0.45;
@@ -334,6 +332,33 @@ export class TweetFeed extends Scene {
             ctx.lineTo(cx - triR * 0.6, cy + triR * 0.85);
             ctx.closePath();
             ctx.fill();
+          }
+
+          // Expand icon (top-right corner) — photos only
+          if (slot.photoUrl) {
+            const iconS = Screen.responsive(7, 8, 10);
+            const iconM = 4;
+            const ix = pad + imgW - iconS - iconM;
+            const iy = imgY + iconM;
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.beginPath();
+            ctx.roundRect(ix - 3, iy - 3, iconS + 6, iconS + 6, 3);
+            ctx.fill();
+            // Draw expand arrows (↗ ↙)
+            ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(ix + iconS * 0.35, iy);
+            ctx.lineTo(ix + iconS, iy);
+            ctx.lineTo(ix + iconS, iy + iconS * 0.65);
+            ctx.moveTo(ix + iconS, iy);
+            ctx.lineTo(ix + iconS * 0.45, iy + iconS * 0.55);
+            ctx.moveTo(ix + iconS * 0.65, iy + iconS);
+            ctx.lineTo(ix, iy + iconS);
+            ctx.lineTo(ix, iy + iconS * 0.35);
+            ctx.moveTo(ix, iy + iconS);
+            ctx.lineTo(ix + iconS * 0.55, iy + iconS * 0.45);
+            ctx.stroke();
           }
         }
       }, { saveState: true });
@@ -378,7 +403,8 @@ export class TweetFeed extends Scene {
       currentY: 0,
       img: null,       // Image element (null until loaded)
       imgH: 0,         // Rendered image height (computed on load)
-      videoUrl: null,  // Set for VIDEO/GIF — opens on click
+      videoUrl: null,  // Set for VIDEO/GIF
+      photoUrl: null,  // Set for PHOTO — full image path
     };
 
     // Load first media item (photo, or thumbnail for video/gif)
@@ -397,6 +423,7 @@ export class TweetFeed extends Scene {
         img.src = path;
       }
       slot.videoUrl = TweetTimeline.videoPath(media);
+      if (media.type === 'PHOTO') slot.photoUrl = path;
     }
 
     return slot;
@@ -466,7 +493,7 @@ export class TweetFeed extends Scene {
     return `${month} ${day}, ${hh}:${mm} UTC`;
   }
 
-  /** Hit-test click against video thumbnails → open in new tab */
+  /** Hit-test click against media images → open in lightbox */
   _handleClick(e) {
     const rect = this.game.canvas.getBoundingClientRect();
     const cx = (e.clientX - rect.left) * (this.game.canvas.width / rect.width) - this.x;
@@ -477,7 +504,8 @@ export class TweetFeed extends Scene {
     const lh = FEED.lineHeight();
 
     for (const slot of this._slots) {
-      if (!slot.videoUrl || !slot.img || slot.imgH <= 0 || slot.opacity < 0.5) continue;
+      if (!slot.img || slot.imgH <= 0 || slot.opacity < 0.5) continue;
+      if (!slot.videoUrl && !slot.photoUrl) continue;
 
       const headerH = lh * 1.6;
       const bodyH = slot.lines.length * lh;
@@ -485,9 +513,29 @@ export class TweetFeed extends Scene {
       const imgW = w - pad * 2;
 
       if (cx >= pad && cx <= pad + imgW && cy >= imgY && cy <= imgY + slot.imgH) {
-        window.open(slot.videoUrl, '_blank');
+        this._openLightbox(slot);
         return;
       }
     }
+  }
+
+  /** Open media in GLightbox overlay */
+  _openLightbox(slot) {
+    const url = slot.videoUrl || slot.photoUrl;
+    if (typeof GLightbox === 'undefined') {
+      window.open(url, '_blank');
+      return;
+    }
+    const element = slot.videoUrl
+      ? { href: slot.videoUrl, type: 'video', source: 'local', width: 900 }
+      : { href: slot.photoUrl, type: 'image' };
+    const lb = GLightbox({
+      elements: [element],
+      autoplayVideos: true,
+      skin: 'clean',
+      openEffect: 'fade',
+      closeEffect: 'fade',
+    });
+    lb.open();
   }
 }
