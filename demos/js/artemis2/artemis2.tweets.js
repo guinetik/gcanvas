@@ -30,13 +30,13 @@ const FEED = {
 
   // Typography (Datatype font, matching HUD)
   font:         'Datatype, ui-monospace, monospace',
-  userFont:     () => `700 ${Screen.responsive(9, 10, 11)}px Datatype, ui-monospace, monospace`,
-  timeFont:     () => `500 ${Screen.responsive(8, 9, 9)}px Datatype, ui-monospace, monospace`,
-  bodyFont:     () => `400 ${Screen.responsive(10, 11, 12)}px Datatype, ui-monospace, monospace`,
+  userFont:     () => `700 ${Screen.responsive(11, 13, 14)}px Datatype, ui-monospace, monospace`,
+  timeFont:     () => `500 ${Screen.responsive(9, 10, 11)}px Datatype, ui-monospace, monospace`,
+  bodyFont:     () => `400 ${Screen.responsive(12, 14, 15)}px Datatype, ui-monospace, monospace`,
   userColor:    '#6ec6ff',
   timeColor:    'rgba(255,255,255,0.35)',
   bodyColor:    'rgba(255,255,255,0.85)',
-  lineHeight:   () => Screen.responsive(14, 16, 18),
+  lineHeight:   () => Screen.responsive(17, 20, 22),
 
   // Transition
   fadeDuration: 0.6,  // seconds (wall-clock, not sim time)
@@ -72,11 +72,13 @@ export class TweetTimeline {
           user:  `@${t.user.username}`,
           name:  t.user.name,
           time:  t.createdAt,
-          media: (t.media || []).map((m) => ({
-            type: m.type,
-            url:  m.url,
-            localFile: this._mediaFilename(t.id, m),
-          })),
+          media: (t.media || [])
+            .filter((m) => m.type === 'PHOTO' && m.filename)
+            .map((m) => ({
+              type: m.type,
+              url:  m.url,
+              filename: m.filename,
+            })),
         };
       })
       .filter((t) => t.missionDay >= 0 && t.missionDay <= 11) // mission window only
@@ -117,20 +119,9 @@ export class TweetTimeline {
     return { tweet: this.tweets[best], index: best, nextDay };
   }
 
-  /** Derive local media filename from tweet id + media entry */
-  _mediaFilename(tweetId, media) {
-    // Media files are named: {tweetId}_{mediaKey}.{ext}
-    // Extract mediaKey from the URL (last path segment before extension)
-    try {
-      const urlPath = new URL(media.url).pathname;
-      const base = urlPath.split("/").pop().split(".")[0]; // e.g. "HEga7kiWcAAzE34"
-      const ext = media.type === "GIF" ? "gif"
-                : media.type === "VIDEO" ? "mp4"
-                : "jpg";
-      return `${tweetId}_${base}.${ext}`;
-    } catch {
-      return null;
-    }
+  /** Get the local image path for a media entry */
+  static imagePath(media) {
+    return media.filename ? `${MEDIA_BASE}${media.filename}` : null;
   }
 }
 
@@ -151,6 +142,7 @@ export class TweetFeed extends Scene {
     super(game, { x: 0, y: 0, origin: 'top-left' });
     this._timeline = timeline;
     this._lastIndex = -1;
+    this._lastSimDay = -1;
 
     /**
      * Each slot: { tweet, lines, opacity, fadeDir, targetY, currentY }
@@ -163,21 +155,21 @@ export class TweetFeed extends Scene {
   sync(simDay) {
     if (!this._timeline.ready) return;
 
+    // Detect scrub or loop reset — time jumped backwards or skipped far ahead
+    const jumped = this._lastSimDay >= 0 &&
+      (simDay < this._lastSimDay - 0.01 || simDay > this._lastSimDay + 0.5);
+    this._lastSimDay = simDay;
+
+    if (jumped) {
+      this._reset(simDay);
+      return;
+    }
+
     const { tweet, index } = this._timeline.getAtDay(simDay);
     if (!tweet || index === this._lastIndex) return;
 
     // New tweet arrived — push it into the stack
     this._lastIndex = index;
-
-    const lines = this._wrapText(tweet.text, FEED.width() - FEED.padding() * 2);
-    const slot = {
-      tweet,
-      lines,
-      opacity: 0,
-      fadeDir: 1,    // fading in
-      targetY: 0,    // computed in _layoutSlots
-      currentY: 0,
-    };
 
     if (this._slots.length >= MAX_VISIBLE) {
       // Mark the oldest for fade-out; it will be removed when opacity hits 0
@@ -185,7 +177,20 @@ export class TweetFeed extends Scene {
       this._slots[0].removing = true;
     }
 
-    this._slots.push(slot);
+    this._slots.push(this._makeSlot(tweet, 0, 1));
+    this._layoutSlots();
+  }
+
+  /** Clear feed and rebuild with the tweet at the given time */
+  _reset(simDay) {
+    this._slots = [];
+    const { tweet, index } = this._timeline.getAtDay(simDay);
+    this._lastIndex = index;
+
+    if (!tweet) return;
+
+    // Show the current tweet immediately (no fade-in)
+    this._slots.push(this._makeSlot(tweet, 1, 0));
     this._layoutSlots();
   }
 
@@ -232,8 +237,7 @@ export class TweetFeed extends Scene {
 
       const t = slot.tweet;
       const headerH = lh * 1.6;
-      const bodyH = slot.lines.length * lh;
-      const h = pad + headerH + bodyH + pad;
+      const h = this._slotHeight(slot);
       const sy = Math.round(slot.currentY);
 
       Painter.useCtx((ctx) => {
@@ -268,6 +272,19 @@ export class TweetFeed extends Scene {
           ctx.fillText(line, pad, y);
           y += lh;
         }
+
+        // Image (if loaded)
+        if (slot.img && slot.imgH > 0) {
+          const imgW = w - pad * 2;
+          const imgY = y + pad * 0.25;
+          // Draw with rounded corners via clip
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(pad, imgY, imgW, slot.imgH, 6);
+          ctx.clip();
+          ctx.drawImage(slot.img, pad, imgY, imgW, slot.imgH);
+          ctx.restore();
+        }
       }, { saveState: true });
     }
 
@@ -297,10 +314,53 @@ export class TweetFeed extends Scene {
 
   // ── Internal ──
 
-  /** Recompute target Y positions for all slots (stack top-to-bottom) */
-  _layoutSlots() {
+  /** Create a slot object and kick off image loading */
+  _makeSlot(tweet, opacity, fadeDir) {
+    const lines = this._wrapText(tweet.text, FEED.width() - FEED.padding() * 2);
+    const slot = {
+      tweet,
+      lines,
+      opacity,
+      fadeDir,
+      targetY: 0,
+      currentY: 0,
+      img: null,       // Image element (null until loaded)
+      imgH: 0,         // Rendered image height (computed on load)
+    };
+
+    // Load first PHOTO if available
+    const photo = tweet.media[0];
+    if (photo) {
+      const path = TweetTimeline.imagePath(photo);
+      if (path) {
+        const img = new Image();
+        img.onload = () => {
+          slot.img = img;
+          // Scale to card width minus padding
+          const maxW = FEED.width() - FEED.padding() * 2;
+          const aspect = img.naturalHeight / img.naturalWidth;
+          slot.imgH = Math.min(maxW * aspect, Screen.responsive(100, 130, 160));
+          this._layoutSlots(); // re-layout now that image height is known
+        };
+        img.src = path;
+      }
+    }
+
+    return slot;
+  }
+
+  /** Compute the rendered height of a slot */
+  _slotHeight(slot) {
     const pad = FEED.padding();
     const lh = FEED.lineHeight();
+    const headerH = lh * 1.6;
+    const bodyH = slot.lines.length * lh;
+    const imgH = slot.imgH > 0 ? slot.imgH + pad * 0.5 : 0;
+    return pad + headerH + bodyH + imgH + pad;
+  }
+
+  /** Recompute target Y positions for all slots (stack top-to-bottom) */
+  _layoutSlots() {
     const gap = () => Screen.responsive(6, 8, 10);
 
     let y = 0;
@@ -310,10 +370,7 @@ export class TweetFeed extends Scene {
       if (slot.opacity === 0 && slot.fadeDir === 1) {
         slot.currentY = y + 12;
       }
-      const headerH = lh * 1.6;
-      const bodyH = slot.lines.length * lh;
-      const h = pad + headerH + bodyH + pad;
-      y += h + gap();
+      y += this._slotHeight(slot) + gap();
     }
   }
 
