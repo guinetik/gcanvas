@@ -332,6 +332,12 @@ function interpolateArray(data, day) {
 
 /** Get Orion spacecraft position at mission day → {x,y,z} in km */
 export function getOrionPos(day) {
+  // Launch phase: lerp from Earth origin to first data point
+  if (day < TRAJ_START_DAY) {
+    const t = Math.max(0, day) / TRAJ_START_DAY; // 0..1
+    const first = h2c(NASA_TRAJ[0]);
+    return { x: first.x * t, y: first.y * t, z: first.z * t };
+  }
   return interpolateArray(NASA_TRAJ, day);
 }
 
@@ -373,7 +379,14 @@ export function buildTrajectoryCurve() {
   const pts = [];
   const SUBDIV = 10;
 
-  // Pure JPL data — no synthetic prefix
+  // Launch phase: Earth origin → first data point (10 subdivisions)
+  const first = h2c(NASA_TRAJ[0]);
+  for (let s = 0; s < SUBDIV; s++) {
+    const t = s / SUBDIV;
+    pts.push({ x: first.x * t, y: first.y * t, z: first.z * t });
+  }
+
+  // JPL data segments
   for (let i = 0; i < TRAJ_N - 1; i++) {
     for (let s = 0; s < SUBDIV; s++) {
       const t = s / SUBDIV;
@@ -394,8 +407,17 @@ export function buildTrajectoryCurve() {
  * @returns {number} Integer index (0..totalPts-1)
  */
 export function getTrajProgress(day, totalPts) {
+  const LAUNCH_PTS = 10; // synthetic launch segment points
+
+  if (day < TRAJ_START_DAY) {
+    // Launch phase: 0..LAUNCH_PTS over 0..TRAJ_START_DAY
+    const t = Math.max(0, day) / TRAJ_START_DAY;
+    return Math.min(LAUNCH_PTS - 1, Math.max(0, Math.ceil(t * LAUNCH_PTS)));
+  }
+
+  // JPL data: offset by LAUNCH_PTS
   const dataIdx = (day - TRAJ_START_DAY) / TRAJ_STEP_DAYS;
-  const trajIdx = Math.max(0, dataIdx * 10);
+  const trajIdx = LAUNCH_PTS + dataIdx * 10;
   return Math.min(totalPts - 1, Math.max(0, Math.ceil(trajIdx)));
 }
 

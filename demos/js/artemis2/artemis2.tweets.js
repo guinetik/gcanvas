@@ -40,6 +40,7 @@ const FEED = {
 
   // Transition
   fadeDuration: 0.6,  // seconds (wall-clock, not sim time)
+  staleAfter:   0.5,  // mission days — fade out card if sim is this far past the next tweet
 };
 
 // ── TweetTimeline (data model) ──────────────────────────────────
@@ -155,14 +156,23 @@ export class TweetFeed extends Scene {
   sync(simDay) {
     if (!this._timeline.ready) return;
 
-    // Detect scrub or loop reset — time jumped backwards or skipped far ahead
-    const jumped = this._lastSimDay >= 0 &&
+    // First sync or scrub/loop reset — backfill the feed
+    const isFirst = this._lastSimDay < 0;
+    const jumped = !isFirst &&
       (simDay < this._lastSimDay - 0.01 || simDay > this._lastSimDay + 0.5);
     this._lastSimDay = simDay;
 
-    if (jumped) {
+    if (isFirst || jumped) {
       this._reset(simDay);
       return;
+    }
+
+    // Fade out stale cards — if sim time moved far past a card's tweet
+    for (const slot of this._slots) {
+      if (!slot.removing && simDay - slot.missionDay > FEED.staleAfter) {
+        slot.fadeDir = -1;
+        slot.removing = true;
+      }
     }
 
     const { tweet, index } = this._timeline.getAtDay(simDay);
@@ -181,16 +191,22 @@ export class TweetFeed extends Scene {
     this._layoutSlots();
   }
 
-  /** Clear feed and rebuild with the tweet at the given time */
+  /** Clear feed and backfill up to MAX_VISIBLE tweets at the given time */
   _reset(simDay) {
     this._slots = [];
-    const { tweet, index } = this._timeline.getAtDay(simDay);
+    const { index } = this._timeline.getAtDay(simDay);
     this._lastIndex = index;
 
-    if (!tweet) return;
+    if (index < 0) return;
 
-    // Show the current tweet immediately (no fade-in)
-    this._slots.push(this._makeSlot(tweet, 1, 0));
+    // Backfill: grab up to MAX_VISIBLE recent tweets that aren't stale
+    const start = Math.max(0, index - MAX_VISIBLE + 1);
+    for (let i = start; i <= index; i++) {
+      const t = this._timeline.tweets[i];
+      if (simDay - t.missionDay <= FEED.staleAfter) {
+        this._slots.push(this._makeSlot(t, 1, 0));
+      }
+    }
     this._layoutSlots();
   }
 
@@ -320,6 +336,7 @@ export class TweetFeed extends Scene {
     const slot = {
       tweet,
       lines,
+      missionDay: tweet.missionDay,
       opacity,
       fadeDir,
       targetY: 0,

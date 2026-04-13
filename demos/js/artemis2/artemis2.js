@@ -27,7 +27,6 @@ import {
   buildTrajectoryCurve,
   getTrajProgress,
   dist3d,
-  TRAJ_START_DAY,
   TLI_DAY,
   MISSION_DAYS,
   EARTH_RADIUS_KM,
@@ -146,7 +145,7 @@ class Artemis2Demo extends Game {
     Screen.init(this);
 
     // Simulation state
-    this._simDay  = TRAJ_START_DAY;
+    this._simDay  = 0;  // Start at launch so early tweets are visible
     this._playing = true;
     this._simSpeed = CONFIG.time.defaultSpeed;
     this._cameraMode = CAM.OVERVIEW;
@@ -357,7 +356,7 @@ class Artemis2Demo extends Game {
     if (this._playing) {
       this._simDay += (dt * this._simSpeed) / 86400;
       if (this._simDay >= MISSION_DAYS) {
-        this._simDay = TRAJ_START_DAY;
+        this._simDay = 0;
       }
     }
 
