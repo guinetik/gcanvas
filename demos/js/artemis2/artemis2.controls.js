@@ -16,7 +16,7 @@ import {
   HorizontalLayout,
   Painter,
   Screen,
-} from "../../src/index.js";
+} from "../../../src/index.js";
 import { formatElapsed, TLI_DAY, MISSION_DAYS, PHASE_LABELS } from "./artemis2.data.js";
 
 const CTRL = {

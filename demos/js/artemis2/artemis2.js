@@ -16,7 +16,7 @@ import {
   Sphere3D,
   VerticalLayout,
   ToggleButton,
-} from "../../src/index.js";
+} from "../../../src/index.js";
 
 import {
   getOrionPos,
@@ -36,6 +36,7 @@ import {
 
 import { Artemis2HUD } from "./artemis2.hud.js";
 import { Artemis2Controls } from "./artemis2.controls.js";
+import { TweetTimeline, TweetFeed } from "./artemis2.tweets.js";
 
 const TWO_PI = Math.PI * 2;
 
@@ -232,6 +233,13 @@ class Artemis2Demo extends Game {
     // UI: Camera mode buttons (top-right)
     this._buildCameraButtons();
 
+    // UI: Tweet feed (center-left)
+    this._tweetTimeline = new TweetTimeline();
+    this._tweetTimeline.load("./artemis/all_tweets.json");
+    this._tweetFeed = new TweetFeed(this, this._tweetTimeline);
+    this._tweetFeed.reposition(this.width, this.height);
+    this.pipeline.add(this._tweetFeed);
+
     // FPS counter
     this.pipeline.add(new FPSCounter(this));
 
@@ -241,6 +249,7 @@ class Artemis2Demo extends Game {
         this._stars = this._generateStars(this._starCount);
         this._positionCameraButtons();
         this._controls.reposition(this.width, this.height);
+        this._tweetFeed.reposition(this.width, this.height);
       });
     }
   }
@@ -369,6 +378,9 @@ class Artemis2Demo extends Game {
 
     // Update controls
     this._controls.setCurrentTime(this._simDay);
+
+    // Update tweet feed
+    this._tweetFeed.sync(this._simDay);
 
     // Update focus target based on camera mode
     switch (this._cameraMode) {

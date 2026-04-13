@@ -8,7 +8,7 @@
  * All drawn via Painter — pure overlay, not a pipeline GameObject.
  */
 
-import { Painter, Screen } from "../../src/index.js";
+import { Painter, Screen } from "../../../src/index.js";
 import { formatElapsed } from "./artemis2.data.js";
 
 const FONT = 'Datatype, ui-monospace, monospace';
