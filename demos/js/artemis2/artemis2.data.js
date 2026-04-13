@@ -45,6 +45,43 @@ export const PHASE_LABELS = [
   { startDay: 9.5,  endDay: 10,   label: 'Entry' },
 ];
 
+// ── Synthetic launch phase (parking orbits + TLI coast) ─────────
+// 1.5 LEO orbits at 400 km altitude (R=6771 km, period≈92 min)
+// in the same orbital plane as JPL data (inc ≈ 28.3°, EME2000).
+// Followed by TLI coast from LEO to first JPL point.
+// 101 points: [0] = Earth origin, [1..91] = 1.5 parking orbits,
+// [92..100] = TLI coast to first JPL position.
+const LAUNCH_TRAJ = [
+[0,0,0],
+[5836,3016,1642],[5445,3537,1921],[4994,4019,2180],[4489,4457,2415],[3935,4846,2623],
+[3337,5182,2803],[2703,5461,2952],[2039,5681,3069],[1353,5838,3152],[652,5931,3200],
+[-56,5960,3213],[-763,5923,3192],[-1462,5821,3135],[-2145,5655,3044],[-2805,5427,2919],
+[-3434,5140,2763],[-4025,4797,2576],[-4572,4401,2361],[-5069,3957,2120],[-5510,3469,1856],
+[-5892,2944,1572],[-6208,2386,1270],[-6457,1802,955],[-6634,1198,629],[-6739,582,296],
+[-6771,-42,-40],[-6728,-664,-376],[-6611,-1280,-708],[-6422,-1881,-1031],[-6163,-2462,-1344],
+[-5836,-3016,-1642],[-5445,-3537,-1921],[-4994,-4019,-2180],[-4489,-4457,-2415],[-3935,-4846,-2623],
+[-3337,-5182,-2803],[-2703,-5461,-2952],[-2039,-5681,-3069],[-1353,-5838,-3152],[-652,-5931,-3200],
+[56,-5960,-3213],[763,-5923,-3192],[1462,-5821,-3135],[2145,-5655,-3044],[2805,-5427,-2919],
+[3434,-5140,-2763],[4025,-4797,-2576],[4572,-4401,-2361],[5069,-3957,-2120],[5510,-3469,-1856],
+[5892,-2944,-1572],[6208,-2386,-1270],[6457,-1802,-955],[6634,-1198,-629],[6739,-582,-296],
+[6771,42,40],[6728,664,376],[6611,1280,708],[6422,1881,1031],[6163,2462,1344],
+[5836,3016,1642],[5445,3537,1921],[4994,4019,2180],[4489,4457,2415],[3935,4846,2623],
+[3337,5182,2803],[2703,5461,2952],[2039,5681,3069],[1353,5838,3152],[652,5931,3200],
+[-56,5960,3213],[-763,5923,3192],[-1462,5821,3135],[-2145,5655,3044],[-2805,5427,2919],
+[-3434,5140,2763],[-4025,4797,2576],[-4572,4401,2361],[-5069,3957,2120],[-5510,3469,1856],
+[-5892,2944,1572],[-6208,2386,1270],[-6457,1802,955],[-6634,1198,629],[-6739,582,296],
+[-6771,-42,-40],[-6728,-664,-376],[-6611,-1280,-708],[-6422,-1881,-1031],[-6163,-2462,-1344],
+[-5836,-3016,-1642],
+[-7868,-3949,-2118],[-10138,-5119,-2738],[-12694,-6488,-3493],
+[-15507,-7999,-4367],[-18497,-9580,-5337],[-21520,-11138,-6256],
+[-22978,-11927,-6577],[-23869,-12345,-6764],[-24603,-12929,-7037],
+];
+const LAUNCH_N = LAUNCH_TRAJ.length; // 101
+
+// Timing: launch phase covers day 0 → TRAJ_START_DAY
+// Ascent (1 pt), parking orbits (90 pts), TLI coast (9 pts), join point (1 pt)
+const LAUNCH_STEP_DAYS = TRAJ_START_DAY / (LAUNCH_N - 1);
+
 // ── Orion spacecraft positions (214 points) ──────────────────────
 // JPL Horizons, spacecraft ID -1024, EME2000, 1h steps
 // Apr 2 02:00 UTC → Apr 10 23:00 UTC
@@ -332,11 +369,17 @@ function interpolateArray(data, day) {
 
 /** Get Orion spacecraft position at mission day → {x,y,z} in km */
 export function getOrionPos(day) {
-  // Launch phase: lerp from Earth origin to first data point
+  // Launch phase: interpolate through synthetic parking orbit + TLI coast
   if (day < TRAJ_START_DAY) {
-    const t = Math.max(0, day) / TRAJ_START_DAY; // 0..1
-    const first = h2c(NASA_TRAJ[0]);
-    return { x: first.x * t, y: first.y * t, z: first.z * t };
+    const d = Math.max(0, day);
+    const fIdx = d / LAUNCH_STEP_DAYS;
+    const i = Math.floor(fIdx);
+    const t = fIdx - i;
+    const i0 = Math.max(0, i - 1);
+    const i1 = Math.min(LAUNCH_N - 1, i);
+    const i2 = Math.min(LAUNCH_N - 1, i + 1);
+    const i3 = Math.min(LAUNCH_N - 1, i + 2);
+    return catmullRom(h2c(LAUNCH_TRAJ[i0]), h2c(LAUNCH_TRAJ[i1]), h2c(LAUNCH_TRAJ[i2]), h2c(LAUNCH_TRAJ[i3]), t);
   }
   return interpolateArray(NASA_TRAJ, day);
 }
@@ -379,11 +422,14 @@ export function buildTrajectoryCurve() {
   const pts = [];
   const SUBDIV = 10;
 
-  // Launch phase: Earth origin → first data point (10 subdivisions)
-  const first = h2c(NASA_TRAJ[0]);
-  for (let s = 0; s < SUBDIV; s++) {
-    const t = s / SUBDIV;
-    pts.push({ x: first.x * t, y: first.y * t, z: first.z * t });
+  // Launch phase: parking orbits + TLI coast (Catmull-Rom through LAUNCH_TRAJ)
+  for (let i = 0; i < LAUNCH_N - 1; i++) {
+    for (let s = 0; s < SUBDIV; s++) {
+      const t = s / SUBDIV;
+      const i0 = Math.max(0, i - 1);
+      const i3 = Math.min(LAUNCH_N - 1, i + 2);
+      pts.push(catmullRom(h2c(LAUNCH_TRAJ[i0]), h2c(LAUNCH_TRAJ[i]), h2c(LAUNCH_TRAJ[i + 1]), h2c(LAUNCH_TRAJ[i3]), t));
+    }
   }
 
   // JPL data segments
@@ -407,17 +453,16 @@ export function buildTrajectoryCurve() {
  * @returns {number} Integer index (0..totalPts-1)
  */
 export function getTrajProgress(day, totalPts) {
-  const LAUNCH_PTS = 10; // synthetic launch segment points
+  const LAUNCH_CURVE_PTS = (LAUNCH_N - 1) * 10; // subdivided launch phase points
 
   if (day < TRAJ_START_DAY) {
-    // Launch phase: 0..LAUNCH_PTS over 0..TRAJ_START_DAY
     const t = Math.max(0, day) / TRAJ_START_DAY;
-    return Math.min(LAUNCH_PTS - 1, Math.max(0, Math.ceil(t * LAUNCH_PTS)));
+    return Math.min(LAUNCH_CURVE_PTS - 1, Math.max(0, Math.ceil(t * LAUNCH_CURVE_PTS)));
   }
 
-  // JPL data: offset by LAUNCH_PTS
+  // JPL data: offset by launch curve points
   const dataIdx = (day - TRAJ_START_DAY) / TRAJ_STEP_DAYS;
-  const trajIdx = LAUNCH_PTS + dataIdx * 10;
+  const trajIdx = LAUNCH_CURVE_PTS + dataIdx * 10;
   return Math.min(totalPts - 1, Math.max(0, Math.ceil(trajIdx)));
 }
 

@@ -17,13 +17,13 @@ import {
   VerticalLayout,
   ToggleButton,
 } from "../../../src/index.js";
+import { orbitPathPoints } from "../../../src/math/kepler.js";
 
 import {
   getOrionPos,
   getMoonPos,
   getOrionVelocity,
   getPhase,
-  getMoonOrbitPoints,
   buildTrajectoryCurve,
   getTrajProgress,
   dist3d,
@@ -65,11 +65,11 @@ const CONFIG = {
   earth: {
     color:              '#1a6faf',
     glowColor:          'rgba(80,160,255,0.35)',
-    glowRadius:         36,
-    radius:             20,
-    atmosphereOffset:   1.5,
+    glowRadius:         14,
+    radius:             8,       // true scale: 6371 km / 800 scale ≈ 8
+    atmosphereOffset:   0.6,
     atmosphereColor:    'rgba(100,180,255,0.4)',
-    atmosphereWidth:    1.5,
+    atmosphereWidth:    1,
     labelColor:         'rgba(68,153,255,0.7)',
   },
 
@@ -200,7 +200,16 @@ class Artemis2Demo extends Game {
     });
 
     // Pre-build data
-    this._moonOrbitPoints = getMoonOrbitPoints();
+    // Generate a clean circular ring for the moon orbit display
+    // Orbital plane normal: [-0.033, -0.474, 0.880], radius ≈ 385,000 km
+    // Moon orbit ellipse from Keplerian elements (derived from NASA_MOON data)
+    this._moonOrbitRing = orbitPathPoints({
+      semiMajorAxis:             400600,
+      eccentricity:              0.014283,
+      inclination:               0.493995,
+      longitudeOfAscendingNode: -0.070520,
+      argumentOfPeriapsis:       2.869024,
+    }, 120);
     this._trajCurve = buildTrajectoryCurve();
 
     // Starfield
@@ -422,9 +431,14 @@ class Artemis2Demo extends Game {
     this._drawStarfield();
     this._drawMoonOrbit();
     this._drawEarthMoonLine();
-    this._drawTrajectoryGhost();
-    this._drawTrajectoryTraveled();
+
+    // Z-sorted trajectory: behind Earth → Earth → in front of Earth
+    const earthZ = this._project(0, 0, 0).z;
+    this._drawTrajectoryGhost((z) => z >= earthZ);
+    this._drawTrajectoryTraveled((z) => z >= earthZ);
     this._drawBodies();
+    this._drawTrajectoryGhost((z) => z < earthZ);
+    this._drawTrajectoryTraveled((z) => z < earthZ);
 
     // Pipeline (controls, camera buttons, FPS)
     this.pipeline.render();
@@ -481,12 +495,13 @@ class Artemis2Demo extends Game {
 
   _drawMoonOrbit() {
     const O = CONFIG.moonOrbit;
+    const pts = this._moonOrbitRing;
     Painter.useCtx((ctx) => {
       ctx.strokeStyle = O.color;
       ctx.lineWidth = O.lineWidth;
       ctx.beginPath();
-      for (let i = 0; i < this._moonOrbitPoints.length; i++) {
-        const pt = this._moonOrbitPoints[i];
+      for (let i = 0; i <= pts.length; i++) {
+        const pt = pts[i % pts.length];
         const p = this._project(pt.x, pt.y, pt.z);
         if (i === 0) ctx.moveTo(p.x, p.y);
         else         ctx.lineTo(p.x, p.y);
@@ -512,7 +527,7 @@ class Artemis2Demo extends Game {
     }, { saveState: true });
   }
 
-  _drawTrajectoryGhost() {
+  _drawTrajectoryGhost(zFilter) {
     const T = CONFIG.trajectory;
     const pts = this._trajCurve;
     if (pts.length < 2) return;
@@ -521,24 +536,21 @@ class Artemis2Demo extends Game {
       ctx.strokeStyle = T.ghostColor;
       ctx.lineWidth = T.ghostWidth;
       ctx.lineJoin = 'round';
-      ctx.beginPath();
-      let first = true;
+      let drawing = false;
       for (let i = 0; i < pts.length; i += T.step) {
         const p = this._project(pts[i].x, pts[i].y, pts[i].z);
-        if (first) { ctx.moveTo(p.x, p.y); first = false; }
-        else         ctx.lineTo(p.x, p.y);
+        if (zFilter(p.z)) {
+          if (!drawing) { ctx.beginPath(); ctx.moveTo(p.x, p.y); drawing = true; }
+          else ctx.lineTo(p.x, p.y);
+        } else if (drawing) {
+          ctx.stroke(); drawing = false;
+        }
       }
-      // Always include last point
-      if ((pts.length - 1) % T.step !== 0) {
-        const last = pts[pts.length - 1];
-        const p = this._project(last.x, last.y, last.z);
-        ctx.lineTo(p.x, p.y);
-      }
-      ctx.stroke();
+      if (drawing) ctx.stroke();
     }, { saveState: true });
   }
 
-  _drawTrajectoryTraveled() {
+  _drawTrajectoryTraveled(zFilter) {
     const T = CONFIG.trajectory;
     const pts = this._trajCurve;
     const upTo = getTrajProgress(this._simDay, pts.length);
@@ -548,20 +560,17 @@ class Artemis2Demo extends Game {
       ctx.strokeStyle = T.traveledColor;
       ctx.lineWidth = T.traveledWidth;
       ctx.lineJoin = 'round';
-      ctx.beginPath();
-      let first = true;
+      let drawing = false;
       for (let i = 0; i <= upTo; i += T.step) {
         const p = this._project(pts[i].x, pts[i].y, pts[i].z);
-        if (first) { ctx.moveTo(p.x, p.y); first = false; }
-        else         ctx.lineTo(p.x, p.y);
+        if (zFilter(p.z)) {
+          if (!drawing) { ctx.beginPath(); ctx.moveTo(p.x, p.y); drawing = true; }
+          else ctx.lineTo(p.x, p.y);
+        } else if (drawing) {
+          ctx.stroke(); drawing = false;
+        }
       }
-      // Always draw to exact tip
-      if (upTo % T.step !== 0) {
-        const tip = pts[upTo];
-        const p = this._project(tip.x, tip.y, tip.z);
-        ctx.lineTo(p.x, p.y);
-      }
-      ctx.stroke();
+      if (drawing) ctx.stroke();
     }, { saveState: true });
   }
 
