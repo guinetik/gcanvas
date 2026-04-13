@@ -99,12 +99,12 @@ const CONFIG = {
   },
 
   moonOrbit: {
-    color:     'rgba(255,255,255,0.2)',
+    color:     'rgba(255,255,255,1)',
     lineWidth: 1,
   },
 
   connection: {
-    color:      'rgba(255,255,255,0.1)',
+    color:      'rgba(255,255,255,1)',
     lineWidth:  1,
     dashOn:     8,
     dashOff:    6,
