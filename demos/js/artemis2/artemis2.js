@@ -243,7 +243,7 @@ class Artemis2Demo extends Game {
 
     // UI: Tweet feed (center-left)
     this._tweetTimeline = new TweetTimeline();
-    this._tweetTimeline.load("./artemis/all_tweets.json");
+    this._tweetTimeline.load("https://pub-e41103fb8bb348f9a45834b39105b1f7.r2.dev/all_tweets.json");
     this._tweetFeed = new TweetFeed(this, this._tweetTimeline);
     this._tweetFeed.reposition(this.width, this.height);
     this.pipeline.add(this._tweetFeed);

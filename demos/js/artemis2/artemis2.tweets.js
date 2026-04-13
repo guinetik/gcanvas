@@ -11,7 +11,7 @@
 import { Scene, Painter, Screen } from "../../../src/index.js";
 
 // Swap this to your R2 URL when ready
-const MEDIA_BASE = "./artemis/media/";
+const MEDIA_BASE = "https://pub-e41103fb8bb348f9a45834b39105b1f7.r2.dev/media/";
 
 // Launch: Apr 1 2026 22:35 UTC (same reference as artemis2.data.js)
 const LAUNCH_MS = Date.UTC(2026, 3, 1, 22, 35, 0); // months are 0-indexed
@@ -59,7 +59,7 @@ export class TweetTimeline {
    * @param {string} url — path to all_tweets.json
    * @returns {Promise<void>}
    */
-  async load(url = "./artemis/all_tweets.json") {
+  async load(url = "https://pub-e41103fb8bb348f9a45834b39105b1f7.r2.dev/all_tweets.json") {
     const res = await fetch(url);
     const raw = await res.json();
 
