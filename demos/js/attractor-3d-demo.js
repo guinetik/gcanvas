@@ -37,6 +37,7 @@ import {
 } from "../../src/index.js";
 import { Camera3D } from "../../src/util/camera3d.js";
 import { WebGLAttractorPipeline } from "../../src/webgl/webgl-attractor-pipeline.js";
+import { WebGPUAttractorPipeline } from "../../src/webgpu/webgpu-attractor-pipeline.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEFAULT CONFIGURATION
@@ -548,42 +549,73 @@ class Attractor3DDemo extends Game {
       this.particles.push(this.createParticle());
     }
 
-    // ── WebGL attractor pipeline ─────────────────────────────────────────
+    // ── Attractor rendering pipeline (WebGPU → WebGL → Canvas 2D) ──────
     const maxSegments = cfg.maxSegments || cfg.particles.count * cfg.particles.trailLength;
-    this.attractorPipeline = new WebGLAttractorPipeline(
-      this.width,
-      this.height,
-      maxSegments,
-      {
-        bloom: cfg.bloom,
-        background: {
-          ...cfg.background,
-          baseColor: cfg.background.baseColor || this._computeBackgroundColor(),
-        },
-        visual: cfg.visual,
-        blink: cfg.blink,
-        energyFlow: cfg.energyFlow,
-        depthFog: cfg.depthFog,
-        iridescence: cfg.iridescence,
-        chromaticAberration: cfg.chromaticAberration,
-        colorGrading: cfg.colorGrading,
-        glow: cfg.glow,
-      }
-    );
+    const pipelineOptions = {
+      bloom: cfg.bloom,
+      background: {
+        ...cfg.background,
+        baseColor: cfg.background.baseColor || this._computeBackgroundColor(),
+      },
+      visual: cfg.visual,
+      blink: cfg.blink,
+      energyFlow: cfg.energyFlow,
+      depthFog: cfg.depthFog,
+      iridescence: cfg.iridescence,
+      chromaticAberration: cfg.chromaticAberration,
+      colorGrading: cfg.colorGrading,
+      glow: cfg.glow,
+    };
 
     this.segments = [];
     this.fadeAlpha = 1;
 
-    const pipelineOk = this.attractorPipeline.init();
-    if (!pipelineOk) {
+    this._initPipeline(maxSegments, pipelineOptions);
+
+    this.time = 0;
+  }
+
+  /**
+   * Initialize the GPU rendering pipeline. Tries WebGPU first (async),
+   * falls back to WebGL, then Canvas 2D if both fail.
+   * Starts with WebGL immediately so rendering works synchronously,
+   * then upgrades to WebGPU in the background if available.
+   * @param {number} maxSegments
+   * @param {Object} pipelineOptions
+   * @private
+   */
+  _initPipeline(maxSegments, pipelineOptions) {
+    // Start with WebGL so rendering works immediately
+    this.attractorPipeline = new WebGLAttractorPipeline(
+      this.width, this.height, maxSegments, pipelineOptions
+    );
+    const webglOk = this.attractorPipeline.init();
+    if (!webglOk) {
       console.warn("WebGL not available, falling back to Canvas 2D");
       this.useWebGL = false;
     } else {
       this.useWebGL = true;
-      console.log(`WebGL attractor pipeline enabled, ${maxSegments} max segments`);
     }
 
-    this.time = 0;
+    // Attempt async upgrade to WebGPU
+    if (navigator.gpu) {
+      const gpu = new WebGPUAttractorPipeline(
+        this.width, this.height, maxSegments, pipelineOptions
+      );
+      gpu.init().then((ok) => {
+        if (ok) {
+          this.attractorPipeline?.destroy();
+          this.attractorPipeline = gpu;
+          this.useWebGL = true;
+          console.log(`WebGPU attractor pipeline enabled, ${maxSegments} max segments`);
+        } else {
+          gpu.destroy?.();
+          console.log(`WebGL attractor pipeline enabled, ${maxSegments} max segments`);
+        }
+      });
+    } else if (webglOk) {
+      console.log(`WebGL attractor pipeline enabled, ${maxSegments} max segments`);
+    }
   }
 
   /**
