@@ -22,9 +22,16 @@ import {
   AccordionGroup,
   Painter,
   Screen,
+  Text,
+  Scene,
+  Tooltip,
+  Tweenetik,
+  Easing,
 } from "/gcanvas.es.min.js";
 import { StateMachine } from "/gcanvas.es.min.js";
 import { Attractor3DDemo, DEFAULTS, deepMerge } from "./attractor-3d-demo.js";
+import { WebGPUAttractorPipeline } from "/gcanvas.es.min.js";
+import { WebGLAttractorPipeline } from "/gcanvas.es.min.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Full nested Attractor3DDemo configs per attractor
@@ -40,7 +47,7 @@ const ATTRACTOR_PRESETS = {
     center: { x: 0, y: 2, z: 27 },
     camera: { perspective: 800, rotationX: -1.8, rotationY: -3 },
     visual: { minHue: 30, maxHue: 200, maxSpeed: 50, saturation: 85, lightness: 55, maxAlpha: 0.85, hueShiftSpeed: 15 },
-    glow: { enabled: true, radius: 25, intensity: 0.25 },
+    glow: { enabled: true, radius: 50, intensity: 0.6 },
     blink: { chance: 0.015, intensityBoost: 1.4 },
     mouseControl: { horizontalAxis: "rotationZ" },
     zoom: { min: 0.2, max: 2.5 },
@@ -198,59 +205,150 @@ const ATTRACTOR_PRESETS = {
 
 const ATTRACTOR_PARAMS = {
   lorenz: [
-    { key: "sigma", label: "\u03C3 (sigma)",  default: 10,       min: 0,   max: 30,  step: 0.1  },
-    { key: "rho",   label: "\u03C1 (rho)",    default: 28,       min: 0,   max: 60,  step: 0.1  },
-    { key: "beta",  label: "\u03B2 (beta)",   default: 8 / 3,    min: 0,   max: 10,  step: 0.01 },
+    { key: "sigma", label: "\u03C3 (sigma)",  default: 10,       min: 0,   max: 30,  step: 0.1,
+      tip: "Prandtl number — controls how fast heat diffuses vs. fluid viscosity. Higher values widen the butterfly wings." },
+    { key: "rho",   label: "\u03C1 (rho)",    default: 28,       min: 0,   max: 60,  step: 0.1,
+      tip: "Rayleigh number — drives convection intensity. Below ~24.7 the system stabilizes; above it, chaos emerges." },
+    { key: "beta",  label: "\u03B2 (beta)",   default: 8 / 3,    min: 0,   max: 10,  step: 0.01,
+      tip: "Geometric factor of the convection cell. Affects how quickly trajectories spiral inward on each lobe." },
   ],
   rossler: [
-    { key: "a", label: "a", default: 0.2,  min: 0, max: 1,  step: 0.01 },
-    { key: "b", label: "b", default: 0.2,  min: 0, max: 1,  step: 0.01 },
-    { key: "c", label: "c", default: 5.7,  min: 0, max: 20, step: 0.1  },
+    { key: "a", label: "a", default: 0.2,  min: 0, max: 1,  step: 0.01,
+      tip: "Controls the speed of rotation in the x-y plane. Increasing it stretches the spiral outward." },
+    { key: "b", label: "b", default: 0.2,  min: 0, max: 1,  step: 0.01,
+      tip: "Couples x into the z dynamics. Small changes subtly affect the folding mechanism." },
+    { key: "c", label: "c", default: 5.7,  min: 0, max: 20, step: 0.1,
+      tip: "Controls the height of the z-axis spike. Higher values create a taller, sharper fold where reinjection occurs." },
   ],
   chen: [
-    { key: "alpha", label: "\u03B1 (alpha)", default: 5,     min: -10, max: 20,  step: 0.1  },
-    { key: "beta",  label: "\u03B2 (beta)",  default: -20,   min: -30, max: 10,  step: 0.1  },
-    { key: "delta", label: "\u03B4 (delta)", default: -0.38, min: -2,  max: 2,   step: 0.01 },
+    { key: "alpha", label: "\u03B1 (alpha)", default: 5,     min: -10, max: 20,  step: 0.1,
+      tip: "Linear coupling strength. Controls how strongly x and y influence each other's rate of change." },
+    { key: "beta",  label: "\u03B2 (beta)",  default: -20,   min: -30, max: 10,  step: 0.1,
+      tip: "Damping/amplification of z. Negative values sustain the double-scroll structure." },
+    { key: "delta", label: "\u03B4 (delta)", default: -0.38, min: -2,  max: 2,   step: 0.01,
+      tip: "Fine-tunes the attractor shape. Small shifts can collapse or expand the two lobes." },
   ],
   chua: [
-    { key: "alpha", label: "\u03B1 (alpha)", default: 15.6,  min: 5,  max: 30,  step: 0.1 },
-    { key: "gamma", label: "\u03B3 (gamma)", default: 25.58, min: 10, max: 50,  step: 0.1 },
-    { key: "m0",    label: "m\u2080",        default: -2,    min: -5, max: 0,   step: 0.1 },
-    { key: "m1",    label: "m\u2081",        default: 0,     min: -3, max: 3,   step: 0.1 },
+    { key: "alpha", label: "\u03B1 (alpha)", default: 15.6,  min: 5,  max: 30,  step: 0.1,
+      tip: "Ratio of capacitances C2/C1. Controls how energy transfers between the two capacitor stages." },
+    { key: "gamma", label: "\u03B3 (gamma)", default: 25.58, min: 10, max: 50,  step: 0.1,
+      tip: "Ratio of C2 to the inductor. Higher values speed up oscillation in the LC resonant loop." },
+    { key: "m0",    label: "m\u2080",        default: -2,    min: -5, max: 0,   step: 0.1,
+      tip: "Inner slope of Chua's diode. Controls the negative resistance in the central voltage region." },
+    { key: "m1",    label: "m\u2081",        default: 0,     min: -3, max: 3,   step: 0.1,
+      tip: "Outer slope of Chua's diode. Determines behavior at high voltages — affects scroll size." },
   ],
   threeScroll: [
-    { key: "a", label: "a", default: 32.48, min: 20,  max: 50,  step: 0.01 },
-    { key: "b", label: "b", default: 45.84, min: 30,  max: 60,  step: 0.01 },
-    { key: "c", label: "c", default: 1.18,  min: 0,   max: 5,   step: 0.01 },
-    { key: "d", label: "d", default: 0.13,  min: 0,   max: 1,   step: 0.01 },
-    { key: "e", label: "e", default: 0.57,  min: 0,   max: 2,   step: 0.01 },
-    { key: "f", label: "f", default: 14.7,  min: 5,   max: 25,  step: 0.1  },
+    { key: "a", label: "a", default: 32.48, min: 20,  max: 50,  step: 0.01,
+      tip: "Primary coupling coefficient. Drives the x-y interaction that forms the three scroll wings." },
+    { key: "b", label: "b", default: 45.84, min: 30,  max: 60,  step: 0.01,
+      tip: "Secondary coupling. Balances against 'a' to maintain the three-fold symmetry." },
+    { key: "c", label: "c", default: 1.18,  min: 0,   max: 5,   step: 0.01,
+      tip: "Damping on z-axis. Controls how tightly trajectories are pulled back to the x-y plane." },
+    { key: "d", label: "d", default: 0.13,  min: 0,   max: 1,   step: 0.01,
+      tip: "Nonlinear coupling strength (xz term). Affects the twisting between scrolls." },
+    { key: "e", label: "e", default: 0.57,  min: 0,   max: 2,   step: 0.01,
+      tip: "Quadratic damping (x\u00B2 term). Prevents trajectories from escaping to infinity." },
+    { key: "f", label: "f", default: 14.7,  min: 5,   max: 25,  step: 0.1,
+      tip: "Linear feedback on y. Shifts the balance between the three scroll centers." },
   ],
   rabinovichFabrikant: [
-    { key: "alpha", label: "\u03B1 (alpha)", default: 0.14, min: 0, max: 1.5, step: 0.01 },
-    { key: "gamma", label: "\u03B3 (gamma)", default: 0.10, min: 0, max: 1.5, step: 0.01 },
+    { key: "alpha", label: "\u03B1 (alpha)", default: 0.14, min: 0, max: 1.5, step: 0.01,
+      tip: "Dissipation rate. Low values allow long chaotic transients; too high and the system decays to a fixed point." },
+    { key: "gamma", label: "\u03B3 (gamma)", default: 0.10, min: 0, max: 1.5, step: 0.01,
+      tip: "Cross-coupling strength. Controls the energy exchange between oscillation modes in the plasma model." },
   ],
   aizawa: [
-    { key: "a", label: "a", default: 0.95, min: 0,   max: 2,  step: 0.01 },
-    { key: "b", label: "b", default: 0.7,  min: 0,   max: 2,  step: 0.01 },
-    { key: "c", label: "c", default: 0.6,  min: 0,   max: 2,  step: 0.01 },
-    { key: "d", label: "d", default: 3.5,  min: 0,   max: 8,  step: 0.1  },
-    { key: "e", label: "e", default: 0.25, min: 0,   max: 1,  step: 0.01 },
-    { key: "f", label: "f", default: 0.1,  min: 0,   max: 1,  step: 0.01 },
+    { key: "a", label: "a", default: 0.95, min: 0,   max: 2,  step: 0.01,
+      tip: "Controls the torus structure. Near 0.95 the attractor sits at the edge of order and chaos." },
+    { key: "b", label: "b", default: 0.7,  min: 0,   max: 2,  step: 0.01,
+      tip: "Rotational damping. Affects how tightly trajectories wind around the torus core." },
+    { key: "c", label: "c", default: 0.6,  min: 0,   max: 2,  step: 0.01,
+      tip: "Vertical drift rate. Shifts the attractor up or down and affects the mushroom cap shape." },
+    { key: "d", label: "d", default: 3.5,  min: 0,   max: 8,  step: 0.1,
+      tip: "Nonlinear coupling strength. Higher values expand the chaotic region of the torus." },
+    { key: "e", label: "e", default: 0.25, min: 0,   max: 1,  step: 0.01,
+      tip: "z-dependent modulation. Fine-tunes the symmetry breaking that makes Aizawa unique." },
+    { key: "f", label: "f", default: 0.1,  min: 0,   max: 1,  step: 0.01,
+      tip: "Cubic x-z coupling. A subtle term that affects the attractor's vertical extent." },
   ],
   thomas: [
-    { key: "b", label: "b", default: 0.208186, min: 0, max: 1, step: 0.001 },
+    { key: "b", label: "b", default: 0.208186, min: 0, max: 1, step: 0.001,
+      tip: "Friction coefficient. At b=0 the system is conservative; as b increases, chaos gives way to stable limit cycles." },
   ],
   halvorsen: [
-    { key: "a", label: "a", default: 1.89, min: 0, max: 5, step: 0.01 },
+    { key: "a", label: "a", default: 1.89, min: 0, max: 5, step: 0.01,
+      tip: "Dissipation parameter. At 1.89 the three-fold symmetric attractor is fully chaotic; lower values simplify it." },
   ],
   dadras: [
-    { key: "a", label: "a", default: 3,   min: 0, max: 10, step: 0.1 },
-    { key: "b", label: "b", default: 2.7, min: 0, max: 10, step: 0.1 },
-    { key: "c", label: "c", default: 1.7, min: 0, max: 10, step: 0.1 },
-    { key: "d", label: "d", default: 2,   min: 0, max: 10, step: 0.1 },
-    { key: "e", label: "e", default: 9,   min: 0, max: 20, step: 0.1 },
+    { key: "a", label: "a", default: 3,   min: 0, max: 10, step: 0.1,
+      tip: "Controls the y-x coupling. Affects the width of the three butterfly wings." },
+    { key: "b", label: "b", default: 2.7, min: 0, max: 10, step: 0.1,
+      tip: "Nonlinear coupling (yz term). Drives the folding that creates the multi-wing structure." },
+    { key: "c", label: "c", default: 1.7, min: 0, max: 10, step: 0.1,
+      tip: "Damping on y. Balances against 'a' to determine the attractor's overall scale." },
+    { key: "d", label: "d", default: 2,   min: 0, max: 10, step: 0.1,
+      tip: "x-y product coupling into z. Controls how trajectories transfer between wings." },
+    { key: "e", label: "e", default: 9,   min: 0, max: 20, step: 0.1,
+      tip: "Damping on z. Higher values compress the attractor vertically; lower values let it expand." },
   ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-attractor display info (title card overlay)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ATTRACTOR_INFO = {
+  lorenz: {
+    title: "LORENZ ATTRACTOR",
+    tagline: "The butterfly effect — atmospheric convection, 1963",
+    equations: "dx/dt = σ(y−x)   dy/dt = x(ρ−z)−y   dz/dt = xy−βz",
+  },
+  rossler: {
+    title: "RÖSSLER ATTRACTOR",
+    tagline: "Simplest chaotic flow — chemical kinetics, 1976",
+    equations: "dx/dt = −y−z   dy/dt = x+ay   dz/dt = b+z(x−c)",
+  },
+  chen: {
+    title: "CHEN ATTRACTOR",
+    tagline: "Dual of Lorenz — not topologically equivalent, 1999",
+    equations: "dx/dt = α(y−x)   dy/dt = (c−α)x−xz+cy   dz/dt = xy−βz",
+  },
+  chua: {
+    title: "CHUA'S CIRCUIT",
+    tagline: "First physical chaotic circuit — piecewise-linear, 1983",
+    equations: "dx/dt = α(y−x−f(x))   dy/dt = x−y+z   dz/dt = −γy",
+  },
+  threeScroll: {
+    title: "THREE-SCROLL ATTRACTOR",
+    tagline: "Unified chaotic system — three intertwined scrolls",
+    equations: "dx/dt = a(y−x)+dxz   dy/dt = bx−xz+fy   dz/dt = cz+xy−ex²",
+  },
+  rabinovichFabrikant: {
+    title: "RABINOVICH-FABRIKANT",
+    tagline: "Plasma instabilities — nonlinear oscillation, 1979",
+    equations: "dx/dt = y(z−1+x²)+γx   dy/dt = x(3z+1−x²)+γy   dz/dt = −2z(α+xy)",
+  },
+  aizawa: {
+    title: "AIZAWA ATTRACTOR",
+    tagline: "Torus-to-chaos transition — delicate symmetry breaking",
+    equations: "dx/dt = (z−b)x−dy   dy/dt = dx+(z−b)y   dz/dt = c+az−z³/3−(x²+y²)(1+ez)+fzx³",
+  },
+  thomas: {
+    title: "THOMAS ATTRACTOR",
+    tagline: "Cyclically symmetric — bounded chaos with friction, 1999",
+    equations: "dx/dt = sin(y)−bx   dy/dt = sin(z)−by   dz/dt = sin(x)−bz",
+  },
+  halvorsen: {
+    title: "HALVORSEN ATTRACTOR",
+    tagline: "Cyclic symmetry — three-fold rotational structure",
+    equations: "dx/dt = −ax−4y−4z−y²   dy/dt = −ay−4z−4x−z²   dz/dt = −az−4x−4y−x²",
+  },
+  dadras: {
+    title: "DADRAS ATTRACTOR",
+    tagline: "Three-wing butterfly — asymmetric strange attractor, 2010",
+    equations: "dx/dt = y−ax+byz   dy/dt = cy−xz+z   dz/dt = dxy−ez",
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -311,9 +409,19 @@ export class CaosPlayground extends Attractor3DDemo {
     // ─── Mobile: Screen detection ─────────────────────────────────────
     Screen.init(this);
 
+    this._tooltip = new Tooltip(this, {
+      textColor: "#fff",
+      font: `${Screen.responsive(12, 14, 18)}px monospace`,
+      maxWidth: Screen.responsive(220, 280, 380),
+      padding: Screen.responsive(6, 8, 12),
+    });
+    this.pipeline.add(this._tooltip);
+
     this._buildPanel();
     this._buildToggleButton();
     this._initPanelStateMachine();
+    this._buildInfoOverlay();
+    this._initRightClickPan();
   }
 
   // ─── Render override: attractor behind, UI on top ───────────────────
@@ -371,6 +479,31 @@ export class CaosPlayground extends Attractor3DDemo {
       onChange: (v) => this._onAttractorChange(v),
     });
     this.panel.addItem(this._controls.attractor);
+
+    // ── Renderer Dropdown (top-level, not in a section) ──────────
+    const hasWebGPU = !!navigator.gpu;
+    const rendererOptions = [{ label: "WebGL", value: "webgl" }];
+    if (hasWebGPU) {
+      rendererOptions.push({ label: "WebGPU", value: "webgpu" });
+    }
+    const defaultRenderer = hasWebGPU ? "webgpu" : "webgl";
+
+    this._activeRenderer = "webgl";
+    this._switchingRenderer = false;
+
+    this._controls.renderer = new Dropdown(this, {
+      label: "RENDERER",
+      width: sw,
+      options: rendererOptions,
+      value: defaultRenderer,
+      onChange: (v) => this._onRendererChange(v),
+    });
+    this.panel.addItem(this._controls.renderer);
+
+    // Auto-switch to WebGPU if available
+    if (hasWebGPU) {
+      this._onRendererChange("webgpu");
+    }
 
     // ── Parameters (dynamic, rebuilt per attractor) ─────────────────
     this._paramsSection = this.panel.addSection("Parameters", { expanded: !isMobile });
@@ -515,7 +648,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
     this._controls.glowRadius = new Slider(this, {
       label: "GLOW RADIUS", width: sw,
-      min: 0, max: 100, value: cfg.glow.radius, step: 5,
+      min: 0, max: 200, value: cfg.glow.radius, step: 5,
       formatValue: (v) => v.toFixed(0),
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -678,6 +811,149 @@ export class CaosPlayground extends Attractor3DDemo {
     }
   }
 
+  // ─── Right-Click Pan ────────────────────────────────────────────────
+
+  _initRightClickPan() {
+    this._panning = false;
+    this._panLastX = 0;
+    this._panLastY = 0;
+
+    // Disable context menu on the canvas so right-click works for panning
+    this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    this.canvas.addEventListener("mousedown", (e) => {
+      if (e.button !== 2) return; // Right-click only
+      this._panning = true;
+      this._panLastX = e.clientX;
+      this._panLastY = e.clientY;
+    });
+
+    this.canvas.addEventListener("mousemove", (e) => {
+      if (!this._panning) return;
+      const dx = e.clientX - this._panLastX;
+      const dy = e.clientY - this._panLastY;
+      this._panLastX = e.clientX;
+      this._panLastY = e.clientY;
+
+      // Convert pixel delta to screenOffset fraction
+      this.config.screenOffset.x += dx / this.width;
+      this.config.screenOffset.y += dy / this.height;
+    });
+
+    this.canvas.addEventListener("mouseup", (e) => {
+      if (e.button === 2) this._panning = false;
+    });
+  }
+
+  // ─── Info Overlay (attractor title card) ───────────────────────────
+
+  _buildInfoOverlay() {
+    const isMobile = Screen.isMobile;
+
+    this._infoScene = new Scene(this, { x: 0, y: 0 });
+    this._infoScene._alpha = 1; // Custom alpha for fade animation
+
+    // Wrap draw to apply fade alpha
+    const originalDraw = this._infoScene.draw.bind(this._infoScene);
+    this._infoScene.draw = () => {
+      const ctx = this.ctx;
+      const prevAlpha = ctx.globalAlpha;
+      ctx.globalAlpha = this._infoScene._alpha;
+      originalDraw();
+      ctx.globalAlpha = prevAlpha;
+    };
+
+    const titleSize = Screen.responsive(22, 28, 36);
+    const taglineSize = Screen.responsive(15, 17, 22);
+    const equationSize = Screen.responsive(13, 15, 18);
+    const align = isMobile ? "center" : "left";
+
+    this._infoTitle = new Text(this, "", {
+      font: `bold ${titleSize}px monospace`,
+      color: "rgba(255,255,255,0.6)",
+      align,
+    });
+
+    this._infoTagline = new Text(this, "", {
+      font: `${taglineSize}px monospace`,
+      color: "rgba(255,255,255,0.4)",
+      align,
+    });
+
+    this._infoEquations = new Text(this, "", {
+      font: `${equationSize}px monospace`,
+      color: "rgba(255,255,255,0.3)",
+      align,
+    });
+
+    this._infoScene.add(this._infoTitle);
+    this._infoScene.add(this._infoTagline);
+    this._infoScene.add(this._infoEquations);
+    this.pipeline.add(this._infoScene);
+
+    // Set initial content and position
+    this._updateInfoContent(this._activePreset);
+    this._layoutInfoOverlay();
+  }
+
+  _updateInfoContent(attractorKey) {
+    const info = ATTRACTOR_INFO[attractorKey];
+    if (!info) return;
+
+    this._infoTitle.text = info.title;
+    this._infoTagline.text = info.tagline;
+    this._infoEquations.text = info.equations;
+
+    // Stack vertically with responsive spacing
+    const gap1 = Screen.responsive(30, 36, 46);
+    const gap2 = Screen.responsive(52, 62, 78);
+    this._infoTitle.y = 0;
+    this._infoTagline.y = gap1;
+    this._infoEquations.y = gap2;
+  }
+
+  _layoutInfoOverlay() {
+    if (!this._infoScene) return;
+
+    if (Screen.isMobile) {
+      // Top center
+      this._infoScene.x = this.width / 2;
+      this._infoScene.y = 60;
+    } else {
+      // Bottom-left with responsive margin
+      const margin = Screen.responsive(20, 28, 40);
+      const blockHeight = Screen.responsive(70, 80, 100);
+      this._infoScene.x = margin;
+      this._infoScene.y = this.height - blockHeight - margin;
+    }
+  }
+
+  _fadeInfoOverlay(attractorKey) {
+    if (!this._infoScene) return;
+
+    // Kill any in-progress fade
+    Tweenetik.killTarget(this._infoScene);
+
+    // Fade out, then swap content, then fade in
+    Tweenetik.to(
+      this._infoScene,
+      { _alpha: 0 },
+      0.3,
+      Easing.easeOutCubic,
+      {
+        onComplete: () => {
+          this._updateInfoContent(attractorKey);
+          Tweenetik.to(
+            this._infoScene,
+            { _alpha: 1 },
+            0.3,
+            Easing.easeInCubic
+          );
+        },
+      }
+    );
+  }
+
   // ─── Dynamic Parameter Sliders ─────────────────────────────────────
 
   _buildParamSliders(attractorKey) {
@@ -721,6 +997,16 @@ export class CaosPlayground extends Attractor3DDemo {
           this.updateAttractorParams(this._uiParams);
         },
       });
+
+      // Wire tooltip on hover
+      if (def.tip) {
+        slider.on("mouseover", (e) => {
+          this._tooltip.show(def.tip, e.x, e.y);
+        });
+        slider.on("mouseout", () => {
+          this._tooltip.hide();
+        });
+      }
 
       this._paramsSection.addItem(slider);
       this._paramSliders.push(slider);
@@ -769,7 +1055,83 @@ export class CaosPlayground extends Attractor3DDemo {
     // Rebuild per-attractor parameter sliders
     this._buildParamSliders(key);
 
+    // Fade the info overlay to the new attractor
+    this._fadeInfoOverlay(key);
+
     console.log(`Switched to ${preset.label}`);
+  }
+
+  // ─── Renderer Swap ──────────────────────────────────────────────────
+
+  async _onRendererChange(rendererType) {
+    if (rendererType === this._activeRenderer) return;
+    if (this._switchingRenderer) return;
+
+    this._switchingRenderer = true;
+    this._controls.renderer.close();
+
+    // Destroy old pipeline
+    this.attractorPipeline?.destroy();
+
+    const cfg = this.config;
+    const maxSegments = cfg.maxSegments || cfg.particles.count * cfg.particles.trailLength;
+    const pipelineOptions = {
+      bloom: cfg.bloom,
+      background: {
+        ...cfg.background,
+        baseColor: cfg.background.baseColor || this._computeBackgroundColor(),
+      },
+      visual: cfg.visual,
+      blink: cfg.blink,
+      energyFlow: cfg.energyFlow,
+      depthFog: cfg.depthFog,
+      iridescence: cfg.iridescence,
+      chromaticAberration: cfg.chromaticAberration,
+      colorGrading: cfg.colorGrading,
+      glow: cfg.glow,
+    };
+
+    if (rendererType === "webgpu") {
+      const pipeline = new WebGPUAttractorPipeline(
+        this.width, this.height, maxSegments, pipelineOptions
+      );
+      const ok = await pipeline.init();
+      if (ok) {
+        this.attractorPipeline = pipeline;
+        this.useWebGL = true; // Flag used by base class to choose WebGL path vs Canvas2D
+        this._activeRenderer = "webgpu";
+        console.log("Switched to WebGPU renderer");
+      } else {
+        console.warn("WebGPU init failed, reverting to WebGL");
+        this._revertToWebGL(maxSegments, pipelineOptions);
+      }
+    } else {
+      this._revertToWebGL(maxSegments, pipelineOptions);
+    }
+
+    this._switchingRenderer = false;
+  }
+
+  /** @private Rebuild WebGL pipeline */
+  _revertToWebGL(maxSegments, pipelineOptions) {
+    const pipeline = new WebGLAttractorPipeline(
+      this.width, this.height, maxSegments, pipelineOptions
+    );
+    const ok = pipeline.init();
+    this.attractorPipeline = pipeline;
+    this.useWebGL = ok;
+    this._activeRenderer = "webgl";
+    if (ok) {
+      console.log("Switched to WebGL renderer");
+    } else {
+      console.warn("WebGL init also failed, using Canvas 2D fallback");
+    }
+  }
+
+  /** @override — skip attractor rendering while switching renderer */
+  _renderAttractor() {
+    if (this._switchingRenderer) return;
+    super._renderAttractor();
   }
 
   // ─── Reset to Preset Defaults ─────────────────────────────────────
@@ -805,5 +1167,7 @@ export class CaosPlayground extends Attractor3DDemo {
     } else if (Screen.isMobile && this._panelFSM) {
       this._panelFSM.setState("panel-hidden");
     }
+
+    this._layoutInfoOverlay();
   }
 }

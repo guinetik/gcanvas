@@ -5,10 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Artemis II Trajectory</title>
   <link rel="stylesheet" href="demos.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+  <style>
+    .goverlay { background: rgba(0,0,0,0.55) !important; }
+    .gclose, .gprev, .gnext { background: rgba(255,255,255,0.12) !important; border: 1px solid rgba(255,255,255,0.15) !important; }
+    .gclose svg, .gprev svg, .gnext svg { fill: rgba(255,255,255,0.6) !important; }
+    .gclose:hover, .gprev:hover, .gnext:hover { background: rgba(255,255,255,0.2) !important; }
+  </style>
   <script src="./js/info-toggle.js"></script>
 
   <!-- SEO:injected -->
-  <meta name="description" content="Artemis II Trajectory - Artemis II Trajectory — Earth–Moon orbital system. Moon orbiting Earth on a circular path Drag to rotate · Scroll / pinch to zoom" />
+  <meta name="description" content="Artemis II Mission Tracker — Real NASA JPL Horizons trajectory data. 10-day free-return lunar flyby. Drag to rotate · Scroll to zoom · Timeline scrub" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://gcanvas.guinetik.com/artemis2.html" />
   <meta property="og:title" content="Artemis II Trajectory" />
@@ -31,13 +39,14 @@
 </head>
 <body>
   <div id="info">
-    <strong>Artemis II Trajectory</strong> — Earth–Moon orbital system.<br/>
+    <strong>Artemis II Mission Tracker</strong> — Real NASA JPL Horizons trajectory data.<br/>
     <span style="color:#CCC">
-      <li>Moon orbiting Earth on a circular path</li>
+      <li>10-day free-return lunar flyby trajectory</li>
       <li>Drag to rotate · Scroll / pinch to zoom</li>
+      <li>Timeline scrub · Simulation speed · Camera modes</li>
     </span>
   </div>
   <canvas id="game"></canvas>
-  <script type="module" src="./js/artemis2.js"></script>
+  <script type="module" src="./js/artemis2/artemis2.js"></script>
 </body>
 </html>
