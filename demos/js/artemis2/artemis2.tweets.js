@@ -74,7 +74,7 @@ export class TweetTimeline {
           name:  t.user.name,
           time:  t.createdAt,
           media: (t.media || [])
-            .filter((m) => m.type === 'PHOTO' && m.filename)
+            .filter((m) => m.filename)
             .map((m) => ({
               type: m.type,
               url:  m.url,
@@ -120,9 +120,19 @@ export class TweetTimeline {
     return { tweet: this.tweets[best], index: best, nextDay };
   }
 
-  /** Get the local image path for a media entry */
+  /** Get the local image/thumbnail path for a media entry */
   static imagePath(media) {
-    return media.filename ? `${MEDIA_BASE}${media.filename}` : null;
+    if (!media.filename) return null;
+    if (media.type === 'PHOTO') return `${MEDIA_BASE}${media.filename}`;
+    // VIDEO/GIF: use pre-generated _thumb.jpg
+    const base = media.filename.replace(/\.(mp4|gif)$/, '');
+    return `${MEDIA_BASE}${base}_thumb.jpg`;
+  }
+
+  /** Get the local video path for a media entry (VIDEO/GIF only) */
+  static videoPath(media) {
+    if (!media.filename || media.type === 'PHOTO') return null;
+    return `${MEDIA_BASE}${media.filename}`;
   }
 }
 
@@ -144,6 +154,10 @@ export class TweetFeed extends Scene {
     this._timeline = timeline;
     this._lastIndex = -1;
     this._lastSimDay = -1;
+
+    // Click handler for video thumbnails
+    this._onClick = (e) => this._handleClick(e);
+    game.canvas.addEventListener('click', this._onClick);
 
     /**
      * Each slot: { tweet, lines, opacity, fadeDir, targetY, currentY }
@@ -289,7 +303,7 @@ export class TweetFeed extends Scene {
           y += lh;
         }
 
-        // Image (if loaded)
+        // Image/thumbnail (if loaded)
         if (slot.img && slot.imgH > 0) {
           const imgW = w - pad * 2;
           const imgY = y + pad * 0.25;
@@ -300,6 +314,27 @@ export class TweetFeed extends Scene {
           ctx.clip();
           ctx.drawImage(slot.img, pad, imgY, imgW, slot.imgH);
           ctx.restore();
+
+          // Play button overlay for video/gif
+          if (slot.videoUrl) {
+            const cx = pad + imgW / 2;
+            const cy = imgY + slot.imgH / 2;
+            const btnR = Screen.responsive(14, 18, 22);
+            // Circle bg
+            ctx.fillStyle = 'rgba(0,0,0,0.55)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, btnR, 0, Math.PI * 2);
+            ctx.fill();
+            // Triangle
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            const triR = btnR * 0.45;
+            ctx.moveTo(cx + triR, cy);
+            ctx.lineTo(cx - triR * 0.6, cy - triR * 0.85);
+            ctx.lineTo(cx - triR * 0.6, cy + triR * 0.85);
+            ctx.closePath();
+            ctx.fill();
+          }
         }
       }, { saveState: true });
     }
@@ -343,24 +378,25 @@ export class TweetFeed extends Scene {
       currentY: 0,
       img: null,       // Image element (null until loaded)
       imgH: 0,         // Rendered image height (computed on load)
+      videoUrl: null,  // Set for VIDEO/GIF — opens on click
     };
 
-    // Load first PHOTO if available
-    const photo = tweet.media[0];
-    if (photo) {
-      const path = TweetTimeline.imagePath(photo);
+    // Load first media item (photo, or thumbnail for video/gif)
+    const media = tweet.media[0];
+    if (media) {
+      const path = TweetTimeline.imagePath(media);
       if (path) {
         const img = new Image();
         img.onload = () => {
           slot.img = img;
-          // Scale to card width minus padding
           const maxW = FEED.width() - FEED.padding() * 2;
           const aspect = img.naturalHeight / img.naturalWidth;
           slot.imgH = Math.min(maxW * aspect, Screen.responsive(100, 130, 160));
-          this._layoutSlots(); // re-layout now that image height is known
+          this._layoutSlots();
         };
         img.src = path;
       }
+      slot.videoUrl = TweetTimeline.videoPath(media);
     }
 
     return slot;
@@ -428,5 +464,30 @@ export class TweetFeed extends Scene {
     const hh = String(d.getUTCHours()).padStart(2, '0');
     const mm = String(d.getUTCMinutes()).padStart(2, '0');
     return `${month} ${day}, ${hh}:${mm} UTC`;
+  }
+
+  /** Hit-test click against video thumbnails → open in new tab */
+  _handleClick(e) {
+    const rect = this.game.canvas.getBoundingClientRect();
+    const cx = (e.clientX - rect.left) * (this.game.canvas.width / rect.width) - this.x;
+    const cy = (e.clientY - rect.top) * (this.game.canvas.height / rect.height) - this.y;
+
+    const w = FEED.width();
+    const pad = FEED.padding();
+    const lh = FEED.lineHeight();
+
+    for (const slot of this._slots) {
+      if (!slot.videoUrl || !slot.img || slot.imgH <= 0 || slot.opacity < 0.5) continue;
+
+      const headerH = lh * 1.6;
+      const bodyH = slot.lines.length * lh;
+      const imgY = slot.currentY + pad + headerH + bodyH + pad * 0.25;
+      const imgW = w - pad * 2;
+
+      if (cx >= pad && cx <= pad + imgW && cy >= imgY && cy <= imgY + slot.imgH) {
+        window.open(slot.videoUrl, '_blank');
+        return;
+      }
+    }
   }
 }
