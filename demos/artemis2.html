@@ -6,15 +6,36 @@
   <title>Artemis II Trajectory</title>
   <link rel="stylesheet" href="demos.css" />
   <script src="./js/info-toggle.js"></script>
+
+  <!-- SEO:injected -->
+  <meta name="description" content="Artemis II Mission Tracker — Real NASA JPL Horizons trajectory data. 10-day free-return lunar flyby. Drag to rotate · Scroll to zoom · Timeline scrub" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://gcanvas.guinetik.com/artemis2.html" />
+  <meta property="og:title" content="Artemis II Trajectory" />
+  <meta property="og:description" content="Artemis II Trajectory - Artemis II Trajectory — Earth–Moon orbital system. Moon orbiting Earth on a circular path Drag to rotate · Scroll / pinch to zoom" />
+  <meta property="og:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Artemis II Trajectory" />
+  <meta name="twitter:description" content="Artemis II Trajectory - Artemis II Trajectory — Earth–Moon orbital system. Moon orbiting Earth on a circular path Drag to rotate · Scroll / pinch to zoom" />
+  <meta name="twitter:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:creator" content="@guinetik" />
+  <link rel="canonical" href="https://gcanvas.guinetik.com/artemis2.html" />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-1GHJD0LM4Z"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-1GHJD0LM4Z');
+  </script>
 </head>
 <body>
   <div id="info">
-    <strong>Artemis II Trajectory</strong> — Physics-accurate free-return flight path simulation.<br/>
+    <strong>Artemis II Mission Tracker</strong> — Real NASA JPL Horizons trajectory data.<br/>
     <span style="color:#CCC">
-      <li>RK4 n-body integration: Earth + Moon + Orion over 10 days</li>
-      <li>28,800 precomputed frames at 30-second resolution</li>
+      <li>10-day free-return lunar flyby trajectory</li>
       <li>Drag to rotate · Scroll / pinch to zoom</li>
-      <li>Use the slider to scrub through the mission</li>
+      <li>Timeline scrub · Simulation speed · Camera modes</li>
     </span>
   </div>
   <canvas id="game"></canvas>

@@ -1,156 +1,216 @@
 /**
  * Artemis II Controls Panel
  *
- * Bottom-center panel: play/pause, speed selector, time slider, mission clock.
+ * Bottom-center panel with button bar (HorizontalLayout), time slider,
+ * mission clock, and phase labels.
  *
- * Callbacks: onPlay, onPause, onSeek(t), onSpeedChange(multiplier)
- * External API: setCurrentTime(t, duration)
+ * Callbacks: onPlay, onPause, onSeek(day), onSpeedChange(multiplier)
+ * External API: setCurrentTime(day), startPlaying()
  */
 
 import {
   Scene,
   Text,
   Button,
+  ToggleButton,
+  HorizontalLayout,
   Painter,
+  Screen,
 } from "../../src/index.js";
-import { formatElapsed } from "./artemis2.physics.js";
+import { formatElapsed, TLI_DAY, MISSION_DAYS, PHASE_LABELS } from "./artemis2.data.js";
 
-const CTRL_CONFIG = {
-  panelWidth:    520,
-  panelHeight:   100,
+const CTRL = {
+  panelHeight:   130,
   padding:       16,
   bg:            'rgba(0,8,20,0.78)',
   border:        'rgba(70,150,220,0.35)',
+  cornerRadius:  10,
+
+  // Vertical layout: buttons → clock → slider → phases
+  btnBarY:       32,    // center of HorizontalLayout row
+  clockY:        62,    // MET text
+  sliderY:       80,    // slider track center
+  phaseY:        98,    // phase labels
+
+  // Slider
   trackColor:    'rgba(70,150,220,0.3)',
   trackHeight:   4,
   thumbColor:    '#4ab4ff',
-  thumbRadius:   8,
+  thumbRadius:   7,
   sliderHitRadius: 16,
-  sliderY:       62,   // y of slider track center within panel (local coords)
+
+  // Clock
   clockFont:     '11px monospace',
   clockColor:    'rgba(100,180,220,0.8)',
-  speeds:        [1, 10, 100, 1000],
-  btnWidth:      58,
-  btnHeight:     30,
-  btnGap:        6,
-  btnY:          22,
+
+  // Buttons
+  speeds:        [500, 1000, 5000, 10000],
+  btnWidth:      54,
+  btnHeight:     28,
+
+  // Phase labels
+  phaseFont:     '8px monospace',
+  phaseColor:    'rgba(255,255,255,0.2)',
+  phaseActive:   '#6ec6ff',
+};
+
+const BTN_STYLE = {
+  colorDefaultBg:     'rgba(0,8,20,0.8)',
+  colorDefaultStroke:  'rgba(70,150,220,0.5)',
+  colorDefaultText:    '#4ab4ff',
+  colorHoverBg:        'rgba(30,90,160,0.9)',
+  colorHoverStroke:    '#4ab4ff',
+  colorHoverText:      '#fff',
 };
 
 export class Artemis2Controls extends Scene {
   constructor(game, callbacks = {}) {
-    super(game, { x: 0, y: 0 }); // positioned by main demo
+    super(game, { x: 0, y: 0, origin: 'top-left' });
 
     this._cb = callbacks;
     this._playing = false;
-    this._speed = 100;
-    this._t = 0;
-    this._duration = 1;
+    this._speed = 1000;
+    this._day = TLI_DAY;
     this._draggingSlider = false;
+    this._panelWidth = Screen.responsive(340, 440, 520);
+    this.interactive = true;
+    this.forceWidth = this._panelWidth;
+    this.forceHeight = CTRL.panelHeight;
 
     this._buildUI();
     this._attachCanvasListeners();
   }
 
-  _buildUI() {
-    const C = CTRL_CONFIG;
+  get panelWidth() {
+    return this._panelWidth;
+  }
 
-    // Play/pause button
+  _buildUI() {
+    this._panelWidth = Screen.responsive(340, 440, 520);
+
+    // ── Button bar via HorizontalLayout ──
+    this._btnBar = new HorizontalLayout(this.game, {
+      spacing: 5,
+      padding: 0,
+      align: 'center',
+      interactive: true,
+    });
+
+    // Play/pause
     this._playBtn = new Button(this.game, {
-      x: C.padding,
-      y: C.btnY,
-      width: C.btnWidth,
-      height: C.btnHeight,
-      text: '▶ Play',
-      origin: 'top-left',
+      width: CTRL.btnWidth,
+      height: CTRL.btnHeight,
+      text: '\u25B6 Play',
+      font: '11px monospace',
+      ...BTN_STYLE,
       onClick: () => this._togglePlay(),
     });
-    this.add(this._playBtn);
+    this._btnBar.add(this._playBtn);
 
-    // Speed buttons
-    this._speedBtns = C.speeds.map((spd, i) => {
-      const isActive = spd === this._speed;
-      const btn = new Button(this.game, {
-        x: C.padding + C.btnWidth + C.btnGap + i * (C.btnWidth + C.btnGap),
-        y: C.btnY,
-        width: C.btnWidth,
-        height: C.btnHeight,
-        text: `${spd}x`,
-        origin: 'top-left',
-        colorDefaultBg:     isActive ? 'rgba(30,90,160,0.9)' : 'rgba(0,8,20,0.8)',
-        colorDefaultStroke: 'rgba(70,150,220,0.5)',
-        colorDefaultText:   isActive ? '#fff' : '#4ab4ff',
-        onClick: () => this._setSpeed(spd),
+    // Speed toggle buttons (exclusive group)
+    this._speedBtns = CTRL.speeds.map((spd) => {
+      const btn = new ToggleButton(this.game, {
+        width: CTRL.btnWidth,
+        height: CTRL.btnHeight,
+        text: spd >= 1000 ? `${spd / 1000}k` : `${spd}x`,
+        font: '10px monospace',
+        ...BTN_STYLE,
+        startToggled: spd === this._speed,
+        colorActiveBg:     'rgba(30,90,160,0.9)',
+        colorActiveStroke:  '#4ab4ff',
+        colorActiveText:    '#fff',
+        onToggle: () => this._setSpeed(spd),
       });
-      this.add(btn);
+      this._btnBar.add(btn);
       return btn;
     });
 
+    this._btnBar.x = this._panelWidth / 2;
+    this._btnBar.y = CTRL.btnBarY;
+    this.add(this._btnBar);
+
     // Mission clock label
     this._clock = new Text(this.game, 'T+00:00:00:00', {
-      x: C.panelWidth / 2,
-      y: C.sliderY - 18,
-      font: C.clockFont,
-      color: C.clockColor,
+      x: this._panelWidth / 2,
+      debug:false,
+      y: CTRL.clockY,
+      font: CTRL.clockFont,
+      color: CTRL.clockColor,
       align: 'center',
       baseline: 'middle',
     });
     this.add(this._clock);
   }
 
+  startPlaying() {
+    this._playing = true;
+    this._playBtn.text = '\u23F8 Pause';
+  }
+
   _togglePlay() {
     this._playing = !this._playing;
-    this._playBtn.text = this._playing ? '⏸ Pause' : '▶ Play';
+    this._playBtn.text = this._playing ? '\u23F8 Pause' : '\u25B6 Play';
     if (this._playing) this._cb.onPlay?.();
     else               this._cb.onPause?.();
   }
 
   _setSpeed(spd) {
     this._speed = spd;
-    const C = CTRL_CONFIG;
+    // Exclusive toggle
     this._speedBtns.forEach((btn, i) => {
-      const active = C.speeds[i] === spd;
-      btn.bg.color    = active ? 'rgba(30,90,160,0.9)' : 'rgba(0,8,20,0.8)';
-      btn.label.color = active ? '#fff' : '#4ab4ff';
+      btn.toggle(CTRL.speeds[i] === spd);
     });
     this._cb.onSpeedChange?.(spd);
   }
 
-  /** Called by main demo each frame to sync clock and thumb */
-  setCurrentTime(t, duration) {
-    this._t = t;
-    this._duration = duration;
-    this._clock.text = formatElapsed(t);
+  setCurrentTime(day) {
+    this._day = day;
+    this._clock.text = formatElapsed(day * 86400);
+  }
+
+  reposition(canvasW, canvasH) {
+    this._panelWidth = Screen.responsive(340, 440, 520);
+    this.x = Math.round((canvasW - this._panelWidth) / 2);
+    this.y = canvasH - CTRL.panelHeight - Screen.responsive(10, 14, 16);
+    this.forceWidth = this._panelWidth;
+    this.forceHeight = CTRL.panelHeight;
+    // Re-center layout and clock
+    if (this._btnBar) this._btnBar.x = (this._panelWidth / 2) + 10;
+    if (this._clock)  this._clock.x = (this._panelWidth / 2) - 30;
   }
 
   draw() {
-    const C = CTRL_CONFIG;
+    const pw = this._panelWidth;
 
     // Panel background
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = C.bg;
-      ctx.strokeStyle = C.border;
+      ctx.fillStyle = CTRL.bg;
+      ctx.strokeStyle = CTRL.border;
       ctx.lineWidth = 1;
-      ctx.roundRect(0, 0, C.panelWidth, C.panelHeight, 6);
+      ctx.beginPath();
+      ctx.roundRect(0, 0, pw, CTRL.panelHeight, CTRL.cornerRadius);
       ctx.fill();
       ctx.stroke();
     }, { saveState: true });
 
     // Slider track
-    const trackX = C.padding;
-    const trackW = C.panelWidth - C.padding * 2;
-    const trackY = C.sliderY;
+    const trackX = CTRL.padding;
+    const trackW = pw - CTRL.padding * 2;
+    const trackY = CTRL.sliderY;
     Painter.useCtx((ctx) => {
-      ctx.fillStyle = C.trackColor;
-      ctx.roundRect(trackX, trackY - C.trackHeight / 2, trackW, C.trackHeight, 2);
+      ctx.fillStyle = CTRL.trackColor;
+      ctx.beginPath();
+      ctx.roundRect(trackX, trackY - CTRL.trackHeight / 2, trackW, CTRL.trackHeight, 2);
       ctx.fill();
     }, { saveState: true });
 
-    // Filled (elapsed) portion
-    const progress = this._duration > 0 ? Math.min(1, this._t / this._duration) : 0;
+    // Progress fill
+    const progress = this._dayToProgress(this._day);
     if (progress > 0) {
       Painter.useCtx((ctx) => {
         ctx.fillStyle = '#4ab4ff';
-        ctx.roundRect(trackX, trackY - C.trackHeight / 2, trackW * progress, C.trackHeight, 2);
+        ctx.beginPath();
+        ctx.roundRect(trackX, trackY - CTRL.trackHeight / 2, trackW * progress, CTRL.trackHeight, 2);
         ctx.fill();
       }, { saveState: true });
     }
@@ -158,20 +218,49 @@ export class Artemis2Controls extends Scene {
     // Thumb
     const thumbX = trackX + trackW * progress;
     Painter.useCtx((ctx) => {
-      // filled thumb
-      ctx.fillStyle = C.thumbColor;
+      ctx.fillStyle = CTRL.thumbColor;
       ctx.beginPath();
-      ctx.arc(thumbX, trackY, C.thumbRadius, 0, Math.PI * 2);
+      ctx.arc(thumbX, trackY, CTRL.thumbRadius, 0, Math.PI * 2);
       ctx.fill();
-      // outline
       ctx.strokeStyle = 'rgba(200,230,255,0.6)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(thumbX, trackY, C.thumbRadius, 0, Math.PI * 2);
+      ctx.arc(thumbX, trackY, CTRL.thumbRadius, 0, Math.PI * 2);
       ctx.stroke();
     }, { saveState: true });
 
-    super.draw(); // renders Buttons and clock Text
+    // Phase labels below slider — skip pre-TLI phases, map days to slider range
+    const labelY = CTRL.phaseY;
+    const sliderRange = MISSION_DAYS - TLI_DAY;
+    Painter.useCtx((ctx) => {
+      ctx.font = CTRL.phaseFont;
+      ctx.textBaseline = 'top';
+      for (const pl of PHASE_LABELS) {
+        // Skip phases that end before the slider starts
+        if (pl.endDay <= TLI_DAY) continue;
+        const active = this._day >= pl.startDay && this._day < pl.endDay;
+        ctx.fillStyle = active ? CTRL.phaseActive : CTRL.phaseColor;
+        ctx.textAlign = 'center';
+        // Clamp start to TLI_DAY so label center is within slider
+        const visStart = Math.max(pl.startDay, TLI_DAY);
+        const centerDay = (visStart + pl.endDay) / 2;
+        const sliderPos = (centerDay - TLI_DAY) / sliderRange;
+        ctx.fillText(pl.label, trackX + trackW * sliderPos, labelY);
+      }
+    }, { saveState: true });
+
+    super.draw();
+  }
+
+  // ── Slider hit-testing ──
+
+  _dayToProgress(day) {
+    const range = MISSION_DAYS - TLI_DAY;
+    return range > 0 ? Math.max(0, Math.min(1, (day - TLI_DAY) / range)) : 0;
+  }
+
+  _progressToDay(progress) {
+    return TLI_DAY + progress * (MISSION_DAYS - TLI_DAY);
   }
 
   _attachCanvasListeners() {
@@ -181,6 +270,7 @@ export class Artemis2Controls extends Scene {
       const pos = this._canvasPos(e);
       if (this._hitSlider(pos.x, pos.y)) {
         this._draggingSlider = true;
+        this.game._uiHandledInput = true; // block camera drag
         this._cb.onSeek?.(this._sliderValue(pos.x));
       }
     };
@@ -189,14 +279,15 @@ export class Artemis2Controls extends Scene {
       const pos = this._canvasPos(e);
       this._cb.onSeek?.(this._sliderValue(pos.x));
     };
-    this._onMouseUp    = () => { this._draggingSlider = false; };
-    this._onMouseLeave = () => { this._draggingSlider = false; };
+    this._onMouseUp    = () => { this._draggingSlider = false; this.game._uiHandledInput = false; };
+    this._onMouseLeave = () => { this._draggingSlider = false; this.game._uiHandledInput = false; };
 
     this._onTouchStart = (e) => {
       const pos = this._canvasPos(e.touches[0]);
       if (this._hitSlider(pos.x, pos.y)) {
         e.preventDefault();
         this._draggingSlider = true;
+        this.game._uiHandledInput = true; // block camera drag
         this._cb.onSeek?.(this._sliderValue(pos.x));
       }
     };
@@ -206,7 +297,7 @@ export class Artemis2Controls extends Scene {
       const pos = this._canvasPos(e.touches[0]);
       this._cb.onSeek?.(this._sliderValue(pos.x));
     };
-    this._onTouchEnd = () => { this._draggingSlider = false; };
+    this._onTouchEnd = () => { this._draggingSlider = false; this.game._uiHandledInput = false; };
 
     canvas.addEventListener('mousedown',  this._onMouseDown);
     canvas.addEventListener('mousemove',  this._onMouseMove);
@@ -234,21 +325,18 @@ export class Artemis2Controls extends Scene {
   }
 
   _hitSlider(cx, cy) {
-    const C = CTRL_CONFIG;
-    const trackLeft  = this.x + C.padding;
-    const trackRight = this.x + C.panelWidth - C.padding;
-    const trackY     = this.y + C.sliderY;
+    const trackLeft  = this.x + CTRL.padding;
+    const trackRight = this.x + this._panelWidth - CTRL.padding;
+    const trackY     = this.y + CTRL.sliderY;
     return cx >= trackLeft && cx <= trackRight &&
-           cy >= trackY - C.sliderHitRadius && cy <= trackY + C.sliderHitRadius;
+           cy >= trackY - CTRL.sliderHitRadius && cy <= trackY + CTRL.sliderHitRadius;
   }
 
   _sliderValue(cx) {
-    const C = CTRL_CONFIG;
-    const trackLeft = this.x + C.padding;
-    const trackW    = C.panelWidth - C.padding * 2;
-    if (trackW <= 0) return 0;
+    const trackLeft = this.x + CTRL.padding;
+    const trackW    = this._panelWidth - CTRL.padding * 2;
+    if (trackW <= 0) return TLI_DAY;
     const norm = Math.max(0, Math.min(1, (cx - trackLeft) / trackW));
-    return norm * this._duration;
+    return this._progressToDay(norm);
   }
 }
-
