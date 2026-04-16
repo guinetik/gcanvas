@@ -812,7 +812,7 @@ class Attractor3DDemo extends Game {
         );
 
         ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${lit}%, ${alpha})`;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
 
         ctx.beginPath();
         ctx.moveTo(cx + p1.x * this.zoom, cy + p1.y * this.zoom);

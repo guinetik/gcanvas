@@ -128,12 +128,14 @@ export class WebGLAttractorPipeline {
       ...options.colorGrading,
     };
 
-    // Pre-allocate typed arrays: 2 vertices per segment
-    // Position: vec2 * 2 = 4 floats per segment
+    this.lineWidth = options.lineWidth ?? 2.0;
+
+    // Per-instance data: 1 entry per segment (expanded to quads on the GPU)
+    // Segment endpoints: (x1, y1, x2, y2) = 4 floats per instance
     this._positions = new Float32Array(maxSegments * 4);
-    // Metadata: (speedNorm, age, blink, segIdx) * 2 = 8 floats per segment
-    this._meta = new Float32Array(maxSegments * 8);
-    // Depth: 1 float per vertex, 2 vertices per segment
+    // Metadata: (speedNorm, age, blink, segIdx) = 4 floats per instance (no duplication)
+    this._meta = new Float32Array(maxSegments * 4);
+    // Depth pair: (depth1, depth2) = 2 floats per instance
     this._depths = new Float32Array(maxSegments * 2);
 
     this._currentTime = 0;
@@ -167,6 +169,14 @@ export class WebGLAttractorPipeline {
 
     const gl = this.gl;
     gl.enable(gl.BLEND);
+
+    // Instanced rendering extension (universal in modern browsers)
+    this._instExt = gl.getExtension("ANGLE_instanced_arrays");
+    if (!this._instExt) {
+      console.warn("WebGLAttractorPipeline: ANGLE_instanced_arrays not available");
+      this.available = false;
+      return false;
+    }
 
     // Compile all shader programs
     this.programs.lines = this._createProgram(
@@ -273,16 +283,18 @@ export class WebGLAttractorPipeline {
     const gl = this.gl;
     this.loc = {};
 
-    // Lines program
+    // Lines program (instanced)
     const lp = this.programs.lines;
     this.loc.lines = {
-      aPosition: gl.getAttribLocation(lp, "aPosition"),
-      aSpeedNorm: gl.getAttribLocation(lp, "aSpeedNorm"),
-      aAge: gl.getAttribLocation(lp, "aAge"),
-      aBlink: gl.getAttribLocation(lp, "aBlink"),
-      aSegIdx: gl.getAttribLocation(lp, "aSegIdx"),
-      aDepth: gl.getAttribLocation(lp, "aDepth"),
+      // Per-vertex (static quad)
+      aQuadVertex: gl.getAttribLocation(lp, "aQuadVertex"),
+      // Per-instance
+      aSegment: gl.getAttribLocation(lp, "aSegment"),
+      aMeta: gl.getAttribLocation(lp, "aMeta"),
+      aDepthPair: gl.getAttribLocation(lp, "aDepthPair"),
+      // Uniforms
       uResolution: gl.getUniformLocation(lp, "uResolution"),
+      uHalfWidth: gl.getUniformLocation(lp, "uHalfWidth"),
       uTime: gl.getUniformLocation(lp, "uTime"),
       uMinHue: gl.getUniformLocation(lp, "uMinHue"),
       uMaxHue: gl.getUniformLocation(lp, "uMaxHue"),
@@ -376,17 +388,27 @@ export class WebGLAttractorPipeline {
   _createLineBuffers() {
     const gl = this.gl;
 
-    // Position buffer: vec2 per vertex, 2 vertices per segment
+    // Static quad template: 6 vertices, each (side, end)
+    // Two triangles forming a quad: A(+1,0) B(-1,0) C(+1,1), B(-1,0) D(-1,1) C(+1,1)
+    const quadTemplate = new Float32Array([
+      +1, 0,  -1, 0,  +1, 1,   // tri 1
+      -1, 0,  -1, 1,  +1, 1,   // tri 2
+    ]);
+    this.quadTemplateBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadTemplateBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, quadTemplate, gl.STATIC_DRAW);
+
+    // Per-instance: segment endpoints (x1, y1, x2, y2) = vec4
     this.positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, this._positions, gl.DYNAMIC_DRAW);
 
-    // Metadata buffer: (speedNorm, age, blink, segIdx) per vertex, 2 vertices per segment
+    // Per-instance: metadata (speedNorm, age, blink, segIdx) = vec4
     this.metaBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.metaBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, this._meta, gl.DYNAMIC_DRAW);
 
-    // Depth buffer: 1 float per vertex, 2 vertices per segment
+    // Per-instance: depth pair (depth1, depth2) = vec2
     this.depthBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.depthBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, this._depths, gl.DYNAMIC_DRAW);
@@ -514,31 +536,26 @@ export class WebGLAttractorPipeline {
     const count = Math.min(segments.length, this.maxSegments);
     const gl = this.gl;
 
+    // Pack per-instance data (no quad expansion — GPU handles that)
     for (let i = 0; i < count; i++) {
       const s = segments[i];
       const pi = i * 4;
-      const mi = i * 8;
-      const di = i * 2;
 
-      // Position: 2 vertices
-      this._positions[pi] = s.x1;
+      // Segment endpoints: vec4
+      this._positions[pi]     = s.x1;
       this._positions[pi + 1] = s.y1;
       this._positions[pi + 2] = s.x2;
       this._positions[pi + 3] = s.y2;
 
-      // Metadata: same values for both vertices of each segment
-      this._meta[mi] = s.speedNorm;
-      this._meta[mi + 1] = s.age;
-      this._meta[mi + 2] = s.blink;
-      this._meta[mi + 3] = s.segIdx;
+      // Metadata: vec4 (one copy per instance, not duplicated)
+      this._meta[pi]     = s.speedNorm;
+      this._meta[pi + 1] = s.age;
+      this._meta[pi + 2] = s.blink;
+      this._meta[pi + 3] = s.segIdx;
 
-      this._meta[mi + 4] = s.speedNorm;
-      this._meta[mi + 5] = s.age;
-      this._meta[mi + 6] = s.blink;
-      this._meta[mi + 7] = s.segIdx;
-
-      // Depth: per-vertex (backward compat: default 0 = near = no fog)
-      this._depths[di] = s.depth1 ?? 0;
+      // Depth pair: vec2
+      const di = i * 2;
+      this._depths[di]     = s.depth1 ?? 0;
       this._depths[di + 1] = s.depth2 ?? 0;
     }
 
@@ -546,7 +563,7 @@ export class WebGLAttractorPipeline {
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._positions.subarray(0, count * 4));
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.metaBuffer);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._meta.subarray(0, count * 8));
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._meta.subarray(0, count * 4));
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.depthBuffer);
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, this._depths.subarray(0, count * 2));
@@ -568,8 +585,9 @@ export class WebGLAttractorPipeline {
     gl.useProgram(this.programs.lines);
     const ll = this.loc.lines;
 
-    // Resolution
+    // Uniforms
     gl.uniform2f(ll.uResolution, this.width, this.height);
+    gl.uniform1f(ll.uHalfWidth, this.lineWidth * 0.5);
     gl.uniform1f(ll.uTime, time);
 
     // Visual config
@@ -601,46 +619,47 @@ export class WebGLAttractorPipeline {
     gl.uniform1f(ll.uIridescenceSpeed, this.iridescenceConfig.speed);
     gl.uniform1f(ll.uIridescenceScale, this.iridescenceConfig.scale);
 
+    const ext = this._instExt;
+
     // Disable quad attribs that might be left enabled
     const bg = this.loc.background;
     if (bg.aUV >= 0) gl.disableVertexAttribArray(bg.aUV);
     if (bg.aPosition >= 0) gl.disableVertexAttribArray(bg.aPosition);
 
-    // Bind position attribute
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-    gl.enableVertexAttribArray(ll.aPosition);
-    gl.vertexAttribPointer(ll.aPosition, 2, gl.FLOAT, false, 0, 0);
-
-    // Bind metadata attributes (interleaved in a single buffer)
-    // Each vertex has 4 floats: speedNorm, age, blink, segIdx
-    const STRIDE = 4 * 4; // 4 floats * 4 bytes
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.metaBuffer);
-
-    if (ll.aSpeedNorm >= 0) {
-      gl.enableVertexAttribArray(ll.aSpeedNorm);
-      gl.vertexAttribPointer(ll.aSpeedNorm, 1, gl.FLOAT, false, STRIDE, 0);
-    }
-    if (ll.aAge >= 0) {
-      gl.enableVertexAttribArray(ll.aAge);
-      gl.vertexAttribPointer(ll.aAge, 1, gl.FLOAT, false, STRIDE, 4);
-    }
-    if (ll.aBlink >= 0) {
-      gl.enableVertexAttribArray(ll.aBlink);
-      gl.vertexAttribPointer(ll.aBlink, 1, gl.FLOAT, false, STRIDE, 8);
-    }
-    if (ll.aSegIdx >= 0) {
-      gl.enableVertexAttribArray(ll.aSegIdx);
-      gl.vertexAttribPointer(ll.aSegIdx, 1, gl.FLOAT, false, STRIDE, 12);
+    // Per-vertex: static quad template (side, end) — advances every vertex
+    if (ll.aQuadVertex >= 0) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.quadTemplateBuffer);
+      gl.enableVertexAttribArray(ll.aQuadVertex);
+      gl.vertexAttribPointer(ll.aQuadVertex, 2, gl.FLOAT, false, 0, 0);
+      ext.vertexAttribDivisorANGLE(ll.aQuadVertex, 0);
     }
 
-    // Bind depth attribute
-    if (ll.aDepth >= 0) {
+    // Per-instance: segment endpoints (x1, y1, x2, y2) = vec4
+    if (ll.aSegment >= 0) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+      gl.enableVertexAttribArray(ll.aSegment);
+      gl.vertexAttribPointer(ll.aSegment, 4, gl.FLOAT, false, 0, 0);
+      ext.vertexAttribDivisorANGLE(ll.aSegment, 1);
+    }
+
+    // Per-instance: metadata (speedNorm, age, blink, segIdx) = vec4
+    if (ll.aMeta >= 0) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.metaBuffer);
+      gl.enableVertexAttribArray(ll.aMeta);
+      gl.vertexAttribPointer(ll.aMeta, 4, gl.FLOAT, false, 0, 0);
+      ext.vertexAttribDivisorANGLE(ll.aMeta, 1);
+    }
+
+    // Per-instance: depth pair (depth1, depth2) = vec2
+    if (ll.aDepthPair >= 0) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.depthBuffer);
-      gl.enableVertexAttribArray(ll.aDepth);
-      gl.vertexAttribPointer(ll.aDepth, 1, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(ll.aDepthPair);
+      gl.vertexAttribPointer(ll.aDepthPair, 2, gl.FLOAT, false, 0, 0);
+      ext.vertexAttribDivisorANGLE(ll.aDepthPair, 1);
     }
 
-    gl.drawArrays(gl.LINES, 0, count * 2);
+    // Draw 6 vertices per instance, `count` instances
+    ext.drawArraysInstancedANGLE(gl.TRIANGLES, 0, 6, count);
   }
 
   /**
@@ -983,6 +1002,7 @@ export class WebGLAttractorPipeline {
     }
     this.programs = {};
 
+    if (this.quadTemplateBuffer) gl.deleteBuffer(this.quadTemplateBuffer);
     if (this.positionBuffer) gl.deleteBuffer(this.positionBuffer);
     if (this.metaBuffer) gl.deleteBuffer(this.metaBuffer);
     if (this.depthBuffer) gl.deleteBuffer(this.depthBuffer);
@@ -999,15 +1019,23 @@ export class WebGLAttractorPipeline {
   // HELPERS
   // ─────────────────────────────────────────────────────────────────────────
 
-  /** @private - Disable line-specific vertex attributes */
+  /** @private - Disable line-specific vertex attributes and reset divisors */
   _disableLineAttribs() {
     const gl = this.gl;
+    const ext = this._instExt;
     const ll = this.loc.lines;
-    if (ll.aPosition >= 0) gl.disableVertexAttribArray(ll.aPosition);
-    if (ll.aSpeedNorm >= 0) gl.disableVertexAttribArray(ll.aSpeedNorm);
-    if (ll.aAge >= 0) gl.disableVertexAttribArray(ll.aAge);
-    if (ll.aBlink >= 0) gl.disableVertexAttribArray(ll.aBlink);
-    if (ll.aSegIdx >= 0) gl.disableVertexAttribArray(ll.aSegIdx);
-    if (ll.aDepth >= 0) gl.disableVertexAttribArray(ll.aDepth);
+    if (ll.aQuadVertex >= 0) gl.disableVertexAttribArray(ll.aQuadVertex);
+    if (ll.aSegment >= 0) {
+      ext.vertexAttribDivisorANGLE(ll.aSegment, 0);
+      gl.disableVertexAttribArray(ll.aSegment);
+    }
+    if (ll.aMeta >= 0) {
+      ext.vertexAttribDivisorANGLE(ll.aMeta, 0);
+      gl.disableVertexAttribArray(ll.aMeta);
+    }
+    if (ll.aDepthPair >= 0) {
+      ext.vertexAttribDivisorANGLE(ll.aDepthPair, 0);
+      gl.disableVertexAttribArray(ll.aDepthPair);
+    }
   }
 }

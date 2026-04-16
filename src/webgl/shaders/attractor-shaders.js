@@ -17,12 +17,13 @@
 export const ATTRACTOR_LINE_VERTEX = `
 precision highp float;
 
-attribute vec2 aPosition;
-attribute float aSpeedNorm;
-attribute float aAge;
-attribute float aBlink;
-attribute float aSegIdx;
-attribute float aDepth;
+// Per-vertex (from static quad buffer)
+attribute vec2 aQuadVertex;   // (side: -1/+1, end: 0/1)
+
+// Per-instance (from segment data, advanced once per instance)
+attribute vec4 aSegment;      // (x1, y1, x2, y2)
+attribute vec4 aMeta;         // (speedNorm, age, blink, segIdx)
+attribute vec2 aDepthPair;    // (depth1, depth2)
 
 varying float vSpeedNorm;
 varying float vAge;
@@ -31,17 +32,30 @@ varying float vSegIdx;
 varying float vDepth;
 
 uniform vec2 uResolution;
+uniform float uHalfWidth;
 
 void main() {
-    vec2 clipPos = (aPosition / uResolution) * 2.0 - 1.0;
+    float side = aQuadVertex.x;  // -1 or +1
+    float end  = aQuadVertex.y;  //  0 or  1
+
+    // Select endpoint
+    vec2 p = mix(aSegment.xy, aSegment.zw, end);
+
+    // Perpendicular offset for line thickness
+    vec2 dir = aSegment.zw - aSegment.xy;
+    float len = length(dir);
+    vec2 perp = (len > 0.0001) ? vec2(-dir.y, dir.x) / len : vec2(0.0, 1.0);
+    p += perp * side * uHalfWidth;
+
+    vec2 clipPos = (p / uResolution) * 2.0 - 1.0;
     clipPos.y = -clipPos.y;
     gl_Position = vec4(clipPos, 0.0, 1.0);
 
-    vSpeedNorm = aSpeedNorm;
-    vAge       = aAge;
-    vBlink     = aBlink;
-    vSegIdx    = aSegIdx;
-    vDepth     = aDepth;
+    vSpeedNorm = aMeta.x;
+    vAge       = aMeta.y;
+    vBlink     = aMeta.z;
+    vSegIdx    = aMeta.w;
+    vDepth     = mix(aDepthPair.x, aDepthPair.y, end);
 }
 `;
 

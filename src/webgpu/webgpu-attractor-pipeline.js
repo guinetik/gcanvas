@@ -71,12 +71,14 @@ export class WebGPUAttractorPipeline {
       ...options.colorGrading,
     };
 
-    // Pre-allocate typed arrays: same layout as WebGL pipeline
-    // Position: vec2 * 2 = 4 floats per segment
+    this.lineWidth = options.lineWidth ?? 2.0;
+
+    // Per-instance data: 1 entry per segment (expanded to quads on the GPU)
+    // Segment endpoints: (x1, y1, x2, y2) = 4 floats per instance
     this._positions = new Float32Array(maxSegments * 4);
-    // Metadata: (speedNorm, age, blink, segIdx) * 2 = 8 floats per segment
-    this._meta = new Float32Array(maxSegments * 8);
-    // Depth: 1 float per vertex, 2 vertices per segment
+    // Metadata: (speedNorm, age, blink, segIdx) = 4 floats per instance (no duplication)
+    this._meta = new Float32Array(maxSegments * 4);
+    // Depth pair: (depth1, depth2) = 2 floats per instance
     this._depths = new Float32Array(maxSegments * 2);
 
     this._currentTime = 0;
@@ -194,7 +196,20 @@ export class WebGPUAttractorPipeline {
   _createBuffers() {
     const device = this.device;
 
-    // Line vertex buffers
+    // Static quad template: 6 vertices, each (side, end) = vec2f
+    const quadTemplate = new Float32Array([
+      +1, 0,  -1, 0,  +1, 1,   // tri 1
+      -1, 0,  -1, 1,  +1, 1,   // tri 2
+    ]);
+    this.quadTemplateBuffer = device.createBuffer({
+      size: quadTemplate.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      mappedAtCreation: true,
+    });
+    new Float32Array(this.quadTemplateBuffer.getMappedRange()).set(quadTemplate);
+    this.quadTemplateBuffer.unmap();
+
+    // Per-instance buffers
     this.positionBuffer = device.createBuffer({
       size: this._positions.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -286,20 +301,18 @@ export class WebGPUAttractorPipeline {
         module: lineVertModule,
         entryPoint: "vs_main",
         buffers: [
-          // Position: vec2f
-          { arrayStride: 8, attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }] },
-          // Metadata: interleaved (speedNorm, age, blink, segIdx) = 4 floats per vertex
-          {
-            arrayStride: 16,
-            attributes: [
-              { shaderLocation: 1, offset: 0, format: "float32" },  // speedNorm
-              { shaderLocation: 2, offset: 4, format: "float32" },  // age
-              { shaderLocation: 3, offset: 8, format: "float32" },  // blink
-              { shaderLocation: 4, offset: 12, format: "float32" }, // segIdx
-            ],
-          },
-          // Depth: f32
-          { arrayStride: 4, attributes: [{ shaderLocation: 5, offset: 0, format: "float32" }] },
+          // Per-vertex: quad template (side, end) = vec2f
+          { arrayStride: 8, stepMode: "vertex",
+            attributes: [{ shaderLocation: 0, offset: 0, format: "float32x2" }] },
+          // Per-instance: segment endpoints (x1, y1, x2, y2) = vec4f
+          { arrayStride: 16, stepMode: "instance",
+            attributes: [{ shaderLocation: 1, offset: 0, format: "float32x4" }] },
+          // Per-instance: metadata (speedNorm, age, blink, segIdx) = vec4f
+          { arrayStride: 16, stepMode: "instance",
+            attributes: [{ shaderLocation: 2, offset: 0, format: "float32x4" }] },
+          // Per-instance: depth pair (depth1, depth2) = vec2f
+          { arrayStride: 8, stepMode: "instance",
+            attributes: [{ shaderLocation: 3, offset: 0, format: "float32x2" }] },
         ],
       },
       fragment: {
@@ -313,7 +326,7 @@ export class WebGPUAttractorPipeline {
           },
         }],
       },
-      primitive: { topology: "line-list" },
+      primitive: { topology: "triangle-list" },
     });
 
     // ── Bright extract pipeline ───────────────────────────────────────
@@ -509,32 +522,31 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
 
     const count = Math.min(segments.length, this.maxSegments);
 
+    // Pack per-instance data (no quad expansion — GPU handles that)
     for (let i = 0; i < count; i++) {
       const s = segments[i];
       const pi = i * 4;
-      const mi = i * 8;
-      const di = i * 2;
 
-      this._positions[pi] = s.x1;
+      // Segment endpoints: vec4
+      this._positions[pi]     = s.x1;
       this._positions[pi + 1] = s.y1;
       this._positions[pi + 2] = s.x2;
       this._positions[pi + 3] = s.y2;
 
-      this._meta[mi] = s.speedNorm;
-      this._meta[mi + 1] = s.age;
-      this._meta[mi + 2] = s.blink;
-      this._meta[mi + 3] = s.segIdx;
-      this._meta[mi + 4] = s.speedNorm;
-      this._meta[mi + 5] = s.age;
-      this._meta[mi + 6] = s.blink;
-      this._meta[mi + 7] = s.segIdx;
+      // Metadata: vec4 (one copy per instance, not duplicated)
+      this._meta[pi]     = s.speedNorm;
+      this._meta[pi + 1] = s.age;
+      this._meta[pi + 2] = s.blink;
+      this._meta[pi + 3] = s.segIdx;
 
-      this._depths[di] = s.depth1 ?? 0;
+      // Depth pair: vec2
+      const di = i * 2;
+      this._depths[di]     = s.depth1 ?? 0;
       this._depths[di + 1] = s.depth2 ?? 0;
     }
 
     this.device.queue.writeBuffer(this.positionBuffer, 0, this._positions, 0, count * 4);
-    this.device.queue.writeBuffer(this.metaBuffer, 0, this._meta, 0, count * 8);
+    this.device.queue.writeBuffer(this.metaBuffer, 0, this._meta, 0, count * 4);
     this.device.queue.writeBuffer(this.depthBuffer, 0, this._depths, 0, count * 2);
   }
 
@@ -576,6 +588,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
       ir.intensity,                    // iridescenceIntensity: f32
       ir.speed,                        // iridescenceSpeed: f32
       ir.scale,                        // iridescenceScale: f32
+      this.lineWidth * 0.5,            // halfWidth: f32
     ]);
     this.device.queue.writeBuffer(this.lineUniformBuffer, 0, lineData);
 
@@ -592,10 +605,11 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     });
     pass.setPipeline(this.pipelines.lines);
     pass.setBindGroup(0, lineBindGroup);
-    pass.setVertexBuffer(0, this.positionBuffer);
-    pass.setVertexBuffer(1, this.metaBuffer);
-    pass.setVertexBuffer(2, this.depthBuffer);
-    pass.draw(count * 2); // 2 vertices per line segment
+    pass.setVertexBuffer(0, this.quadTemplateBuffer);
+    pass.setVertexBuffer(1, this.positionBuffer);
+    pass.setVertexBuffer(2, this.metaBuffer);
+    pass.setVertexBuffer(3, this.depthBuffer);
+    pass.draw(6, count); // 6 vertices per instance, count instances
     pass.end();
   }
 
@@ -864,6 +878,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     this._destroyRenderTargets();
 
     // Buffers
+    this.quadTemplateBuffer?.destroy();
     this.positionBuffer?.destroy();
     this.metaBuffer?.destroy();
     this.depthBuffer?.destroy();
