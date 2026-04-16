@@ -106,7 +106,7 @@ const DEFAULTS = {
   bloom: {
     enabled: true,
     threshold: 0.25,
-    strength: 0.35,
+    strength: 0.25,
     radius: 0.6,
     passes: 1,
   },
@@ -114,7 +114,7 @@ const DEFAULTS = {
   glow: {
     enabled: true,
     radius: 50,
-    intensity: 0.5,
+    intensity: 0.85,
   },
 
   depthFog: {
