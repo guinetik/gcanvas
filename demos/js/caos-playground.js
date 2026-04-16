@@ -397,6 +397,10 @@ export class CaosPlayground extends Attractor3DDemo {
   init() {
     super.init(); // Camera, particles, WebGL pipeline all set up
 
+    // Pause the sim when the tab is hidden so backgrounded rAF throttling
+    // can't queue up a wall-clock backlog.
+    this.enablePauseOnBlur(true);
+
     this.fpsCounter = new FPSCounter(this, {
       color: "#00FF00",
       anchor: Screen.isMobile ? "bottom-left" : "bottom-right",

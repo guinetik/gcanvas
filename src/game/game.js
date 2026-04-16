@@ -106,6 +106,9 @@ export class Game {
     // Add visibility pause feature
     this._pauseOnBlur = false;
     this._isPaused = false;
+    // Single-source-of-truth for the pending rAF. Any new schedule MUST
+    // cancel this first, or hide/show races can spawn duplicate chains.
+    this._rafId = 0;
     //
     this._init = false;
     //
@@ -301,7 +304,7 @@ export class Game {
     }
     this.running = true;
     this.loop = this.loop.bind(this);
-    requestAnimationFrame(this.loop);
+    this._scheduleFrame();
     this.logger.log("[Game] Started");
     this.logger.groupEnd();
   }
@@ -311,6 +314,10 @@ export class Game {
    */
   stop() {
     this.running = false;
+    if (this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = 0;
+    }
     this.logger.log("[Game] Stopped");
   }
 
@@ -323,8 +330,18 @@ export class Game {
     this.running = true;
     this.lastTime = performance.now();
     this._accumulator = 0;
-    requestAnimationFrame(this.loop);
+    this._scheduleFrame();
     this.logger.log("[Game] Resumed");
+  }
+
+  /**
+   * Schedule the next frame, cancelling any rAF that's already pending.
+   * Single choke point so start/resume/loop can't spawn parallel chains.
+   * @private
+   */
+  _scheduleFrame() {
+    if (this._rafId) cancelAnimationFrame(this._rafId);
+    this._rafId = requestAnimationFrame(this.loop);
   }
 
   /**
@@ -345,9 +362,15 @@ export class Game {
    * @private
    */
   loop(timestamp) {
+    this._rafId = 0;
     if (!this.running) return;
 
-    const elapsed = timestamp - this.lastTime; // <--- Real elapsed time
+    // Clamp elapsed so a huge gap (e.g. tab was hidden and rAF was throttled
+    // to 1 Hz) can't blow out the accumulator or the FPS reading. 100 ms is
+    // ~6 frames — enough headroom for a hitch, small enough to drain quickly.
+    // Min 1 ms guards against Infinity FPS if two rAFs somehow share a
+    // timestamp (stale-chain race).
+    const elapsed = Math.min(Math.max(timestamp - this.lastTime, 1), 100);
     this.lastTime = timestamp;
     this._accumulator += elapsed;
 
@@ -372,7 +395,7 @@ export class Game {
     if (this.boundsDirty) {
       this.boundsDirty = false;
     }
-    requestAnimationFrame(this.loop);
+    this._scheduleFrame();
   }
 
   /**
