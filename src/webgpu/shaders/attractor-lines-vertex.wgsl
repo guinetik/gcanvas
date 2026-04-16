@@ -42,6 +42,7 @@ struct VertexOutput {
     @location(2) blink: f32,
     @location(3) segIdx: f32,
     @location(4) depth: f32,
+    @location(5) side: f32,
 };
 
 @vertex
@@ -70,5 +71,6 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     output.blink = input.segMeta.z;
     output.segIdx = input.segMeta.w;
     output.depth = mix(input.depthPair.x, input.depthPair.y, end);
+    output.side = side;
     return output;
 }

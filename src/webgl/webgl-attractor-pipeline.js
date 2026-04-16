@@ -119,7 +119,7 @@ export class WebGLAttractorPipeline {
     };
 
     this.colorGradingConfig = {
-      enabled: false,
+      enabled: true,
       exposure: 1.4,
       vignetteStrength: 0.15,
       vignetteRadius: 0.85,
@@ -128,7 +128,7 @@ export class WebGLAttractorPipeline {
       ...options.colorGrading,
     };
 
-    this.lineWidth = options.lineWidth ?? 2.0;
+    this.lineWidth = options.lineWidth ?? 3.0;
 
     // Per-instance data: 1 entry per segment (expanded to quads on the GPU)
     // Segment endpoints: (x1, y1, x2, y2) = 4 floats per instance

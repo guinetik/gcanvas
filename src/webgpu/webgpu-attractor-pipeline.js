@@ -66,12 +66,12 @@ export class WebGPUAttractorPipeline {
       ...options.chromaticAberration,
     };
     this.colorGradingConfig = {
-      enabled: false, exposure: 1.4, vignetteStrength: 0.15,
+      enabled: true, exposure: 1.4, vignetteStrength: 0.15,
       vignetteRadius: 0.85, grainIntensity: 0.02, warmth: 0.15,
       ...options.colorGrading,
     };
 
-    this.lineWidth = options.lineWidth ?? 2.0;
+    this.lineWidth = options.lineWidth ?? 3.0;
 
     // Per-instance data: 1 entry per segment (expanded to quads on the GPU)
     // Segment endpoints: (x1, y1, x2, y2) = 4 floats per instance
@@ -172,13 +172,14 @@ export class WebGPUAttractorPipeline {
     const h = this.height;
     const hw = Math.max(1, Math.floor(w / 2));
     const hh = Math.max(1, Math.floor(h / 2));
-    const fmt = "rgba8unorm";
+    const hdrFormat = "rgba16float"; // HDR: preserves >1.0 additive values for tone mapping
+    const ldrFormat = "rgba8unorm";  // LDR: bloom is lossy anyway
 
-    this.sceneRT = new WebGPURenderTarget(this.device, w, h, fmt);
-    this.brightRT = new WebGPURenderTarget(this.device, hw, hh, fmt);
-    this.blurPingRT = new WebGPURenderTarget(this.device, hw, hh, fmt);
-    this.blurPongRT = new WebGPURenderTarget(this.device, hw, hh, fmt);
-    this.postRT = new WebGPURenderTarget(this.device, w, h, fmt);
+    this.sceneRT = new WebGPURenderTarget(this.device, w, h, hdrFormat);
+    this.brightRT = new WebGPURenderTarget(this.device, hw, hh, ldrFormat);
+    this.blurPingRT = new WebGPURenderTarget(this.device, hw, hh, ldrFormat);
+    this.blurPongRT = new WebGPURenderTarget(this.device, hw, hh, ldrFormat);
+    this.postRT = new WebGPURenderTarget(this.device, w, h, hdrFormat);
   }
 
   /** @private */
@@ -255,7 +256,8 @@ export class WebGPUAttractorPipeline {
   /** @private */
   _createPipelines() {
     const device = this.device;
-    const targetFormat = "rgba8unorm";
+    const hdrFormat = "rgba16float"; // sceneRT, postRT
+    const ldrFormat = "rgba8unorm";  // brightRT, blurPing/Pong
 
     // ── Background pipeline (alpha blend) ─────────────────────────────
     const bgBindGroupLayout = device.createBindGroupLayout({
@@ -275,7 +277,7 @@ export class WebGPUAttractorPipeline {
         module: bgModule,
         entryPoint: "fs_main",
         targets: [{
-          format: targetFormat,
+          format: hdrFormat,
           blend: {
             color: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
             alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
@@ -319,7 +321,7 @@ export class WebGPUAttractorPipeline {
         module: lineFragModule,
         entryPoint: "fs_main",
         targets: [{
-          format: targetFormat,
+          format: hdrFormat,
           blend: {
             color: { srcFactor: "one", dstFactor: "one", operation: "add" },
             alpha: { srcFactor: "one", dstFactor: "one", operation: "add" },
@@ -348,7 +350,7 @@ export class WebGPUAttractorPipeline {
       fragment: {
         module: brightModule,
         entryPoint: "fs_main",
-        targets: [{ format: targetFormat }], // No blending — replace
+        targets: [{ format: ldrFormat }], // No blending — replace
       },
       primitive: { topology: "triangle-list" },
     });
@@ -363,7 +365,7 @@ export class WebGPUAttractorPipeline {
       fragment: {
         module: blurModule,
         entryPoint: "fs_main",
-        targets: [{ format: targetFormat }],
+        targets: [{ format: ldrFormat }],
       },
       primitive: { topology: "triangle-list" },
     });
@@ -389,7 +391,7 @@ export class WebGPUAttractorPipeline {
         module: compositeModule,
         entryPoint: "fs_main",
         targets: [{
-          format: targetFormat,
+          format: hdrFormat,
           blend: {
             color: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
             alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
@@ -400,7 +402,7 @@ export class WebGPUAttractorPipeline {
     });
 
     // ── Post-process pipeline ─────────────────────────────────────────
-    // Same layout as single-texture passes but renders to rgba8unorm RT
+    // Writes to sceneRT (reused as scratch) — HDR format.
     const postModule = device.createShaderModule({
       code: FULLSCREEN_QUAD_VERTEX + POST_PROCESS_FRAGMENT,
     });
@@ -411,7 +413,7 @@ export class WebGPUAttractorPipeline {
         module: postModule,
         entryPoint: "fs_main",
         targets: [{
-          format: targetFormat,
+          format: hdrFormat,
           blend: {
             color: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },
             alpha: { srcFactor: "one", dstFactor: "one-minus-src-alpha", operation: "add" },

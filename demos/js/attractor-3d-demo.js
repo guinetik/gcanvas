@@ -137,7 +137,7 @@ const DEFAULTS = {
   },
 
   colorGrading: {
-    enabled: false,
+    enabled: true,
     exposure: 1.4,
     vignetteStrength: 0.15,
     vignetteRadius: 0.85,
@@ -962,9 +962,11 @@ class Attractor3DDemo extends Game {
       this.particles.push(this.createParticle());
     }
 
-    // Reset camera
+    // Reset camera (clear all axes including Z/screen rotation from previous attractor)
     this.camera.rotationX = this.config.camera.rotationX;
     this.camera.rotationY = this.config.camera.rotationY;
+    this.camera.rotationZ = this.config.camera.rotationZ ?? 0;
+    this.camera.screenRotation = this.config.camera.screenRotation ?? 0;
     this.camera.velocityX = 0;
     this.camera.velocityY = 0;
 

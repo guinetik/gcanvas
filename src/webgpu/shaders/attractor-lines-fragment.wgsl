@@ -64,6 +64,7 @@ struct FragmentInput {
     @location(2) blink: f32,
     @location(3) segIdx: f32,
     @location(4) depth: f32,
+    @location(5) side: f32,
 };
 
 @fragment
@@ -106,6 +107,10 @@ fn fs_main(input: FragmentInput) -> @location(0) vec4f {
 
     var alpha = (1.0 - input.age) * u.maxAlpha * (1.0 + input.blink * (u.alphaBoost - 1.0));
     alpha = clamp(alpha, 0.0, 1.0);
+
+    // Edge antialiasing: fade alpha near the outer edges of the quad.
+    let edgeAA = 1.0 - smoothstep(0.55, 1.0, abs(input.side));
+    alpha *= edgeAA;
 
     if (u.depthFogEnabled > 0.5) {
         let fogFade = 1.0 - smoothstep(0.3, 1.0, input.depth * u.depthFogDensity);

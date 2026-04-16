@@ -30,6 +30,7 @@ varying float vAge;
 varying float vBlink;
 varying float vSegIdx;
 varying float vDepth;
+varying float vSide;
 
 uniform vec2 uResolution;
 uniform float uHalfWidth;
@@ -56,6 +57,7 @@ void main() {
     vBlink     = aMeta.z;
     vSegIdx    = aMeta.w;
     vDepth     = mix(aDepthPair.x, aDepthPair.y, end);
+    vSide      = side;
 }
 `;
 
@@ -67,6 +69,7 @@ varying float vAge;
 varying float vBlink;
 varying float vSegIdx;
 varying float vDepth;
+varying float vSide;
 
 uniform float uTime;
 uniform float uMinHue;
@@ -174,6 +177,10 @@ void main() {
     // Age -> alpha decay
     float alpha = (1.0 - vAge) * uMaxAlpha * (1.0 + vBlink * (uAlphaBoost - 1.0));
     alpha = clamp(alpha, 0.0, 1.0);
+
+    // Edge antialiasing: fade alpha near the outer edges of the quad.
+    float edgeAA = 1.0 - smoothstep(0.55, 1.0, abs(vSide));
+    alpha *= edgeAA;
 
     // Depth fog: smoothstep fade on alpha for distant segments
     if (uDepthFogEnabled > 0.5) {
