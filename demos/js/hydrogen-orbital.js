@@ -723,7 +723,7 @@ class HydrogenOrbitalDemo extends Game {
       height: CONFIG.toggle.height,
       onClick: () => this._togglePanel(),
     });
-    this._toggleBtn.x = CONFIG.toggle.margin + CONFIG.toggle.width / 2;
+    this._toggleBtn.x = CONFIG.toggle.margin + CONFIG.toggle.width * 2 +CONFIG.toggle.width;
     this._toggleBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
     this.pipeline.add(this._toggleBtn);
     this._toggleBtn.visible = Screen.isMobile;
@@ -742,7 +742,7 @@ class HydrogenOrbitalDemo extends Game {
       },
     });
     // Position to the right of the toggle button
-    this._mathBtn.x = CONFIG.toggle.margin * 2 + CONFIG.toggle.width + CONFIG.toggle.width / 2;
+    this._mathBtn.x = CONFIG.toggle.margin + CONFIG.toggle.width / 2;
     this._mathBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
     this.pipeline.add(this._mathBtn);
   }
@@ -759,7 +759,7 @@ class HydrogenOrbitalDemo extends Game {
       },
     });
     // Position to the right of the math button
-    this._bohrBtn.x = CONFIG.toggle.margin * 3 + CONFIG.toggle.width * 2 + CONFIG.toggle.width / 2;
+    this._bohrBtn.x = CONFIG.toggle.margin * 2 + CONFIG.toggle.width + CONFIG.toggle.width / 2;
     this._bohrBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
     this.pipeline.add(this._bohrBtn);
   }

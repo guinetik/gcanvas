@@ -295,7 +295,7 @@ export function createInfoButton(game, { onToggle }) {
   });
   const btnIndex = Screen.isMobile ? 1 : 0;
   btn.x = CONFIG.toggle.margin * (btnIndex + 1) + CONFIG.toggle.width * btnIndex + CONFIG.toggle.width / 2;
-  btn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
+  btn.y = game.height - CONFIG.toggle.margin - CONFIG.toggle.height / 2;
   return btn;
 }
 
