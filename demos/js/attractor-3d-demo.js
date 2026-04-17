@@ -79,7 +79,7 @@ const DEFAULTS = {
     lightness: 55,
     maxAlpha: 0.85,
     hueShiftSpeed: 15,
-    hueJitter: 10,
+    hueJitter: 1,
   },
 
   blink: {
@@ -139,11 +139,11 @@ const DEFAULTS = {
 
   colorGrading: {
     enabled: true,
-    exposure: 1.1,
-    vignetteStrength: 0.15,
+    exposure: 0.75,
+    vignetteStrength: 0.25,
     vignetteRadius: 0.85,
-    grainIntensity: 0.02,
-    warmth: 0.15,
+    grainIntensity: 0.001,
+    warmth: 0.01,
   },
 
   zoom: {
@@ -523,7 +523,9 @@ class Attractor3DDemo extends Game {
     this.canvas.addEventListener("mouseup", () => {
       console.log(
         `Camera: rotationX: ${this.camera.rotationX.toFixed(3)}, ` +
-          `rotationY: ${this.camera.rotationY.toFixed(3)}`
+          `rotationY: ${this.camera.rotationY.toFixed(3)}, ` +
+          `rotationZ: ${this.camera.rotationZ.toFixed(3)}, ` +
+          `screenRotation: ${this.camera.screenRotation.toFixed(3)}`
       );
       let sumX = 0,
         sumY = 0,

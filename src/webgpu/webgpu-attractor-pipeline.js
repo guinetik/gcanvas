@@ -66,7 +66,7 @@ export class WebGPUAttractorPipeline {
       ...options.chromaticAberration,
     };
     this.colorGradingConfig = {
-      enabled: true, exposure: 1.1, vignetteStrength: 0.15,
+      enabled: true, exposure: 0.9, vignetteStrength: 0.15,
       vignetteRadius: 0.85, grainIntensity: 0.02, warmth: 0.15,
       ...options.colorGrading,
     };

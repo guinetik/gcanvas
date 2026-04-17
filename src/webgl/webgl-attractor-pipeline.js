@@ -121,7 +121,7 @@ export class WebGLAttractorPipeline {
 
     this.colorGradingConfig = {
       enabled: true,
-      exposure: 1.1,
+      exposure: 0.9,
       vignetteStrength: 0.15,
       vignetteRadius: 0.85,
       grainIntensity: 0.02,
