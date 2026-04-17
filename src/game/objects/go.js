@@ -44,7 +44,10 @@ export class GameObject extends Transformable {
     this.parent = null;
     /** @type {EventEmitter} */
     this.events = new EventEmitter();
-    this._interactive = options.interactive ?? false;
+    // Default to null (not explicitly set) rather than false, so Scene
+     // containers don't accidentally block input dispatch to their children.
+     // Pipeline and _hitTest use strict `=== false` to mean "explicitly disabled".
+    this._interactive = options.interactive ?? null;
     this._hovered = false;
     if (options.anchor) {
       applyAnchor(this, options);
