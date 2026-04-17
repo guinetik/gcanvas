@@ -53,4 +53,9 @@ describe("Theme registry", () => {
     const mono = THEMES.monochrome;
     expect(mono.colors.neonGreen).toContain("255");
   });
+
+  it("createTheme derives accordion header tints from accent", () => {
+    const t = createTheme("#ffffff");
+    expect(t.colors.accordionRowBorder).toMatch(/rgba\(255,\s*255,\s*255/);
+  });
 });

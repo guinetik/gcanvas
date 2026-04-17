@@ -192,6 +192,8 @@ export class Slider extends GameObject {
     // Global move/up for drag continuity outside bounds
     this.game.events.on("inputmove", (e) => {
       if (this._dragging && this.isInteractiveInHierarchy()) {
+        // Keep Pipeline's UI flag set so scene pan/zoom/camera ignores this gesture.
+        this.game._uiHandledInput = true;
         const local = this.screenToLocal(e.x, e.y);
         this.value = this._valueFromX(local.x);
       }

@@ -7,9 +7,10 @@
  ***************************************************************/
 
 import { Scene } from "./objects";
-import { Tweenetik } from "../motion"; 
+import { Tweenetik } from "../motion";
 import { Loggable } from "../logger/loggable";
 import { ZOrderedCollection } from "../util";
+import { Mouse } from "../io/mouse.js";
 /**
  * Pipeline - Maintains a list of GameObjects, updating and rendering them
  * each frame. It also centralizes and dispatches pointer events (inputdown,
@@ -42,6 +43,63 @@ export class Pipeline extends Loggable {
         this.dispatchInputEvent(type, e);
       });
     });
+
+    // Wheel is not dispatched to GameObjects; still expose "pointer over UI" for scene zoom etc.
+    this.game.events.on("wheel", () => {
+      this.game._uiPointerOverInteractive = this.hitTestInteractiveUI(
+        Mouse.x,
+        Mouse.y
+      );
+    });
+  }
+
+  /**
+   * True if (x, y) hits any interactive object in the pipeline, including nested
+   * {@link Scene} children. Matches pointer dispatch order (topmost wins).
+   *
+   * @param {number} x - Canvas-space x (same as unified input events).
+   * @param {number} y - Canvas-space y.
+   * @returns {boolean}
+   */
+  hitTestInteractiveUI(x, y) {
+    const e = { x, y };
+    for (let i = this.gameObjects.length - 1; i >= 0; i--) {
+      const obj = this.gameObjects[i];
+      if (obj instanceof Scene) {
+        if (obj.interactive === false || obj.visible === false) continue;
+        if (this._sceneHitTestInteractive(obj, e)) return true;
+      } else if (obj.interactive && obj._hitTest?.(e.x, e.y)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @param {Scene} scene
+   * @param {{ x: number, y: number }} e
+   * @returns {boolean}
+   * @private
+   */
+  _sceneHitTestInteractive(scene, e) {
+    for (let i = scene.children.length - 1; i >= 0; i--) {
+      const child = scene.children[i];
+
+      if (scene.isChildHittable && !scene.isChildHittable(child)) {
+        continue;
+      }
+
+      if (child instanceof Scene) {
+        if (child.interactive === false || child.visible === false) continue;
+        if (this._sceneHitTestInteractive(child, e)) return true;
+      } else if (child.interactive && child._hitTest?.(e.x, e.y)) {
+        return true;
+      }
+    }
+    if (scene.interactive && scene._hitTest?.(e.x, e.y)) {
+      return true;
+    }
+    return false;
   }
 
   /**

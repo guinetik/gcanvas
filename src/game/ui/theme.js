@@ -6,10 +6,23 @@
  * Aesthetic principles:
  * - Dark translucent backgrounds (depth, layering)
  * - Neon green (#0f0) as primary accent
- * - Monospace typography throughout
+ * - Datatype (variable) + monospace fallbacks for typography
  * - Inverted colors on hover for clear feedback
  * - Minimal, clean lines inspired by terminal UIs
  ***************************************************************/
+
+const CONFIG = {
+  /** Must match the family loaded on the page (see `demos/demos.css` @import). */
+  fontFamilyName: "Datatype",
+};
+
+/**
+ * Default font stack for canvas `ctx.font` and CSS `font-family`.
+ * Load the Datatype face in HTML/CSS before drawing text on canvas.
+ *
+ * @constant {string}
+ */
+export const FONT_FAMILY_STACK = `${CONFIG.fontFamilyName}, ui-monospace, monospace`;
 
 /**
  * Core theme colors and values for UI components.
@@ -56,17 +69,26 @@ export const UI_THEME = {
     subtleBorder: "rgba(0, 255, 0, 0.4)",
     activeBorder: "#0f0",
     glowBorder: "rgba(0, 255, 0, 0.5)",
+
+    /** Accordion section header row (AccordionSection) — derived per theme */
+    accordionRowBg: "rgba(0, 255, 0, 0.03)",
+    accordionRowBgHover: "rgba(0, 255, 0, 0.08)",
+    accordionRowBorder: "rgba(0, 255, 0, 0.2)",
   },
   
   /**
-   * Typography
+   * Typography (canvas + HTML; requires Datatype loaded — see demos.css)
    */
   fonts: {
-    primary: "monospace",
-    small: "11px monospace",
-    medium: "14px monospace",
-    large: "18px monospace",
-    heading: "bold 24px monospace",
+    /** Same as {@link FONT_FAMILY_STACK} */
+    family: FONT_FAMILY_STACK,
+    primary: FONT_FAMILY_STACK,
+    small: `11px ${FONT_FAMILY_STACK}`,
+    medium: `14px ${FONT_FAMILY_STACK}`,
+    large: `18px ${FONT_FAMILY_STACK}`,
+    heading: `bold 24px ${FONT_FAMILY_STACK}`,
+    /** Default for `Text` GameObject when the `font` option is omitted */
+    gameObjectText: `16px ${FONT_FAMILY_STACK}`,
   },
   
   /**
@@ -234,6 +256,9 @@ export function createTheme(accentHex) {
       subtleBorder: subtle,
       activeBorder: accent,
       glowBorder: glow,
+      accordionRowBg: `rgba(${r},${g},${b},0.03)`,
+      accordionRowBgHover: `rgba(${r},${g},${b},0.08)`,
+      accordionRowBorder: `rgba(${r},${g},${b},0.2)`,
     },
     fonts: { ...UI_THEME.fonts },
     spacing: { ...UI_THEME.spacing },

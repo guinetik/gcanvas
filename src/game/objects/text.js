@@ -9,6 +9,7 @@ import { GameObject } from "./go.js";
 import { GameObjectShapeWrapper } from "./wrapper.js";
 import { Painter } from "../../painter/painter.js";
 import { TextShape } from "../../shapes/text.js";
+import { UI_THEME } from "../ui/theme.js";
 
 /**
  * Text - Renders a string onto the canvas using the Painter API.
@@ -41,7 +42,7 @@ export class Text extends GameObjectShapeWrapper {
    * @param {object} [options={}] - Configuration options
    * @param {number} [options.x=0] - X-position
    * @param {number} [options.y=0] - Y-position
-   * @param {string} [options.font="16px monospace"] - CSS-style font string
+   * @param {string} [options.font] - CSS-style font string (defaults to `UI_THEME.fonts.gameObjectText`)
    * @param {string} [options.color="#fff"] - Text color
    * @param {string} [options.align="left"] - Text alignment
    * @param {string} [options.baseline="top"] - Text baseline
@@ -53,9 +54,10 @@ export class Text extends GameObjectShapeWrapper {
    * @param {number} [options.padding] - Padding when using anchors
    */
   constructor(game, text, options = {}) {
+    const defaultFont = options.font || UI_THEME.fonts.gameObjectText;
     // Create the TextShape
     const textShape = new TextShape(text, {
-      font: options.font || "16px monospace",
+      font: defaultFont,
       color: options.color || "yellow",
       align: options.align || "left",
       baseline: options.baseline || "top",
@@ -69,7 +71,7 @@ export class Text extends GameObjectShapeWrapper {
     super(game, textShape, options);
     // Store reference to text-specific options for direct access
     this._textOptions = {
-      font: options.font || "16px monospace",
+      font: defaultFont,
       color: options.color || "yellow",
       align: options.align || "left",
       baseline: options.baseline || "top",
@@ -91,6 +93,12 @@ export class Text extends GameObjectShapeWrapper {
   set text(value) {
     this.shape.text = value;
     this.markBoundsDirty();
+    // Eagerly pull the shape's freshly-measured dimensions up to the wrapper
+    // so any parent layout pass that runs this frame sees the new size.
+    // Without this, LayoutScene.update reads stale widths (runs before child
+    // updates can sync) and stacks multi-text layouts at y=0 for one frame.
+    if (this.shape._width) this._width = this.shape._width;
+    if (this.shape._height) this._height = this.shape._height;
   }
 
   /**
@@ -227,15 +235,32 @@ export class Text extends GameObjectShapeWrapper {
   update(dt) {
     super.update(dt);
 
-    // Sync dimensions from the text shape only if not explicitly set
-    // Check if width/height were set via options (they would be non-zero)
+    // Mirror the shape's measured dimensions back onto the wrapper so layout
+    // systems (VerticalLayout, etc.) see correct widths. The shape is
+    // authoritative for text dimensions because TextShape._calculateBounds
+    // measures against the current font + text.
     if (this.shape) {
-      // Only auto-size if width/height are 0 or not set
-      if (!this._width || this._width === 0) {
-        this._width = this.shape.width || this.measureWidth();
-      }
-      if (!this._height || this._height === 0) {
-        this._height = this.shape.height || this.measureHeight();
+      if (this.shape.width) this._width = this.shape.width;
+      if (this.shape.height) this._height = this.shape.height;
+    }
+  }
+
+  /**
+   * Override the wrapper sync so it does NOT push width/height onto the
+   * shape. TextShape measures its own dimensions from font metrics; if the
+   * wrapper force-synced zero-width down it would corrupt the shape and
+   * break TextShape.draw's alignment offset calculation.
+   */
+  syncPropertiesToShape() {
+    if (!this.shape) return;
+    const propsToSync = [
+      "rotation", "scaleX", "scaleY", "visible", "debug", "debugColor"
+    ];
+    for (const prop of propsToSync) {
+      if (prop in this && prop in this.shape) {
+        if (this[prop] !== this.shape[prop]) {
+          this.shape[prop] = this[prop];
+        }
       }
     }
   }

@@ -160,14 +160,17 @@ export class AccordionSection extends GameObject {
     const halfW = this.width / 2;
     const halfH = this.height / 2;
 
+    const cols = this._theme.colors;
+    const rowBg = cols.accordionRowBg ?? "rgba(0, 255, 0, 0.03)";
+    const rowBgHover = cols.accordionRowBgHover ?? "rgba(0, 255, 0, 0.08)";
+    const rowBorder = cols.accordionRowBorder ?? "rgba(0, 255, 0, 0.2)";
+
     // Background bar
-    ctx.fillStyle = this._isHovered
-      ? "rgba(0, 255, 0, 0.08)"
-      : "rgba(0, 255, 0, 0.03)";
+    ctx.fillStyle = this._isHovered ? rowBgHover : rowBg;
     ctx.fillRect(-halfW, -halfH, this.width, this.height);
 
     // Bottom border
-    ctx.strokeStyle = "rgba(0, 255, 0, 0.2)";
+    ctx.strokeStyle = rowBorder;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(-halfW, halfH);

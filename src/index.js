@@ -26,3 +26,6 @@ export * from "./physics";
 
 // WebGL (optional, for shader effects)
 export * from "./webgl";
+
+// WebGPU (optional, for GPU compute/render)
+export * from "./webgpu";

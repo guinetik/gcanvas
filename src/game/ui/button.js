@@ -50,7 +50,7 @@ export class Button extends GameObject {
    * @param {number} [options.width=120] - Width of the Button.
    * @param {number} [options.height=40] - Height of the Button.
    * @param {string} [options.text="Button"] - Label text for the Button.
-   * @param {string} [options.font="14px monospace"] - Font for the text.
+   * @param {string} [options.font] - Font for the text (defaults to `game.theme.fonts.medium` or `UI_THEME.fonts.medium`)
    * @param {string} [options.textColor="#000"] - Text color for the Button.
    * @param {string} [options.textAlign="center"] - Alignment of the text.
    * @param {string} [options.textBaseline="middle"] - Baseline of the text.
@@ -91,7 +91,7 @@ export class Button extends GameObject {
       width = 120,
       height = 40,
       text = "Button",
-      font = "14px monospace",
+      font: fontOpt,
       textColor = "#000",
       textAlign = "center",
       textBaseline = "middle",
@@ -112,6 +112,10 @@ export class Button extends GameObject {
       colorPressedStroke,
       colorPressedText,
     } = options;
+
+    /** @type {string} */
+    const font =
+      fontOpt ?? game?.theme?.fonts?.medium ?? UI_THEME.fonts.medium;
 
     // Resolve theme: per-option overrides > game theme > default UI_THEME
     const _t = (game?.theme?.button) || UI_THEME.button;

@@ -184,8 +184,9 @@ export class TextShape extends Shape {
   }
 
   set text(value) {
-    this.checkDirty(value, this._text);
+    const old = this._text;
     this._text = value;
+    this.checkDirty(value, old);
   }
 
   get font() {
@@ -193,8 +194,9 @@ export class TextShape extends Shape {
   }
 
   set font(value) {
-    this.checkDirty(value, this._font);
+    const old = this._font;
     this._font = value;
+    this.checkDirty(value, old);
   }
 
   get color() {
@@ -210,8 +212,9 @@ export class TextShape extends Shape {
   }
 
   set align(value) {
-    this.checkDirty(value, this._align);
+    const old = this._align;
     this._align = value;
+    this.checkDirty(value, old);
   }
 
   get baseline() {
@@ -219,8 +222,9 @@ export class TextShape extends Shape {
   }
 
   set baseline(value) {
-    this.checkDirty(value, this._baseline);
+    const old = this._baseline;
     this._baseline = value;
+    this.checkDirty(value, old);
   }
 }
 
