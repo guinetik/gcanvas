@@ -34,6 +34,16 @@ const CONFIG = {
     marginRight: 16,
     marginTop: 16,
     headerHeight: 28,
+    mobilePadding: 12,
+    mobileMaxHeight: 0.85,
+    mobileMargin: 10,
+    /** Semi-transparent black behind accordion + controls so the image shows through */
+    backgroundColor: "rgba(0, 0, 0, 0.78)",
+  },
+  toggle: {
+    margin: 12,
+    width: 44,
+    height: 44,
   },
   zoom: {
     min: 0.1,
@@ -122,7 +132,7 @@ export class DitherEditor extends Game {
     this.canvas.addEventListener(
       "wheel",
       (e) => {
-        if (this._uiHandledInput) return;
+        if (this._uiHandledInput || this._uiPointerOverInteractive) return;
         e.preventDefault();
         const delta = e.deltaY > 0 ? -CONFIG.zoom.speed : CONFIG.zoom.speed;
         this._targetZoom *= 1 + delta;
@@ -147,6 +157,10 @@ export class DitherEditor extends Game {
     });
 
     this.events.on("inputmove", (e) => {
+      if (this.pipeline.hitTestInteractiveUI(e.x, e.y)) {
+        this._draggingCanvas = false;
+        return;
+      }
       if (!this._draggingCanvas) return;
       const dx = e.x - this._lastDragX;
       const dy = e.y - this._lastDragY;
@@ -229,9 +243,105 @@ export class DitherEditor extends Game {
     this._dirty = true;
   }
 
+  /**
+   * Panel width, padding, and inner control width from {@link Screen} + canvas size.
+   * @returns {{ panelWidth: number, padding: number, sliderW: number }}
+   */
+  _responsivePanelDimensions() {
+    const m = CONFIG.panel;
+    if (Screen.isMobile) {
+      const margin = m.mobileMargin ?? 10;
+      const panelWidth = Math.max(160, this.width - 2 * margin);
+      const padding = m.mobilePadding ?? 12;
+      return { panelWidth, padding, sliderW: panelWidth - padding * 2 };
+    }
+    let panelWidth = Screen.responsive(220, 250, m.width);
+    const padding = Screen.responsive(10, 12, m.padding);
+    const maxW = this.width - m.marginRight - 8;
+    panelWidth = Math.min(panelWidth, maxW);
+    return { panelWidth, padding, sliderW: panelWidth - padding * 2 };
+  }
+
+  /**
+   * Positions the accordion panel (desktop: top-right; mobile: bottom strip, height-clamped).
+   */
+  _layoutPanel() {
+    if (!this.panel) return;
+    const m = CONFIG.panel;
+    if (Screen.isMobile) {
+      const panelH = this.panel._height || 300;
+      const maxH = this.height * (m.mobileMaxHeight ?? 0.85);
+      const clampedH = Math.min(panelH, maxH);
+      const margin = m.mobileMargin ?? 10;
+      this.panel.x = margin;
+      this.panel.y = this.height - clampedH - margin;
+    } else {
+      const w = this.panel._width || this.panel._panelWidth;
+      this.panel.x = this.width - w - m.marginRight;
+      this.panel.y = m.marginTop;
+    }
+  }
+
+  /**
+   * Updates panel and control sizes after resize or breakpoint change.
+   */
+  _syncPanelSizesFromScreen() {
+    if (!this.panel) return;
+    const { panelWidth, padding, sliderW } = this._responsivePanelDimensions();
+    const p = this.panel;
+    p._panelWidth = panelWidth;
+    p._padding = padding;
+    p._itemWidth = panelWidth - padding * 2;
+
+    if (p._entries) {
+      for (const entry of p._entries) {
+        if (entry.type === "section") {
+          entry.ref.width = p._itemWidth;
+        }
+      }
+    }
+
+    this._updateControlWidths(sliderW);
+    p.layoutAll();
+    this._layoutPanel();
+  }
+
+  /**
+   * @param {number} sliderW - Inner width for sliders, dropdown, and buttons
+   */
+  _updateControlWidths(sliderW) {
+    const w = sliderW;
+    if (this._controls.loadBtn) this._controls.loadBtn.width = w;
+    const sliders = [
+      "contrast",
+      "highlights",
+      "shadows",
+      "gamma",
+      "grain",
+      "pixelSize",
+    ];
+    for (const key of sliders) {
+      const s = this._controls[key];
+      if (s) {
+        s.sliderWidth = w;
+        s.width = w;
+      }
+    }
+    const dd = this._controls.algorithm;
+    if (dd) {
+      dd.dropdownWidth = w;
+      dd.width = w;
+    }
+    for (const key of ["compare", "freePixels", "export", "reset"]) {
+      const b = this._controls[key];
+      if (b) b.width = w;
+    }
+  }
+
   _buildUI() {
-    const panelWidth = Screen.responsive(220, 250, CONFIG.panel.width);
-    const padding = Screen.responsive(10, 12, CONFIG.panel.padding);
+    const { panelWidth, padding, sliderW } = this._responsivePanelDimensions();
+    /** On mobile, start with sections collapsed so the docked panel stays compact. */
+    const defaultExpanded = !Screen.isMobile;
 
     this.panel = new AccordionGroup(this, {
       width: panelWidth,
@@ -242,11 +352,19 @@ export class DitherEditor extends Game {
     this.panel.interactive = true;
     this.pipeline.add(this.panel);
 
+    const origLayout = this.panel.layout.bind(this.panel);
+    this.panel.layout = () => {
+      origLayout();
+      this._layoutPanel();
+    };
+
     // --- Image section ---
-    const imageSection = this.panel.addSection("Image", { expanded: true });
+    const imageSection = this.panel.addSection("Image", {
+      expanded: defaultExpanded,
+    });
     this._controls.loadBtn = new Button(this, {
       text: "Load Image",
-      width: panelWidth - padding * 2,
+      width: sliderW,
       height: 36,
       onClick: () => this._openFilePicker(),
     });
@@ -254,8 +372,9 @@ export class DitherEditor extends Game {
     this.panel.commitSection(imageSection);
 
     // --- Adjustments section ---
-    const adjSection = this.panel.addSection("Adjustments", { expanded: true });
-    const sliderW = panelWidth - padding * 2;
+    const adjSection = this.panel.addSection("Adjustments", {
+      expanded: defaultExpanded,
+    });
 
     this._controls.contrast = new Slider(this, {
       label: "Contrast",
@@ -331,7 +450,9 @@ export class DitherEditor extends Game {
     this.panel.commitSection(adjSection);
 
     // --- Dither section ---
-    const ditherSection = this.panel.addSection("Dither", { expanded: true });
+    const ditherSection = this.panel.addSection("Dither", {
+      expanded: defaultExpanded,
+    });
 
     this._controls.algorithm = new Dropdown(this, {
       label: "Algorithm",
@@ -363,7 +484,9 @@ export class DitherEditor extends Game {
     this.panel.commitSection(ditherSection);
 
     // --- Output section ---
-    const outputSection = this.panel.addSection("Output", { expanded: true });
+    const outputSection = this.panel.addSection("Output", {
+      expanded: defaultExpanded,
+    });
 
     this._controls.compare = new ToggleButton(this, {
       text: "Compare",
@@ -401,13 +524,46 @@ export class DitherEditor extends Game {
 
     this.panel.commitSection(outputSection);
     this.panel.layoutAll();
-    this._positionPanel();
+
+    const originalPanelDraw = this.panel.draw.bind(this.panel);
+    this.panel.draw = () => {
+      Painter.shapes.rect(
+        0,
+        0,
+        this.panel._width,
+        this.panel._height,
+        CONFIG.panel.backgroundColor,
+      );
+      originalPanelDraw();
+    };
+
+    this._buildPanelToggle();
+    this._layoutPanel();
   }
 
-  _positionPanel() {
-    const m = CONFIG.panel;
-    this.panel.x = this.width - this.panel.width - m.marginRight;
-    this.panel.y = m.marginTop;
+  /**
+   * Mobile-only control to show/hide the panel (matches galaxy-playground pattern).
+   */
+  _buildPanelToggle() {
+    const t = CONFIG.toggle;
+    this._panelToggleBtn = new Button(this, {
+      text: "\u2699",
+      width: t.width,
+      height: t.height,
+      onClick: () => this._togglePanel(),
+    });
+    this._panelToggleBtn.x = t.margin + t.width / 2;
+    this._panelToggleBtn.y = t.margin + t.height / 2;
+    this._panelToggleBtn.visible = Screen.isMobile;
+    this._panelToggleBtn.interactive = Screen.isMobile;
+    this.pipeline.add(this._panelToggleBtn);
+  }
+
+  /** @returns {void} */
+  _togglePanel() {
+    if (!this.panel) return;
+    this.panel.visible = !this.panel.visible;
+    this.panel.interactive = this.panel.visible;
   }
 
   _scheduleProcess() {
@@ -538,6 +694,9 @@ export class DitherEditor extends Game {
         // Skip fully transparent pixels
         if (img.data[idx + 3] === 0) continue;
 
+        // Pure black is invisible on the canvas background; skip to save particles/GPU
+        if (r === 0 && g === 0 && b === 0) continue;
+
         this._particles.push({
           homeX: sx - halfW,
           homeY: sy - halfH,
@@ -576,16 +735,18 @@ export class DitherEditor extends Game {
     });
     this._camera.enableMouseControl(this.canvas, {
       game: this,
-      isOverPanel: (x, y) => {
-        if (!this.panel) return false;
+      isOverPanel: (clientX, clientY) => {
+        if (!this.panel?.visible) return false;
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const x = (clientX - rect.left) * scaleX;
+        const y = (clientY - rect.top) * scaleY;
         const px = this.panel.x;
         const py = this.panel.y;
-        return (
-          x >= px &&
-          x <= px + this.panel.width &&
-          y >= py &&
-          y <= py + (this.panel.height || 600)
-        );
+        const pw = this.panel._width ?? this.panel.width;
+        const ph = this.panel._height ?? this.panel.height;
+        return x >= px && x <= px + pw && y >= py && y <= py + ph;
       },
     });
 
@@ -756,16 +917,30 @@ export class DitherEditor extends Game {
   }
 
   render() {
-    super.render();
+    // Draw content first, pipeline (UI) last so controls stay on top and receive hits.
+    // (Game.render clears + pipeline only — our previous super.render()+image hid the panel.)
+    Painter.setContext(this.ctx);
+    if (this.running) this.clear();
 
     if (this._freePixelsActive) {
       this._renderFreePixels();
+      this.pipeline.render();
       return;
     }
 
     const img = this._comparing ? this._sourceImage : this._processedImage;
-    if (!img) return;
+    if (img) {
+      this._drawDitherImage(img);
+    }
 
+    this.pipeline.render();
+  }
+
+  /**
+   * Renders the source/processed image with zoom and pan (below UI).
+   * @param {{ data: Uint8ClampedArray, width: number, height: number }} img
+   */
+  _drawDitherImage(img) {
     const imageData = new ImageData(
       new Uint8ClampedArray(img.data),
       img.width,
@@ -796,7 +971,11 @@ export class DitherEditor extends Game {
   }
 
   onResize() {
-    if (this.panel) this._positionPanel();
+    this._syncPanelSizesFromScreen();
+    if (this._panelToggleBtn) {
+      this._panelToggleBtn.visible = Screen.isMobile;
+      this._panelToggleBtn.interactive = Screen.isMobile;
+    }
     if (this._glRenderer) this._glRenderer.resize(this.width, this.height);
   }
 }
