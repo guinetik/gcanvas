@@ -79,6 +79,7 @@ const DEFAULTS = {
     lightness: 55,
     maxAlpha: 0.85,
     hueShiftSpeed: 15,
+    hueJitter: 10,
   },
 
   blink: {
@@ -106,7 +107,7 @@ const DEFAULTS = {
   bloom: {
     enabled: true,
     threshold: 0.25,
-    strength: 0.25,
+    strength: 0.18,
     radius: 0.6,
     passes: 1,
   },
@@ -125,9 +126,9 @@ const DEFAULTS = {
 
   iridescence: {
     enabled: true,
-    intensity: 0.3,
+    intensity: 0.38,
     speed: 0.5,
-    scale: 2.0,
+    scale: 2.5,
   },
 
   chromaticAberration: {
@@ -138,7 +139,7 @@ const DEFAULTS = {
 
   colorGrading: {
     enabled: true,
-    exposure: 1.4,
+    exposure: 1.1,
     vignetteStrength: 0.15,
     vignetteRadius: 0.85,
     grainIntensity: 0.02,

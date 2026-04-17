@@ -24,6 +24,7 @@ import {
   Screen,
   Text,
   Scene,
+  VerticalLayout,
   Tooltip,
   Tweenetik,
   Easing,
@@ -43,10 +44,10 @@ const ATTRACTOR_PRESETS = {
   lorenz: {
     label: "Lorenz",
     attractor: { dt: 0.005, scale: 10 },
-    particles: { count: 400, trailLength: 250, spawnRange: 5 },
-    center: { x: 0, y: 2, z: 27 },
-    camera: { perspective: 800, rotationX: -1.8, rotationY: -3 },
-    visual: { minHue: 30, maxHue: 200, maxSpeed: 50, saturation: 85, lightness: 30, maxAlpha: 0.85, hueShiftSpeed: 15 },
+    particles: { count: 350, trailLength: 300, spawnRange: 3 },
+    center: { x: 0, y: 0, z: 27 },
+    camera: { perspective: 800, rotationX: 4.5, rotationY: 3.2 },
+    visual: { minHue: 30, maxHue: 200, maxSpeed: 50, saturation: 70, lightness: 30, maxAlpha: 0.5, hueShiftSpeed: 15 },
     glow: { enabled: true, radius: 50, intensity: 0.85 },
     blink: { chance: 0.015, intensityBoost: 1.4 },
     mouseControl: { horizontalAxis: "rotationZ" },
@@ -54,17 +55,58 @@ const ATTRACTOR_PRESETS = {
     restart: { delay: 1 },
     spawnOffset: { z: 27 },
     normalizeRotation: true,
-    respawnChance: 0.001,
+    respawnChance: 0.003,
     autoRotation: { enabled: false, speed: 0.15, axis: "z" },
+  },
+  dadras: {
+    label: "Dadras",
+    attractor: { dt: 0.01, scale: 35 },
+    particles: { count: 250, trailLength: 175, spawnRange: 5 },
+    center: { x: 0, y: 0, z: 0 },
+    camera: { perspective: 800, rotationX: -0.195, rotationY: 0 },
+    visual: { minHue: 30, maxHue: 90, maxSpeed: 30, saturation: 70, lightness: 30, maxAlpha: 0.5, hueShiftSpeed: 50 },
+    blink: { chance: 0.02, intensityBoost: 1.5, saturationBoost: 1.2, alphaBoost: 1.3 },
+    zoom: { min: 0.3, max: 3.0, baseScreenSize: 900 },
+    screenOffset: { x: 0, y: 0.01 },
+    respawnChance: 0.000001,
+    autoRotation: { enabled: false, speed: 0.15, axis: "y" },
+  },
+  thomas: {
+    label: "Thomas",
+    attractor: { dt: 0.09, scale: 60 },
+    particles: { count: 250, trailLength: 225, spawnRange: 3 },
+    center: { x: -0.2, y: -0.2, z: 0 },
+    camera: { perspective: 800, rotationX: 0.3, rotationY: 0.2 },
+    visual: { minHue: 120, maxHue: 200, maxSpeed: 2.5, saturation: 70, lightness: 30, maxAlpha: 0.5, hueShiftSpeed: 8 },
+    blink: { chance: 0.1, minDuration: 0.06, intensityBoost: 1.4, saturationBoost: 1.15, alphaBoost: 1.2 },
+    zoom: { min: 0.3, max: 3.0 },
+    respawnChance: 0.003,
+    autoRotation: { enabled: true, speed: 0.15, axis: "y" },
+  },
+  halvorsen: {
+    label: "Halvorsen",
+    attractor: { dt: 0.008, scale: 25 },
+    particles: { count: 300, trailLength: 300, spawnRange: 1 },
+    center: { x: 0, y: 0, z: 0 },
+    camera: { perspective: 300, rotationX: 0.615, rotationY: 0.495 },
+    visual: { minHue: 320, maxHue: 220, maxSpeed: 40, saturation: 70, lightness: 30, maxAlpha: 0.5, hueShiftSpeed: 15 },
+    blink: { chance: 0.08, minDuration: 0.04, maxDuration: 0.18, intensityBoost: 1.5, saturationBoost: 1.2, alphaBoost: 1.3 },
+    zoom: { min: 0.25, max: 2.5 },
+    axisMapping: "yz-swap",
+    mouseControl: { horizontalAxis: "screenRotation" },
+    normalizeRotation: true,
+    maxDistance: 20,
+    respawnChance: 0.001,
+    autoRotation: { enabled: false, speed: 0.15, axis: "screen" },
   },
   rossler: {
     label: "Rossler",
     attractor: { dt: 0.075, scale: 15 },
-    particles: { count: 300, trailLength: 200, spawnRange: 0.2 },
+    particles: { count: 200, trailLength: 200, spawnRange: 1 },
     center: { x: 0, y: 0, z: 0 },
     camera: { perspective: 500, rotationX: 0.3, rotationY: 0 },
-    visual: { minHue: 40, maxHue: 280, maxSpeed: 20, saturation: 85, lightness: 30, maxAlpha: 0.5, hueShiftSpeed: 10 },
-    bloom: { threshold: 0.15, strength: 0.25 },
+    visual: { minHue: 40, maxHue: 280, maxSpeed: 20, saturation: 70, lightness: 25, maxAlpha: 0.5, hueShiftSpeed: 10 },
+    bloom: { threshold: 0.15, strength: 0.18 },
     glow: { intensity: 0.85 },
     blink: { chance: 0.015, intensityBoost: 1.4, saturationBoost: 1.15, alphaBoost: 1.25 },
     zoom: { min: 0.2, max: 2.5 },
@@ -72,16 +114,16 @@ const ATTRACTOR_PRESETS = {
     screenOffset: { x: 0, y: 0.12 },
     warmupSteps: 0,
     paramVariation: { params: { a: 0.2, b: 0.2, c: 5.7 }, range: 0.02 },
-    respawnChance: 0.001,
+    respawnChance: 0.002,
     autoRotation: { enabled: false, speed: 0.5, axis: "y" },
   },
   chen: {
     label: "Chen",
     attractor: { dt: 0.008, scale: 12 },
-    particles: { count: 400, trailLength: 250, spawnRange: 10 },
+    particles: { count: 350, trailLength: 250, spawnRange: 10 },
     center: { x: 0, y: 0, z: 12 },
     camera: { perspective: 800, rotationX: -1.3, rotationY: 0 },
-    visual: { minHue: 200, maxHue: 280, maxSpeed: 50, saturation: 95, lightness: 30, maxAlpha: 0.55, hueShiftSpeed: 12 },
+    visual: { minHue: 200, maxHue: 280, maxSpeed: 50, saturation: 95, lightness: 30, maxAlpha: 0.5, hueShiftSpeed: 12 },
     glow: { enabled: true, radius: 75, intensity: 0.85 },
     blink: { chance: 0.015, intensityBoost: 1.4, saturationBoost: 1.15, alphaBoost: 1.25 },
     warmupSteps: 1,
@@ -94,15 +136,30 @@ const ATTRACTOR_PRESETS = {
     respawnChance: 0.001,
     autoRotation: { enabled: false, speed: 0.15, axis: "z" },
   },
+  aizawa: {
+    label: "Aizawa",
+    attractor: { dt: 0.008, scale: 120 },
+    particles: { count: 350, trailLength: 175, spawnRange: 0.5 },
+    center: { x: 0, y: 0, z: 0.65 },
+    camera: { perspective: 800, rotationX: 0.4, rotationY: 0 },
+    visual: { minHue: 280, maxHue: 180, maxSpeed: 8, saturation: 70, lightness: 30, maxAlpha: 0.5, hueShiftSpeed: 12 },
+    blink: { chance: 0.018, minDuration: 0.04, maxDuration: 0.2, intensityBoost: 1.5, saturationBoost: 1.2, alphaBoost: 1.3 },
+    zoom: { min: 0.3, max: 2.5 },
+    axisMapping: "yz-swap",
+    mouseControl: { invertX: true, invertY: true },
+    normalizeRotation: true,
+    respawnChance: 0.001,
+    autoRotation: { enabled: false, speed: 0.15, axis: "y" },
+  },
   chua: {
     label: "Chua's Circuit",
     attractor: { dt: 0.01, scale: 60 },
-    particles: { count: 400, trailLength: 250, spawnRange: 1 },
+    particles: { count: 350, trailLength: 250, spawnRange: 1 },
     center: { x: 0, y: 0, z: 0 },
     camera: { perspective: 800, rotationX: 0.5, rotationY: -0.6 },
-    visual: { minHue: 90, maxHue: 180, maxSpeed: 20, saturation: 90, lightness: 30, maxAlpha: 0.6, hueShiftSpeed: 10 },
+    visual: { minHue: 90, maxHue: 180, maxSpeed: 20, saturation: 70, lightness: 30, maxAlpha: 0.5, hueShiftSpeed: 10 },
     blink: { chance: 0.02, intensityBoost: 1.5, saturationBoost: 1.2, alphaBoost: 1.3 },
-    bloom: { enabled: true, threshold: 0.3, strength: 0.25, radius: 0.5 },
+    bloom: { enabled: true, threshold: 0.3, strength: 0.18, radius: 0.5 },
     zoom: { min: 0.3, max: 3.0 },
     warmupSteps: 0,
     maxDistance: 12,
@@ -116,8 +173,8 @@ const ATTRACTOR_PRESETS = {
     particles: { count: 350, trailLength: 250, spawnRange: 5 },
     center: { x: 0, y: 0, z: 124 },
     camera: { perspective: 800, rotationX: -1.5, rotationY: 0 },
-    visual: { minHue: 260, maxHue: 50, maxSpeed: 8000, saturation: 95, lightness: 30, maxAlpha: 0.35, hueShiftSpeed: 8 },
-    bloom: { enabled: true, threshold: 0.35, strength: 0.25, radius: 0.5 },
+    visual: { minHue: 260, maxHue: 50, maxSpeed: 8000, saturation: 70, lightness: 30, maxAlpha: 0.35, hueShiftSpeed: 8 },
+    bloom: { enabled: true, threshold: 0.35, strength: 0.18, radius: 0.5 },
     blink: { chance: 0.015, intensityBoost: 1.6, saturationBoost: 1.3, alphaBoost: 1.4 },
     zoom: { min: 0.2, max: 3.0 },
     warmupSteps: 0,
@@ -129,73 +186,18 @@ const ATTRACTOR_PRESETS = {
   rabinovichFabrikant: {
     label: "Rabinovich-Fabrikant",
     attractor: { dt: 0.02, scale: 85 },
-    particles: { count: 300, trailLength: 300, spawnRange: 3 },
+    particles: { count: 350, trailLength: 300, spawnRange: 3 },
     center: { x: 0, y: 0, z: 0.8 },
     spawnOffset: { x: 0, y: 0, z: 0.5 },
     camera: { perspective: 600, rotationX: 0.4, rotationY: 0 },
-    visual: { minHue: 330, maxHue: 200, maxSpeed: 8, saturation: 90, lightness: 30, maxAlpha: 0.85, hueShiftSpeed: 12 },
+    visual: { minHue: 330, maxHue: 200, maxSpeed: 8, saturation: 70, lightness: 30, maxAlpha: 0.5, hueShiftSpeed: 12 },
     blink: { chance: 0.02, minDuration: 0.03, maxDuration: 0.15, intensityBoost: 1.6, saturationBoost: 1.2, alphaBoost: 1.3 },
     zoom: { min: 0.5, max: 3.0 },
     warmupSteps: 1000,
     maxDistance: 4,
     respawnChance: 0.002,
     autoRotation: { enabled: false, speed: 0.15, axis: "y" },
-  },
-  aizawa: {
-    label: "Aizawa",
-    attractor: { dt: 0.008, scale: 120 },
-    particles: { count: 375, trailLength: 175, spawnRange: 0.5 },
-    center: { x: 0, y: 0, z: 0.65 },
-    camera: { perspective: 800, rotationX: 0.4, rotationY: 0 },
-    visual: { minHue: 280, maxHue: 180, maxSpeed: 8, saturation: 90, lightness: 30, maxAlpha: 0.85, hueShiftSpeed: 12 },
-    blink: { chance: 0.018, minDuration: 0.04, maxDuration: 0.2, intensityBoost: 1.5, saturationBoost: 1.2, alphaBoost: 1.3 },
-    zoom: { min: 0.3, max: 2.5 },
-    axisMapping: "yz-swap",
-    mouseControl: { invertX: true, invertY: true },
-    normalizeRotation: true,
-    respawnChance: 0.001,
-    autoRotation: { enabled: false, speed: 0.15, axis: "y" },
-  },
-  thomas: {
-    label: "Thomas",
-    attractor: { dt: 0.08, scale: 60 },
-    particles: { count: 375, trailLength: 400, spawnRange: 2 },
-    center: { x: -0.2, y: -0.2, z: 0 },
-    camera: { perspective: 800, rotationX: 0.3, rotationY: 0.2 },
-    visual: { minHue: 120, maxHue: 200, maxSpeed: 2.5, saturation: 85, lightness: 30, maxAlpha: 0.8, hueShiftSpeed: 8 },
-    blink: { chance: 0.012, minDuration: 0.06, intensityBoost: 1.4, saturationBoost: 1.15, alphaBoost: 1.2 },
-    zoom: { min: 0.3, max: 3.0 },
-    autoRotation: { enabled: false, speed: 0.15, axis: "y" },
-  },
-  halvorsen: {
-    label: "Halvorsen",
-    attractor: { dt: 0.004, scale: 25 },
-    particles: { count: 500, trailLength: 125, spawnRange: 1 },
-    center: { x: 0, y: 0, z: 0 },
-    camera: { perspective: 300, rotationX: 0.615, rotationY: 0.495 },
-    visual: { minHue: 320, maxHue: 220, maxSpeed: 40, saturation: 80, lightness: 30, maxAlpha: 0.85, hueShiftSpeed: 15 },
-    blink: { chance: 0.08, minDuration: 0.04, maxDuration: 0.18, intensityBoost: 1.5, saturationBoost: 1.2, alphaBoost: 1.3 },
-    zoom: { min: 0.25, max: 2.5 },
-    axisMapping: "yz-swap",
-    mouseControl: { horizontalAxis: "screenRotation" },
-    normalizeRotation: true,
-    maxDistance: 20,
-    respawnChance: 0.002,
-    autoRotation: { enabled: false, speed: 0.15, axis: "screen" },
-  },
-  dadras: {
-    label: "Dadras",
-    attractor: { dt: 0.01, scale: 50 },
-    particles: { count: 375, trailLength: 150, spawnRange: 5 },
-    center: { x: 0, y: 0, z: 0 },
-    camera: { perspective: 800, rotationX: 0.3, rotationY: 0 },
-    visual: { minHue: 60, maxHue: 240, maxSpeed: 30, saturation: 80, lightness: 30, maxAlpha: 0.9, hueShiftSpeed: 20 },
-    blink: { chance: 0.02, intensityBoost: 1.5, saturationBoost: 1.2, alphaBoost: 1.3 },
-    zoom: { min: 0.3, max: 3.0, baseScreenSize: 900 },
-    screenOffset: { x: 0, y: 0.01 },
-    respawnChance: 0,
-    autoRotation: { enabled: false, speed: 0.15, axis: "y" },
-  },
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -284,13 +286,13 @@ const ATTRACTOR_PARAMS = {
   dadras: [
     { key: "a", label: "a", default: 3,   min: 0, max: 10, step: 0.1,
       tip: "Controls the y-x coupling. Affects the width of the three butterfly wings." },
-    { key: "b", label: "b", default: 2.7, min: 0, max: 10, step: 0.1,
+    { key: "b", label: "b", default: 2.2, min: 0, max: 10, step: 0.1,
       tip: "Nonlinear coupling (yz term). Drives the folding that creates the multi-wing structure." },
     { key: "c", label: "c", default: 1.7, min: 0, max: 10, step: 0.1,
       tip: "Damping on y. Balances against 'a' to determine the attractor's overall scale." },
     { key: "d", label: "d", default: 2,   min: 0, max: 10, step: 0.1,
       tip: "x-y product coupling into z. Controls how trajectories transfer between wings." },
-    { key: "e", label: "e", default: 9,   min: 0, max: 20, step: 0.1,
+    { key: "e", label: "e", default: 12,  min: 0, max: 20, step: 0.1,
       tip: "Damping on z. Higher values compress the attractor vertically; lower values let it expand." },
   ],
 };
@@ -433,7 +435,6 @@ export class CaosPlayground extends Attractor3DDemo {
 
   /** @override */
   render() {
-    Painter.setContext(this.ctx);
     if (this.running) this.clear();
     this._renderAttractor();   // Attractor behind
     this.pipeline.render();    // UI panel on top
@@ -853,20 +854,20 @@ export class CaosPlayground extends Attractor3DDemo {
   // ─── Info Overlay (attractor title card) ───────────────────────────
 
   _buildInfoOverlay() {
+    console.log("buildInfoOverlay");
     const isMobile = Screen.isMobile;
 
-    this._infoScene = new Scene(this, { x: 0, y: 0 });
+    this._infoScene = new VerticalLayout(this, {
+      x: 0,
+      y: 0,
+      debug:true,
+      spacing: Screen.responsive(8, 8, 10),
+      align: isMobile ? "center" : "start",
+    });
     this._infoScene._alpha = 1; // Custom alpha for fade animation
-
-    // Wrap draw to apply fade alpha
-    const originalDraw = this._infoScene.draw.bind(this._infoScene);
-    this._infoScene.draw = () => {
-      const ctx = this.ctx;
-      const prevAlpha = ctx.globalAlpha;
-      ctx.globalAlpha = this._infoScene._alpha;
-      originalDraw();
-      ctx.globalAlpha = prevAlpha;
-    };
+    // Anchor layout content at scene top-left instead of the default
+    // vertical-centering offset, so scene.x/y is the block's top-left corner.
+    this._infoScene.getLayoutOffset = () => ({ offsetX: 0, offsetY: 0 });
 
     const titleSize = Screen.responsive(22, 28, 36);
     const taglineSize = Screen.responsive(15, 17, 22);
@@ -877,18 +878,24 @@ export class CaosPlayground extends Attractor3DDemo {
       font: `bold ${titleSize}px monospace`,
       color: "rgba(255,255,255,0.6)",
       align,
+      debug: true,
+      debugColor: "blue",
     });
 
     this._infoTagline = new Text(this, "", {
       font: `${taglineSize}px monospace`,
       color: "rgba(255,255,255,0.4)",
       align,
+      debug: true,
+      debugColor: "magenta",
     });
 
     this._infoEquations = new Text(this, "", {
       font: `${equationSize}px monospace`,
       color: "rgba(255,255,255,0.3)",
       align,
+      debug: true,
+      debugColor: "yellow",
     });
 
     this._infoScene.add(this._infoTitle);
@@ -909,12 +916,8 @@ export class CaosPlayground extends Attractor3DDemo {
     this._infoTagline.text = info.tagline;
     this._infoEquations.text = info.equations;
 
-    // Stack vertically with responsive spacing
-    const gap1 = Screen.responsive(30, 36, 46);
-    const gap2 = Screen.responsive(52, 62, 78);
-    this._infoTitle.y = 0;
-    this._infoTagline.y = gap1;
-    this._infoEquations.y = gap2;
+    this._infoScene._layoutDirty = true;
+    this._layoutInfoOverlay();
   }
 
   _layoutInfoOverlay() {
