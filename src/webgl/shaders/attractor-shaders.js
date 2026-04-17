@@ -96,6 +96,13 @@ uniform float uIridescenceIntensity;
 uniform float uIridescenceSpeed;
 uniform float uIridescenceScale;
 
+// Hue jitter (degrees) — per-segment random hue offset within the tone range
+uniform float uHueJitter;
+
+float hash11(float x) {
+    return fract(sin(x * 127.1 + 311.7) * 43758.5453);
+}
+
 // HSL to RGB conversion
 vec3 hsl2rgb(float h, float s, float l) {
     h = mod(h, 360.0) / 360.0;
@@ -131,7 +138,18 @@ vec3 iridescence(float idx, float time, float scale, float speed) {
 void main() {
     // Speed -> hue
     float baseHue = uMaxHue - vSpeedNorm * (uMaxHue - uMinHue);
-    float hue = mod(baseHue + uHueOffset, 360.0);
+    // Smoothly interpolated per-segment hue jitter along the trail only.
+    // Seeding on depth caused abrupt hue jumps where trails at different
+    // depths crossed in screen space; using segIdx alone keeps the variance
+    // coherent across crossings while still giving motion perception as the
+    // bands slide backwards through the trail as it ages.
+    float jitterPos = vSegIdx * 3.0;
+    float bucket = floor(jitterPos);
+    float bucketFrac = smoothstep(0.0, 1.0, fract(jitterPos));
+    float jA = hash11(bucket * 17.3) - 0.5;
+    float jB = hash11((bucket + 1.0) * 17.3) - 0.5;
+    float hueJitter = mix(jA, jB, bucketFrac) * 2.0 * uHueJitter;
+    float hue = mod(baseHue + uHueOffset + hueJitter + 360.0, 360.0);
 
     // Blink modulation
     float sat = min(1.0, (uSaturation / 100.0) * (1.0 + vBlink * (uSaturationBoost - 1.0)));

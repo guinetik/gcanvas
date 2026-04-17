@@ -24,6 +24,7 @@ struct Uniforms {
     iridescenceSpeed: f32,
     iridescenceScale: f32,
     halfWidth: f32,
+    hueJitter: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;

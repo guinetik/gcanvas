@@ -79,6 +79,7 @@ export class WebGLAttractorPipeline {
       saturation: 85,
       lightness: 55,
       maxAlpha: 0.85,
+      hueJitter: 10,
       ...options.visual,
     };
 
@@ -105,9 +106,9 @@ export class WebGLAttractorPipeline {
 
     this.iridescenceConfig = {
       enabled: true,
-      intensity: 0.3,
+      intensity: 0.38,
       speed: 0.5,
-      scale: 2.0,
+      scale: 2.5,
       ...options.iridescence,
     };
 
@@ -120,7 +121,7 @@ export class WebGLAttractorPipeline {
 
     this.colorGradingConfig = {
       enabled: true,
-      exposure: 1.4,
+      exposure: 1.1,
       vignetteStrength: 0.15,
       vignetteRadius: 0.85,
       grainIntensity: 0.02,
@@ -317,6 +318,7 @@ export class WebGLAttractorPipeline {
       uIridescenceIntensity: gl.getUniformLocation(lp, "uIridescenceIntensity"),
       uIridescenceSpeed: gl.getUniformLocation(lp, "uIridescenceSpeed"),
       uIridescenceScale: gl.getUniformLocation(lp, "uIridescenceScale"),
+      uHueJitter: gl.getUniformLocation(lp, "uHueJitter"),
     };
 
     // Background program
@@ -597,6 +599,7 @@ export class WebGLAttractorPipeline {
     gl.uniform1f(ll.uLightness, this.visualConfig.lightness);
     gl.uniform1f(ll.uMaxAlpha, this.visualConfig.maxAlpha);
     gl.uniform1f(ll.uHueOffset, hueOffset);
+    gl.uniform1f(ll.uHueJitter, this.visualConfig.hueJitter ?? 0);
 
     // Blink config
     gl.uniform1f(ll.uIntensityBoost, this.blinkConfig.intensityBoost);

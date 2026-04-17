@@ -42,7 +42,7 @@ export class WebGPUAttractorPipeline {
       ...options.background,
     };
     this.visualConfig = {
-      minHue: 30, maxHue: 200, saturation: 85, lightness: 55, maxAlpha: 0.85,
+      minHue: 30, maxHue: 200, saturation: 85, lightness: 55, maxAlpha: 0.85, hueJitter: 18,
       ...options.visual,
     };
     this.blinkConfig = {
@@ -58,7 +58,7 @@ export class WebGPUAttractorPipeline {
       ...options.depthFog,
     };
     this.iridescenceConfig = {
-      enabled: true, intensity: 0.3, speed: 0.5, scale: 2.0,
+      enabled: true, intensity: 0.38, speed: 0.5, scale: 2.5,
       ...options.iridescence,
     };
     this.chromaticAberrationConfig = {
@@ -66,7 +66,7 @@ export class WebGPUAttractorPipeline {
       ...options.chromaticAberration,
     };
     this.colorGradingConfig = {
-      enabled: true, exposure: 1.4, vignetteStrength: 0.15,
+      enabled: true, exposure: 1.1, vignetteStrength: 0.15,
       vignetteRadius: 0.85, grainIntensity: 0.02, warmth: 0.15,
       ...options.colorGrading,
     };
@@ -591,6 +591,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
       ir.speed,                        // iridescenceSpeed: f32
       ir.scale,                        // iridescenceScale: f32
       this.lineWidth * 0.5,            // halfWidth: f32
+      v.hueJitter,                     // hueJitter: f32
     ]);
     this.device.queue.writeBuffer(this.lineUniformBuffer, 0, lineData);
 

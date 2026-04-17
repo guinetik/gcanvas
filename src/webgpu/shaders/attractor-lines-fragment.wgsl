@@ -24,6 +24,7 @@ struct Uniforms {
     iridescenceSpeed: f32,
     iridescenceScale: f32,
     _pad: f32,
+    hueJitter: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -49,6 +50,10 @@ fn hsl2rgb(h_in: f32, s_in: f32, l_in: f32) -> vec3f {
     return rgb + m;
 }
 
+fn hash11(x: f32) -> f32 {
+    return fract(sin(x * 127.1 + 311.7) * 43758.5453);
+}
+
 fn iridescence(idx: f32, time: f32, scale: f32, speed: f32) -> vec3f {
     let phase = idx * scale + time * speed;
     return vec3f(
@@ -70,7 +75,18 @@ struct FragmentInput {
 @fragment
 fn fs_main(input: FragmentInput) -> @location(0) vec4f {
     let baseHue = u.maxHue - input.speedNorm * (u.maxHue - u.minHue);
-    let hue = (baseHue + u.hueOffset) % 360.0;
+    // Smoothly interpolated per-segment hue jitter along the trail only.
+    // Seeding on depth caused abrupt hue jumps where trails at different
+    // depths crossed in screen space; using segIdx alone keeps the variance
+    // coherent across crossings while still giving motion perception as the
+    // bands slide backwards through the trail as it ages.
+    let jitterPos = input.segIdx * 3.0;
+    let bucket = floor(jitterPos);
+    let bucketFrac = smoothstep(0.0, 1.0, fract(jitterPos));
+    let jA = hash11(bucket * 17.3) - 0.5;
+    let jB = hash11((bucket + 1.0) * 17.3) - 0.5;
+    let hueJitter = mix(jA, jB, bucketFrac) * 2.0 * u.hueJitter;
+    let hue = (baseHue + u.hueOffset + hueJitter + 360.0) % 360.0;
 
     let sat = min(1.0, (u.saturation / 100.0) * (1.0 + input.blink * (u.saturationBoost - 1.0)));
     let lit = min(1.0, (u.lightness / 100.0) * (1.0 + input.blink * (u.intensityBoost - 1.0)));
