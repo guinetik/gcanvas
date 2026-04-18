@@ -144,6 +144,7 @@ const DEFAULTS = {
     vignetteRadius: 0.85,
     grainIntensity: 0.001,
     warmth: 0.01,
+    bleach: 0.6,
   },
 
   zoom: {

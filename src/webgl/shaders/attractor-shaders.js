@@ -453,6 +453,7 @@ uniform float uVignetteStrength;
 uniform float uVignetteRadius;
 uniform float uGrainIntensity;
 uniform float uWarmth;
+uniform float uBleach;
 
 // Hash for film grain
 float hash(vec2 p) {
@@ -498,8 +499,20 @@ void main() {
         // ACES filmic tonemapping
         color = acesTonemap(color);
 
-        // Warm shadow tinting: add warmth in dark regions
         float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+
+        // Bleach to white when at least two channels are high — i.e. the
+        // color is actually desaturating through overexposure, not just a
+        // pure saturated hue. Using the median channel (not max, not
+        // luminance) ignores pure-hue peaks like a bright red (1,0,0) while
+        // letting genuinely-blown cores (1, 0.9, 0.8) go white.
+        float mx = max(color.r, max(color.g, color.b));
+        float mn = min(color.r, min(color.g, color.b));
+        float medianChannel = color.r + color.g + color.b - mx - mn;
+        float bleach = smoothstep(0.75, 1.0, medianChannel) * uBleach;
+        color = mix(color, vec3(1.0), bleach);
+
+        // Warm shadow tinting: add warmth in dark regions
         float shadowMask = 1.0 - smoothstep(0.0, 0.4, luminance);
         color += vec3(0.1, 0.05, 0.0) * shadowMask * uWarmth;
 

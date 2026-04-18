@@ -126,6 +126,7 @@ export class WebGLAttractorPipeline {
       vignetteRadius: 0.85,
       grainIntensity: 0.02,
       warmth: 0.15,
+      bleach: 0.6,
       ...options.colorGrading,
     };
 
@@ -379,6 +380,7 @@ export class WebGLAttractorPipeline {
       uVignetteRadius: gl.getUniformLocation(pp, "uVignetteRadius"),
       uGrainIntensity: gl.getUniformLocation(pp, "uGrainIntensity"),
       uWarmth: gl.getUniformLocation(pp, "uWarmth"),
+      uBleach: gl.getUniformLocation(pp, "uBleach"),
     };
   }
 
@@ -854,6 +856,7 @@ export class WebGLAttractorPipeline {
     gl.uniform1f(pl.uVignetteRadius, this.colorGradingConfig.vignetteRadius);
     gl.uniform1f(pl.uGrainIntensity, this.colorGradingConfig.grainIntensity);
     gl.uniform1f(pl.uWarmth, this.colorGradingConfig.warmth);
+    gl.uniform1f(pl.uBleach, this.colorGradingConfig.bleach);
 
     this._bindQuad(pl.aPosition, pl.aUV);
     this._drawQuad();

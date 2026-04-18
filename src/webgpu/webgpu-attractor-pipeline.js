@@ -67,7 +67,7 @@ export class WebGPUAttractorPipeline {
     };
     this.colorGradingConfig = {
       enabled: true, exposure: 0.9, vignetteStrength: 0.15,
-      vignetteRadius: 0.85, grainIntensity: 0.02, warmth: 0.15,
+      vignetteRadius: 0.85, grainIntensity: 0.02, warmth: 0.15, bleach: 0.6,
       ...options.colorGrading,
     };
 
@@ -801,7 +801,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
       cg.enabled ? 1.0 : 0.0,
       cg.exposure,
       cg.vignetteStrength, cg.vignetteRadius,
-      cg.grainIntensity, cg.warmth,
+      cg.grainIntensity, cg.warmth, cg.bleach,
     ]);
     this.device.queue.writeBuffer(this.postProcessUniformBuffer, 0, data);
 

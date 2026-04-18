@@ -13,6 +13,7 @@ struct Uniforms {
     vignetteRadius: f32,
     grainIntensity: f32,
     warmth: f32,
+    bleach: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -57,6 +58,18 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
         color = acesTonemap(color);
 
         let luminance = dot(color, vec3f(0.2126, 0.7152, 0.0722));
+
+        // Bleach to white when at least two channels are high — i.e. the
+        // color is actually desaturating through overexposure, not just a
+        // pure saturated hue. Using the median channel (not max, not
+        // luminance) ignores pure-hue peaks like a bright red (1,0,0) while
+        // letting genuinely-blown cores (1, 0.9, 0.8) go white.
+        let mx = max(color.r, max(color.g, color.b));
+        let mn = min(color.r, min(color.g, color.b));
+        let medianChannel = color.r + color.g + color.b - mx - mn;
+        let bleach = smoothstep(0.75, 1.0, medianChannel) * u.bleach;
+        color = mix(color, vec3f(1.0), bleach);
+
         let shadowMask = 1.0 - smoothstep(0.0, 0.4, luminance);
         color += vec3f(0.1, 0.05, 0.0) * shadowMask * u.warmth;
 
