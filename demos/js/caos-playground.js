@@ -714,55 +714,55 @@ const ATTRACTOR_PARAMS = {
 const ATTRACTOR_INFO = {
   lorenz: {
     title: "LORENZ ATTRACTOR",
-    tagline: "The butterfly effect — atmospheric convection, 1963",
+    tagline: "A flap of wings becomes a storm — Lorenz, 1963",
     equations: "dx/dt = σ(y−x)   dy/dt = x(ρ−z)−y   dz/dt = xy−βz",
   },
   rossler: {
     title: "RÖSSLER ATTRACTOR",
-    tagline: "Simplest chaotic flow — chemical kinetics, 1976",
+    tagline: "The minimum ingredients for chaos: one twist, one fold — Rössler, 1976",
     equations: "dx/dt = −y−z   dy/dt = x+ay   dz/dt = b+z(x−c)",
   },
   chen: {
     title: "CHEN ATTRACTOR",
-    tagline: "Dual of Lorenz — not topologically equivalent, 1999",
+    tagline: "Lorenz's equations rearranged — same rules, stranger geometry — Chen, 1999",
     equations: "dx/dt = α(y−x)   dy/dt = (c−α)x−xz+cy   dz/dt = xy−βz",
   },
   chua: {
     title: "CHUA'S CIRCUIT",
-    tagline: "First physical chaotic circuit — piecewise-linear, 1983",
+    tagline: "The first chaos you can solder — real electrons, real unpredictability — Chua, 1983",
     equations: "dx/dt = α(y−x−f(x))   dy/dt = x−y+z   dz/dt = −γy",
   },
   threeScroll: {
     title: "THREE-SCROLL ATTRACTOR",
-    tagline: "Unified chaotic system — three intertwined scrolls",
+    tagline: "Three chaotic vortices knotted into one unified flow",
     equations: "dx/dt = a(y−x)+dxz   dy/dt = bx−xz+fy   dz/dt = cz+xy−ex²",
   },
   rabinovichFabrikant: {
     title: "RABINOVICH-FABRIKANT",
-    tagline: "Plasma instabilities — nonlinear oscillation, 1979",
+    tagline: "The turbulent drift of ionized plasma, solved on paper — 1979",
     equations:
       "dx/dt = y(z−1+x²)+γx   dy/dt = x(3z+1−x²)+γy   dz/dt = −2z(α+xy)",
   },
   aizawa: {
     title: "AIZAWA ATTRACTOR",
-    tagline: "Torus-to-chaos transition — delicate symmetry breaking",
+    tagline: "A doughnut tearing itself apart — where order loses its grip",
     equations:
       "dx/dt = (z−b)x−dy   dy/dt = dx+(z−b)y   dz/dt = c+az−z³/3−(x²+y²)(1+ez)+fzx³",
   },
   thomas: {
     title: "THOMAS ATTRACTOR",
-    tagline: "Cyclically symmetric — bounded chaos with friction, 1999",
+    tagline: "Add friction to a frictionless spin and chaos crystallizes — Thomas, 1999",
     equations: "dx/dt = sin(y)−bx   dy/dt = sin(z)−by   dz/dt = sin(x)−bz",
   },
   halvorsen: {
     title: "HALVORSEN ATTRACTOR",
-    tagline: "Cyclic symmetry — three-fold rotational structure",
+    tagline: "Three identical equations, rotated 120° apart — chaos with threefold symmetry",
     equations:
       "dx/dt = −ax−4y−4z−y²   dy/dt = −ay−4z−4x−z²   dz/dt = −az−4x−4y−x²",
   },
   dadras: {
     title: "DADRAS ATTRACTOR",
-    tagline: "Three-wing butterfly — asymmetric strange attractor, 2010",
+    tagline: "A three-winged butterfly built to break Lorenz's symmetry — Dadras, 2010",
     equations: "dx/dt = y−ax+byz   dy/dt = cy−xz+z   dz/dt = dxy−ez",
   },
 };
@@ -1348,7 +1348,7 @@ export class CaosPlayground extends Attractor3DDemo {
       x: 0,
       y: 0,
       debug: false,
-      spacing: Screen.responsive(8, 8, 10),
+      spacing: Screen.responsive(6, 6, 7),
       align: "center",
     });
     this._infoScene._alpha = 1; // Custom alpha for fade animation
@@ -1356,9 +1356,9 @@ export class CaosPlayground extends Attractor3DDemo {
     // vertical-centering offset, so scene.x/y is the block's top-left corner.
     this._infoScene.getLayoutOffset = () => ({ offsetX: 0, offsetY: 0 });
 
-    const titleSize = Screen.responsive(22, 28, 36);
-    const taglineSize = Screen.responsive(15, 17, 22);
-    const equationSize = Screen.responsive(13, 15, 18);
+    const titleSize = Screen.responsive(17, 21, 26);
+    const taglineSize = Screen.responsive(12, 13, 16);
+    const equationSize = Screen.responsive(10, 12, 14);
     const align = "center";
 
     this._infoTitle = new Text(this, "", {
@@ -1433,9 +1433,9 @@ export class CaosPlayground extends Attractor3DDemo {
     const textW = this._infoScene.width || 0;
     const textH = this._infoScene.height || 0;
 
-    const padX = 20;
-    const padTop = -8;
-    const padBottom = 20;
+    const padX = 14;
+    const padTop = -6;
+    const padBottom = 14;
 
     // Size the background pill to wrap the text with asymmetric vertical
     // padding — tighter on top so the title doesn't look sunken inside
