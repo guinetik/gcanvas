@@ -497,11 +497,15 @@ class Attractor3DDemo extends Game {
       friction: cfg.camera.friction,
       clampX: cfg.camera.clampX,
     });
-    this.camera.enableMouseControl(this.canvas, cfg.mouseControl || undefined);
+    this.camera.enableMouseControl(this.canvas, {
+      ...(cfg.mouseControl || {}),
+      game: this,
+    });
 
     // ── Gestures ─────────────────────────────────────────────────────────
     this.gesture = new Gesture(this.canvas, {
       onZoom: (delta) => {
+        if (this._uiHandledInput || this._uiPointerOverInteractive) return;
         this.targetZoom *= 1 + delta * cfg.zoom.speed;
       },
       onPan: null,
