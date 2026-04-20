@@ -1420,6 +1420,10 @@ export class CaosPlayground extends Attractor3DDemo {
     this._infoTitle.text = info.title;
     this._infoTagline.text = info.tagline;
     this._infoEquations.text = info.equations;
+
+    // Text swap changes the measured width/height, so re-run the layout
+    // and reposition the container + background to match new content.
+    this._layoutInfoOverlay();
   }
 
   _layoutInfoOverlay() {
