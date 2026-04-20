@@ -745,7 +745,7 @@ const ATTRACTOR_INFO = {
   },
   aizawa: {
     title: "AIZAWA ATTRACTOR",
-    tagline: "Watch a periodic torus shatter as order dissolves into chaos",
+    tagline: "Chaotic orbits wrap a spherical cage around a central oscillating axis",
     equations:
       "dx/dt = (z−b)x−dy   dy/dt = dx+(z−b)y   dz/dt = c+az−z³/3−(x²+y²)(1+ez)+fzx³",
   },
