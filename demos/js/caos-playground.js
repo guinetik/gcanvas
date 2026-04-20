@@ -25,6 +25,8 @@ import {
   Text,
   Scene,
   VerticalLayout,
+  RoundedRectangle,
+  ShapeGOFactory,
   Tooltip,
   Tweenetik,
   Easing,
@@ -1347,7 +1349,7 @@ export class CaosPlayground extends Attractor3DDemo {
       y: 0,
       debug: false,
       spacing: Screen.responsive(8, 8, 10),
-      align: isMobile ? "center" : "start",
+      align: "center",
     });
     this._infoScene._alpha = 1; // Custom alpha for fade animation
     // Anchor layout content at scene top-left instead of the default
@@ -1357,11 +1359,11 @@ export class CaosPlayground extends Attractor3DDemo {
     const titleSize = Screen.responsive(22, 28, 36);
     const taglineSize = Screen.responsive(15, 17, 22);
     const equationSize = Screen.responsive(13, 15, 18);
-    const align = isMobile ? "center" : "left";
+    const align = "center";
 
     this._infoTitle = new Text(this, "", {
       font: `bold ${titleSize}px monospace`,
-      color: "rgba(255,255,255,0.6)",
+      color: "rgba(255,255,255,0.95)",
       align,
       debug: false,
       debugColor: "blue",
@@ -1369,7 +1371,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
     this._infoTagline = new Text(this, "", {
       font: `${taglineSize}px monospace`,
-      color: "rgba(255,255,255,0.4)",
+      color: "rgba(255,255,255,0.65)",
       align,
       debug: false,
       debugColor: "magenta",
@@ -1377,7 +1379,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
     this._infoEquations = new Text(this, "", {
       font: `${equationSize}px monospace`,
-      color: "rgba(255,255,255,0.3)",
+      color: "rgba(255,255,255,0.5)",
       align,
       debug: false,
       debugColor: "yellow",
@@ -1386,7 +1388,25 @@ export class CaosPlayground extends Attractor3DDemo {
     this._infoScene.add(this._infoTitle);
     this._infoScene.add(this._infoTagline);
     this._infoScene.add(this._infoEquations);
-    this.pipeline.add(this._infoScene);
+
+    // Outer container: background rect (child 0) + VerticalLayout (child 1).
+    // The Rect sits behind the text as a semi-transparent pill. Its size is
+    // synced to the layout's measured dimensions in _layoutInfoOverlay.
+    this._infoContainer = new Scene(this, { x: 0, y: 0 });
+    this._infoContainer._alpha = 1;
+
+    this._infoBg = ShapeGOFactory.create(
+      this,
+      new RoundedRectangle(10, {
+        color: "rgba(0,0,0,0.45)",
+        width: 10,
+        height: 10,
+      })
+    );
+
+    this._infoContainer.add(this._infoBg);
+    this._infoContainer.add(this._infoScene);
+    this.pipeline.add(this._infoContainer);
 
     // Set initial content and position
     this._updateInfoContent(this._activePreset);
@@ -1400,38 +1420,60 @@ export class CaosPlayground extends Attractor3DDemo {
     this._infoTitle.text = info.title;
     this._infoTagline.text = info.tagline;
     this._infoEquations.text = info.equations;
-
-    this._infoScene._layoutDirty = true;
-    this._layoutInfoOverlay();
   }
 
   _layoutInfoOverlay() {
-    if (!this._infoScene) return;
+    if (!this._infoContainer) return;
+
+    // Force the VerticalLayout measurement synchronously so width/height
+    // reflect current content before we size the background and position
+    // the container.
+    this._infoScene._layoutDirty = true;
+    this._infoScene.update(0);
+    const textW = this._infoScene.width || 0;
+    const textH = this._infoScene.height || 0;
+
+    const padX = 20;
+    const padTop = -8;
+    const padBottom = 20;
+
+    // Size the background pill to wrap the text with asymmetric vertical
+    // padding — tighter on top so the title doesn't look sunken inside
+    // the box (text glyphs have ascent space above the caps).
+    this._infoBg.width = textW + padX * 2;
+    this._infoBg.height = textH + padTop + padBottom;
+    if (this._infoBg.shape) {
+      this._infoBg.shape.width = this._infoBg.width;
+      this._infoBg.shape.height = this._infoBg.height;
+    }
+    this._infoBg.x = -padX;
+    this._infoBg.y = -padTop;
+
+    // Text block sits at the container's origin; container is positioned
+    // such that the text (not the background padding) centers on screen.
+    this._infoScene.x = 0;
+    this._infoScene.y = 0;
 
     if (Screen.isMobile) {
-      // Top center
-      this._infoScene.x = this.width / 2;
-      this._infoScene.y = 60;
+      this._infoContainer.x = this.width / 2 - textW / 2;
+      this._infoContainer.y = 60;
     } else {
-      // Bottom-left with responsive margin
       const margin = Screen.responsive(20, 28, 40);
       const blockHeight = Screen.responsive(70, 80, 100);
-      this._infoScene.x = margin;
-      this._infoScene.y = this.height - blockHeight - margin;
+      this._infoContainer.x = this.width / 2 - textW / 2;
+      this._infoContainer.y = this.height - blockHeight - margin;
     }
   }
 
   _fadeInfoOverlay(attractorKey) {
-    if (!this._infoScene) return;
+    if (!this._infoContainer) return;
 
-    // Kill any in-progress fade
-    Tweenetik.killTarget(this._infoScene);
+    Tweenetik.killTarget(this._infoContainer);
 
-    // Fade out, then swap content, then fade in
-    Tweenetik.to(this._infoScene, { _alpha: 0 }, 0.3, Easing.easeOutCubic, {
+    Tweenetik.to(this._infoContainer, { _alpha: 0 }, 0.3, Easing.easeOutCubic, {
       onComplete: () => {
         this._updateInfoContent(attractorKey);
-        Tweenetik.to(this._infoScene, { _alpha: 1 }, 0.3, Easing.easeInCubic);
+        Tweenetik.to(this._infoContainer, { _alpha: 1 }, 0.3, Easing.easeInCubic);
       },
     });
   }
