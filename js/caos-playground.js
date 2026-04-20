@@ -25,6 +25,8 @@ import {
   Text,
   Scene,
   VerticalLayout,
+  RoundedRectangle,
+  ShapeGOFactory,
   Tooltip,
   Tweenetik,
   Easing,
@@ -44,36 +46,63 @@ const ATTRACTOR_PRESETS = {
   lorenz: {
     label: "Lorenz",
     attractor: { dt: 0.009, scale: 12 },
-    particles: { count: 350, trailLength: 200, spawnRange: 1.5},
+    particles: { count: 350, trailLength: 200, spawnRange: 1.5 },
     center: { x: 0, y: 0, z: 27 },
     camera: { perspective: 800, rotationX: 4.5, rotationY: 3.2 },
-    visual: { minHue: 75, maxHue: 125, maxSpeed: 70, saturation: 55, lightness: 45, maxAlpha: 0.15, hueShiftSpeed: 10 },
+    visual: {
+      minHue: 75,
+      maxHue: 125,
+      maxSpeed: 70,
+      saturation: 70,
+      lightness: 45,
+      maxAlpha: 0.1,
+      hueShiftSpeed: 10,
+    },
     glow: { enabled: true, radius: 200, intensity: 5 },
-    blink: { chance: 0.01, intensityBoost: 1.5, saturationBoost: 0.256, alphaBoost: 1.75 },
+    blink: {
+      chance: 0.33,
+      intensityBoost: 1.5,
+      saturationBoost: 1.15,
+      alphaBoost: 1.75,
+    },
     mouseControl: { horizontalAxis: "rotationZ" },
     zoom: { min: 0.3, max: 2.5 },
     restart: { delay: 1 },
     spawnOffset: { z: 27 },
-    colorGrading: { bleach: 0.75 },
+    colorGrading: { bleach: 0.5 },
     normalizeRotation: true,
-    respawnChance: 0.009,
+    respawnChance: 0.005,
     autoRotation: { enabled: false, speed: 0.15, axis: "z" },
   },
   rossler: {
     label: "Rossler",
-    attractor: { dt: 0.075, scale: 20 },
-    particles: { count: 300, trailLength: 275, spawnRange: .5 },
+    attractor: { dt: 0.07, scale: 20 },
+    particles: { count: 300, trailLength: 400, spawnRange: 1 },
     center: { x: 0, y: 0, z: 0 },
     camera: { perspective: 800, rotationX: 0.5, rotationY: 0 },
-    visual: { minHue: 10, maxHue: 255, maxSpeed: 25, saturation: 60, lightness: 25, maxAlpha: 0.15, hueShiftSpeed: 20, hueJitter: 10 },
-    glow: { enabled: true, radius: 250, intensity: 1.1 },
-    blink: { chance: 0.123, intensityBoost: 0.1, saturationBoost: 0.1, alphaBoost: 0.5},
+    visual: {
+      minHue: 40,
+      maxHue: 280,
+      maxSpeed: 25,
+      saturation: 70,
+      lightness: 30,
+      maxAlpha: 0.35,
+      hueShiftSpeed: 20,
+      hueJitter: 10,
+    },
+    glow: { enabled: true, radius: 250, intensity: 0.9 },
+    blink: {
+      chance: 0.123,
+      intensityBoost: 1.4,
+      saturationBoost: 1.15,
+      alphaBoost: 1.25,
+    },
     energyFlow: { intensity: 0.25, speed: 1.2, sparkThreshold: 0.75 },
-    colorGrading: { bleach: 1 },
+    colorGrading: { bleach: 0.25 },
     zoom: { min: 0.2, max: 2.5 },
     axisMapping: { x: "x", y: "z", z: "y", sx: 1, sy: -0.72, sz: 1 },
     screenOffset: { x: 0, y: 0.2 },
-    warmupSteps: 150,
+    warmupSteps: 20,
     paramVariation: { params: { a: 0.2, b: 0.2, c: 5.7 }, range: 0.02 },
     respawnChance: 0.0009,
     mouseControl: { horizontalAxis: "rotationZ" },
@@ -82,39 +111,90 @@ const ATTRACTOR_PRESETS = {
   dadras: {
     label: "Dadras",
     attractor: { dt: 0.01, scale: 70 },
-    particles: { count: 300, trailLength: 200, spawnRange: 5 },
+    particles: { count: 350, trailLength: 300, spawnRange: 3 },
     center: { x: 0, y: 0, z: 0 },
-    camera: { perspective: 800, rotationX: -0.895, rotationY: 0.000, rotationZ: -0.595 },
-    visual: { minHue: 150, maxHue: 275, maxSpeed: 70, saturation: 70, lightness: 50, maxAlpha: 0.15, hueShiftSpeed: 20 },
+    camera: {
+      perspective: 800,
+      rotationX: -0.895,
+      rotationY: 0.0,
+      rotationZ: -0.595,
+    },
+    visual: {
+      minHue: 150,
+      maxHue: 275,
+      maxSpeed: 95,
+      saturation: 50,
+      lightness: 30,
+      maxAlpha: 0.25,
+      hueShiftSpeed: 20,
+    },
     glow: { enabled: true, radius: 100, intensity: 2.0 },
-    blink: { chance: 0.01, intensityBoost: 1.1, alphaBoost: 0.1 },
+    blink: {
+      chance: 0.14,
+      intensityBoost: 1.4,
+      saturationBoost: 1.15,
+      alphaBoost: 0.75,
+    },
+    colorGrading: { bleach: 0.25 },
     zoom: { min: 0.3, max: 3.0, baseScreenSize: 900 },
     screenOffset: { x: 0, y: 0.01 },
-    respawnChance: 0,
+    maxDistance: 15,
+    respawnChance: 0.003,
     autoRotation: { enabled: false, speed: 0.15, axis: "y" },
   },
   thomas: {
     label: "Thomas",
-    attractor: { dt: 0.09, scale: 80 },
-    particles: { count: 400, trailLength: 200, spawnRange: 5 },
+    attractor: { dt: 0.092, scale: 80 },
+    particles: { count: 300, trailLength: 320, spawnRange: 2 },
     center: { x: -0.2, y: -0.2, z: 0 },
     camera: { perspective: 800, rotationX: 0.3, rotationY: 0.2 },
-    visual: { minHue: 170, maxHue: 210, maxSpeed: 70, saturation: 70, lightness: 40, maxAlpha: 0.15, hueShiftSpeed: 6 },
-    glow: { enabled: true, radius: 50, intensity: 5.1 },
-    blink: { chance: 0.01, alphaBoost: 0.1 },
+    visual: {
+      minHue: 170,
+      maxHue: 210,
+      maxSpeed: 50,
+      saturation: 70,
+      lightness: 40,
+      maxAlpha: 0.22,
+      hueShiftSpeed: 0,
+      hueJitter: 8,
+    },
+    glow: { enabled: true, radius: 70, intensity: 3.5 },
+    blink: {
+      chance: 0.15,
+      intensityBoost: 1.4,
+      saturationBoost: 1.15,
+      alphaBoost: 1.25,
+    },
+    colorGrading: { bleach: 0.25 },
     zoom: { min: 0.3, max: 3.0 },
-    respawnChance: 0.001,
+    mouseControl: { horizontalAxis: "rotationZ" },
+    normalizeRotation: true,
+    respawnChance: 0.0008,
     autoRotation: { enabled: true, speed: 0.15, axis: "y" },
   },
   halvorsen: {
     label: "Halvorsen",
     attractor: { dt: 0.008, scale: 25 },
-    particles: { count: 300, trailLength: 300, spawnRange: 1 },
+    particles: { count: 300, trailLength: 330, spawnRange: 1 },
     center: { x: 0, y: 0, z: 0 },
     camera: { perspective: 300, rotationX: 0.615, rotationY: 0.495 },
-    visual: { minHue: 270, maxHue: 320, maxSpeed: 70, saturation: 70, lightness: 35, maxAlpha: 0.15, hueShiftSpeed: 18 },
-    glow: { enabled: true, radius: 150, intensity: 0.75 },
-    blink: { chance: 0.01, intensityBoost: 1.5 },
+    visual: {
+      minHue: 270,
+      maxHue: 320,
+      maxSpeed: 70,
+      saturation: 70,
+      lightness: 50,
+      maxAlpha: 0.1,
+      hueShiftSpeed: 18,
+    },
+    glow: { enabled: true, radius: 150, intensity: 1.75 },
+    blink: {
+      chance: 0.05,
+      intensityBoost: 0.5,
+      saturationBoost: 0.15,
+      alphaBoost: 0.5,
+    },
+    colorGrading: { bleach: 0.25 },
     zoom: { min: 0.25, max: 2.5 },
     axisMapping: "yz-swap",
     mouseControl: { horizontalAxis: "screenRotation" },
@@ -125,18 +205,32 @@ const ATTRACTOR_PRESETS = {
   },
   aizawa: {
     label: "Aizawa",
-    attractor: { dt: 0.05, scale: 175 },
-    particles: { count: 350, trailLength: 200, spawnRange: 0.25 },
+    attractor: { dt: 0.015, scale: 175 },
+    particles: { count: 350, trailLength: 300, spawnRange: 0.25 },
     center: { x: 0, y: 0, z: 0.65 },
     camera: { perspective: 800, rotationX: 0.4, rotationY: 0 },
-    visual: { minHue: 150, maxHue: 200, maxSpeed: 70, saturation: 55, lightness: 20, maxAlpha: 0.1, hueShiftSpeed: 40 },
+    visual: {
+      minHue: 150,
+      maxHue: 200,
+      maxSpeed: 70,
+      saturation: 60,
+      lightness: 30,
+      maxAlpha: 0.3,
+      hueShiftSpeed: 40,
+    },
     glow: { enabled: true, radius: 300, intensity: 1.75 },
-    blink: { chance: 0.2, intensityBoost: 1.1, saturationBoost: 1.1, alphaBoost: 1.5 },
+    blink: {
+      chance: 0.01,
+      intensityBoost: 0.1,
+      saturationBoost: 0.1,
+      alphaBoost: 0.15,
+    },
+    colorGrading: { bleach: 0.015 },
     zoom: { min: 0.3, max: 2.5 },
     axisMapping: "yz-swap",
     mouseControl: { invertX: false, invertY: false },
     normalizeRotation: true,
-    respawnChance: 0.009,
+    respawnChance: 0.00005,
     autoRotation: { enabled: false, speed: 0.15, axis: "y" },
   },
   chen: {
@@ -145,52 +239,101 @@ const ATTRACTOR_PRESETS = {
     particles: { count: 300, trailLength: 270, spawnRange: 3 },
     center: { x: 0, y: 0, z: 15 },
     camera: { perspective: 800, rotationX: -1.3, rotationY: 0 },
-    visual: { minHue: 200, maxHue: 260, maxSpeed: 70, saturation: 70, lightness: 40, maxAlpha: 0.1, hueShiftSpeed: 14 },
+    visual: {
+      minHue: 200,
+      maxHue: 260,
+      maxSpeed: 70,
+      saturation: 60,
+      lightness: 40,
+      maxAlpha: 0.2,
+      hueShiftSpeed: 14,
+    },
     glow: { enabled: true, radius: 100, intensity: 3.75 },
-    blink: { chance: 0.1, intensityBoost: 2.5 },
+    blink: {
+      chance: 0.1,
+      intensityBoost: 2.5,
+      saturationBoost: 1.15,
+      alphaBoost: 0.65,
+    },
+    colorGrading: { bleach: 0.3 },
     warmupSteps: 1,
     zoom: { min: 0.2, max: 2.5 },
     mouseControl: { horizontalAxis: "rotationZ" },
     normalizeRotation: true,
     spawnOffset: { z: 8 },
-    paramVariation: { params: { alpha: 5, beta: -20, delta: -0.38 }, range: 0.05 },
+    paramVariation: {
+      params: { alpha: 5, beta: -20, delta: -0.38 },
+      range: 0.05,
+    },
     maxDistance: 50,
     respawnChance: 0.001,
     autoRotation: { enabled: false, speed: 0.15, axis: "z" },
   },
   chua: {
     label: "Chua's Circuit",
-    attractor: { dt: 0.01, scale: 60 },
-    particles: { count: 350, trailLength: 250, spawnRange: 1 },
+    attractor: { dt: 0.011, scale: 75 },
+    particles: { count: 350, trailLength: 500, spawnRange: 1 },
     center: { x: 0, y: 0, z: 0 },
-    camera: { perspective: 800, rotationX: -4.515, rotationY: -0.600, rotationZ: -3.270 },
-    visual: { minHue: 120, maxHue: 170, maxSpeed: 70, saturation: 70, lightness: 50, maxAlpha: 0.15, hueShiftSpeed: 25 },
-    glow: { enabled: true, radius: 150, intensity: 0.75 },
-    blink: { chance: 0.124, intensityBoost: 1.4 },
+    camera: {
+      perspective: 800,
+      rotationX: -4.515,
+      rotationY: -0.6,
+      rotationZ: -3.27,
+    },
+    visual: {
+      minHue: 120,
+      maxHue: 170,
+      maxSpeed: 70,
+      saturation: 60,
+      lightness: 50,
+      maxAlpha: 0.1,
+      hueShiftSpeed: 25,
+    },
+    glow: { enabled: true, radius: 150, intensity: 1.75 },
+    blink: {
+      chance: 0.33,
+      intensityBoost: 0.4,
+      saturationBoost: 0.5,
+      alphaBoost: 0.25,
+    },
     bloom: { enabled: true, threshold: 0.3, strength: 0.18, radius: 0.5 },
+    colorGrading: { bleach: 0.3 },
     zoom: { min: 0.3, max: 3.0 },
     warmupSteps: 0,
     maxDistance: 12,
-    respawnChance: 0.009,
+    respawnChance: 0.005,
     spawnOffset: { x: 0.1, y: 0.1, z: 0.1 },
     autoRotation: { enabled: false, speed: 0.15, axis: "y" },
   },
   threeScroll: {
     label: "Three-Scroll",
-    attractor: { dt: 0.005, scale: 1.8 },
-    particles: { count: 300, trailLength: 150, spawnRange: 5},
+    attractor: { dt: 0.003, scale: 2 },
+    particles: { count: 350, trailLength: 250, spawnRange: 4 },
     center: { x: 0, y: 0, z: 124 },
-    camera: { perspective: 800, rotationX: 0, rotationY: 0, rotationZ: 3 },
-    visual: { minHue: 150, maxHue: 50, maxSpeed: 70, saturation: 70, lightness: 30, maxAlpha: 0.12, hueShiftSpeed: 10 },
+    camera: { perspective: 800, rotationX: -1.5, rotationY: 0, rotationZ: 0 },
+    visual: {
+      minHue: 260,
+      maxHue: 50,
+      maxSpeed: 8000,
+      saturation: 90,
+      lightness: 45,
+      maxAlpha: 0.091,
+      hueShiftSpeed: 8,
+    },
     glow: { enabled: true, radius: 100, intensity: 1.8 },
-    blink: { chance: 0.001, intensityBoost: .3, saturationBoost: .1, alphaBoost: .5 },
-    colorGrading: { bleach: 0.5 },
+    blink: {
+      chance: 0.09,
+      intensityBoost: 1.6,
+      saturationBoost: 1.3,
+      alphaBoost: 0.3,
+    },
+    colorGrading: { bleach: 0.01 },
     zoom: { min: 0.2, max: 3.0 },
-    warmupSteps: 1,
+    warmupSteps: 0,
+    maxDistance: 250,
     respawnChance: 0.005,
-    maxDistance: 300,
     spawnOffset: { x: -0.29, y: -0.25, z: -0.59 },
-    autoRotation: { enabled: true, speed: 0.12, axis: "x" },
+    autoRotation: { enabled: true, speed: 0.12, axis: "z" },
   },
   rabinovichFabrikant: {
     label: "Rabinovich-Fabrikant",
@@ -198,16 +341,35 @@ const ATTRACTOR_PRESETS = {
     particles: { count: 300, trailLength: 150, spawnRange: 2 },
     center: { x: 0, y: 0, z: 0.8 },
     spawnOffset: { x: 0, y: 0, z: 0.5 },
-    camera: { perspective: 800, rotationX: 2.046, rotationY: 0.000, rotationZ: 0.004 },
-    visual: { minHue: 380, maxHue: 300, maxSpeed: 70, saturation: 70, lightness: 35, maxAlpha: 0.15, hueShiftSpeed: 35 },
+    camera: {
+      perspective: 800,
+      rotationX: 2.046,
+      rotationY: 0.0,
+      rotationZ: 0.004,
+    },
+    visual: {
+      minHue: 380,
+      maxHue: 300,
+      maxSpeed: 70,
+      saturation: 60,
+      lightness: 30,
+      maxAlpha: 0.3,
+      hueShiftSpeed: 35,
+    },
     glow: { enabled: true, radius: 150, intensity: 0.75 },
-    blink: { chance: 0.35, intensityBoost: 1.7 },
+    blink: {
+      chance: 0.35,
+      intensityBoost: 1.7,
+      saturationBoost: 1.15,
+      alphaBoost: 1.25,
+    },
+    colorGrading: { bleach: 0.5 },
     zoom: { min: 0.5, max: 3.0 },
     warmupSteps: 1000,
     maxDistance: 4,
     respawnChance: 0.001,
     autoRotation: { enabled: true, speed: 0.15, axis: "z" },
-  }
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -218,92 +380,330 @@ const ATTRACTOR_PRESETS = {
 
 const ATTRACTOR_PARAMS = {
   lorenz: [
-    { key: "sigma", label: "\u03C3 (sigma)",  default: 10,       min: 0,   max: 30,  step: 0.1,
-      tip: "Prandtl number — controls how fast heat diffuses vs. fluid viscosity. Higher values widen the butterfly wings." },
-    { key: "rho",   label: "\u03C1 (rho)",    default: 28,       min: 0,   max: 60,  step: 0.1,
-      tip: "Rayleigh number — drives convection intensity. Below ~24.7 the system stabilizes; above it, chaos emerges." },
-    { key: "beta",  label: "\u03B2 (beta)",   default: 8 / 3,    min: 0,   max: 10,  step: 0.01,
-      tip: "Geometric factor of the convection cell. Affects how quickly trajectories spiral inward on each lobe." },
+    {
+      key: "sigma",
+      label: "\u03C3 (sigma)",
+      default: 10,
+      min: 0,
+      max: 30,
+      step: 0.1,
+      tip: "Prandtl number — controls how fast heat diffuses vs. fluid viscosity. Higher values widen the butterfly wings.",
+    },
+    {
+      key: "rho",
+      label: "\u03C1 (rho)",
+      default: 28,
+      min: 0,
+      max: 60,
+      step: 0.1,
+      tip: "Rayleigh number — drives convection intensity. Below ~24.7 the system stabilizes; above it, chaos emerges.",
+    },
+    {
+      key: "beta",
+      label: "\u03B2 (beta)",
+      default: 8 / 3,
+      min: 0,
+      max: 10,
+      step: 0.01,
+      tip: "Geometric factor of the convection cell. Affects how quickly trajectories spiral inward on each lobe.",
+    },
   ],
   rossler: [
-    { key: "a", label: "a", default: 0.2,  min: 0, max: 1,  step: 0.01,
-      tip: "Controls the speed of rotation in the x-y plane. Increasing it stretches the spiral outward." },
-    { key: "b", label: "b", default: 0.2,  min: 0, max: 1,  step: 0.01,
-      tip: "Couples x into the z dynamics. Small changes subtly affect the folding mechanism." },
-    { key: "c", label: "c", default: 5.7,  min: 0, max: 20, step: 0.1,
-      tip: "Controls the height of the z-axis spike. Higher values create a taller, sharper fold where reinjection occurs." },
+    {
+      key: "a",
+      label: "a",
+      default: 0.2,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tip: "Controls the speed of rotation in the x-y plane. Increasing it stretches the spiral outward.",
+    },
+    {
+      key: "b",
+      label: "b",
+      default: 0.2,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tip: "Couples x into the z dynamics. Small changes subtly affect the folding mechanism.",
+    },
+    {
+      key: "c",
+      label: "c",
+      default: 5.7,
+      min: 0,
+      max: 20,
+      step: 0.1,
+      tip: "Controls the height of the z-axis spike. Higher values create a taller, sharper fold where reinjection occurs.",
+    },
   ],
   chen: [
-    { key: "alpha", label: "\u03B1 (alpha)", default: 5,     min: -10, max: 20,  step: 0.1,
-      tip: "Linear coupling strength. Controls how strongly x and y influence each other's rate of change." },
-    { key: "beta",  label: "\u03B2 (beta)",  default: -20,   min: -30, max: 10,  step: 0.1,
-      tip: "Damping/amplification of z. Negative values sustain the double-scroll structure." },
-    { key: "delta", label: "\u03B4 (delta)", default: -0.38, min: -2,  max: 2,   step: 0.01,
-      tip: "Fine-tunes the attractor shape. Small shifts can collapse or expand the two lobes." },
+    {
+      key: "alpha",
+      label: "\u03B1 (alpha)",
+      default: 5,
+      min: -10,
+      max: 20,
+      step: 0.1,
+      tip: "Linear coupling strength. Controls how strongly x and y influence each other's rate of change.",
+    },
+    {
+      key: "beta",
+      label: "\u03B2 (beta)",
+      default: -20,
+      min: -30,
+      max: 10,
+      step: 0.1,
+      tip: "Damping/amplification of z. Negative values sustain the double-scroll structure.",
+    },
+    {
+      key: "delta",
+      label: "\u03B4 (delta)",
+      default: -0.38,
+      min: -2,
+      max: 2,
+      step: 0.01,
+      tip: "Fine-tunes the attractor shape. Small shifts can collapse or expand the two lobes.",
+    },
   ],
   chua: [
-    { key: "alpha", label: "\u03B1 (alpha)", default: 15.6,  min: 5,  max: 30,  step: 0.1,
-      tip: "Ratio of capacitances C2/C1. Controls how energy transfers between the two capacitor stages." },
-    { key: "gamma", label: "\u03B3 (gamma)", default: 25.58, min: 10, max: 50,  step: 0.1,
-      tip: "Ratio of C2 to the inductor. Higher values speed up oscillation in the LC resonant loop." },
-    { key: "m0",    label: "m\u2080",        default: -2,    min: -5, max: 0,   step: 0.1,
-      tip: "Inner slope of Chua's diode. Controls the negative resistance in the central voltage region." },
-    { key: "m1",    label: "m\u2081",        default: 0,     min: -3, max: 3,   step: 0.1,
-      tip: "Outer slope of Chua's diode. Determines behavior at high voltages — affects scroll size." },
+    {
+      key: "alpha",
+      label: "\u03B1 (alpha)",
+      default: 15.6,
+      min: 5,
+      max: 30,
+      step: 0.1,
+      tip: "Ratio of capacitances C2/C1. Controls how energy transfers between the two capacitor stages.",
+    },
+    {
+      key: "gamma",
+      label: "\u03B3 (gamma)",
+      default: 25.58,
+      min: 10,
+      max: 50,
+      step: 0.1,
+      tip: "Ratio of C2 to the inductor. Higher values speed up oscillation in the LC resonant loop.",
+    },
+    {
+      key: "m0",
+      label: "m\u2080",
+      default: -2,
+      min: -5,
+      max: 0,
+      step: 0.1,
+      tip: "Inner slope of Chua's diode. Controls the negative resistance in the central voltage region.",
+    },
+    {
+      key: "m1",
+      label: "m\u2081",
+      default: 0,
+      min: -3,
+      max: 3,
+      step: 0.1,
+      tip: "Outer slope of Chua's diode. Determines behavior at high voltages — affects scroll size.",
+    },
   ],
   threeScroll: [
-    { key: "a", label: "a", default: 32.48, min: 20,  max: 50,  step: 0.01,
-      tip: "Primary coupling coefficient. Drives the x-y interaction that forms the three scroll wings." },
-    { key: "b", label: "b", default: 45.84, min: 30,  max: 60,  step: 0.01,
-      tip: "Secondary coupling. Balances against 'a' to maintain the three-fold symmetry." },
-    { key: "c", label: "c", default: 1.18,  min: 0,   max: 5,   step: 0.01,
-      tip: "Damping on z-axis. Controls how tightly trajectories are pulled back to the x-y plane." },
-    { key: "d", label: "d", default: 0.13,  min: 0,   max: 1,   step: 0.01,
-      tip: "Nonlinear coupling strength (xz term). Affects the twisting between scrolls." },
-    { key: "e", label: "e", default: 0.57,  min: 0,   max: 2,   step: 0.01,
-      tip: "Quadratic damping (x\u00B2 term). Prevents trajectories from escaping to infinity." },
-    { key: "f", label: "f", default: 14.7,  min: 5,   max: 25,  step: 0.1,
-      tip: "Linear feedback on y. Shifts the balance between the three scroll centers." },
+    {
+      key: "a",
+      label: "a",
+      default: 32.48,
+      min: 20,
+      max: 50,
+      step: 0.01,
+      tip: "Primary coupling coefficient. Drives the x-y interaction that forms the three scroll wings.",
+    },
+    {
+      key: "b",
+      label: "b",
+      default: 45.84,
+      min: 30,
+      max: 60,
+      step: 0.01,
+      tip: "Secondary coupling. Balances against 'a' to maintain the three-fold symmetry.",
+    },
+    {
+      key: "c",
+      label: "c",
+      default: 1.18,
+      min: 0,
+      max: 5,
+      step: 0.01,
+      tip: "Damping on z-axis. Controls how tightly trajectories are pulled back to the x-y plane.",
+    },
+    {
+      key: "d",
+      label: "d",
+      default: 0.13,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tip: "Nonlinear coupling strength (xz term). Affects the twisting between scrolls.",
+    },
+    {
+      key: "e",
+      label: "e",
+      default: 0.57,
+      min: 0,
+      max: 2,
+      step: 0.01,
+      tip: "Quadratic damping (x\u00B2 term). Prevents trajectories from escaping to infinity.",
+    },
+    {
+      key: "f",
+      label: "f",
+      default: 14.7,
+      min: 5,
+      max: 25,
+      step: 0.1,
+      tip: "Linear feedback on y. Shifts the balance between the three scroll centers.",
+    },
   ],
   rabinovichFabrikant: [
-    { key: "alpha", label: "\u03B1 (alpha)", default: 0.14, min: 0, max: 1.5, step: 0.01,
-      tip: "Dissipation rate. Low values allow long chaotic transients; too high and the system decays to a fixed point." },
-    { key: "gamma", label: "\u03B3 (gamma)", default: 0.10, min: 0, max: 1.5, step: 0.01,
-      tip: "Cross-coupling strength. Controls the energy exchange between oscillation modes in the plasma model." },
+    {
+      key: "alpha",
+      label: "\u03B1 (alpha)",
+      default: 0.14,
+      min: 0,
+      max: 1.5,
+      step: 0.01,
+      tip: "Dissipation rate. Low values allow long chaotic transients; too high and the system decays to a fixed point.",
+    },
+    {
+      key: "gamma",
+      label: "\u03B3 (gamma)",
+      default: 0.1,
+      min: 0,
+      max: 1.5,
+      step: 0.01,
+      tip: "Cross-coupling strength. Controls the energy exchange between oscillation modes in the plasma model.",
+    },
   ],
   aizawa: [
-    { key: "a", label: "a", default: 0.95, min: 0,   max: 2,  step: 0.01,
-      tip: "Controls the torus structure. Near 0.95 the attractor sits at the edge of order and chaos." },
-    { key: "b", label: "b", default: 0.7,  min: 0,   max: 2,  step: 0.01,
-      tip: "Rotational damping. Affects how tightly trajectories wind around the torus core." },
-    { key: "c", label: "c", default: 0.6,  min: 0,   max: 2,  step: 0.01,
-      tip: "Vertical drift rate. Shifts the attractor up or down and affects the mushroom cap shape." },
-    { key: "d", label: "d", default: 3.5,  min: 0,   max: 8,  step: 0.1,
-      tip: "Nonlinear coupling strength. Higher values expand the chaotic region of the torus." },
-    { key: "e", label: "e", default: 0.85, min: 0,   max: 1,  step: 0.01,
-      tip: "z-dependent modulation. Fine-tunes the symmetry breaking that makes Aizawa unique." },
-    { key: "f", label: "f", default: 0.1,  min: 0,   max: 1,  step: 0.01,
-      tip: "Cubic x-z coupling. A subtle term that affects the attractor's vertical extent." },
+    {
+      key: "a",
+      label: "a",
+      default: 0.95,
+      min: 0,
+      max: 2,
+      step: 0.01,
+      tip: "Controls the torus structure. Near 0.95 the attractor sits at the edge of order and chaos.",
+    },
+    {
+      key: "b",
+      label: "b",
+      default: 0.7,
+      min: 0,
+      max: 2,
+      step: 0.01,
+      tip: "Rotational damping. Affects how tightly trajectories wind around the torus core.",
+    },
+    {
+      key: "c",
+      label: "c",
+      default: 0.6,
+      min: 0,
+      max: 2,
+      step: 0.01,
+      tip: "Vertical drift rate. Shifts the attractor up or down and affects the mushroom cap shape.",
+    },
+    {
+      key: "d",
+      label: "d",
+      default: 3.5,
+      min: 0,
+      max: 8,
+      step: 0.1,
+      tip: "Nonlinear coupling strength. Higher values expand the chaotic region of the torus.",
+    },
+    {
+      key: "e",
+      label: "e",
+      default: 0.25,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tip: "z-dependent modulation. Fine-tunes the symmetry breaking that makes Aizawa unique.",
+    },
+    {
+      key: "f",
+      label: "f",
+      default: 0.1,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      tip: "Cubic x-z coupling. A subtle term that affects the attractor's vertical extent.",
+    },
   ],
   thomas: [
-    { key: "b", label: "b", default: 0.208186, min: 0, max: 1, step: 0.001,
-      tip: "Friction coefficient. At b=0 the system is conservative; as b increases, chaos gives way to stable limit cycles." },
+    {
+      key: "b",
+      label: "b",
+      default: 0.208186,
+      min: 0,
+      max: 1,
+      step: 0.001,
+      tip: "Friction coefficient. At b=0 the system is conservative; as b increases, chaos gives way to stable limit cycles.",
+    },
   ],
   halvorsen: [
-    { key: "a", label: "a", default: 1.89, min: 0, max: 5, step: 0.01,
-      tip: "Dissipation parameter. At 1.89 the three-fold symmetric attractor is fully chaotic; lower values simplify it." },
+    {
+      key: "a",
+      label: "a",
+      default: 1.89,
+      min: 0,
+      max: 5,
+      step: 0.01,
+      tip: "Dissipation parameter. At 1.89 the three-fold symmetric attractor is fully chaotic; lower values simplify it.",
+    },
   ],
   dadras: [
-    { key: "a", label: "a", default: 3,   min: 0, max: 10, step: 0.1,
-      tip: "Controls the y-x coupling. Affects the width of the three butterfly wings." },
-    { key: "b", label: "b", default: 2.7, min: 0, max: 10, step: 0.1,
-      tip: "Nonlinear coupling (yz term). Drives the folding that creates the multi-wing structure." },
-    { key: "c", label: "c", default: 1.7, min: 0, max: 10, step: 0.1,
-      tip: "Damping on y. Balances against 'a' to determine the attractor's overall scale." },
-    { key: "d", label: "d", default: 2,   min: 0, max: 10, step: 0.1,
-      tip: "x-y product coupling into z. Controls how trajectories transfer between wings." },
-    { key: "e", label: "e", default: 9,   min: 0, max: 20, step: 0.1,
-      tip: "Damping on z. Higher values compress the attractor vertically; lower values let it expand." },
+    {
+      key: "a",
+      label: "a",
+      default: 3,
+      min: 0,
+      max: 10,
+      step: 0.1,
+      tip: "Controls the y-x coupling. Affects the width of the three butterfly wings.",
+    },
+    {
+      key: "b",
+      label: "b",
+      default: 2.7,
+      min: 0,
+      max: 10,
+      step: 0.1,
+      tip: "Nonlinear coupling (yz term). Drives the folding that creates the multi-wing structure.",
+    },
+    {
+      key: "c",
+      label: "c",
+      default: 1.7,
+      min: 0,
+      max: 10,
+      step: 0.1,
+      tip: "Damping on y. Balances against 'a' to determine the attractor's overall scale.",
+    },
+    {
+      key: "d",
+      label: "d",
+      default: 2,
+      min: 0,
+      max: 10,
+      step: 0.1,
+      tip: "x-y product coupling into z. Controls how trajectories transfer between wings.",
+    },
+    {
+      key: "e",
+      label: "e",
+      default: 9,
+      min: 0,
+      max: 20,
+      step: 0.1,
+      tip: "Damping on z. Higher values compress the attractor vertically; lower values let it expand.",
+    },
   ],
 };
 
@@ -314,52 +714,55 @@ const ATTRACTOR_PARAMS = {
 const ATTRACTOR_INFO = {
   lorenz: {
     title: "LORENZ ATTRACTOR",
-    tagline: "The butterfly effect — atmospheric convection, 1963",
+    tagline: "A rounded decimal in a weather model exposed chaos itself (1963)",
     equations: "dx/dt = σ(y−x)   dy/dt = x(ρ−z)−y   dz/dt = xy−βz",
   },
   rossler: {
     title: "RÖSSLER ATTRACTOR",
-    tagline: "Simplest chaotic flow — chemical kinetics, 1976",
+    tagline: "Engineered to be the simplest possible strange attractor — one nonlinear term (1976)",
     equations: "dx/dt = −y−z   dy/dt = x+ay   dz/dt = b+z(x−c)",
   },
   chen: {
     title: "CHEN ATTRACTOR",
-    tagline: "Dual of Lorenz — not topologically equivalent, 1999",
+    tagline: "Chaos synthesized on purpose by destabilizing a stable system (1999)",
     equations: "dx/dt = α(y−x)   dy/dt = (c−α)x−xz+cy   dz/dt = xy−βz",
   },
   chua: {
     title: "CHUA'S CIRCUIT",
-    tagline: "First physical chaotic circuit — piecewise-linear, 1983",
+    tagline: "Proof chaos is physical — built from resistors, capacitors, and a diode (1983)",
     equations: "dx/dt = α(y−x−f(x))   dy/dt = x−y+z   dz/dt = −γy",
   },
   threeScroll: {
     title: "THREE-SCROLL ATTRACTOR",
-    tagline: "Unified chaotic system — three intertwined scrolls",
+    tagline: "A unified system that contains Lorenz and Chen as special cases",
     equations: "dx/dt = a(y−x)+dxz   dy/dt = bx−xz+fy   dz/dt = cz+xy−ex²",
   },
   rabinovichFabrikant: {
     title: "RABINOVICH-FABRIKANT",
-    tagline: "Plasma instabilities — nonlinear oscillation, 1979",
-    equations: "dx/dt = y(z−1+x²)+γx   dy/dt = x(3z+1−x²)+γy   dz/dt = −2z(α+xy)",
+    tagline: "How tiny ripples in hot plasma amplify into turbulent storms (1979)",
+    equations:
+      "dx/dt = y(z−1+x²)+γx   dy/dt = x(3z+1−x²)+γy   dz/dt = −2z(α+xy)",
   },
   aizawa: {
     title: "AIZAWA ATTRACTOR",
-    tagline: "Torus-to-chaos transition — delicate symmetry breaking",
-    equations: "dx/dt = (z−b)x−dy   dy/dt = dx+(z−b)y   dz/dt = c+az−z³/3−(x²+y²)(1+ez)+fzx³",
+    tagline: "Chaotic orbits wrap a spherical cage around a central oscillating axis",
+    equations:
+      "dx/dt = (z−b)x−dy   dy/dt = dx+(z−b)y   dz/dt = c+az−z³/3−(x²+y²)(1+ez)+fzx³",
   },
   thomas: {
     title: "THOMAS ATTRACTOR",
-    tagline: "Cyclically symmetric — bounded chaos with friction, 1999",
+    tagline: "Pure friction is all it takes to turn a cyclic flow into chaos (1999)",
     equations: "dx/dt = sin(y)−bx   dy/dt = sin(z)−by   dz/dt = sin(x)−bz",
   },
   halvorsen: {
     title: "HALVORSEN ATTRACTOR",
-    tagline: "Cyclic symmetry — three-fold rotational structure",
-    equations: "dx/dt = −ax−4y−4z−y²   dy/dt = −ay−4z−4x−z²   dz/dt = −az−4x−4y−x²",
+    tagline: "Three equations, three axes, identical rules — the same chaos from any angle",
+    equations:
+      "dx/dt = −ax−4y−4z−y²   dy/dt = −ay−4z−4x−z²   dz/dt = −az−4x−4y−x²",
   },
   dadras: {
     title: "DADRAS ATTRACTOR",
-    tagline: "Three-wing butterfly — asymmetric strange attractor, 2010",
+    tagline: "A modern asymmetric butterfly designed to map uncharted chaos (2010)",
     equations: "dx/dt = y−ax+byz   dy/dt = cy−xz+z   dz/dt = dxy−ez",
   },
 };
@@ -373,7 +776,7 @@ const CONFIG = {
     width: 300,
     padding: 18,
     marginRight: 16,
-    marginTop: 16,
+    marginTop: 60,
     debugColor: "rgba(0, 255, 0, 0.18)",
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     spacing: 10,
@@ -446,16 +849,22 @@ export class CaosPlayground extends Attractor3DDemo {
   /** @override */
   render() {
     if (this.running) this.clear();
-    this._renderAttractor();   // Attractor behind
-    this.pipeline.render();    // UI panel on top
+    this._renderAttractor(); // Attractor behind
+    this.pipeline.render(); // UI panel on top
   }
 
   // ─── Panel Construction ─────────────────────────────────────────────
 
   _buildPanel() {
     const isMobile = Screen.isMobile;
-    const panelWidth = Screen.responsive(this.width - 20, this.width - 20, CONFIG.panel.width);
-    const padding = isMobile ? CONFIG.panel.mobilePadding : CONFIG.panel.padding;
+    const panelWidth = Screen.responsive(
+      this.width - 20,
+      this.width - 20,
+      CONFIG.panel.width,
+    );
+    const padding = isMobile
+      ? CONFIG.panel.mobilePadding
+      : CONFIG.panel.padding;
     const { debugColor, spacing } = CONFIG.panel;
     const cfg = this.config;
 
@@ -472,7 +881,13 @@ export class CaosPlayground extends Attractor3DDemo {
     // Draw a semi-transparent black background behind the panel contents
     const originalDraw = this.panel.draw.bind(this.panel);
     this.panel.draw = () => {
-      Painter.shapes.rect(0, 0, this.panel._width, this.panel._height, CONFIG.panel.backgroundColor);
+      Painter.shapes.rect(
+        0,
+        0,
+        this.panel._width,
+        this.panel._height,
+        CONFIG.panel.backgroundColor,
+      );
       originalDraw();
     };
 
@@ -484,7 +899,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
     // ── Attractor Dropdown (always visible, not in a section) ─────
     const attractorOptions = Object.entries(ATTRACTOR_PRESETS).map(
-      ([key, preset]) => ({ label: preset.label, value: key })
+      ([key, preset]) => ({ label: preset.label, value: key }),
     );
 
     this._controls.attractor = new Dropdown(this, {
@@ -522,7 +937,9 @@ export class CaosPlayground extends Attractor3DDemo {
     }
 
     // ── Parameters (dynamic, rebuilt per attractor) ─────────────────
-    this._paramsSection = this.panel.addSection("Parameters", { expanded: !isMobile });
+    this._paramsSection = this.panel.addSection("Parameters", {
+      expanded: !isMobile,
+    });
     this._paramSliders = [];
     this._buildParamSliders(this._activePreset);
 
@@ -530,8 +947,12 @@ export class CaosPlayground extends Attractor3DDemo {
     const physics = this.panel.addSection("Physics", { expanded: !isMobile });
 
     this._controls.dt = new Slider(this, {
-      label: "TIME STEP", width: sw,
-      min: 0.001, max: 0.1, value: cfg.attractor.dt, step: 0.001,
+      label: "TIME STEP",
+      width: sw,
+      min: 0.001,
+      max: 0.1,
+      value: cfg.attractor.dt,
+      step: 0.001,
       formatValue: (v) => v.toFixed(3),
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -541,8 +962,12 @@ export class CaosPlayground extends Attractor3DDemo {
     physics.addItem(this._controls.dt);
 
     this._controls.scale = new Slider(this, {
-      label: "SCALE", width: sw,
-      min: 1, max: 150, value: cfg.attractor.scale, step: 1,
+      label: "SCALE",
+      width: sw,
+      min: 1,
+      max: 150,
+      value: cfg.attractor.scale,
+      step: 1,
       formatValue: (v) => v.toFixed(0),
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -556,8 +981,12 @@ export class CaosPlayground extends Attractor3DDemo {
 
     this._controls.particles = new Stepper(this, {
       label: "COUNT",
-      value: cfg.particles.count, min: 50, max: 1000, step: 50,
-      buttonSize: 32, valueWidth: 60,
+      value: cfg.particles.count,
+      min: 50,
+      max: 1000,
+      step: 50,
+      buttonSize: 32,
+      valueWidth: 60,
       onChange: (v) => {
         if (this._updatingSliders) return;
         this.updateParticleCount(v);
@@ -566,8 +995,12 @@ export class CaosPlayground extends Attractor3DDemo {
     particles.addItem(this._controls.particles);
 
     this._controls.trailLength = new Slider(this, {
-      label: "TRAIL LENGTH", width: sw,
-      min: 10, max: 500, value: cfg.particles.trailLength, step: 10,
+      label: "TRAIL LENGTH",
+      width: sw,
+      min: 10,
+      max: 500,
+      value: cfg.particles.trailLength,
+      step: 10,
       formatValue: (v) => v.toFixed(0),
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -580,8 +1013,12 @@ export class CaosPlayground extends Attractor3DDemo {
     const color = this.panel.addSection("Color", { expanded: false });
 
     this._controls.minHue = new Slider(this, {
-      label: "HUE MIN", width: sw,
-      min: 0, max: 360, value: cfg.visual.minHue, step: 1,
+      label: "HUE MIN",
+      width: sw,
+      min: 0,
+      max: 360,
+      value: cfg.visual.minHue,
+      step: 1,
       formatValue: (v) => v.toFixed(0) + "\u00B0",
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -592,8 +1029,12 @@ export class CaosPlayground extends Attractor3DDemo {
     color.addItem(this._controls.minHue);
 
     this._controls.maxHue = new Slider(this, {
-      label: "HUE MAX", width: sw,
-      min: 0, max: 360, value: cfg.visual.maxHue, step: 1,
+      label: "HUE MAX",
+      width: sw,
+      min: 0,
+      max: 360,
+      value: cfg.visual.maxHue,
+      step: 1,
       formatValue: (v) => v.toFixed(0) + "\u00B0",
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -604,8 +1045,12 @@ export class CaosPlayground extends Attractor3DDemo {
     color.addItem(this._controls.maxHue);
 
     this._controls.saturation = new Slider(this, {
-      label: "SATURATION", width: sw,
-      min: 0, max: 100, value: cfg.visual.saturation, step: 1,
+      label: "SATURATION",
+      width: sw,
+      min: 0,
+      max: 100,
+      value: cfg.visual.saturation,
+      step: 1,
       formatValue: (v) => v.toFixed(0) + "%",
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -616,8 +1061,12 @@ export class CaosPlayground extends Attractor3DDemo {
     color.addItem(this._controls.saturation);
 
     this._controls.lightness = new Slider(this, {
-      label: "LIGHTNESS", width: sw,
-      min: 0, max: 100, value: cfg.visual.lightness, step: 1,
+      label: "LIGHTNESS",
+      width: sw,
+      min: 0,
+      max: 100,
+      value: cfg.visual.lightness,
+      step: 1,
       formatValue: (v) => v.toFixed(0) + "%",
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -631,7 +1080,9 @@ export class CaosPlayground extends Attractor3DDemo {
     const effects = this.panel.addSection("Effects", { expanded: false });
 
     this._controls.bloom = new ToggleButton(this, {
-      text: "Bloom", width: 80, height: 30,
+      text: "Bloom",
+      width: 80,
+      height: 30,
       startToggled: cfg.bloom.enabled,
       onToggle: (on) => {
         this.config.bloom.enabled = on;
@@ -641,8 +1092,12 @@ export class CaosPlayground extends Attractor3DDemo {
     effects.addItem(this._controls.bloom);
 
     this._controls.bloomStrength = new Slider(this, {
-      label: "BLOOM STRENGTH", width: sw,
-      min: 0, max: 1, value: cfg.bloom.strength, step: 0.05,
+      label: "BLOOM STRENGTH",
+      width: sw,
+      min: 0,
+      max: 1,
+      value: cfg.bloom.strength,
+      step: 0.05,
       formatValue: (v) => v.toFixed(2),
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -653,7 +1108,9 @@ export class CaosPlayground extends Attractor3DDemo {
     effects.addItem(this._controls.bloomStrength);
 
     this._controls.glow = new ToggleButton(this, {
-      text: "Glow", width: 80, height: 30,
+      text: "Glow",
+      width: 80,
+      height: 30,
       startToggled: cfg.glow.enabled,
       onToggle: (on) => {
         this.config.glow.enabled = on;
@@ -663,8 +1120,12 @@ export class CaosPlayground extends Attractor3DDemo {
     effects.addItem(this._controls.glow);
 
     this._controls.glowRadius = new Slider(this, {
-      label: "GLOW RADIUS", width: sw,
-      min: 0, max: 200, value: cfg.glow.radius, step: 5,
+      label: "GLOW RADIUS",
+      width: sw,
+      min: 0,
+      max: 200,
+      value: cfg.glow.radius,
+      step: 5,
       formatValue: (v) => v.toFixed(0),
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -675,7 +1136,9 @@ export class CaosPlayground extends Attractor3DDemo {
     effects.addItem(this._controls.glowRadius);
 
     this._controls.autoRotation = new ToggleButton(this, {
-      text: "Auto-Rotate", width: 110, height: 30,
+      text: "Auto-Rotate",
+      width: 110,
+      height: 30,
       startToggled: cfg.autoRotation.enabled,
       onToggle: (on) => {
         this.config.autoRotation.enabled = on;
@@ -684,8 +1147,12 @@ export class CaosPlayground extends Attractor3DDemo {
     effects.addItem(this._controls.autoRotation);
 
     this._controls.rotationSpeed = new Slider(this, {
-      label: "ROTATION SPEED", width: sw,
-      min: 0.01, max: 0.5, value: cfg.autoRotation.speed, step: 0.01,
+      label: "ROTATION SPEED",
+      width: sw,
+      min: 0.01,
+      max: 0.5,
+      value: cfg.autoRotation.speed,
+      step: 0.01,
       formatValue: (v) => v.toFixed(2),
       onChange: (v) => {
         if (this._updatingSliders) return;
@@ -696,13 +1163,17 @@ export class CaosPlayground extends Attractor3DDemo {
 
     // ── Reset + Restart buttons (always visible, not in a section) ────
     this._controls.reset = new Button(this, {
-      text: "Reset Defaults", width: sw, height: 32,
+      text: "Reset Defaults",
+      width: sw,
+      height: 32,
       onClick: () => this._resetToDefaults(),
     });
     this.panel.addItem(this._controls.reset);
 
     this._controls.restart = new Button(this, {
-      text: "Restart", width: sw, height: 32,
+      text: "Restart",
+      width: sw,
+      height: 32,
       onClick: () => {
         // Restart simulation with current slider values (don't reset to preset)
         this.switchAttractor(this._activePreset, {
@@ -725,7 +1196,13 @@ export class CaosPlayground extends Attractor3DDemo {
 
     // On mobile, only allow one section expanded at a time
     if (isMobile) {
-      this._sections = [this._paramsSection, physics, particles, color, effects];
+      this._sections = [
+        this._paramsSection,
+        physics,
+        particles,
+        color,
+        effects,
+      ];
       this._setupExclusiveSections();
     }
 
@@ -870,23 +1347,23 @@ export class CaosPlayground extends Attractor3DDemo {
     this._infoScene = new VerticalLayout(this, {
       x: 0,
       y: 0,
-      debug:false,
-      spacing: Screen.responsive(8, 8, 10),
-      align: isMobile ? "center" : "start",
+      debug: false,
+      spacing: Screen.responsive(6, 6, 7),
+      align: "center",
     });
     this._infoScene._alpha = 1; // Custom alpha for fade animation
     // Anchor layout content at scene top-left instead of the default
     // vertical-centering offset, so scene.x/y is the block's top-left corner.
     this._infoScene.getLayoutOffset = () => ({ offsetX: 0, offsetY: 0 });
 
-    const titleSize = Screen.responsive(22, 28, 36);
-    const taglineSize = Screen.responsive(15, 17, 22);
-    const equationSize = Screen.responsive(13, 15, 18);
-    const align = isMobile ? "center" : "left";
+    const titleSize = Screen.responsive(17, 21, 26);
+    const taglineSize = Screen.responsive(12, 13, 16);
+    const equationSize = Screen.responsive(10, 12, 14);
+    const align = "center";
 
     this._infoTitle = new Text(this, "", {
       font: `bold ${titleSize}px monospace`,
-      color: "rgba(255,255,255,0.6)",
+      color: "rgba(255,255,255,0.95)",
       align,
       debug: false,
       debugColor: "blue",
@@ -894,7 +1371,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
     this._infoTagline = new Text(this, "", {
       font: `${taglineSize}px monospace`,
-      color: "rgba(255,255,255,0.4)",
+      color: "rgba(255,255,255,0.65)",
       align,
       debug: false,
       debugColor: "magenta",
@@ -902,7 +1379,7 @@ export class CaosPlayground extends Attractor3DDemo {
 
     this._infoEquations = new Text(this, "", {
       font: `${equationSize}px monospace`,
-      color: "rgba(255,255,255,0.3)",
+      color: "rgba(255,255,255,0.5)",
       align,
       debug: false,
       debugColor: "yellow",
@@ -911,7 +1388,25 @@ export class CaosPlayground extends Attractor3DDemo {
     this._infoScene.add(this._infoTitle);
     this._infoScene.add(this._infoTagline);
     this._infoScene.add(this._infoEquations);
-    this.pipeline.add(this._infoScene);
+
+    // Outer container: background rect (child 0) + VerticalLayout (child 1).
+    // The Rect sits behind the text as a semi-transparent pill. Its size is
+    // synced to the layout's measured dimensions in _layoutInfoOverlay.
+    this._infoContainer = new Scene(this, { x: 0, y: 0 });
+    this._infoContainer._alpha = 1;
+
+    this._infoBg = ShapeGOFactory.create(
+      this,
+      new RoundedRectangle(10, {
+        color: "rgba(0,0,0,0.45)",
+        width: 10,
+        height: 10,
+      })
+    );
+
+    this._infoContainer.add(this._infoBg);
+    this._infoContainer.add(this._infoScene);
+    this.pipeline.add(this._infoContainer);
 
     // Set initial content and position
     this._updateInfoContent(this._activePreset);
@@ -926,57 +1421,74 @@ export class CaosPlayground extends Attractor3DDemo {
     this._infoTagline.text = info.tagline;
     this._infoEquations.text = info.equations;
 
-    this._infoScene._layoutDirty = true;
+    // Text swap changes the measured width/height, so re-run the layout
+    // and reposition the container + background to match new content.
     this._layoutInfoOverlay();
   }
 
   _layoutInfoOverlay() {
-    if (!this._infoScene) return;
+    if (!this._infoContainer) return;
+
+    // Force the VerticalLayout measurement synchronously so width/height
+    // reflect current content before we size the background and position
+    // the container.
+    this._infoScene._layoutDirty = true;
+    this._infoScene.update(0);
+    const textW = this._infoScene.width || 0;
+    const textH = this._infoScene.height || 0;
+
+    const padX = 14;
+    const padTop = -6;
+    const padBottom = 14;
+
+    // Size the background pill to wrap the text with asymmetric vertical
+    // padding — tighter on top so the title doesn't look sunken inside
+    // the box (text glyphs have ascent space above the caps).
+    this._infoBg.width = textW + padX * 2;
+    this._infoBg.height = textH + padTop + padBottom;
+    if (this._infoBg.shape) {
+      this._infoBg.shape.width = this._infoBg.width;
+      this._infoBg.shape.height = this._infoBg.height;
+    }
+    this._infoBg.x = -padX;
+    this._infoBg.y = -padTop;
+
+    // Text block sits at the container's origin; container is positioned
+    // such that the text (not the background padding) centers on screen.
+    this._infoScene.x = 0;
+    this._infoScene.y = 0;
 
     if (Screen.isMobile) {
-      // Top center
-      this._infoScene.x = this.width / 2;
-      this._infoScene.y = 60;
+      this._infoContainer.x = this.width / 2 - textW / 2;
+      this._infoContainer.y = 60;
     } else {
-      // Bottom-left with responsive margin
       const margin = Screen.responsive(20, 28, 40);
       const blockHeight = Screen.responsive(70, 80, 100);
-      this._infoScene.x = margin;
-      this._infoScene.y = this.height - blockHeight - margin;
+      this._infoContainer.x = this.width / 2 - textW / 2;
+      this._infoContainer.y = this.height - blockHeight - margin;
     }
   }
 
   _fadeInfoOverlay(attractorKey) {
-    if (!this._infoScene) return;
+    if (!this._infoContainer) return;
 
-    // Kill any in-progress fade
-    Tweenetik.killTarget(this._infoScene);
+    Tweenetik.killTarget(this._infoContainer);
 
-    // Fade out, then swap content, then fade in
-    Tweenetik.to(
-      this._infoScene,
-      { _alpha: 0 },
-      0.3,
-      Easing.easeOutCubic,
-      {
-        onComplete: () => {
-          this._updateInfoContent(attractorKey);
-          Tweenetik.to(
-            this._infoScene,
-            { _alpha: 1 },
-            0.3,
-            Easing.easeInCubic
-          );
-        },
-      }
-    );
+    Tweenetik.to(this._infoContainer, { _alpha: 0 }, 0.3, Easing.easeOutCubic, {
+      onComplete: () => {
+        this._updateInfoContent(attractorKey);
+        Tweenetik.to(this._infoContainer, { _alpha: 1 }, 0.3, Easing.easeInCubic);
+      },
+    });
   }
 
   // ─── Dynamic Parameter Sliders ─────────────────────────────────────
 
   _buildParamSliders(attractorKey) {
     const panelWidth = Screen.isMobile ? this.width - 20 : CONFIG.panel.width;
-    const padding = Screen.isMobile ? CONFIG.panel.mobilePadding : CONFIG.panel.padding;
+    const padding = Screen.isMobile
+      ? CONFIG.panel.mobilePadding
+      : CONFIG.panel.padding;
     const sw = panelWidth - padding * 2;
 
     // Remove old sliders if any
@@ -996,10 +1508,8 @@ export class CaosPlayground extends Attractor3DDemo {
 
     for (const def of paramDefs) {
       // Auto-format: derive decimal places from step precision
-      const decimals = def.step >= 1 ? 0
-        : def.step >= 0.1 ? 1
-        : def.step >= 0.01 ? 2
-        : 3;
+      const decimals =
+        def.step >= 1 ? 0 : def.step >= 0.1 ? 1 : def.step >= 0.01 ? 2 : 3;
 
       const slider = new Slider(this, {
         label: def.label.toUpperCase(),
@@ -1097,7 +1607,8 @@ export class CaosPlayground extends Attractor3DDemo {
     this.attractorPipeline?.destroy();
 
     const cfg = this.config;
-    const maxSegments = cfg.maxSegments || cfg.particles.count * cfg.particles.trailLength;
+    const maxSegments =
+      cfg.maxSegments || cfg.particles.count * cfg.particles.trailLength;
     const pipelineOptions = {
       bloom: cfg.bloom,
       background: {
@@ -1116,7 +1627,10 @@ export class CaosPlayground extends Attractor3DDemo {
 
     if (rendererType === "webgpu") {
       const pipeline = new WebGPUAttractorPipeline(
-        this.width, this.height, maxSegments, pipelineOptions
+        this.width,
+        this.height,
+        maxSegments,
+        pipelineOptions,
       );
       const ok = await pipeline.init();
       if (ok) {
@@ -1138,7 +1652,10 @@ export class CaosPlayground extends Attractor3DDemo {
   /** @private Rebuild WebGL pipeline */
   _revertToWebGL(maxSegments, pipelineOptions) {
     const pipeline = new WebGLAttractorPipeline(
-      this.width, this.height, maxSegments, pipelineOptions
+      this.width,
+      this.height,
+      maxSegments,
+      pipelineOptions,
     );
     const ok = pipeline.init();
     this.attractorPipeline = pipeline;
