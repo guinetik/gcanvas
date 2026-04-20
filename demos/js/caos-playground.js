@@ -714,55 +714,55 @@ const ATTRACTOR_PARAMS = {
 const ATTRACTOR_INFO = {
   lorenz: {
     title: "LORENZ ATTRACTOR",
-    tagline: "A flap of wings becomes a storm — Lorenz, 1963",
+    tagline: "A rounded decimal in a weather model exposed chaos itself (1963)",
     equations: "dx/dt = σ(y−x)   dy/dt = x(ρ−z)−y   dz/dt = xy−βz",
   },
   rossler: {
     title: "RÖSSLER ATTRACTOR",
-    tagline: "The minimum ingredients for chaos: one twist, one fold — Rössler, 1976",
+    tagline: "Engineered to be the simplest possible strange attractor — one nonlinear term (1976)",
     equations: "dx/dt = −y−z   dy/dt = x+ay   dz/dt = b+z(x−c)",
   },
   chen: {
     title: "CHEN ATTRACTOR",
-    tagline: "Lorenz's equations rearranged — same rules, stranger geometry — Chen, 1999",
+    tagline: "Chaos synthesized on purpose by destabilizing a stable system (1999)",
     equations: "dx/dt = α(y−x)   dy/dt = (c−α)x−xz+cy   dz/dt = xy−βz",
   },
   chua: {
     title: "CHUA'S CIRCUIT",
-    tagline: "The first chaos you can solder — real electrons, real unpredictability — Chua, 1983",
+    tagline: "Proof chaos is physical — built from resistors, capacitors, and a diode (1983)",
     equations: "dx/dt = α(y−x−f(x))   dy/dt = x−y+z   dz/dt = −γy",
   },
   threeScroll: {
     title: "THREE-SCROLL ATTRACTOR",
-    tagline: "Three chaotic vortices knotted into one unified flow",
+    tagline: "A unified system that contains Lorenz and Chen as special cases",
     equations: "dx/dt = a(y−x)+dxz   dy/dt = bx−xz+fy   dz/dt = cz+xy−ex²",
   },
   rabinovichFabrikant: {
     title: "RABINOVICH-FABRIKANT",
-    tagline: "The turbulent drift of ionized plasma, solved on paper — 1979",
+    tagline: "How tiny ripples in hot plasma amplify into turbulent storms (1979)",
     equations:
       "dx/dt = y(z−1+x²)+γx   dy/dt = x(3z+1−x²)+γy   dz/dt = −2z(α+xy)",
   },
   aizawa: {
     title: "AIZAWA ATTRACTOR",
-    tagline: "A doughnut tearing itself apart — where order loses its grip",
+    tagline: "Watch a periodic torus shatter as order dissolves into chaos",
     equations:
       "dx/dt = (z−b)x−dy   dy/dt = dx+(z−b)y   dz/dt = c+az−z³/3−(x²+y²)(1+ez)+fzx³",
   },
   thomas: {
     title: "THOMAS ATTRACTOR",
-    tagline: "Add friction to a frictionless spin and chaos crystallizes — Thomas, 1999",
+    tagline: "Pure friction is all it takes to turn a cyclic flow into chaos (1999)",
     equations: "dx/dt = sin(y)−bx   dy/dt = sin(z)−by   dz/dt = sin(x)−bz",
   },
   halvorsen: {
     title: "HALVORSEN ATTRACTOR",
-    tagline: "Three identical equations, rotated 120° apart — chaos with threefold symmetry",
+    tagline: "Three equations, three axes, identical rules — the same chaos from any angle",
     equations:
       "dx/dt = −ax−4y−4z−y²   dy/dt = −ay−4z−4x−z²   dz/dt = −az−4x−4y−x²",
   },
   dadras: {
     title: "DADRAS ATTRACTOR",
-    tagline: "A three-winged butterfly built to break Lorenz's symmetry — Dadras, 2010",
+    tagline: "A modern asymmetric butterfly designed to map uncharted chaos (2010)",
     equations: "dx/dt = y−ax+byz   dy/dt = cy−xz+z   dz/dt = dxy−ez",
   },
 };
