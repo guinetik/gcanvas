@@ -501,9 +501,12 @@ export class SpaceGame extends Game {
     // Calculate rows based on level (starts at 4, increases every 2 levels, max 8)
     const alienRows = Math.min(MAX_ALIEN_ROWS, ALIEN_BASE_ROWS + Math.floor((this.level - 1) / 2));
 
-    // Calculate starting position to center the alien grid
-    const gridWidth = ALIEN_COLS * ALIEN_SPACING_X;
-    const startX = (this.width - gridWidth) / 2 + ALIEN_SPACING_X / 2;
+    // Scale column spacing to fit narrow viewports (mobile) so the rightmost
+    // column stays within the player's reach. Leaves one alien-width margin per side.
+    const maxGridWidth = this.width - ALIEN_WIDTH * 2;
+    const spacingX = Math.min(ALIEN_SPACING_X, maxGridWidth / ALIEN_COLS);
+    const gridWidth = ALIEN_COLS * spacingX;
+    const startX = (this.width - gridWidth) / 2 + spacingX / 2;
 
     // Adjust starting Y based on level - aliens start lower on higher levels
     const levelStartOffset = Math.min(50, (this.level - 1) * 10);
@@ -523,7 +526,7 @@ export class SpaceGame extends Game {
         }
 
         const alien = new Alien(this, {
-          x: startX + col * ALIEN_SPACING_X,
+          x: startX + col * spacingX,
           y: startY + row * ALIEN_SPACING_Y,
           row: rowType,
           col: col,
@@ -1665,9 +1668,11 @@ export class SpaceGame extends Game {
     // Gauntlet uses max rows (8) with level 10 speed
     const alienRows = MAX_ALIEN_ROWS;
 
-    // Calculate starting position to center the alien grid
-    const gridWidth = ALIEN_COLS * ALIEN_SPACING_X;
-    const startX = (this.width - gridWidth) / 2 + ALIEN_SPACING_X / 2;
+    // Scale column spacing to fit narrow viewports (same logic as spawnAliens)
+    const maxGridWidth = this.width - ALIEN_WIDTH * 2;
+    const spacingX = Math.min(ALIEN_SPACING_X, maxGridWidth / ALIEN_COLS);
+    const gridWidth = ALIEN_COLS * spacingX;
+    const startX = (this.width - gridWidth) / 2 + spacingX / 2;
     const startY = this.levelStartY + 50; // Start a bit lower
 
     for (let row = 0; row < alienRows; row++) {
@@ -1683,7 +1688,7 @@ export class SpaceGame extends Game {
         }
 
         const alien = new Alien(this, {
-          x: startX + col * ALIEN_SPACING_X,
+          x: startX + col * spacingX,
           y: startY + row * ALIEN_SPACING_Y,
           row: rowType,
           col: col,
