@@ -1,4 +1,13 @@
-import { GameObject, TextShape } from "/gcanvas.es.min.js";
+import { GameObject, TextShape, Screen } from "/gcanvas.es.min.js";
+
+// Responsive typography — mobile/tablet/desktop
+const TITLE_FONT_PX = Screen.responsive(22, 28, 32);
+const HUD_FONT_PX = Screen.responsive(14, 18, 20);
+const LIVES_FONT_PX = Screen.responsive(14, 16, 18);
+const TITLE_Y = Screen.responsive(50, 80, 100);
+const HUD_ROW_Y = TITLE_Y + TITLE_FONT_PX + 8;
+const HUD_SIDE_MARGIN = Screen.responsive(10, 16, 20);
+const LIVES_BOTTOM_MARGIN = Screen.responsive(30, 36, 40);
 
 export class HUD extends GameObject {
   constructor(game, options = {}) {
@@ -6,7 +15,7 @@ export class HUD extends GameObject {
 
     // Title - centered, below info bar
     this.titleText = new TextShape("SPACE INVADERS", {
-      font: "bold 32px monospace",
+      font: `bold ${TITLE_FONT_PX}px monospace`,
       color: "#ffff00",
       align: "center",
       baseline: "top",
@@ -16,7 +25,7 @@ export class HUD extends GameObject {
 
     // Score - top left
     this.scoreText = new TextShape("SCORE: 0", {
-      font: "20px monospace",
+      font: `${HUD_FONT_PX}px monospace`,
       color: "#ffffff",
       align: "left",
       baseline: "top",
@@ -26,7 +35,7 @@ export class HUD extends GameObject {
 
     // Level - top right
     this.levelText = new TextShape("LEVEL: 1", {
-      font: "20px monospace",
+      font: `${HUD_FONT_PX}px monospace`,
       color: "#00ffff",
       align: "right",
       baseline: "top",
@@ -36,7 +45,7 @@ export class HUD extends GameObject {
 
     // Lives - bottom left (above FPS)
     this.livesText = new TextShape("LIVES: 3", {
-      font: "18px monospace",
+      font: `${LIVES_FONT_PX}px monospace`,
       color: "#00ff00",
       align: "left",
       baseline: "bottom",
@@ -76,24 +85,24 @@ export class HUD extends GameObject {
   draw() {
     super.draw();
 
-    // Title (centered, 100px from top to account for info bar)
+    // Title (centered, responsive top padding)
     this.titleText.x = this.game.width / 2;
-    this.titleText.y = 100;
+    this.titleText.y = TITLE_Y;
     this.titleText.render();
 
     // Score (top left, below title area)
-    this.scoreText.x = 20;
-    this.scoreText.y = 140;
+    this.scoreText.x = HUD_SIDE_MARGIN;
+    this.scoreText.y = HUD_ROW_Y;
     this.scoreText.render();
 
     // Level (top right, below title area)
-    this.levelText.x = this.game.width - 20;
-    this.levelText.y = 140;
+    this.levelText.x = this.game.width - HUD_SIDE_MARGIN;
+    this.levelText.y = HUD_ROW_Y;
     this.levelText.render();
 
     // Lives (bottom left, above FPS counter)
-    this.livesText.x = 20;
-    this.livesText.y = this.game.height - 40;
+    this.livesText.x = HUD_SIDE_MARGIN;
+    this.livesText.y = this.game.height - LIVES_BOTTOM_MARGIN;
     this.livesText.render();
 
     // Center message (scale font based on screen width)

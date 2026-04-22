@@ -7,7 +7,13 @@ import {
   Sound,
   Button,
   ToggleButton,
+  Screen,
 } from "/gcanvas.es.min.js";
+
+// Countdown "GO!" size — scaled for mobile so it fits the viewport
+const COUNTDOWN_FONT_PX = Screen.responsive(72, 96, 120);
+// Alien grid top offset — pushed down on mobile to clear the compact HUD
+const LEVEL_START_Y = Screen.responsive(130, 160, 170);
 
 // Import constants
 import {
@@ -202,6 +208,7 @@ export class SpaceGame extends Game {
     this._spaceGameInitialized = true;
 
     super.init();
+    Screen.init(this);
     this.initKeyboard();
     this.initAudio();
 
@@ -214,12 +221,10 @@ export class SpaceGame extends Game {
     this.countdownTimer = 0;
     this.alienDirection = 1; // 1 = right, -1 = left
     this.alienMoveTimer = 0;
-    this.alienMoveInterval = 1; // seconds between moves
-    this.levelStartY = 80;
     this.audioResumed = false;
     this.baseMoveInterval = 1; // Base seconds between moves (decreases with level)
     this.alienMoveInterval = this.baseMoveInterval;
-    this.levelStartY = 170; // Below title and score display
+    this.levelStartY = LEVEL_START_Y; // Below title and score display (responsive)
     this.levelTransitionTimer = 0;
     this.shipAnimationTimer = 0;
     this.shipStartY = 0; // For fly-in animation
@@ -259,9 +264,11 @@ export class SpaceGame extends Game {
     this.hud = new HUD(this);
     this.pipeline.add(this.hud);
 
-    // Create countdown text (hidden initially)
+    // Create countdown text (hidden initially) — position is refreshed each
+    // frame in update() so it stays centered even if the viewport resizes
+    // (mobile URL bar collapse, orientation change, etc.)
     this.countdownText = new TextShape("", {
-      font: "bold 120px monospace",
+      font: `bold ${COUNTDOWN_FONT_PX}px monospace`,
       color: "#00ff00",
       align: "center",
       baseline: "middle",
@@ -772,6 +779,13 @@ export class SpaceGame extends Game {
 
   update(dt) {
     super.update(dt);
+
+    // Keep the countdown text centered — the viewport can shift after init
+    // on mobile when the browser URL bar collapses post-tap.
+    if (this.countdownText) {
+      this.countdownText.x = this.width / 2;
+      this.countdownText.y = this.height / 2;
+    }
 
     // Resume audio on any key press (browser autoplay policy)
     if (!this.audioResumed && (Keys.isDown(Keys.SPACE) || Keys.isDown(Keys.LEFT) || Keys.isDown(Keys.RIGHT))) {

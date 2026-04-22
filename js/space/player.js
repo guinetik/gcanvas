@@ -164,6 +164,8 @@ export class Player extends GameObject {
     // Mobile touch controls
     this.touchActive = false;
     this.touchX = 0;
+    // Shield on mobile: raise when a second finger is also down
+    this.touchShieldActive = false;
     this.setupTouchControls();
   }
 
@@ -176,6 +178,7 @@ export class Player extends GameObject {
     canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
       this.touchActive = true;
+      this.touchShieldActive = e.touches.length >= 2;
       const touch = e.touches[0];
       const rect = canvas.getBoundingClientRect();
       this.touchX = touch.clientX - rect.left;
@@ -184,19 +187,23 @@ export class Player extends GameObject {
     canvas.addEventListener("touchmove", (e) => {
       e.preventDefault();
       if (this.touchActive) {
+        this.touchShieldActive = e.touches.length >= 2;
         const touch = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         this.touchX = touch.clientX - rect.left;
       }
     }, { passive: false });
 
-    canvas.addEventListener("touchend", () => {
-      this.touchActive = false;
-    });
-
-    canvas.addEventListener("touchcancel", () => {
-      this.touchActive = false;
-    });
+    // Only stop movement/fire when ALL fingers are up — lifting the shield
+    // finger (while keeping the movement finger) should just drop the shield.
+    const handleEnd = (e) => {
+      this.touchShieldActive = e.touches.length >= 2;
+      if (e.touches.length === 0) {
+        this.touchActive = false;
+      }
+    };
+    canvas.addEventListener("touchend", handleEnd, { passive: false });
+    canvas.addEventListener("touchcancel", handleEnd);
   }
 
   /**
@@ -373,11 +380,11 @@ export class Player extends GameObject {
       this.shoot();
     }
 
-    // Shield system
+    // Shield system (Shift on desktop, second-finger touch on mobile)
     if (this.shieldUnlocked && canMove) {
-      const shiftPressed = Keys.isDown(Keys.SHIFT);
+      const wantsShield = Keys.isDown(Keys.SHIFT) || this.touchShieldActive;
 
-      if (shiftPressed && this.shieldEnergy > 0) {
+      if (wantsShield && this.shieldEnergy > 0) {
         // Activate shield
         this.shieldActive = true;
         this.shieldEnergy -= SHIELD_DRAIN_RATE * dt;
