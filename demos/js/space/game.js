@@ -7,7 +7,13 @@ import {
   Sound,
   Button,
   ToggleButton,
+  Screen,
 } from "../../../src/index.js";
+
+// Countdown "GO!" size — scaled for mobile so it fits the viewport
+const COUNTDOWN_FONT_PX = Screen.responsive(72, 96, 120);
+// Alien grid top offset — pushed down on mobile to clear the compact HUD
+const LEVEL_START_Y = Screen.responsive(130, 160, 170);
 
 // Import constants
 import {
@@ -202,6 +208,7 @@ export class SpaceGame extends Game {
     this._spaceGameInitialized = true;
 
     super.init();
+    Screen.init(this);
     this.initKeyboard();
     this.initAudio();
 
@@ -214,12 +221,10 @@ export class SpaceGame extends Game {
     this.countdownTimer = 0;
     this.alienDirection = 1; // 1 = right, -1 = left
     this.alienMoveTimer = 0;
-    this.alienMoveInterval = 1; // seconds between moves
-    this.levelStartY = 80;
     this.audioResumed = false;
     this.baseMoveInterval = 1; // Base seconds between moves (decreases with level)
     this.alienMoveInterval = this.baseMoveInterval;
-    this.levelStartY = 170; // Below title and score display
+    this.levelStartY = LEVEL_START_Y; // Below title and score display (responsive)
     this.levelTransitionTimer = 0;
     this.shipAnimationTimer = 0;
     this.shipStartY = 0; // For fly-in animation
@@ -259,12 +264,15 @@ export class SpaceGame extends Game {
     this.hud = new HUD(this);
     this.pipeline.add(this.hud);
 
-    // Create countdown text (hidden initially)
+    // Create countdown text (hidden initially) — position is refreshed each
+    // frame in update() so it stays centered even if the viewport resizes
+    // (mobile URL bar collapse, orientation change, etc.)
     this.countdownText = new TextShape("", {
-      font: "bold 120px monospace",
+      font: `bold ${COUNTDOWN_FONT_PX}px monospace`,
       color: "#00ff00",
       align: "center",
       baseline: "middle",
+      origin: "center", // (x, y) marks the glyph center, not its top-left box
       zIndex: 1000,
     });
     this.countdownText.x = this.width / 2;
@@ -501,9 +509,12 @@ export class SpaceGame extends Game {
     // Calculate rows based on level (starts at 4, increases every 2 levels, max 8)
     const alienRows = Math.min(MAX_ALIEN_ROWS, ALIEN_BASE_ROWS + Math.floor((this.level - 1) / 2));
 
-    // Calculate starting position to center the alien grid
-    const gridWidth = ALIEN_COLS * ALIEN_SPACING_X;
-    const startX = (this.width - gridWidth) / 2 + ALIEN_SPACING_X / 2;
+    // Scale column spacing to fit narrow viewports (mobile) so the rightmost
+    // column stays within the player's reach. Leaves one alien-width margin per side.
+    const maxGridWidth = this.width - ALIEN_WIDTH * 2;
+    const spacingX = Math.min(ALIEN_SPACING_X, maxGridWidth / ALIEN_COLS);
+    const gridWidth = ALIEN_COLS * spacingX;
+    const startX = (this.width - gridWidth) / 2 + spacingX / 2;
 
     // Adjust starting Y based on level - aliens start lower on higher levels
     const levelStartOffset = Math.min(50, (this.level - 1) * 10);
@@ -523,7 +534,7 @@ export class SpaceGame extends Game {
         }
 
         const alien = new Alien(this, {
-          x: startX + col * ALIEN_SPACING_X,
+          x: startX + col * spacingX,
           y: startY + row * ALIEN_SPACING_Y,
           row: rowType,
           col: col,
@@ -741,7 +752,7 @@ export class SpaceGame extends Game {
   /**
    * Spawn a boss minion that floats to a position near the boss
    */
-  spawnBossMinion(startX, startY, targetX, targetY, minionType) {
+  spawnBossMinion(startX, startY, minionType) {
     // Spawn minions closer to the boss - within 150px horizontally, 50-120px below
     const bossX = this.boss ? this.boss.x : this.width / 2;
     const bossY = this.boss ? this.boss.y : 170;
@@ -769,6 +780,13 @@ export class SpaceGame extends Game {
 
   update(dt) {
     super.update(dt);
+
+    // Keep the countdown text centered — the viewport can shift after init
+    // on mobile when the browser URL bar collapses post-tap.
+    if (this.countdownText) {
+      this.countdownText.x = this.width / 2;
+      this.countdownText.y = this.height / 2;
+    }
 
     // Resume audio on any key press (browser autoplay policy)
     if (!this.audioResumed && (Keys.isDown(Keys.SPACE) || Keys.isDown(Keys.LEFT) || Keys.isDown(Keys.RIGHT))) {
@@ -1665,9 +1683,11 @@ export class SpaceGame extends Game {
     // Gauntlet uses max rows (8) with level 10 speed
     const alienRows = MAX_ALIEN_ROWS;
 
-    // Calculate starting position to center the alien grid
-    const gridWidth = ALIEN_COLS * ALIEN_SPACING_X;
-    const startX = (this.width - gridWidth) / 2 + ALIEN_SPACING_X / 2;
+    // Scale column spacing to fit narrow viewports (same logic as spawnAliens)
+    const maxGridWidth = this.width - ALIEN_WIDTH * 2;
+    const spacingX = Math.min(ALIEN_SPACING_X, maxGridWidth / ALIEN_COLS);
+    const gridWidth = ALIEN_COLS * spacingX;
+    const startX = (this.width - gridWidth) / 2 + spacingX / 2;
     const startY = this.levelStartY + 50; // Start a bit lower
 
     for (let row = 0; row < alienRows; row++) {
@@ -1683,7 +1703,7 @@ export class SpaceGame extends Game {
         }
 
         const alien = new Alien(this, {
-          x: startX + col * ALIEN_SPACING_X,
+          x: startX + col * spacingX,
           y: startY + row * ALIEN_SPACING_Y,
           row: rowType,
           col: col,

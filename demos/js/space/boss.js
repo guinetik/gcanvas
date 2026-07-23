@@ -273,12 +273,10 @@ export class Boss extends GameObject {
   }
 
   spawnMinion() {
-    // Spawn a minion that will float to a position
+    // Spawn a minion that will float to a position near the boss
+    // (the landing target is computed inside spawnBossMinion)
     if (this.game.spawnBossMinion) {
-      const targetX = 100 + Math.random() * (this.game.width - 200);
-      const targetY = 200 + Math.random() * 150;
-
-      this.game.spawnBossMinion(this.x, this.y, targetX, targetY, this.bossType);
+      this.game.spawnBossMinion(this.x, this.y, this.bossType);
       this.minionCount++;
     }
   }

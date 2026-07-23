@@ -3,6 +3,7 @@ import {
   PLAYER_SPEED,
   PLAYER_WIDTH,
   PLAYER_HEIGHT,
+  PLAYER_MOVE_ZONE_TOP,
   STARPOWER_DURATION,
   STARPOWER_SPEED_MULTIPLIER,
   SHIELD_MAX_ENERGY,
@@ -164,6 +165,9 @@ export class Player extends GameObject {
     // Mobile touch controls
     this.touchActive = false;
     this.touchX = 0;
+    this.touchY = 0;
+    // Shield on mobile: raise when a second finger is also down
+    this.touchShieldActive = false;
     this.setupTouchControls();
   }
 
@@ -176,27 +180,34 @@ export class Player extends GameObject {
     canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
       this.touchActive = true;
+      this.touchShieldActive = e.touches.length >= 2;
       const touch = e.touches[0];
       const rect = canvas.getBoundingClientRect();
       this.touchX = touch.clientX - rect.left;
+      this.touchY = touch.clientY - rect.top;
     }, { passive: false });
 
     canvas.addEventListener("touchmove", (e) => {
       e.preventDefault();
       if (this.touchActive) {
+        this.touchShieldActive = e.touches.length >= 2;
         const touch = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         this.touchX = touch.clientX - rect.left;
+        this.touchY = touch.clientY - rect.top;
       }
     }, { passive: false });
 
-    canvas.addEventListener("touchend", () => {
-      this.touchActive = false;
-    });
-
-    canvas.addEventListener("touchcancel", () => {
-      this.touchActive = false;
-    });
+    // Only stop movement/fire when ALL fingers are up — lifting the shield
+    // finger (while keeping the movement finger) should just drop the shield.
+    const handleEnd = (e) => {
+      this.touchShieldActive = e.touches.length >= 2;
+      if (e.touches.length === 0) {
+        this.touchActive = false;
+      }
+    };
+    canvas.addEventListener("touchend", handleEnd, { passive: false });
+    canvas.addEventListener("touchcancel", handleEnd);
   }
 
   /**
@@ -290,14 +301,21 @@ export class Player extends GameObject {
     // Handle movement (arrow keys and WASD)
     let movingLeft = canMove && (Keys.isDown(Keys.LEFT) || Keys.isDown("a") || Keys.isDown("A"));
     let movingRight = canMove && (Keys.isDown(Keys.RIGHT) || Keys.isDown("d") || Keys.isDown("D"));
+    let movingUp = canMove && (Keys.isDown(Keys.UP) || Keys.isDown("w") || Keys.isDown("W"));
+    let movingDown = canMove && (Keys.isDown(Keys.DOWN) || Keys.isDown("s") || Keys.isDown("S"));
 
-    // Touch controls - move toward touch position
+    // Touch controls - drag the ship toward the finger on both axes
     if (this.touchActive && canMove) {
       const deadzone = 20; // pixels from ship center before moving
-      const diff = this.touchX - this.x;
-      if (Math.abs(diff) > deadzone) {
-        movingLeft = diff < 0;
-        movingRight = diff > 0;
+      const diffX = this.touchX - this.x;
+      if (Math.abs(diffX) > deadzone) {
+        movingLeft = diffX < 0;
+        movingRight = diffX > 0;
+      }
+      const diffY = this.touchY - this.y;
+      if (Math.abs(diffY) > deadzone) {
+        movingUp = diffY < 0;
+        movingDown = diffY > 0;
       }
     }
 
@@ -319,6 +337,14 @@ export class Player extends GameObject {
       this.targetTilt = 0;
     }
 
+    // Vertical (forward/backward) movement — tilt is horizontal-only, so Y just moves
+    if (movingUp) {
+      this.y -= speed * dt;
+    }
+    if (movingDown) {
+      this.y += speed * dt;
+    }
+
     // Smoothly interpolate current tilt toward target
     this.currentTilt += (this.targetTilt - this.currentTilt) * this.tiltSpeed * dt;
 
@@ -326,6 +352,13 @@ export class Player extends GameObject {
     if (canMove) {
       const halfWidth = PLAYER_WIDTH / 2;
       this.x = Math.max(halfWidth, Math.min(this.game.width - halfWidth, this.x));
+
+      // Vertical roam is limited to the bottom of the screen so the ship can
+      // dodge and weave without camping up in the alien rows.
+      const halfHeight = PLAYER_HEIGHT / 2;
+      const topBound = this.game.height * PLAYER_MOVE_ZONE_TOP;
+      const bottomBound = this.game.height - halfHeight;
+      this.y = Math.max(topBound, Math.min(bottomBound, this.y));
     }
 
     // Animate engine flicker
@@ -373,11 +406,11 @@ export class Player extends GameObject {
       this.shoot();
     }
 
-    // Shield system
+    // Shield system (Shift on desktop, second-finger touch on mobile)
     if (this.shieldUnlocked && canMove) {
-      const shiftPressed = Keys.isDown(Keys.SHIFT);
+      const wantsShield = Keys.isDown(Keys.SHIFT) || this.touchShieldActive;
 
-      if (shiftPressed && this.shieldEnergy > 0) {
+      if (wantsShield && this.shieldEnergy > 0) {
         // Activate shield
         this.shieldActive = true;
         this.shieldEnergy -= SHIELD_DRAIN_RATE * dt;
