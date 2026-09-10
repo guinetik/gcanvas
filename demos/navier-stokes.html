@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Navier–Stokes Playground</title>
+  <meta name="description" content="Explore a Burgers vortex with interactive Navier–Stokes streamlines, viscosity, axial stretching, and bloom." />
+  <link rel="stylesheet" href="demos.css" />
+  <style>
+    #info, #info-toggle {
+      color: var(--vortex-accent);
+      background: var(--vortex-surface);
+      border-color: var(--vortex-border);
+    }
+    #info strong, #info a { color: var(--vortex-gold); }
+    #info-toggle:hover { background: var(--vortex-accent); color: #030c14; }
+  </style>
+  <script type="module" src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <strong>Navier–Stokes Playground</strong> — A study of vortex motion.
+    <p>Drag freely to orbit in any direction. Scroll to zoom. Choose Slow or Fast in Motion, or adjust Auto Move (0 turns it off). Space pauses motion, R resets, H hides the interface. On mobile, tap Controls to open the panel.</p>
+    <p>This Burgers vortex is a smooth, steady solution of the incompressible Navier–Stokes equations. Fluid spirals inward and stretches along its axis while viscosity spreads the rotating core. Teal and blue mark slower angular rotation; copper marks the faster core. Values use normalized units.</p>
+    <p>Inspired by the <a href="https://openai.com/index/navier-stokes-solution/" target="_blank" rel="noopener noreferrer">September 2026 announcement</a>. This art study illustrates vortex motion, not a singularity proof.</p>
+    <a href="https://arxiv.org/abs/1002.2489" target="_blank" rel="noopener noreferrer">About Burgers vortices</a>
+  </div>
+  <canvas id="game" style="touch-action: none" aria-label="Navier–Stokes vortex playground. Drag to orbit; Space to pause; R to reset; H to hide controls."></canvas>
+  <script type="module" src="./js/navier-stokes.js"></script>
+</body>
+</html>

@@ -312,12 +312,27 @@ export function createTheme(accentHex) {
 }
 
 /**
- * Named theme registry. Ships with "default" and "monochrome".
+ * Named theme registry. Ships with "default", "monochrome", and "vortex".
  */
 export const THEMES = {
   default: { ...structuredClone(UI_THEME) },
   monochrome: createTheme("#ffffff"),
+  vortex: createTheme("#83cfff"),
 };
+
+// Blue streamlines, gold highlights, and an opaque navy surface.
+Object.assign(THEMES.vortex.colors, {
+  darkBg: "rgba(3,12,20,0.96)",
+  darkerBg: "#030c14",
+  darkText: "#030c14",
+});
+THEMES.vortex.button.default.bg = THEMES.vortex.colors.darkBg;
+THEMES.vortex.dropdown.trigger.bg = THEMES.vortex.colors.darkBg;
+THEMES.vortex.dropdown.panel.bg = THEMES.vortex.colors.darkerBg;
+THEMES.vortex.dropdown.item.selectedText = "#f2c879";
+THEMES.vortex.slider.track.bg = THEMES.vortex.colors.darkerBg;
+THEMES.vortex.slider.label.value = "#f2c879";
+THEMES.vortex.tooltip.bg = THEMES.vortex.colors.darkerBg;
 
 // Override monochrome backgrounds for better contrast
 Object.assign(THEMES.monochrome.colors, {
