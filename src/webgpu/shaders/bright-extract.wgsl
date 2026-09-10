@@ -12,7 +12,8 @@ struct Uniforms {
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     let color = textureSample(tex, texSampler, uv);
-    let luminance = dot(color.rgb, vec3f(0.2126, 0.7152, 0.0722));
-    let brightness = smoothstep(u.threshold, u.threshold + 0.15, luminance);
+    // Preserve bloom on saturated blue and red, too.
+    let peak = max(color.r, max(color.g, color.b));
+    let brightness = smoothstep(u.threshold, u.threshold + 0.15, peak);
     return color * brightness;
 }

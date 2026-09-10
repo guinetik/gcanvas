@@ -171,19 +171,15 @@ void main() {
         depthFactor = clamp(depthFactor, 0.0, 1.0);
     }
 
-    // Energy flow: layered sinusoids boost brightness (HDR)
-    float energy1 = sin(vSegIdx * 6.2832 * 2.0 - uTime * uEnergySpeed * 1.0) * 0.5 + 0.5;
-    float energy2 = sin(vSegIdx * 6.2832 * 5.0 - uTime * uEnergySpeed * 1.7) * 0.5 + 0.5;
-    float energy3 = sin(vSegIdx * 6.2832 * 11.0 - uTime * uEnergySpeed * 2.3) * 0.5 + 0.5;
-    float energy4 = sin(vSegIdx * 6.2832 * 17.0 - uTime * uEnergySpeed * 3.1) * 0.5 + 0.5;
-    float energy = energy1 * 0.4 + energy2 * 0.25 + energy3 * 0.2 + energy4 * 0.15;
-    color *= 1.0 + energy * uEnergyIntensity * 3.5 * depthFactor;
-
-    // Sparks: sharp bright HDR flashes (two layers like codepen)
-    float sparkWave1 = sin(vSegIdx * 150.0 - uTime * 8.0);
-    float sparkWave2 = cos(vSegIdx * 200.0 + uTime * 6.0);
-    float spark = step(uSparkThreshold, sparkWave1) + step(uSparkThreshold + 0.005, sparkWave2) * 0.7;
-    color += color * spark * uEnergyIntensity * 4.0 * depthFactor;
+    // Packets travel toward the particle, leaving an asymmetric luminous wake.
+    // segIdx includes a stable particle phase so separate paths breathe independently.
+    float phase = fract(vSegIdx * 2.0 + uTime * uEnergySpeed * 0.22);
+    float packet = exp(-phase * 10.0) * smoothstep(0.0, 0.035, phase);
+    float head = exp(-vAge * 65.0);
+    float flow = clamp(uEnergyIntensity, 0.0, 1.0);
+    float sparkWave = cos(phase * 6.2832);
+    float spark = smoothstep(uSparkThreshold, uSparkThreshold + 0.02, sparkWave) * packet;
+    color *= 1.0 + (packet * 2.5 + head * 1.5 + spark) * uEnergyIntensity * depthFactor;
 
     // Fresnel-like rim glow: brightness boost at mid-depth range
     if (uDepthFogEnabled > 0.5) {
@@ -192,11 +188,17 @@ void main() {
         color *= 1.0 + rim;
     }
 
-    // Age -> alpha decay
+    // A faint continuous filament connects bright heads to long fading wakes.
     float alpha = (1.0 - vAge) * uMaxAlpha * (1.0 + vBlink * (uAlphaBoost - 1.0));
+    float wake = pow(max(0.0, 1.0 - vAge), 0.65);
+    alpha *= mix(1.0, wake * (0.09 + packet * 0.65 + head * 0.8), flow);
     alpha = clamp(alpha, 0.0, 1.0);
 
-    // Edge antialiasing: fade alpha near the outer edges of the quad.
+    // Narrow hot core surrounded by a saturated sheath, within the same draw call.
+    float core = exp(-vSide * vSide * 24.0);
+    float sheath = exp(-vSide * vSide * 4.0);
+    color = mix(color, vec3(1.0), core * flow * min(0.65, head * 0.45 + packet * 0.55));
+    alpha *= mix(1.0, core * 0.8 + sheath * 0.2, flow);
     float edgeAA = 1.0 - smoothstep(0.55, 1.0, abs(vSide));
     alpha *= edgeAA;
 
@@ -321,8 +323,9 @@ uniform float uThreshold;
 
 void main() {
     vec4 color = texture2D(uTexture, vUV);
-    float luminance = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
-    float brightness = smoothstep(uThreshold, uThreshold + 0.15, luminance);
+    // Peak-channel extraction lets saturated blue and red glow as well as green.
+    float peak = max(color.r, max(color.g, color.b));
+    float brightness = smoothstep(uThreshold, uThreshold + 0.15, peak);
     gl_FragColor = color * brightness;
 }
 `;

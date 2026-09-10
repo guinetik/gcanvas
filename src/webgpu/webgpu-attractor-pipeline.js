@@ -6,6 +6,7 @@
  * Self-contained: owns its own GPUDevice, offscreen canvas, and render targets.
  */
 
+import { NeonGlow } from "../util/neon-glow.js";
 import { WebGPURenderTarget } from "./webgpu-render-target.js";
 import FULLSCREEN_QUAD_VERTEX from "./shaders/fullscreen-quad.wgsl?raw";
 import BACKGROUND_FRAGMENT from "./shaders/background.wgsl?raw";
@@ -238,6 +239,12 @@ export class WebGPUAttractorPipeline {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     this.blurUniformBuffer = device.createBuffer({
+      size: 256,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    // Queue writes happen before command submission. Each direction needs its
+    // own buffer or both encoded passes observe the final (vertical) write.
+    this.blurVerticalUniformBuffer = device.createBuffer({
       size: 256,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -663,28 +670,9 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   compositeOnto(ctx, x = 0, y = 0) {
     if (!this.available) return;
 
-    // Neon glow: multiple additive-blended blur layers at increasing radii
-    if (this.glowConfig.enabled && this.glowConfig.radius > 0) {
-      const r = this.glowConfig.radius;
-      const a = this.glowConfig.intensity;
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      // Tight bright core
-      ctx.filter = `blur(${r * 0.5}px)`;
-      ctx.globalAlpha = a;
-      ctx.drawImage(this.canvas, x, y);
-      // Mid spread
-      ctx.filter = `blur(${r}px)`;
-      ctx.globalAlpha = a * 0.7;
-      ctx.drawImage(this.canvas, x, y);
-      // Wide soft halo
-      ctx.filter = `blur(${r * 2.5}px)`;
-      ctx.globalAlpha = a * 0.4;
-      ctx.drawImage(this.canvas, x, y);
-      ctx.restore();
-    }
-
     ctx.drawImage(this.canvas, x, y);
+    this._neonGlow ??= new NeonGlow();
+    this._neonGlow.draw(ctx, this.canvas, this.glowConfig, x, y);
   }
 
   // ── Private Render Pass Helpers ─────────────────────────────────────
@@ -744,12 +732,12 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
 
       // Vertical blur -> blurPongRT
       const vData = new Float32Array([0.0, 1.0 / hh, this.bloomConfig.radius, 0]);
-      this.device.queue.writeBuffer(this.blurUniformBuffer, 0, vData);
+      this.device.queue.writeBuffer(this.blurVerticalUniformBuffer, 0, vData);
 
       const vBindGroup = this.device.createBindGroup({
         layout: this.bindGroupLayouts.texturePass,
         entries: [
-          { binding: 0, resource: { buffer: this.blurUniformBuffer } },
+          { binding: 0, resource: { buffer: this.blurVerticalUniformBuffer } },
           { binding: 1, resource: this.linearSampler },
           { binding: 2, resource: this.blurPingRT.view },
         ],
@@ -876,6 +864,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   }
 
   destroy() {
+    this._neonGlow?.destroy();
     if (!this.available) return;
 
     this._destroyRenderTargets();
@@ -889,6 +878,7 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
     this.backgroundUniformBuffer?.destroy();
     this.brightExtractUniformBuffer?.destroy();
     this.blurUniformBuffer?.destroy();
+    this.blurVerticalUniformBuffer?.destroy();
     this.compositeUniformBuffer?.destroy();
     this.postProcessUniformBuffer?.destroy();
 

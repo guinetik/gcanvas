@@ -12,6 +12,7 @@
  * Does NOT modify or depend on WebGLLineRenderer.
  */
 
+import { NeonGlow } from "../util/neon-glow.js";
 import { WebGLFBO } from "./webgl-fbo.js";
 import {
   ATTRACTOR_LINE_VERTEX,
@@ -871,28 +872,9 @@ export class WebGLAttractorPipeline {
   compositeOnto(ctx, x = 0, y = 0) {
     if (!this.available) return;
 
-    // Neon glow: multiple additive-blended blur layers at increasing radii
-    if (this.glowConfig.enabled && this.glowConfig.radius > 0) {
-      const r = this.glowConfig.radius;
-      const a = this.glowConfig.intensity;
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      // Tight bright core
-      ctx.filter = `blur(${r * 0.5}px)`;
-      ctx.globalAlpha = a;
-      ctx.drawImage(this.canvas, x, y);
-      // Mid spread
-      ctx.filter = `blur(${r}px)`;
-      ctx.globalAlpha = a * 0.7;
-      ctx.drawImage(this.canvas, x, y);
-      // Wide soft halo
-      ctx.filter = `blur(${r * 2.5}px)`;
-      ctx.globalAlpha = a * 0.4;
-      ctx.drawImage(this.canvas, x, y);
-      ctx.restore();
-    }
-
     ctx.drawImage(this.canvas, x, y);
+    this._neonGlow ??= new NeonGlow();
+    this._neonGlow.draw(ctx, this.canvas, this.glowConfig, x, y);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -998,6 +980,7 @@ export class WebGLAttractorPipeline {
 
   /** Release all GPU resources. */
   destroy() {
+    this._neonGlow?.destroy();
     if (!this.available) return;
     const gl = this.gl;
 

@@ -103,18 +103,14 @@ fn fs_main(input: FragmentInput) -> @location(0) vec4f {
         depthFactor = clamp(mix(1.0, 1.0 - input.depth, u.depthFogEnergyFalloff), 0.0, 1.0);
     }
 
-    let TAU = 6.2832;
-    let energy1 = sin(input.segIdx * TAU * 2.0 - u.time * u.energySpeed * 1.0) * 0.5 + 0.5;
-    let energy2 = sin(input.segIdx * TAU * 5.0 - u.time * u.energySpeed * 1.7) * 0.5 + 0.5;
-    let energy3 = sin(input.segIdx * TAU * 11.0 - u.time * u.energySpeed * 2.3) * 0.5 + 0.5;
-    let energy4 = sin(input.segIdx * TAU * 17.0 - u.time * u.energySpeed * 3.1) * 0.5 + 0.5;
-    let energy = energy1 * 0.4 + energy2 * 0.25 + energy3 * 0.2 + energy4 * 0.15;
-    color *= 1.0 + energy * u.energyIntensity * 3.5 * depthFactor;
-
-    let sparkWave1 = sin(input.segIdx * 150.0 - u.time * 8.0);
-    let sparkWave2 = cos(input.segIdx * 200.0 + u.time * 6.0);
-    let spark = step(u.sparkThreshold, sparkWave1) + step(u.sparkThreshold + 0.005, sparkWave2) * 0.7;
-    color += color * spark * u.energyIntensity * 4.0 * depthFactor;
+    // Independently phased packets move toward each head, trailing a soft wake.
+    let phase = fract(input.segIdx * 2.0 + u.time * u.energySpeed * 0.22);
+    let packet = exp(-phase * 10.0) * smoothstep(0.0, 0.035, phase);
+    let head = exp(-input.age * 65.0);
+    let flow = clamp(u.energyIntensity, 0.0, 1.0);
+    let sparkWave = cos(phase * 6.2832);
+    let spark = smoothstep(u.sparkThreshold, u.sparkThreshold + 0.02, sparkWave) * packet;
+    color *= 1.0 + (packet * 2.5 + head * 1.5 + spark) * u.energyIntensity * depthFactor;
 
     if (u.depthFogEnabled > 0.5) {
         let rim = clamp(1.0 - abs(input.depth - 0.4) * 2.0, 0.0, 1.0) * 0.3;
@@ -122,9 +118,15 @@ fn fs_main(input: FragmentInput) -> @location(0) vec4f {
     }
 
     var alpha = (1.0 - input.age) * u.maxAlpha * (1.0 + input.blink * (u.alphaBoost - 1.0));
+    let wake = pow(max(0.0, 1.0 - input.age), 0.65);
+    alpha *= mix(1.0, wake * (0.09 + packet * 0.65 + head * 0.8), flow);
     alpha = clamp(alpha, 0.0, 1.0);
 
-    // Edge antialiasing: fade alpha near the outer edges of the quad.
+    // Hot core and saturated sheath share one instanced quad.
+    let core = exp(-input.side * input.side * 24.0);
+    let sheath = exp(-input.side * input.side * 4.0);
+    color = mix(color, vec3f(1.0), core * flow * min(0.65, head * 0.45 + packet * 0.55));
+    alpha *= mix(1.0, core * 0.8 + sheath * 0.2, flow);
     let edgeAA = 1.0 - smoothstep(0.55, 1.0, abs(input.side));
     alpha *= edgeAA;
 
