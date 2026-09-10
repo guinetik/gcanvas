@@ -1,10 +1,12 @@
 import { Game, GameObject, Painter, Camera3D, Screen, WebGLAttractorPipeline, AccordionGroup, Dropdown, Slider, Button, VerticalLayout, Text, UI_THEME, THEMES } from "../../src/index.js";
+import { PALETTES, LOOKS } from "./navier-stokes-looks.js";
 
 const CONFIG = {
   background: "#060909",
   strands: { mobile: 36, desktop: 64, samples: 260, radius: 1.25, axialSeed: 0.012, axialSpread: 0.065, extent: 1.85 },
   camera: { perspective: 1600, rotationX: 0.22, rotationY: 0.4, screenRotation: -0.16 },
   motion: { speed: 1.3, orbit: 24, maxOrbit: 60, drag: 0.006, maxDt: 0.05, pulseWidth: 0.025 },
+  appearance: { palette: "copper", look: "neon", maxBloom: 2, maxGlow: 1.5, mobileGlowScale: 0.55 },
   caption: { spacing: 12, paddingX: 20, paddingY: 16, background: "rgba(3,12,20,0.96)", border: "#315b72", title: "#f2c879", subtitle: "#83cfff", equation: "#b7d6e8" },
   ui: { panelWidth: 300, panelTop: 48, padding: 14, spacing: 8, margin: 12, buttonHeight: 36, toggleWidth: 128, captionBottom: 42, compactWidth: 900, compactHeight: 650, minZoom: 0.5, maxZoom: 2, wheelZoom: 0.001 },
   layout: { leftX: 0.33, widthScale: 0.39, heightScale: 0.24, centerY: 0.47, embed: { widthScale: 0.42, heightScale: 0.264, centerY: 0.5 } },
@@ -14,7 +16,7 @@ const CONFIG = {
     bloom: { enabled: true, threshold: 0.3, strength: 0.3, radius: 0.5, passes: 1 },
     glow: { enabled: false },
     background: { baseColor: [0.012, 0.023, 0.02], fogDensity: 0.045, noiseScale: 2, animSpeed: 0.025 },
-    // Moving highlights below follow actual travel time, so disable decorative shader sparks.
+    // Physical travel highlights are separate from the optional decorative shimmer.
     energyFlow: { intensity: 0, speed: 0, sparkThreshold: 1.1 },
     depthFog: { enabled: true, density: 0.8, energyFalloff: 0.4 },
     iridescence: { enabled: false },
@@ -102,6 +104,7 @@ class VortexField extends GameObject {
     const layout = this.game.embed ? CONFIG.layout.embed : CONFIG.layout;
     this.scale = Math.min(availableWidth * layout.widthScale, this.height * layout.heightScale) * this.game.zoom;
     this.gpu.lineWidth = CONFIG.gpu.lineWidth * Math.max(0.3, Math.min(1, this.scale / 180));
+    this.gpu.setGlowConfig({ radius: LOOKS[this.game.activeLook].glow.radius * (this.game.compact ? CONFIG.appearance.mobileGlowScale : 1) });
     this.centerX = this.game.focusLeft && !this.game.compact ? this.width * CONFIG.layout.leftX : availableWidth / 2;
     this.centerY = this.height * layout.centerY;
     if (this.gpu.width !== this.width || this.gpu.height !== this.height) this.gpu.resize(this.width, this.height);
@@ -134,9 +137,10 @@ class VortexField extends GameObject {
           segment.y1 = this.centerY + previous.y;
           segment.x2 = this.centerX + projected.x;
           segment.y2 = this.centerY + projected.y;
-          // Two restrained color bands: teal/blue outer flow, copper fast core.
-          // Avoid the green/yellow middle of the shader's linear HSL ramp.
-          segment.speedNorm = point.heat < 0.8 ? (1 - point.heat / 0.8) * 0.14 : 0.94 + (point.heat - 0.8) * 0.3;
+          // Copper keeps two distinct bands; other palettes blend along core rotation.
+          segment.speedNorm = PALETTES[this.game.activePalette].banded
+            ? (point.heat < 0.8 ? (1 - point.heat / 0.8) * 0.14 : 0.94 + (point.heat - 0.8) * 0.3)
+            : point.heat;
           segment.age = (1 - edge) * 1.4 + 0.1;
           segment.blink = pulse * edge;
           segment.segIdx = t;
@@ -160,9 +164,10 @@ class VortexField extends GameObject {
     } else {
       Painter.shapes.rect(0, 0, this.width, this.height, CONFIG.background);
       for (const s of this.segments) {
-        const hue = CONFIG.gpu.visual.maxHue - s.speedNorm * (CONFIG.gpu.visual.maxHue - CONFIG.gpu.visual.minHue);
+        const { minHue, maxHue, saturation, lightness } = this.gpu.visualConfig;
+        const hue = maxHue - s.speedNorm * (maxHue - minHue);
         const alpha = Math.max(0, 1 - s.age * 0.7) * (0.3 + s.blink * 0.5) * (1 - s.depth2 * 0.6);
-        Painter.lines.line(s.x1, s.y1, s.x2, s.y2, `hsla(${hue},62%,65%,${alpha})`, 1);
+        Painter.lines.line(s.x1, s.y1, s.x2, s.y2, `hsla(${hue},${saturation}%,${lightness}%,${alpha})`, 1);
       }
     }
   }
@@ -181,6 +186,8 @@ export class NavierStokesDemo extends Game {
     this.activePreset = "balance";
     this.autoMove = CONFIG.motion.orbit;
     this.activeMotion = "fast";
+    this.activePalette = CONFIG.appearance.palette;
+    this.activeLook = CONFIG.appearance.look;
     this.backgroundColor = CONFIG.background;
     this.listeners = new AbortController();
     this.enableFluidSize();
@@ -196,6 +203,8 @@ export class NavierStokesDemo extends Game {
     }
     this.panelOpen = !this.compact && !this.ambient;
     this.field = new VortexField(this);
+    this.setPalette(this.activePalette);
+    this.setLook(this.activeLook);
     this.pipeline.add(this.field);
     this.buildUI();
     this.listen(document, "DOMContentLoaded", () => this.layoutUI());
@@ -236,8 +245,8 @@ export class NavierStokesDemo extends Game {
   listen(target, name, callback) { target.addEventListener(name, callback, { signal: this.listeners.signal, passive: false }); }
 
   pointerOverPanel(point) {
-    return this.panel?.visible && point.x >= this.panel.x && point.x <= this.panel.x + this.panel.width &&
-      point.y >= this.panel.y && point.y <= this.panel.y + this.panel.height;
+    return this.panel?.visible && point.x >= this.panel.x && point.x <= this.panel.x + this.panel.width * this.panel.scaleX &&
+      point.y >= this.panel.y && point.y <= this.panel.y + this.panel.height * this.panel.scaleY;
   }
 
   buildUI() {
@@ -250,7 +259,7 @@ export class NavierStokesDemo extends Game {
     this.panel = panel;
     const draw = panel.draw.bind(panel);
     panel.draw = () => {
-      Painter.shapes.rect(0, 0, panel.width, panel.height, this.theme.colors.darkBg);
+      Painter.shapes.rect(0, 0, panel.width * panel.scaleX, panel.height * panel.scaleY, this.theme.colors.darkBg);
       draw();
     };
     this.pipeline.add(panel);
@@ -265,9 +274,21 @@ export class NavierStokesDemo extends Game {
       onChange: (name) => { if (!this.syncing && PRESETS[name]) this.setPreset(name); },
     });
     panel.addItem(this.controls.preset);
-    this.parametersSection = panel.addSection("Parameters", { expanded: !this.compact });
-    this.motionSection = panel.addSection("Motion", { expanded: !this.compact });
+    this.parametersSection = panel.addSection("Parameters", { expanded: false });
+    this.motionSection = panel.addSection("Motion", { expanded: false });
+    this.appearanceSection = panel.addSection("Color & light", { expanded: !this.compact });
     this.viewSection = panel.addSection("View", { expanded: false });
+    for (const [name, label, presets, value, apply] of [
+      ["palette", "PALETTE", PALETTES, this.activePalette, (name) => this.setPalette(name)],
+      ["look", "LOOK", LOOKS, this.activeLook, (name) => this.setLook(name)],
+    ]) {
+      this.controls[name] = new Dropdown(this, {
+        label, width: panel.itemWidth, origin: "center", value,
+        options: Object.entries(presets).map(([value, preset]) => ({ label: preset.label, value })),
+        onChange: (name) => { if (!this.syncing) apply(name); },
+      });
+      this.appearanceSection.addItem(this.controls[name]);
+    }
     for (const [name, label, min, max, step, digits] of [
       ["viscosity", "VISCOSITY (ν)", 0.002, 0.025, 0.001, 3],
       ["strain", "AXIAL STRETCH (α)", 0.08, 0.36, 0.01, 2],
@@ -317,12 +338,19 @@ export class NavierStokesDemo extends Game {
     });
     this.controls.bloom = new Slider(this, {
       label: "BLOOM", width: panel.itemWidth, origin: "center",
-      min: 0, max: 1.5, step: 0.05, value: this.field.gpu.bloomConfig.strength,
+      min: 0, max: CONFIG.appearance.maxBloom, step: 0.05, value: this.field.gpu.bloomConfig.strength,
       formatValue: (value) => value.toFixed(2),
       onChange: (value) => { if (!this.syncing) this.field.gpu.setBloomConfig({ strength: value }); },
     });
     this.viewSection.addItem(this.controls.zoom);
     this.viewSection.addItem(this.controls.bloom);
+    this.controls.glow = new Slider(this, {
+      label: "GLOW", width: panel.itemWidth, origin: "center",
+      min: 0, max: CONFIG.appearance.maxGlow, step: 0.05, value: this.field.gpu.glowConfig.intensity,
+      formatValue: (value) => value.toFixed(2),
+      onChange: (value) => { if (!this.syncing) this.field.gpu.setGlowConfig({ enabled: value > 0, intensity: value }); },
+    });
+    this.viewSection.addItem(this.controls.glow);
     this.pauseButton = new Button(this, {
       text: this.paused ? "Resume" : "Pause", width: panel.itemWidth,
       height: CONFIG.ui.buttonHeight, origin: "center", onClick: () => this.togglePause(),
@@ -333,11 +361,12 @@ export class NavierStokesDemo extends Game {
       origin: "center", onClick: () => this.reset(),
     }));
     // On small screens, expand one section at a time so all controls remain reachable.
-    for (const section of [this.parametersSection, this.motionSection, this.viewSection]) {
+    const sections = [this.parametersSection, this.motionSection, this.appearanceSection, this.viewSection];
+    for (const section of sections) {
       const toggle = section.toggle.bind(section);
       section.toggle = (force) => {
         if (this.compact && force !== false && !section.expanded) {
-          for (const other of [this.parametersSection, this.motionSection, this.viewSection]) if (other !== section) other.toggle(false);
+          for (const other of sections) if (other !== section) other.toggle(false);
         }
         toggle(force);
       };
@@ -402,8 +431,11 @@ export class NavierStokesDemo extends Game {
     if (!this.panel) return;
     this.panel.visible = this.panelOpen && !this.ambient && !this.embed;
     this.panel.interactive = this.panel.visible;
-    this.panel.x = this.compact ? (this.width - this.panel.width) / 2 : this.width - this.panel.width - CONFIG.ui.margin;
-    this.panel.y = this.compact ? Math.max(CONFIG.ui.margin, this.height - this.panel.height - CONFIG.ui.margin) : CONFIG.ui.panelTop;
+    const panelTop = this.compact ? CONFIG.ui.margin : CONFIG.ui.panelTop;
+    const panelScale = Math.min(1, (this.height - panelTop - CONFIG.ui.margin) / this.panel.height);
+    this.panel.scaleX = this.panel.scaleY = panelScale;
+    this.panel.x = this.compact ? (this.width - this.panel.width * panelScale) / 2 : this.width - this.panel.width * panelScale - CONFIG.ui.margin;
+    this.panel.y = this.compact ? this.height - this.panel.height * panelScale - CONFIG.ui.margin : panelTop;
     if (this.toggleButton) {
       this.toggleButton.visible = !this.embed && (this.compact || this.ambient);
       this.toggleButton.interactive = this.toggleButton.visible;
@@ -429,6 +461,24 @@ export class NavierStokesDemo extends Game {
     this.syncControls();
   }
 
+  setPalette(name) {
+    if (!PALETTES[name]) return;
+    this.activePalette = name;
+    this.field.gpu.setVisualConfig(PALETTES[name]);
+    this.syncControls();
+  }
+
+  setLook(name) {
+    if (!LOOKS[name]) return;
+    this.activeLook = name;
+    const look = LOOKS[name];
+    this.field.gpu.setBloomConfig({ ...look.bloom, enabled: true });
+    this.field.gpu.setGlowConfig({ ...look.glow, enabled: look.glow.intensity > 0, radius: look.glow.radius * (this.compact ? CONFIG.appearance.mobileGlowScale : 1) });
+    this.field.gpu.setEnergyConfig(look.energy);
+    this.field.gpu.setIridescenceConfig(look.iridescence);
+    this.syncControls();
+  }
+
   syncControls() {
     if (!this.controls) return;
     this.syncing = true;
@@ -439,6 +489,9 @@ export class NavierStokesDemo extends Game {
     this.controls.bloom.value = this.field.gpu.bloomConfig.strength;
     this.controls.motionPreset.value = this.activeMotion;
     this.controls.autoMove.value = this.autoMove;
+    this.controls.palette.value = this.activePalette;
+    this.controls.look.value = this.activeLook;
+    this.controls.glow.value = this.field.gpu.glowConfig.intensity;
     this.syncing = false;
   }
 
@@ -454,7 +507,8 @@ export class NavierStokesDemo extends Game {
     this.zoom = 1;
     this.autoMove = CONFIG.motion.orbit;
     this.activeMotion = "fast";
-    this.field.gpu.setBloomConfig(CONFIG.gpu.bloom);
+    this.setPalette(CONFIG.appearance.palette);
+    this.setLook(CONFIG.appearance.look);
     this.setPreset("balance");
     this.field.resize();
   }
