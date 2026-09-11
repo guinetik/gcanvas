@@ -10,6 +10,10 @@ export const CANVAS_HEIGHT = 600;
 export const PLAYER_SPEED = 300;
 export const PLAYER_WIDTH = 40;
 export const PLAYER_HEIGHT = 20;
+// Vertical roam: the ship may advance/retreat within the bottom third of the
+// screen. PLAYER_MOVE_ZONE_TOP is the forward (up-screen) limit as a fraction
+// of screen height; below that it's clamped to the screen's bottom edge.
+export const PLAYER_MOVE_ZONE_TOP = 2 / 3;
 
 // Bullet constants
 export const BULLET_SPEED = 400;

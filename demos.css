@@ -1,10 +1,24 @@
 @import url("https://fonts.googleapis.com/css2?family=Datatype:wdth,wght@50..150,100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Martian+Mono:wght@400..700&display=swap");
 
 /**
  * Shared stack for page chrome and canvas demos (matches FONT_FAMILY_STACK in src/game/ui/theme.js).
+ * The --tv-* tokens are the terminal-vercel palette shared with guinetik.com,
+ * galaxies and exoplanets — the info HUD draws only from these.
  */
 :root {
     --gcanvas-font-family: Datatype, ui-monospace, monospace;
+
+    --tv-bg: #0a0a0a;
+    --tv-bg-2: #111111;
+    --tv-surface: #171717;
+    --tv-border: #262626;
+    --tv-text: #ededed;
+    --tv-text-2: #a1a1a1;
+    --tv-muted: #666666;
+    --tv-accent: #1fb2a6;
+    --tv-accent-hover: #2dd4bf;
+    --tv-mono: "Martian Mono", ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, monospace;
 }
 
 /* General layout */
@@ -269,64 +283,165 @@ iframe {
     /* we let the page inside handle its own scrolling if needed */
 }
 
-.light {
-    background: rgba(0, 0, 0, 0.5) !important;
-    color: #ffffff !important;
-}
-
-.light span {
-    background: black !important;
-    color: #0f0;
-    padding: 0;
-    margin: 0;
-}
-
-.light strong,
-.light code {
-    background: #000;
-    color: #fff;
-    padding: 0.2em 0.3em;
-    box-decoration-break: clone;
-    display: inline;
-    line-height: 1.8;
-}
-
-code {
-    color: black !important;
-    background: #0f0;
-}
-
-.light code {
-    color: black !important;
-    background: #0f0;
-}
-
-/* #info overlay (optional) - hidden by default to spark curiosity */
+/* ========================================
+   Info HUD — terminal-vercel readout
+   Floating card under the toggle, monochrome;
+   the canvas supplies the color, teal only on links.
+   ======================================== */
 #info {
     position: absolute;
-    font-family: var(--gcanvas-font-family);
-    top: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0, 0, 0, 0.8);
-    color: #0f0;
-    max-height: 0;
-    padding: 0 20px;
-    overflow: hidden;
-    transition:
-        max-height 0.3s ease,
-        padding 0.3s ease;
-    font-size: 14px;
-    line-height: 1.4;
-    border-bottom: 1px solid #333;
+    top: 48px;
+    left: 8px;
+    width: min(400px, calc(100vw - 16px));
+    max-height: calc(100vh - 64px);
+    max-height: calc(100dvh - 64px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--tv-border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    color: var(--tv-text-2);
+    font-family: var(--tv-mono);
+    font-size: 12px;
+    line-height: 1.6;
     z-index: 10;
-    pointer-events: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--tv-border) transparent;
+    /* hidden by default to spark curiosity */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        visibility 0.2s;
 }
 
 #info.open {
-    max-height: 300px;
-    padding: 12px 20px;
-    padding-right: 48px;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* Eyebrow — the demo's section, structure as information */
+#info .info-eyebrow {
+    display: block;
+    color: var(--tv-muted);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+#info h1 {
+    margin: 2px 0 0;
+    color: var(--tv-text);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+#info .dek {
+    margin: 2px 0 0;
+    color: var(--tv-text-2);
+}
+
+#info p {
+    margin: 10px 0 0;
+}
+
+/* Compact math block for attractors & simulations */
+#info .math {
+    margin: 10px 0 0;
+    padding: 8px 10px;
+    background: var(--tv-bg-2);
+    border-left: 2px solid var(--tv-border);
+    color: var(--tv-muted);
+    font-size: 11px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+/* One-line pedagogy footnote for library demos */
+#info .notes {
+    color: var(--tv-muted);
+    font-size: 11px;
+}
+
+/* Controls — kbd chip + muted verb */
+#info .controls {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 10px 0 0;
+    border-top: 1px solid var(--tv-border);
+    display: grid;
+    gap: 6px;
+}
+
+#info .controls li {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+#info kbd,
+#info code {
+    display: inline-block;
+    padding: 1px 6px;
+    background: var(--tv-surface);
+    border: 1px solid var(--tv-border);
+    border-radius: 4px;
+    color: var(--tv-text);
+    font-family: var(--tv-mono);
+    font-size: 11px;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+#info a {
+    color: var(--tv-accent);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--tv-accent);
+}
+
+#info a:hover {
+    color: var(--tv-accent-hover);
+    border-bottom-color: var(--tv-accent-hover);
+}
+
+#info .links {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--tv-border);
+    font-size: 11px;
+}
+
+/* Legacy markup (unmigrated demos): keep readable in the new palette */
+#info strong {
+    color: var(--tv-text);
+}
+
+#info li {
+    margin: 2px 0;
+}
+
+#info span {
+    color: var(--tv-text-2) !important;
+}
+
+#info::-webkit-scrollbar {
+    width: 4px;
+}
+
+#info::-webkit-scrollbar-thumb {
+    background: var(--tv-border);
+    border-radius: 4px;
 }
 
 /* Info toggle button - always visible on desktop and mobile */
@@ -336,26 +451,47 @@ code {
     justify-content: center;
     position: absolute;
     top: 8px;
-    right: 8px;
+    left: 8px;
     width: 32px;
     height: 32px;
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid #333;
-    border-radius: 4px;
-    color: #0f0;
-    font-family: var(--gcanvas-font-family);
-    font-size: 18px;
-    font-weight: bold;
+    background: rgba(10, 10, 10, 0.85);
+    border: 1px solid var(--tv-border);
+    border-radius: 6px;
+    color: var(--tv-muted);
+    font-family: var(--tv-mono);
+    font-size: 14px;
+    font-weight: 700;
     cursor: pointer;
     z-index: 11;
     pointer-events: auto;
     line-height: 1;
     padding: 0;
     margin: 0;
+    transition:
+        color 0.2s ease,
+        border-color 0.2s ease;
 }
 
 #info-toggle:hover {
-    background: rgba(0, 0, 0, 0.9);
+    color: var(--tv-text);
+    border-color: #333;
+}
+
+#info-toggle.open {
+    color: var(--tv-accent);
+    border-color: var(--tv-accent);
+}
+
+#info-toggle:focus-visible {
+    outline: 2px solid var(--tv-accent);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #info,
+    #info-toggle {
+        transition: none;
+    }
 }
 
 strong {

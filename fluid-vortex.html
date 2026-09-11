@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fluid Vortex Experiment</title>
+  <meta name="description" content="Stir a live particle fluid into luminous vortices. GCanvas SPH physics meets glowing motion trails." />
+  <link rel="stylesheet" href="demos.css" />
+  <style>
+    #info, #info-toggle { color: #83cfff; background: rgba(3,12,20,0.96); border-color: #315b72; }
+    #info strong, #info a { color: #f2c879; }
+    #info-toggle:hover { background: #83cfff; color: #030c14; }
+  </style>
+  <script type="module" src="./js/info-toggle.js"></script>
+
+  <!-- SEO:injected -->
+  <meta name="description" content="Fluid Vortex Experiment - Fluid Vortex — A live fluid, written in light. Drag to stir. Hold to spin up a local eddy. Space pauses, R resets, H hides the..." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://gcanvas.guinetik.com/fluid-vortex.html" />
+  <meta property="og:title" content="Fluid Vortex Experiment" />
+  <meta property="og:description" content="Fluid Vortex Experiment - Fluid Vortex — A live fluid, written in light. Drag to stir. Hold to spin up a local eddy. Space pauses, R resets, H hides the..." />
+  <meta property="og:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Fluid Vortex Experiment" />
+  <meta name="twitter:description" content="Fluid Vortex Experiment - Fluid Vortex — A live fluid, written in light. Drag to stir. Hold to spin up a local eddy. Space pauses, R resets, H hides the..." />
+  <meta name="twitter:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:creator" content="@guinetik" />
+  <link rel="canonical" href="https://gcanvas.guinetik.com/fluid-vortex.html" />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-1GHJD0LM4Z"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-1GHJD0LM4Z');
+  </script>
+</head>
+<body>
+  <div id="info">
+    <strong>Fluid Vortex</strong> — A live fluid, written in light.
+    <p>Drag to stir. Hold to spin up a local eddy. Space pauses, R resets, H hides the interface. On mobile, tap Controls for settings.</p>
+    <p>This experiment connects GCanvas's 2D SPH fluid forces to the attractor trail renderer. Pressure and viscosity couple neighboring particles; an external vortex drive keeps the liquid circulating. Every line records a particle's actual recent motion.</p>
+    <p>Try Twin currents for interacting eddies or Free ink to remove the vortex drive. This is a stylized particle simulation with a circular boundary, separate from the analytic <a href="navier-stokes.html">Navier–Stokes vortex</a>. Bloom and glow are artistic effects.</p>
+  </div>
+  <canvas id="game" style="touch-action: none" aria-label="Interactive fluid vortex. Drag to stir, hold to spin. Space pauses, R resets, H hides controls."></canvas>
+  <script type="module" src="./js/fluid-vortex.js"></script>
+</body>
+</html>

@@ -92,8 +92,8 @@ const DEFAULTS = {
   },
 
   energyFlow: {
-    intensity: 0.4,
-    speed: 1.0,
+    intensity: 0.85,
+    speed: 1.6,
     sparkThreshold: 0.98,
   },
 
@@ -106,16 +106,16 @@ const DEFAULTS = {
 
   bloom: {
     enabled: true,
-    threshold: 0.25,
-    strength: 0.18,
-    radius: 0.6,
+    threshold: 0.16,
+    strength: 0.65,
+    radius: 1.8,
     passes: 1,
   },
 
   glow: {
     enabled: true,
-    radius: 50,
-    intensity: 0.85,
+    radius: 24,
+    intensity: 0.3,
   },
 
   depthFog: {
@@ -126,7 +126,7 @@ const DEFAULTS = {
 
   iridescence: {
     enabled: true,
-    intensity: 0.38,
+    intensity: 0.18,
     speed: 0.5,
     scale: 2.5,
   },
@@ -139,12 +139,12 @@ const DEFAULTS = {
 
   colorGrading: {
     enabled: true,
-    exposure: 0.75,
+    exposure: 1.05,
     vignetteStrength: 0.25,
     vignetteRadius: 0.85,
     grainIntensity: 0.001,
     warmth: 0.01,
-    bleach: 0.6,
+    bleach: 0.15,
   },
 
   zoom: {
@@ -327,6 +327,8 @@ class AttractorParticle {
     this.dt = dt;
 
     this.trail = [];
+    // Independent pulse positions keep the whole attractor from flashing in sync.
+    this.flowPhase = Math.random();
     this.speed = 0;
 
     // Blink / glitch state
@@ -576,6 +578,7 @@ class Attractor3DDemo extends Game {
     };
 
     this.segments = [];
+    this._segmentPool = [];
     this.fadeAlpha = 1;
 
     this._initPipeline(maxSegments, pipelineOptions);
@@ -728,41 +731,48 @@ class Attractor3DDemo extends Game {
     const { maxSpeed } = this.config.visual;
     const perspective = this.config.camera.perspective;
 
-    this.segments.length = 0;
+    let count = 0;
+    const capacity = this.attractorPipeline.maxSegments;
 
     for (const particle of this.particles) {
       if (particle.trail.length < 2) continue;
 
       const blink = particle.blinkIntensity;
+      const head = particle.trail[0];
+      let projected = this.camera.project(head.x, head.y, head.z);
 
       for (let i = 1; i < particle.trail.length; i++) {
+        if (count >= capacity) break;
         const curr = particle.trail[i];
-        const prev = particle.trail[i - 1];
 
-        const p1 = this.camera.project(prev.x, prev.y, prev.z);
+        const p1 = projected;
         const p2 = this.camera.project(curr.x, curr.y, curr.z);
+        projected = p2;
         if (p1.scale <= 0 || p2.scale <= 0) continue;
 
         // Normalize depth to [0,1] using perspective distance
         const depth1 = Math.max(0, Math.min(1, p1.z / perspective));
         const depth2 = Math.max(0, Math.min(1, p2.z / perspective));
 
-        this.segments.push({
-          x1: cx + p1.x * this.zoom,
-          y1: cy + p1.y * this.zoom,
-          x2: cx + p2.x * this.zoom,
-          y2: cy + p2.y * this.zoom,
-          speedNorm: Math.min(curr.speed / maxSpeed, 1),
-          age: i / particle.trail.length,
-          blink,
-          segIdx: i / particle.trail.length,
-          depth1,
-          depth2,
-        });
+        // Reuse segment records instead of allocating up to 250k every frame.
+        const segment = this._segmentPool[count] ?? (this._segmentPool[count] = {});
+        segment.x1 = cx + p1.x * this.zoom;
+        segment.y1 = cy + p1.y * this.zoom;
+        segment.x2 = cx + p2.x * this.zoom;
+        segment.y2 = cy + p2.y * this.zoom;
+        segment.speedNorm = Math.min(curr.speed / maxSpeed, 1);
+        segment.age = i / particle.trail.length;
+        segment.blink = blink;
+        segment.segIdx = segment.age + particle.flowPhase;
+        segment.depth1 = depth1;
+        segment.depth2 = depth2;
+        this.segments[count++] = segment;
       }
+      if (count >= capacity) break;
     }
 
-    return this.segments.length;
+    this.segments.length = count;
+    return count;
   }
 
   /**
@@ -781,6 +791,8 @@ class Attractor3DDemo extends Game {
       hueShiftSpeed,
     } = this.config.visual;
     const { intensityBoost, saturationBoost, alphaBoost } = this.config.blink;
+    const energy = this.config.energyFlow;
+    const flow = Math.max(0, Math.min(1, energy.intensity));
     const hueOffset = (this.time * hueShiftSpeed) % 360;
 
     const ctx = this.ctx;
@@ -792,13 +804,15 @@ class Attractor3DDemo extends Game {
       if (particle.trail.length < 2) continue;
 
       const blink = particle.blinkIntensity;
+      const headPoint = particle.trail[0];
+      let projected = this.camera.project(headPoint.x, headPoint.y, headPoint.z);
 
       for (let i = 1; i < particle.trail.length; i++) {
         const curr = particle.trail[i];
-        const prev = particle.trail[i - 1];
 
-        const p1 = this.camera.project(prev.x, prev.y, prev.z);
+        const p1 = projected;
         const p2 = this.camera.project(curr.x, curr.y, curr.z);
+        projected = p2;
         if (p1.scale <= 0 || p2.scale <= 0) continue;
 
         const age = i / particle.trail.length;
@@ -810,17 +824,22 @@ class Attractor3DDemo extends Game {
           100,
           saturation * (1 + blink * (saturationBoost - 1))
         );
+        const phase = ((age + particle.flowPhase) * 2 + this.time * energy.speed * 0.22) % 1;
+        const ramp = Math.min(1, phase / 0.035);
+        const packet = Math.exp(-phase * 10) * ramp * ramp * (3 - 2 * ramp);
+        const head = Math.exp(-age * 65);
         const lit = Math.min(
           100,
-          lightness * (1 + blink * (intensityBoost - 1))
+          lightness * (1 + blink * (intensityBoost - 1)) + flow * (packet * 25 + head * 35)
         );
+        const wake = Math.pow(1 - age, 0.65) * (0.09 + packet * 0.65 + head * 0.8);
         const alpha = Math.min(
           1,
-          (1 - age) * maxAlpha * (1 + blink * (alphaBoost - 1))
+          (1 - age) * maxAlpha * (1 + blink * (alphaBoost - 1)) * (1 - flow + flow * wake)
         );
 
         ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${lit}%, ${alpha})`;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.25 + head * flow;
 
         ctx.beginPath();
         ctx.moveTo(cx + p1.x * this.zoom, cy + p1.y * this.zoom);

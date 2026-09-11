@@ -272,6 +272,7 @@ export class SpaceGame extends Game {
       color: "#00ff00",
       align: "center",
       baseline: "middle",
+      origin: "center", // (x, y) marks the glyph center, not its top-left box
       zIndex: 1000,
     });
     this.countdownText.x = this.width / 2;
@@ -751,7 +752,7 @@ export class SpaceGame extends Game {
   /**
    * Spawn a boss minion that floats to a position near the boss
    */
-  spawnBossMinion(startX, startY, targetX, targetY, minionType) {
+  spawnBossMinion(startX, startY, minionType) {
     // Spawn minions closer to the boss - within 150px horizontally, 50-120px below
     const bossX = this.boss ? this.boss.x : this.width / 2;
     const bossY = this.boss ? this.boss.y : 170;

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fluid Singularities · GCanvas</title>
+  <meta name="description" content="Explore finite-time vortex concentration with shrinking length scales, growing speed, and falling core energy." />
+  <link rel="stylesheet" href="demos.css" />
+  <style>
+    #info, #info-toggle { color: #83cfff; background: #030c14; border-color: #315b72; }
+    #info strong, #info a { color: #f2c879; }
+    #info-toggle:hover { background: #83cfff; color: #030c14; }
+  </style>
+  <script type="module" src="./js/info-toggle.js"></script>
+
+  <!-- SEO:injected -->
+  <meta name="description" content="Fluid Singularities · GCanvas - math Fluid Singularities A shrinking core. A speed without a ceiling. A scaling visualization of finite-time blowup: as the..." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://gcanvas.guinetik.com/singularity.html" />
+  <meta property="og:title" content="Fluid Singularities · GCanvas" />
+  <meta property="og:description" content="Fluid Singularities · GCanvas - math Fluid Singularities A shrinking core. A speed without a ceiling. A scaling visualization of finite-time blowup: as the..." />
+  <meta property="og:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Fluid Singularities · GCanvas" />
+  <meta name="twitter:description" content="Fluid Singularities · GCanvas - math Fluid Singularities A shrinking core. A speed without a ceiling. A scaling visualization of finite-time blowup: as the..." />
+  <meta name="twitter:image" content="https://gcanvas.guinetik.com/og_image.png" />
+  <meta name="twitter:creator" content="@guinetik" />
+  <link rel="canonical" href="https://gcanvas.guinetik.com/singularity.html" />
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-1GHJD0LM4Z"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-1GHJD0LM4Z');
+  </script>
+</head>
+<body>
+  <div id="info">
+    <span class="info-eyebrow">math</span>
+    <h1>Fluid Singularities</h1>
+    <p class="dek">A shrinking core. A speed without a ceiling.</p>
+    <p>A scaling visualization of finite-time blowup: as the timeline approaches T, the core radius collapses while its speed grows without bound. Schematic, not a solver — the spirals and pulse rings illustrate the construction in OpenAI's September 2026 paper.</p>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> orbit</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Space</kbd> pause</li>
+      <li><kbd>R</kbd> reset</li>
+      <li><kbd>H</kbd> hide interface</li>
+      <li><kbd>Timeline</kbd> scrub the approach to T</li>
+    </ul>
+    <p class="links"><a href="https://cdn.openai.com/pdf/32d9f210-8b73-45e0-91bc-82a30aef8a9a/navier-stokes.pdf" target="_blank" rel="noopener noreferrer">Read the paper ↗</a> · <a href="navier-stokes.html">Burgers vortex</a> · <a href="fluid-vortex.html">Particle fluid</a></p>
+  </div>
+  <canvas id="game" tabindex="0" style="touch-action: none" aria-label="Fluid Singularities. Drag to orbit; scroll to zoom; Space pauses, R resets time and camera zoom, H hides controls."></canvas>
+  <script type="module" src="./js/singularity.js"></script>
+</body>
+</html>
