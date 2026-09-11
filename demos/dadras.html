@@ -31,17 +31,22 @@
 </head>
 <body>
   <div id="info">
-    <strong>Dadras Attractor</strong><br/>
-    <span style="color:#CCC">
-      <li>dx/dt = y - 3x + 2.7yz</li>
-      <li>dy/dt = 1.7y - xz + z</li>
-      <li>dz/dt = 2xy - 9z</li>
-      <li>Blue = slow, Red = fast</li>
-      <li>Drag to rotate</li>
-      <li>Scroll/pinch to zoom</li>
-      <li>Double-click to reset zoom</li>
-      <li>Press R to restart</li>
-    </span>
+    <span class="info-eyebrow">math</span>
+    <h1>Dadras Attractor</h1>
+    <p class="dek">A multi-scroll system with broad, sweeping wings (2010).</p>
+    <p>Particles surf the scrolls, colored by speed: blue = slow, gold = fast.</p>
+    <div class="math">
+      dx/dt = y − ax + byz<br/>
+      dy/dt = cy − xz + z<br/>
+      dz/dt = dxy − ez<br/>
+      a = 3 &nbsp; b = 2.7 &nbsp; c = 1.7 &nbsp; d = 2 &nbsp; e = 9
+    </div>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Dbl-click</kbd> reset view</li>
+      <li><kbd>R</kbd> restart</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/dadras.js"></script>

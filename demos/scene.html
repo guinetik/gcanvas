@@ -32,13 +32,17 @@
 </head>
 
 <body>
-    <div id="info" class="light">
-        <strong>Scene Demo</strong><br>
-        <span>This demo shows how to layer game objects using <code>Scene</code>.<br />
-            It also features the <code>Draggable</code> mix-in to allow dragging of game objects.<br>
-            Click on a square to bring it to the front of the scene.<br>
-            Drag the squares around the canvas.<br>
-        </span>
+    <div id="info">
+      <span class="info-eyebrow">scene</span>
+      <h1>Scene Layers</h1>
+      <p class="dek">Fifty draggable squares fighting for the front.</p>
+      <p>Colored squares scatter across a layered Scene; grab one and it pops to the top of the draw order.</p>
+      <p class="notes"><strong>Scene</strong> layering with bringToFront, the <strong>applyDraggable</strong> mixin, <strong>Random</strong> distributions, and <strong>Button</strong> UI in a <strong>VerticalLayout</strong>.</p>
+      <ul class="controls">
+        <li><kbd>Drag</kbd> move a square and bring it to front</li>
+        <li><kbd>Hover</kbd> grow a square</li>
+        <li><kbd>Buttons</kbd> add, clear, and re-scatter layers</li>
+      </ul>
     </div>
     <canvas id="game"></canvas>
     <script type="module">

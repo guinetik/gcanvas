@@ -33,12 +33,18 @@
 
 <body>
   <div id="info">
-    <strong>Fractals</strong> — This demo showcases multiple features of the engine.<br/>
-    The engine contains a <code>Fractals</code> class that provides pure JavaScript implementations of many popular fractals. <br/>
-    It features a custom <code>FractalRenderer</code> that inherits from <code>ImageGO</code>, the default way to display images in the engine.<br/>
-    Then we use the <code>Painter.img</code> module to render bitmap based on the fractal data.<br/>
-    Also featured is the <code>TaskManager</code> class; a simple implementation of a task queue that allows the main thread to send tasks to the worker thread and receive the results asynchronously.<br/>
-  </div>
+  <span class="info-eyebrow">image</span>
+  <h1>Fractals</h1>
+  <p class="dek">A fractal explorer rendered off the main thread.</p>
+  <p>Mandelbrot, Julia, Newton and friends are computed in a web worker and streamed back as bitmaps; pan and zoom glide with eased momentum.</p>
+  <p class="notes"><strong>Fractals</strong> supplies the math, <strong>TaskManager</strong> runs it in a worker, and <strong>Painter.img</strong> with <strong>ImageGo</strong> puts the pixels on screen.</p>
+  <ul class="controls">
+    <li><kbd>Drag</kbd> pan with momentum</li>
+    <li><kbd>Scroll</kbd> zoom toward the cursor</li>
+    <li><kbd>Pinch</kbd> zoom on touch</li>
+    <li><kbd>Buttons</kbd> cycle type, iterations, color — animate, zoom</li>
+  </ul>
+</div>
   <canvas id="game"></canvas>
 
   <script type="module">

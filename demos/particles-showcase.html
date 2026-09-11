@@ -33,15 +33,16 @@
 
 <body>
   <div id="info">
-    <strong>Particle System</strong> — High-performance particle engine showcase.<br/>
-    <span style="color:#CCC">
-      <li><code>Fountain</code> — Upward spray with gravity (circles).</li>
-      <li><code>Fire</code> — Rising flames with color gradient (squares).</li>
-      <li><code>Snow</code> — Gentle falling snowflakes (circles).</li>
-      <li><code>Click</code> — Burst confetti at its station (triangles).</li>
-      <li><code>Drag</code> — Orbit Camera3D around the scene.</li>
-      <li><code>Space</code> — Toggle emitters on/off.</li>
-    </span>
+    <span class="info-eyebrow">motion</span>
+    <h1>Particle System</h1>
+    <p class="dek">Twenty thousand particles across four stations.</p>
+    <p>Four labeled stations — a fountain, rising fire, falling snow, and click-triggered confetti — all fed from one shared particle pool and projected in pseudo-3D.</p>
+    <p class="notes"><strong>ParticleSystem</strong> and <strong>ParticleEmitter</strong> with composable <strong>Updaters</strong>, depth-sorted through <strong>Camera3D</strong> in a <strong>Scene3D</strong>.</p>
+    <ul class="controls">
+      <li><kbd>Click</kbd> burst confetti at its station</li>
+      <li><kbd>Drag</kbd> orbit the camera</li>
+      <li><kbd>Space</kbd> toggle emitters on/off</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/particles-showcase.js"></script>

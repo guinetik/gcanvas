@@ -32,16 +32,20 @@
 </head>
 <body>
   <div id="info">
-    <strong>Dither Editor</strong> — Load an image, apply adjustments and dithering algorithms in real-time.<br/>
-    <span style="color:#CCC">
-      <li>Drag & drop or click Load Image to open a file</li>
-      <li>Adjust contrast, highlights, shadows, gamma, grain</li>
-      <li>Choose from 11 dithering algorithms</li>
-      <li>Mouse wheel to zoom, drag to pan</li>
-      <li>Compare toggle to see original vs processed</li>
-      <li>Export result as PNG</li>
-    </span>
-  </div>
+  <span class="info-eyebrow">image</span>
+  <h1>Dither Editor</h1>
+  <p class="dek">Turn any photo into inky halftone pixels.</p>
+  <p>Load an image, shape its tones, and dither it with any of eleven algorithms in real time. Free Pixels scatters the result into 3D particles.</p>
+  <p class="notes"><strong>Dither</strong> supplies the algorithms, image-adjust helpers shape the tones, and an <strong>AccordionGroup</strong> of <strong>Slider</strong> and <strong>Dropdown</strong> controls drives it all.</p>
+  <ul class="controls">
+    <li><kbd>Drop</kbd> load an image, or use the Load Image button</li>
+    <li><kbd>Scroll</kbd> zoom</li>
+    <li><kbd>Drag</kbd> pan when zoomed in</li>
+    <li><kbd>Compare</kbd> toggle original vs processed</li>
+    <li><kbd>Free Pixels</kbd> explode the image into draggable 3D particles</li>
+    <li><kbd>Export PNG</kbd> save the result</li>
+  </ul>
+</div>
   <canvas id="game"></canvas>
   <script type="module">
     import { DitherEditor } from "./js/dither-editor.js";

@@ -33,13 +33,16 @@
 
 <body>
   <div id="info">
-    <strong>Image Patterns</strong> - Generating and using seamless textures.
-    <span style="color:#CCC">
-      <li><code>Patterns</code> — Utility class for generating seamless textures (Dots, Stripes, Noise, etc.).</li>
-      <li><code>PatternRectangle</code> — Shape that repeats a bitmap pattern.</li>
-      <li><code>Painter.img</code> — Helpers to convert raw pixels to ImageBitmaps.</li>
-    </span>
-  </div>
+  <span class="info-eyebrow">image</span>
+  <h1>Pattern Gallery</h1>
+  <p class="dek">Procedural pixel textures, tiled to taste.</p>
+  <p>A scrollable grid of seamless patterns — dots, voronoi, penrose, perlin noise — each generated pixel by pixel at load with random colors.</p>
+  <p class="notes"><strong>Patterns</strong> generates the raw pixels, <strong>Painter.img</strong> turns them into bitmaps, and <strong>PatternRectangle</strong> tiles them inside a scrollable <strong>TileLayout</strong>.</p>
+  <ul class="controls">
+    <li><kbd>Scroll</kbd> browse the gallery</li>
+    <li><kbd>Drag</kbd> scroll on touch</li>
+  </ul>
+</div>
   <canvas id="game"></canvas>
   <script type="module">
     import { MyGame } from './js/patterns.js';

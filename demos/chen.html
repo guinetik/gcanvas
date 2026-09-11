@@ -31,19 +31,22 @@
 </head>
 <body>
   <div id="info">
-    <strong>Chen (Chen-Lee) Attractor</strong> (1999)<br/>
-    <span style="color:#CCC">
-      <li>dx/dt = αx - yz</li>
-      <li>dy/dt = βy + xz</li>
-      <li>dz/dt = δz + xy/3</li>
-      <li>α = 5, β = -10, δ = -0.38</li>
-      <li>Double-scroll butterfly structure</li>
-      <li>Purple = slow, Cyan = fast</li>
-      <li>Drag to rotate</li>
-      <li>Scroll/pinch to zoom</li>
-      <li>Double-click to reset zoom</li>
-      <li>Press R to restart</li>
-    </span>
+    <span class="info-eyebrow">math</span>
+    <h1>Chen Attractor</h1>
+    <p class="dek">A double-scroll butterfly, wider-winged cousin of Lorenz, 1999.</p>
+    <p>Each particle runs slightly detuned parameters, filling the vortex eyes. Purple marks the slow orbits, cyan the fast sweeps.</p>
+    <div class="math">
+      dx/dt = αx &minus; yz<br/>
+      dy/dt = βy + xz<br/>
+      dz/dt = δz + xy/3<br/>
+      α = 5 &nbsp; β = &minus;20 &nbsp; δ = &minus;0.38
+    </div>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Dbl-click</kbd> reset view</li>
+      <li><kbd>R</kbd> restart</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/chen.js"></script>

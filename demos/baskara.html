@@ -33,10 +33,17 @@
 
 <body>
   <div id="info">
-    <strong>Bhaskara Dance</strong> - Visualizing the quadratic formula (Bhaskara).
-    Particles represent the roots of ax² + bx + c = 0. Watch them dance
-    as coefficients animate, merge when the discriminant hits zero, and spiral
-    into the complex plane when roots become imaginary.
+    <span class="info-eyebrow">genart</span>
+    <h1>Bhaskara Dance</h1>
+    <p class="dek">The quadratic formula, set loose on the plane.</p>
+    <p>Each particle pair traces the roots of a quadratic as its coefficients animate. Roots merge when the discriminant hits zero and spiral into the complex plane when it goes negative.</p>
+    <div class="math">
+      ax&sup2; + bx + c = 0 &nbsp;&rarr;&nbsp; x = (&minus;b &plusmn; &radic;&Delta;) / 2a, &nbsp; &Delta; = b&sup2; &minus; 4ac
+    </div>
+    <ul class="controls">
+      <li><kbd>Click</kbd> enable percussion synth</li>
+      <li><kbd>Move</kbd> pull the roots toward the cursor</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module">

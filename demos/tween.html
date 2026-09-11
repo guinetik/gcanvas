@@ -33,24 +33,11 @@
 
 <body>
   <div id="info">
-    <strong>Tween Demo</strong> - A box animated over time. The library features two motion-related classes:
-    <span style="color:#CCC">
-      <li><code>Tween</code> - Contains motion primitives, lerps and easing functions.</li>
-      <li><code>Tweenetik</code> - A shorcut class that leverates Tween to interpolate object properties over time</li>
-      <pre>
-Tweenetik.to(
-  mySprite,                         // an object or sprite
-  { scaleX: scale, scaleY: scale},  // the properties & end-values
-  2.0,                              // duration in seconds
-  Easing.easeOutBounce,             // easing function
-  {
-    delay: 0.5,                     // optional 0.5s delay
-    onStart: () => console.log("Tween started!"),
-    onComplete: () => console.log("Tween done!"),
-    onUpdate: () => console.log("Updated frame"),
-  }
-);</pre>
-    </span>
+    <span class="info-eyebrow">motion</span>
+    <h1>Tween</h1>
+    <p class="dek">A box that breathes on an elastic loop.</p>
+    <p>A nested group scales up and back down forever, each leg with a different easing, while the label reads out the live scale.</p>
+    <p class="notes"><strong>Tweenetik</strong> interpolates object properties over time with <strong>Easing</strong>, built on <strong>Tween</strong> primitives.</p>
   </div>
   <canvas id="game"></canvas>
   <script type="module">

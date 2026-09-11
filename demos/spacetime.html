@@ -33,14 +33,20 @@
 
 <body>
   <div id="info">
-    <strong>Spacetime Curvature</strong> — General relativity visualization.<br/>
-    <span style="color:#CCC">
-      <li><code>Grid</code> — Flat spacetime distorted by mass.</li>
-      <li><code>Well</code> — Gravitational potential creates curvature.</li>
-      <li><code>Click</code> — Shuffle to a new stellar body.</li>
-      <li><code>Drag</code> — Rotate the 3D view.</li>
-      <li><code>Double-click</code> — Reset view.</li>
-    </span>
+    <span class="info-eyebrow">physics</span>
+    <h1>Spacetime Curvature</h1>
+    <p class="dek">A flat grid, dented by mass.</p>
+    <p>A stellar body bends the grid into its gravitational well, Φ(r) = &minus;GM/r stretched into the third axis. Stylized embedding diagram, not to scale.</p>
+    <div class="math">
+      gμν = ημν + hμν<br/>
+      Rμν &minus; ½Rgμν = 8πGTμν
+    </div>
+    <ul class="controls">
+      <li><kbd>Click</kbd> shuffle body</li>
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Dbl-click</kbd> reset view</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/spacetime.js"></script>

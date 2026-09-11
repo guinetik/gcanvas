@@ -33,12 +33,11 @@
 
 <body>
     <div id="info">
-        <strong>Game Loop Demo</strong> — Demonstrates the <code>update → render</code> cycle using a bouncing ball.
-        <br>
-        A <strong>Game</strong> runs the loop and delegates updates and rendering to its <strong>Pipeline</strong>. <br>
-        A <strong>GameObject</strong> implements <code>update(dt)</code> and <code>render()</code> to animate and draw
-        itself. <br>
-        This demo shows a ball that moves and bounces off canvas edges on each frame.
+        <span class="info-eyebrow">game</span>
+        <h1>Game Loop</h1>
+        <p class="dek">The update → render heartbeat, one bouncing ball at a time.</p>
+        <p>A ball moves each frame and bounces off the canvas edges. An FPS counter sits in the corner.</p>
+        <p class="notes">A <strong>Game</strong> runs the loop, a <strong>GameObject</strong> implements <code>update(dt)</code> and <code>draw()</code>, and the <strong>Pipeline</strong> calls both every frame.</p>
     </div>
 
     <canvas id="game"></canvas>

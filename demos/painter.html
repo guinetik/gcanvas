@@ -33,16 +33,18 @@
 
 <body>
 
-    <div id="info" style="visibility: hidden;">
-        <strong>Paint Game</strong> — Demonstrate the <code>Painter</code> class.<br>
-        A <code>Painter</code> is an abstraction of the Canvas' Drawing API.<br />
-        The goal is to produce shapes faster and with an streamlined API.<br />
-        The Painter API is used to creates the shape primitives but it can also be used to draw directly on the
-        canvas.<br />
-        1) <strong>Line</strong>: first click sets start, second click sets end.<br>
-        2) <strong>Pencil</strong>: hold mouse/touch and drag to draw.<br>
-        3) <strong>Eraser</strong>: hold mouse/touch and drag to erase pixels.<br>
-    </div>
+    <div id="info">
+  <span class="info-eyebrow">painter</span>
+  <h1>Paint Game</h1>
+  <p class="dek">A scribble pad built straight on the Painter API.</p>
+  <p>Strokes are stored as plain point arrays and redrawn every frame with random blend modes, so old marks keep shimmering.</p>
+  <p class="notes"><strong>Painter</strong> draws directly on the canvas, <strong>Cursor</strong> swaps the pointer per tool, and <strong>ToggleButton</strong>s in a <strong>HorizontalLayout</strong> form the toolbar.</p>
+  <ul class="controls">
+    <li><kbd>Drag</kbd> draw or erase with the active tool</li>
+    <li><kbd>Click</kbd> set line start, then line end (line tool)</li>
+    <li><kbd>Toolbar</kbd> switch pencil, eraser, line — or clear all</li>
+  </ul>
+</div>
     <canvas id="game"></canvas>
     <script type="module">
         import { DemoGame } from "./js/painter.js";

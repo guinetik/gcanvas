@@ -31,11 +31,15 @@
 </head>
 <body>
   <div id="info">
-    <strong>FluidSystem Demo</strong> — Simplified fluid simulation.<br/>
-    <span style="color:#CCC">
-      <li>Click to push particles, hover to attract</li>
-      <li>Switch between Liquid and Gas physics</li>
-    </span>
+    <span class="info-eyebrow">physics</span>
+    <h1>FluidSystem Demo</h1>
+    <p class="dek">The fluid engine, stripped to its basics.</p>
+    <p>A minimal FluidSystem setup: hold to push particles away, hover to pull them in, and flip between liquid and gas physics with the on-screen buttons.</p>
+    <ul class="controls">
+      <li><kbd>Hold</kbd> push</li>
+      <li><kbd>Hover</kbd> pull</li>
+      <li><kbd>Buttons</kbd> mode, gravity, reset</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/fluid-simple.js"></script>

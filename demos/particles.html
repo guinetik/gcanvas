@@ -32,13 +32,16 @@
 
 <body>
   <div id="info">
-    <strong>Particles Demo</strong> — A particle system built with <code>GameObject</code>.
-    <span style="color:#CCC">
-      <li><code>Particle extends GameObject</code> — Inherits transform & lifecycle methods.</li>
-      <li><code>Physics</code> — Custom <code>update(dt)</code> logic for velocity, friction, and boundary collision.</li>
-      <li><code>Interaction</code> — Mouse repulsion logic using vector math.</li>
-      <li><code>Shapes</code> — Randomly assigned primitives (Circle, Square, Triangle, Star).</li>
-    </span>
+    <span class="info-eyebrow">shapes</span>
+    <h1>Particles</h1>
+    <p class="dek">Five hundred primitives that fear your cursor.</p>
+    <p>A swarm of random circles, squares, triangles, and stars bouncing with friction, spin, and trails. Each particle is its own GameObject running its own physics.</p>
+    <p class="notes"><strong>GameObject</strong> particles rendering cached <strong>Shape</strong> primitives in a <strong>Scene</strong>, with a <strong>Button</strong> panel in a <strong>VerticalLayout</strong>.</p>
+    <ul class="controls">
+      <li><kbd>Move</kbd> repels nearby particles</li>
+      <li><kbd>Drag</kbd> spawns new particles</li>
+      <li><kbd>Clear</kbd> / <kbd>Reset</kbd> buttons empty or respawn the swarm</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/particles.js"></script>

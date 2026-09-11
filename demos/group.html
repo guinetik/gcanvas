@@ -32,17 +32,13 @@
 </head>
 
 <body>
-  <div id="info" class="light">
-    <strong>Group Demo</strong> —
-    A <code>Group</code> is a specialized shape that can contain other shapes. It
-    inherits from <code>Shape</code>, which in turn extends our <code>Transformable</code> base. 
-    This means a <code>Group</code> has the same properties as any shape—<em>x</em>, 
-    <em>y</em>, <em>rotation</em>, <em>scaleX</em>, <em>scaleY</em>, <em>opacity</em>, 
-    and <em>visible</em>—and applying transformations (rotation, scaling, etc.) 
-    to the group will affect all child shapes as a single unit.<br><br>
-    This approach lets you manage and animate collections of shapes as a single entity,
-    similar to how grouping worked in Flash.
-  </div>  
+  <div id="info">
+    <span class="info-eyebrow">shapes</span>
+    <h1>Groups</h1>
+    <p class="dek">Twenty circles moving as one, Flash-style.</p>
+    <p>A ring of circles grouped around a label, rotating and pulsing as a single unit. One circle blinks out in sequence while the colors cycle.</p>
+    <p class="notes">A <strong>Group</strong> transformed as one via the <strong>Transform</strong> API, inheriting rotation, scale, and visibility from <strong>Transformable</strong>.</p>
+  </div>
   <canvas id="game"></canvas>
   <script type="module">
     import { MyGame } from './js/group.js';

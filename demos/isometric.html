@@ -32,14 +32,17 @@
 </head>
 
 <body>
-  <div id="info" class="light">
-    <strong>Marble Madness</strong>
-    <span>
-      A mini <code>IsometricScene</code> demo with platforms at different heights.<br>
-      <b>WASD</b> to move, <b>Space</b> to jump. Navigate the platforms!<br>
-      <b>Q/E</b> or <b>arrow buttons</b> to rotate the view 90°.<br>
-      The ball will reset if it falls off the edge.<br>
-    </span>
+  <div id="info">
+    <span class="info-eyebrow">scene</span>
+    <h1>Marble Madness</h1>
+    <p class="dek">A marble hopping across floating isometric platforms.</p>
+    <p>Roll the ball between platforms at different heights. Fall off the edge and it resets to the start.</p>
+    <p class="notes">An <strong>IsometricScene</strong> projects the grid, <strong>Keys</strong> reads input, and <strong>Button</strong> drives the on-screen rotation arrows.</p>
+    <ul class="controls">
+      <li><kbd>WASD</kbd> move the ball</li>
+      <li><kbd>Space</kbd> jump</li>
+      <li><kbd>Q</kbd>/<kbd>E</kbd> or arrow buttons rotate the view 90°</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module">

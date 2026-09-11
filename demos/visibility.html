@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Opacity</title>
+  <title>Visibility</title>
   <link rel="stylesheet" href="demos.css" />
   <script src="./js/info-toggle.js"></script>
 
@@ -33,12 +33,14 @@
 
 <body>
   <div id="info">
-    <strong>Visibility Toggle Demo</strong> - Shows how game objects can be dynamically shown or hidden.
-    <span style="color:#CCC">
-      <li><code>Transformable</code> — The base class providing the <code>visible</code> property.</li>
-      <li><code>Pipeline Integration</code> — The pipeline skips invisible objects during rendering.</li>
-      <li><code>Dynamic Toggling</code> — Click the button to toggle visibility of a random square.</li>
-    </span>
+    <span class="info-eyebrow">shapes</span>
+    <h1>Visibility</h1>
+    <p class="dek">Now you see it — now the pipeline skips it.</p>
+    <p>Three squares in a row; a button hides one at random. Invisible objects are skipped entirely at render time.</p>
+    <p class="notes">The <strong>Transformable</strong> visible flag on a <strong>HorizontalLayout</strong> of squares, flipped by a <strong>Button</strong>.</p>
+    <ul class="controls">
+      <li><kbd>Click</kbd> the button toggles a random square</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module">

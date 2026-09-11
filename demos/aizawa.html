@@ -31,18 +31,22 @@
 </head>
 <body>
   <div id="info">
-    <strong>Aizawa Attractor</strong><br/>
-    <span style="color:#CCC">
-      <li>dx/dt = (z - b)x - dy</li>
-      <li>dy/dt = dx + (z - b)y</li>
-      <li>dz/dt = c + az - z³/3 - (x² + y²)(1 + ez) + fzx³</li>
-      <li>a=0.95, b=0.7, c=0.6, d=3.5, e=0.25, f=0.1</li>
-      <li>Cyan = slow, Magenta = fast</li>
-      <li>Drag to rotate</li>
-      <li>Scroll/pinch to zoom</li>
-      <li>Double-click to reset zoom</li>
-      <li>Press R to restart</li>
-    </span>
+    <span class="info-eyebrow">math</span>
+    <h1>Aizawa Attractor</h1>
+    <p class="dek">A chaotic torus that keeps folding through itself.</p>
+    <p>Orbits wrap the torus and spike out along its axis, colored by speed: cyan = slow, magenta = fast.</p>
+    <div class="math">
+      dx/dt = (z − b)x − dy<br/>
+      dy/dt = dx + (z − b)y<br/>
+      dz/dt = c + az − z³/3 − (x² + y²)(1 + ez) + fzx³<br/>
+      a = 0.95 &nbsp; b = 0.7 &nbsp; c = 0.6 &nbsp; d = 3.5 &nbsp; e = 0.25 &nbsp; f = 0.1
+    </div>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Dbl-click</kbd> reset view</li>
+      <li><kbd>R</kbd> restart</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/aizawa.js"></script>

@@ -31,12 +31,13 @@
 </head>
 <body>
   <div id="info">
-    <strong>Study 008 - 3D Logo</strong><br/>
-    <span style="color:#CCC">
-      <li>Extruded SVG Geometry</li>
-      <li>Wireframe rendering</li>
-      <li>Mouse interaction</li>
-    </span>
+    <span class="info-eyebrow">genart</span>
+    <h1>Study 008 - 3D Logo</h1>
+    <p class="dek">The GCanvas logo, peeled off the page.</p>
+    <p>The logo's SVG path is parsed, triangulated, and extruded into a spinning wireframe solid. Depth and lighting are faked entirely on the 2D canvas.</p>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate the logo; auto-rotation resumes when idle</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/study008.js"></script>

@@ -32,14 +32,16 @@
 </head>
 
 <body>
-  <div id="info" class="light">
-    <strong>Layout Demo</strong><br>
-    <span>Demonstrates dynamic switching between <code>HorizontalLayout</code> and
-      <code>VerticalLayout</code>.<br>
-      Use the right side buttons to switch layout direction.<br>
-      Use the bottom buttons to add or remove random rectangles from the layout group.<br>
-      Layout auto-sizes and aligns children with spacing and padding.
-    </span>
+  <div id="info">
+    <span class="info-eyebrow">scene</span>
+    <h1>Layout Switcher</h1>
+    <p class="dek">One set of boxes, four ways to arrange them.</p>
+    <p>Random rectangles flow between four layout modes; each container auto-sizes, aligns, and scrolls its children.</p>
+    <p class="notes"><strong>HorizontalLayout</strong>, <strong>VerticalLayout</strong>, <strong>TileLayout</strong>, and <strong>GridLayout</strong> with scrollable viewports and <strong>Button</strong> controls.</p>
+    <ul class="controls">
+      <li><kbd>Click</kbd> a bottom button to switch layout mode</li>
+      <li><kbd>Add</kbd> / <kbd>Remove</kbd> insert or drop a rectangle</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
 

@@ -33,9 +33,15 @@
 
 <body>
   <div id="info">
-    <strong>Bezier Signature</strong> — A <code>BezierShape</code> receives an array of path commands and draws them as a
-    bezier curve. This can be done all frames at once or they can be iterated over time, like a signature animation.
-  </div>
+  <span class="info-eyebrow">painter</span>
+  <h1>Bezier Signature</h1>
+  <p class="dek">A signature that signs itself.</p>
+  <p>A cubic bezier path is revealed segment by segment while a glowing pen tip traces the stroke; once finished, the signature bobs gently.</p>
+  <p class="notes"><strong>BezierShape</strong> renders a path-command array that grows a little more every frame.</p>
+  <ul class="controls">
+    <li><kbd>Click</kbd> restart the animation</li>
+  </ul>
+</div>
   <canvas id="game"></canvas>
   <script type="module">
     import { MyGame } from './js/beziersignature.js';

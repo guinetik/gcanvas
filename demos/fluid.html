@@ -33,13 +33,18 @@
 
 <body>
   <div id="info">
-    <strong>Fluid & Gas Playground</strong> — SPH-like liquid + lightweight gas using math-only helpers.<br />
-    <span style="color:#9ef">
-      <li>Move mouse to stir, hold click to push.</li>
-      <li>Press 1 for Liquid, 2 for Gas, Space toggles.</li>
-      <li>Gas mode: blue=cold (top), red=hot (bottom).</li>
-      <li>Drag the browser window to shake the bottle!</li>
-    </span>
+    <span class="info-eyebrow">physics</span>
+    <h1>Fluid &amp; Gas Playground</h1>
+    <p class="dek">SPH-like liquid and buoyant gas in one bottle.</p>
+    <p>Particles under pressure, viscosity, and gravity; gas mode adds thermal buoyancy — blue runs cold at the top, red hot at the bottom. Steppers tune gravity, viscosity, pressure, and bounce.</p>
+    <ul class="controls">
+      <li><kbd>Hover</kbd> stir</li>
+      <li><kbd>Hold</kbd> push</li>
+      <li><kbd>1/2</kbd> liquid / gas</li>
+      <li><kbd>Space</kbd> toggle mode</li>
+      <li><kbd>G</kbd> gravity</li>
+      <li><kbd>R</kbd> reset</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
 

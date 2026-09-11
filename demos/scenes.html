@@ -56,12 +56,15 @@
 </head>
 
 <body>
-  <div id="info" class="light">
-    <strong>Scenes Demo</strong> —
-    A <code>Scene</code> is a container for <code>GameObjects</code> that provides its own coordinate system and transforms.
-    Scenes can be nested inside other scenes, support z-ordering with <code>bringToFront()</code> and <code>sendToBack()</code>,
-    and inherit from <code>GameObject</code> so they have full transform support (position, rotation, scale).
-    Use scenes to organize game layers, UI panels, or any logical grouping of objects.
+  <div id="info">
+    <span class="info-eyebrow">scene</span>
+    <h1>Scenes Demo</h1>
+    <p class="dek">Containers with their own coordinate systems, put through their paces.</p>
+    <p>Three panels: a scene rotating and scaling with its children, scenes nested inside scenes, and z-ordering with bring-to-front and send-to-back.</p>
+    <p class="notes">A <strong>Scene</strong> inherits from <strong>GameObject</strong>, so it nests, transforms, and reorders like any other object.</p>
+    <ul class="controls">
+      <li><kbd>Debug</kbd> button toggles scene bounds overlays</li>
+    </ul>
   </div>
   <button id="debug-toggle">Toggle Debug</button>
   <canvas id="game"></canvas>

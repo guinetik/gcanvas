@@ -33,15 +33,15 @@
 
 <body>
   <div id="info">
-    <strong>Black Hole</strong> — Cinematic accretion disk visualization.<br/>
-    <span style="color:#CCC">
-      <li><code>Gravitational Lensing</code> — Light bends around the hole.</li>
-      <li><code>Accretion Disk</code> — 2500 particles with heat gradient.</li>
-      <li><code>Doppler Beaming</code> — Approaching side brighter.</li>
-      <li><code>Hawking Radiation</code> — Rare cyan quantum escapes.</li>
-      <li><code>Drag</code> — Orbit the camera around.</li>
-      <li><code>Auto-rotate</code> — Slow orbit when idle.</li>
-    </span>
+    <span class="info-eyebrow">physics</span>
+    <h1>Black Hole</h1>
+    <p class="dek">An accretion disk, lensed and beamed.</p>
+    <p>Particles orbit the hole with a heat gradient, light bends around the shadow, Doppler beaming brightens the approaching side, and the odd cyan fleck escapes as Hawking radiation. Cinematic and stylized, not to scale.</p>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> orbit (auto-rotates when idle)</li>
+      <li><kbd>&#9654; Replay</kbd> form a new black hole</li>
+    </ul>
+    <p class="links"><a href="tde.html">Tidal disruption event</a></p>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/blackhole/index.js"></script>

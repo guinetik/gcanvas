@@ -33,16 +33,18 @@
 
 <body>
     <div id="info">
-        <strong>Bezier Curve Editor</strong> — Create and modify Bezier curves with interactive control points. <br>
-        The demo shows the separation between <strong>Shapes</strong> (visual definitions) and
-        <strong>GameObjects</strong> (interactive entities). <br>
-        <strong>BezierShape</strong> defines curve paths using commands like "M" (move), "L" (line), "Q" (quadratic),
-        and "C" (cubic). <br>
-        <strong>Control Points</strong> are wrapped with ShapeGOFactory to make them interactive, while guide lines show
-        relationships between points. <br>
-        Switch between <strong>Add Points</strong> mode to place new control points and <strong>Edit Points</strong>
-        mode to drag and adjust the curve shape.
-    </div>
+  <span class="info-eyebrow">painter</span>
+  <h1>Bezier Curve Editor</h1>
+  <p class="dek">Click out a curve, then bend it to your will.</p>
+  <p>Control points become path commands — line, quadratic, cubic — and the curve rebuilds live as you edit. Cut shapes stay on canvas, wobbling.</p>
+  <p class="notes"><strong>BezierShape</strong> defines the path with M/L/Q/C commands, and <strong>ShapeGOFactory</strong> wraps shapes into interactive <strong>GameObjects</strong>.</p>
+  <ul class="controls">
+    <li><kbd>Click</kbd> place a control point (Add mode)</li>
+    <li><kbd>Drag</kbd> move a point (Edit mode)</li>
+    <li><kbd>Cut</kbd> detach the curve and let it jitter</li>
+    <li><kbd>Clear</kbd> wipe the canvas</li>
+  </ul>
+</div>
     <canvas id="game"></canvas>
     <script type="module" src="./js/bezier.js"></script>
     <script type="module">

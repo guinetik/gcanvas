@@ -33,9 +33,15 @@
 
 <body>
   <div id="info">
-    <strong>SVG Motion</strong> — Interactive path drawing with animation.<br/>
-    This demo uses <code>SVGShape</code> and <code>GameObject</code> to animate SVG vector paths with easing, motion effects, and a glowing trail.
-  </div>
+  <span class="info-eyebrow">painter</span>
+  <h1>SVG Motion</h1>
+  <p class="dek">An SVG path that draws itself in neon green.</p>
+  <p>Two logo paths trace themselves with a glowing drawing point, then drift on a jittery float loop once complete.</p>
+  <p class="notes"><strong>SVGShape</strong> animates path progress with <strong>Easing</strong>, and <strong>Motion.float</strong> handles the idle drift.</p>
+  <ul class="controls">
+    <li><kbd>Click</kbd> restart the animation</li>
+  </ul>
+</div>
   <canvas id="game"></canvas>
   <script type="module">
     import { MyGame } from './js/svgtween.js';

@@ -33,11 +33,16 @@
 
 <body>
     <div id="info">
-        <strong>EventEmitter Demo</strong> — Shows how <code>Game.events</code> handles unified input events. <br>
-        Events from <strong>mouse</strong>, <strong>touch</strong>, <strong>keyboard</strong> and <strong>input</strong>
-        are emitted using a
-        single system. <br>
-        This demo logs the last event that happened inside a box on screen. Try clicking, moving, or touching!
+        <span class="info-eyebrow">game</span>
+        <h1>Event Emitter</h1>
+        <p class="dek">Mouse, touch, and keyboard, all on one bus.</p>
+        <p>A box on screen logs the last event it saw, and whether it happened inside the box or out.</p>
+        <p class="notes"><strong>Game.events</strong> is an <strong>EventEmitter</strong> unifying mouse, touch, and keyboard input; <strong>Keys</strong> names the logical keys.</p>
+        <ul class="controls">
+            <li><kbd>Click</kbd> logs the event, inside the box or out</li>
+            <li><kbd>Scroll</kbd> logs wheel events</li>
+            <li><kbd>Any key</kbd> logs keydown and keyup</li>
+        </ul>
     </div>
 
     <canvas id="game"></canvas>

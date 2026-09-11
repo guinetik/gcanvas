@@ -31,14 +31,15 @@
 </head>
 <body>
     <div id="info">
-        <strong>Sphere3D Showcase</strong> — 3D sphere rendering modes<br/>
-        <span style="color:#CCC">
-            <li>Solid Color (Canvas 2D rendering)</li>
-            <li>Gas Giant (WebGL shader with bands)</li>
-            <li>Star (WebGL shader with glow)</li>
-            <li>Drag to rotate camera</li>
-            <li>Double-click to reset view</li>
-        </span>
+      <span class="info-eyebrow">3d</span>
+      <h1>Sphere3D Showcase</h1>
+      <p class="dek">Three spheres, three renderers.</p>
+      <p>A solid Canvas 2D sphere next to two WebGL-shaded ones: a banded gas giant and a glowing star.</p>
+      <p class="notes"><strong>Sphere3D</strong> in solid and shader modes, projected through a shared <strong>Camera3D</strong>.</p>
+      <ul class="controls">
+        <li><kbd>Drag</kbd> rotates the camera</li>
+        <li><kbd>Double-click</kbd> resets the view</li>
+      </ul>
     </div>
     <canvas id="game"></canvas>
     <script type="module" src="./js/sphere3d.js"></script>

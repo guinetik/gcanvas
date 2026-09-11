@@ -31,18 +31,22 @@
 </head>
 <body>
   <div id="info">
-    <strong>Lorenz Attractor</strong> — The Butterfly Effect (1963)<br/>
-    <span style="color:#CCC">
-      <li>dx/dt = σ(y - x)</li>
-      <li>dy/dt = x(ρ - z) - y</li>
-      <li>dz/dt = xy - βz</li>
-      <li>σ=10, ρ=28, β=8/3</li>
-      <li>Blue = slow, Red = fast</li>
-      <li>Drag to rotate</li>
-      <li>Scroll/pinch to zoom</li>
-      <li>Double-click to reset zoom</li>
-      <li>Press R to restart</li>
-    </span>
+    <span class="info-eyebrow">math</span>
+    <h1>Lorenz Attractor</h1>
+    <p class="dek">The butterfly effect, 1963.</p>
+    <p>Particles ride the two lobes of Lorenz's convection model, colored by speed: blue = slow, red = fast.</p>
+    <div class="math">
+      dx/dt = σ(y − x)<br/>
+      dy/dt = x(ρ − z) − y<br/>
+      dz/dt = xy − βz<br/>
+      σ = 10 &nbsp; ρ = 28 &nbsp; β = 8/3
+    </div>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Dbl-click</kbd> reset view</li>
+      <li><kbd>R</kbd> restart</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/lorenz.js"></script>
