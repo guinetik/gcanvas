@@ -13,14 +13,18 @@
     toggle.id = "info-toggle";
     toggle.textContent = "i";
     toggle.setAttribute("aria-label", "Toggle info panel");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-controls", "info");
 
     // Insert button before info element
     info.parentNode.insertBefore(toggle, info);
 
     // Toggle functionality
     toggle.addEventListener("click", function() {
-      info.classList.toggle("open");
-      toggle.textContent = info.classList.contains("open") ? "×" : "i";
+      const open = info.classList.toggle("open");
+      toggle.classList.toggle("open", open);
+      toggle.textContent = open ? "×" : "i";
+      toggle.setAttribute("aria-expanded", String(open));
     });
   });
 })();
