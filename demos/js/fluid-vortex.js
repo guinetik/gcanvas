@@ -6,7 +6,7 @@ import { PALETTES, LOOKS } from "./navier-stokes-looks.js";
 const CONFIG = {
   background: "#02060c", panelWidth: 300, margin: 12, panelTop: 48,
   compactWidth: 900, compactHeight: 650, brushSpeed: 3,
-  captionWidth: 480, captionHeight: 70, captionBottom: 20,
+  captionWidth: 480, captionHeight: 70, captionBottom: 20, captionOffsetX: 0,
 };
 
 class Caption extends GameObject {
@@ -145,7 +145,8 @@ export class FluidVortexDemo extends Game {
       this.toggleButton.text = p.visible ? "Close controls" : "Controls";
     }
     if (this.caption) {
-      const x = !this.compact && p.visible ? p.x / 2 : this.width / 2;
+      let x = this.width / 2 + CONFIG.captionOffsetX;
+      if (!this.compact && p.visible) x = Math.min(x, p.x - this.caption.width / 2 - margin);
       const y = this.height - CONFIG.captionBottom - CONFIG.captionHeight / 2;
       for (const item of [this.caption, this.title, this.hint]) { item.visible = !this.clean && !(this.compact && p.visible); item.x = x; }
       this.caption.y = y; this.title.y = y - 12; this.hint.y = y + 15;
@@ -160,7 +161,7 @@ export class FluidVortexDemo extends Game {
     const model = this.field.model;
     model.mode = "whirlpool"; model.drive = FLUID_CONFIG.drive; model.viscosity = FLUID_CONFIG.viscosity;
     model.brush.radius = FLUID_CONFIG.brushRadius;
-    this.field.setPalette("ice"); this.field.setLook("neon"); this.field.restart();
+    this.field.setPalette("ice"); this.field.setLook("nebula"); this.field.restart();
     this.syncing = true;
     for (const [name, value] of Object.entries({ mode: model.mode, drive: model.drive, viscosity: model.viscosity, radius: model.brush.radius, palette: this.field.palette, look: this.field.look })) this.controls[name].value = value;
     this.syncing = false;

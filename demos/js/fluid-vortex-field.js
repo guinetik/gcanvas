@@ -3,8 +3,8 @@ import { FluidVortexModel, FLUID_CONFIG } from "./fluid-vortex-model.js";
 import { PALETTES, LOOKS } from "./navier-stokes-looks.js";
 
 const CONFIG = {
-  history: 120, sampleEvery: 3, fit: 0.41, lineWidth: 1.3,
-  warmupSteps: 90, speedColorScale: 1.8, trailFade: 1.45,
+  history: 120, sampleEvery: 3, fit: 0.54, lineWidth: 1.3,
+  warmupSteps: 90, speedColorScale: 1.8, trailFade: 1.45, offsetX: 0,
   gpu: {
     visual: { maxAlpha: 0.32, hueJitter: 0 },
     background: { baseColor: [0.004, 0.008, 0.018], fogDensity: 0.02, noiseScale: 2, animSpeed: 0.02 },
@@ -16,7 +16,7 @@ const CONFIG = {
 
 export class FluidVortexField extends GameObject {
   constructor(game) {
-    super(game, { origin: "top-left", interactive: false });
+    super(game, { origin: "top-left", x: 0, y: 0, interactive: false });
     this.model = new FluidVortexModel(game.width < 700 ? FLUID_CONFIG.mobileCount : FLUID_CONFIG.count);
     const capacity = this.model.count * (CONFIG.history - 1);
     this.gpu = new WebGLAttractorPipeline(game.width, game.height, capacity, CONFIG.gpu);
@@ -26,7 +26,7 @@ export class FluidVortexField extends GameObject {
     this.activeSegments = [];
     this.history = new Float32Array(this.model.count * CONFIG.history * 3);
     this.palette = "ice";
-    this.look = "neon";
+    this.look = "nebula";
     this.setPalette(this.palette);
     this.setLook(this.look);
     this.resize();
@@ -52,9 +52,8 @@ export class FluidVortexField extends GameObject {
 
   resize() {
     this.width = this.game.width; this.height = this.game.height;
-    const available = !this.game.compact && !this.game.clean ? this.width - 324 : this.width;
-    this.scale = Math.min(available, this.height) * CONFIG.fit;
-    this.centerX = this.game.focusLeft && !this.game.compact ? this.width * 0.33 : available / 2;
+    this.scale = Math.min(this.width, this.height) * CONFIG.fit;
+    this.centerX = this.game.focusLeft && !this.game.compact ? this.width * 0.33 : this.width / 2 + CONFIG.offsetX;
     this.centerY = this.height * 0.48;
     this.gpu.lineWidth = CONFIG.lineWidth * Math.max(0.55, this.scale / 300);
     this.gpu.setGlowConfig({ radius: LOOKS[this.look].glow.radius * (this.game.compact ? 0.5 : 1) });
