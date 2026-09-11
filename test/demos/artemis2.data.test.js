@@ -14,7 +14,7 @@ import {
   MISSION_DAYS,
   EARTH_RADIUS_KM,
   MOON_RADIUS_KM,
-} from "../../demos/js/artemis2.data.js";
+} from "../../demos/js/artemis2/artemis2.data.js";
 
 describe("Artemis II Data Module", () => {
   describe("getOrionPos()", () => {
@@ -87,7 +87,7 @@ describe("Artemis II Data Module", () => {
   describe("getMoonOrbitPoints()", () => {
     it("returns an array of points", () => {
       const pts = getMoonOrbitPoints();
-      expect(pts.length).toBe(329);
+      expect(pts.length).toBe(331);
       expect(pts[0]).toHaveProperty("x");
       expect(pts[0]).toHaveProperty("y");
       expect(pts[0]).toHaveProperty("z");
@@ -97,19 +97,23 @@ describe("Artemis II Data Module", () => {
   describe("buildTrajectoryCurve()", () => {
     it("returns a dense array of points (post-TLI)", () => {
       const curve = buildTrajectoryCurve();
-      // 41 launch spiral + (107 - 1) * 10 subdivisions + 1 final = 2131
-      expect(curve.length).toBe(2131);
+      // (101 - 1) * 10 launch spiral + (214 - 1) * 10 JPL subdivisions + 1 final = 3131
+      expect(curve.length).toBe(3131);
     });
   });
 
   describe("getTrajProgress()", () => {
-    it("returns 0 at trajectory start", () => {
-      expect(getTrajProgress(TRAJ_START_DAY, 2131)).toBe(0);
+    it("returns 0 at launch", () => {
+      expect(getTrajProgress(0, 3131)).toBe(0);
+    });
+
+    it("enters the JPL segment after the launch curve", () => {
+      expect(getTrajProgress(TRAJ_START_DAY, 3131)).toBe(1000);
     });
 
     it("returns max near end of mission", () => {
-      const idx = getTrajProgress(MISSION_DAYS, 2131);
-      expect(idx).toBe(2130);
+      const idx = getTrajProgress(MISSION_DAYS, 3131);
+      expect(idx).toBe(3130);
     });
   });
 
