@@ -202,6 +202,36 @@ nav a:not(.helix-link):not(.helix-external).active {
     padding-left: 0.5rem;
 }
 
+/* Subgroup captions inside a section body (Math / Physics).
+   Static labels, not toggles — they carry no href and no .helix-link class,
+   so the router and the accordion never see them. */
+.helix-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.7rem 0 0.35rem;
+    color: #555;
+    font-family: var(--gcanvas-font-family);
+    font-size: 0.68em;
+    font-weight: bold;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* Hairline trailing off to the right of the caption */
+.helix-group::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, #222, transparent);
+}
+
+/* First caption sits flush under the header */
+.helix-group:first-child {
+    margin-top: 0.15rem;
+}
+
 /* DNA unzip — odd links spiral in from the left strand */
 @keyframes unzip-left {
     0% {
@@ -234,13 +264,15 @@ nav a:not(.helix-link):not(.helix-external).active {
     }
 }
 
-/* When section is open, animate links in */
-.helix-section.open .helix-link:nth-child(odd) {
+/* When section is open, animate links in.
+   nth-of-type counts <a> siblings only, so .helix-group captions slotted
+   between links don't flip the left/right strand alternation. */
+.helix-section.open .helix-link:nth-of-type(odd) {
     animation: unzip-left 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     transform-origin: left center;
 }
 
-.helix-section.open .helix-link:nth-child(even) {
+.helix-section.open .helix-link:nth-of-type(even) {
     animation: unzip-right 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     transform-origin: right center;
 }
