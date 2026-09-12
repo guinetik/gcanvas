@@ -88,10 +88,14 @@ const CONFIG = {
   orbiterColor: "#4af",
   orbiterGlow: "rgba(100, 180, 255, 0.6)",
 
-  // Button layout
+  // Button layout (top-right, center origin)
   btnMargin: 12,
   btnSize: 44,
   btnGap: 8,
+
+  hud: {
+    top: 28, // below canvas edge; #info-toggle stays top-left
+  },
 };
 
 class KerrDemo extends Game {
@@ -216,58 +220,71 @@ class KerrDemo extends Game {
   // ── Info Header ─────────────────────────────────────────────────────────
 
   _buildInfoHeader() {
-    this._infoScene = new Scene(this, { x: 0, y: 0 });
+    this._infoScene = new Scene(this, { x: 0, y: 0, originX: 0.5 });
     applyAnchor(this._infoScene, {
-      anchor: Position.TOP_LEFT,
-      anchorOffsetX: Screen.responsive(10, 10, 10),
-      anchorOffsetY: 66,
+      anchor: Position.TOP_CENTER,
+      anchorMargin: CONFIG.hud.top,
+      anchorSetTextAlign: false,
     });
+    this.pipeline.add(this._infoScene);
+
+    const textOpts = { align: "center", baseline: "middle", originX: 0.5 };
 
     this._titleText = new Text(this, "Kerr Metric", {
       font: `bold ${Screen.responsive(18, 24, 28)}px monospace`,
       color: "#f7a",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this._equationText = new Text(this, "ds\u00B2 = g\u03BC\u03BD dx\u03BC dx\u03BD", {
       font: `${Screen.responsive(14, 18, 20)}px monospace`,
       color: "#fff",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this._massText = new Text(this, "M = 1.00", {
       font: `${Screen.responsive(9, 12, 13)}px monospace`,
       color: "#667",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this._spinText = new Text(this, "a = 0.70M (70%)", {
       font: `${Screen.responsive(9, 12, 13)}px monospace`,
       color: "#667",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this._orbitText = new Text(this, "r = 10.00  \u03A9_drag = 0.0200", {
       font: `${Screen.responsive(9, 12, 13)}px monospace`,
       color: "#667",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
-    const items = [this._titleText, this._equationText, this._massText, this._spinText, this._orbitText];
+    this._hudItems = [this._titleText, this._equationText, this._massText, this._spinText, this._orbitText];
+    this._hudItems.forEach((item) => {
+      if (item.shape) item.shape.originX = 0.5;
+      this._infoScene.add(item);
+    });
+    this._layoutHud();
+  }
+
+  _layoutHud() {
+    if (!this._infoScene || !this._hudItems) return;
+
     const spacing = Screen.responsive(18, 26, 30);
     let y = 0;
-    for (const item of items) {
+    for (const item of this._hudItems) {
       item.x = 0;
       item.y = y;
+      item.align = "center";
+      item.originX = 0.5;
+      if (item.shape) item.shape.originX = 0.5;
       y += spacing;
-      this._infoScene.add(item);
     }
-    this.pipeline.add(this._infoScene);
+
+    this._infoScene.originX = 0.5;
+    this._infoScene.height = y;
+    this._infoScene.markBoundsDirty();
   }
 
   _updateInfoHeader() {
@@ -281,10 +298,8 @@ class KerrDemo extends Game {
   // ── Buttons ────────────────────────────────────────────────────────────
 
   _buildButtons() {
-    const { btnMargin, btnSize, btnGap } = CONFIG;
-    const centerY = btnMargin + btnSize / 2;
+    const { btnSize } = CONFIG;
 
-    // Settings toggle button (always visible)
     this._settingsBtn = new ToggleButton(this, {
       text: "\u2699",
       width: btnSize,
@@ -295,11 +310,8 @@ class KerrDemo extends Game {
         else this.infoPanel.hide();
       },
     });
-    this._settingsBtn.x = btnMargin + btnSize / 2;
-    this._settingsBtn.y = centerY;
     this.pipeline.add(this._settingsBtn);
 
-    // New Black Hole button (always visible, right of settings)
     this._shuffleBtn = new Button(this, {
       text: "\u21BB",
       width: btnSize,
@@ -316,9 +328,19 @@ class KerrDemo extends Game {
       colorPressedText: "#fff",
       onClick: () => this.shuffleParameters(),
     });
-    this._shuffleBtn.x = btnMargin + btnSize + btnGap + btnSize / 2;
-    this._shuffleBtn.y = centerY;
     this.pipeline.add(this._shuffleBtn);
+    this._layoutButtons();
+  }
+
+  _layoutButtons() {
+    if (!this._settingsBtn || !this._shuffleBtn) return;
+    const { btnMargin, btnSize, btnGap } = CONFIG;
+    const y = btnMargin + btnSize / 2;
+    // [gear] [shuffle] flush to the top-right
+    this._shuffleBtn.x = this.width - btnMargin - btnSize / 2;
+    this._shuffleBtn.y = y;
+    this._settingsBtn.x = this.width - btnMargin - btnSize - btnGap - btnSize / 2;
+    this._settingsBtn.y = y;
   }
 
   /**
@@ -341,14 +363,8 @@ class KerrDemo extends Game {
       Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize),
     );
 
-    // Info header repositioning
-    if (this._infoScene) {
-      applyAnchor(this._infoScene, {
-        anchor: Position.TOP_LEFT,
-        anchorOffsetX: Screen.responsive(10, 10, 10),
-        anchorOffsetY: 66,
-      });
-    }
+    this._layoutHud();
+    this._layoutButtons();
 
     // Close modal on resize
     if (this.infoPanel && this.infoPanel.visible) {
