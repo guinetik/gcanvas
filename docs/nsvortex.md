@@ -18,6 +18,7 @@ The seeded spirals, two colored wave families, pulse envelopes, angular modes, a
 - Scrubbing pauses playback. Choose a palette or tempo, toggle the waves, and adjust camera zoom and auto orbit in the accordion panel.
 - Core scales retains the radius, height, speed, energy readouts and logarithmic chart from Fluid Singularities. About the paper explains the artistic interpretation and links to the source.
 - Follow core keeps shrinking structures visible. Fixed world scale shows their actual normalized contraction; eventually the core falls below one pixel.
+- On larger screens, the Fixed scale inset compares the initial outline with the shrinking core. It follows the same drag/orbit angle as the main artwork while keeping its own scale. Both main views show a faint starting-view outline. Follow core magnifies only the live core, so the outline is a framing reference there; use Fixed world scale or the inset to compare actual sizes. Both references use the current seed; the inset is hidden with the interface and omitted from artwork exports.
 - Seed generates another filament arrangement and stores its number in the URL. A shared `?seed=42` reproduces the geometry. `?paused=1` starts paused.
 - Save artwork exports a PNG without the canvas interface. Reset time & camera returns to the start while preserving the current play/pause state; Replay at the endpoint starts playback again.
 - Reduced-motion preference starts paused. Hidden tabs suspend the game loop.

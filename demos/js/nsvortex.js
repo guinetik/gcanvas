@@ -2,7 +2,7 @@ import { Game, Screen, THEMES } from "../../src/index.js";
 import { coreScales, SINGULARITY_CONFIG as MODEL } from "./singularity-model.js";
 import { LOOM_CONFIG, loomState } from "./nsvortex-model.js";
 import { PALETTES } from "./navier-stokes-looks.js";
-import { VortexField } from "./nsvortex-field.js";
+import { VortexField, VortexScaleInset } from "./nsvortex-field.js";
 import { UI_CONFIG, buildVortexUI, syncVortexUI } from "./nsvortex-ui.js";
 
 const CONFIG = {
@@ -39,6 +39,8 @@ export class NSVortexDemo extends Game {
     this.panelOpen = !this.compact && !this.clean;
     this.field = new VortexField(this);
     this.pipeline.add(this.field);
+    this.scaleInset = new VortexScaleInset(this);
+    this.pipeline.add(this.scaleInset);
     buildVortexUI(this);
     this.listen(document, "DOMContentLoaded", () => this.layoutUI());
     // Match the other fluid demos: Input owns touch/mouse dispatch and UI capture.
@@ -152,8 +154,7 @@ export class NSVortexDemo extends Game {
 
   positionCaption() {
     if (!this.caption) return;
-    const available = !this.compact && this.panel?.visible ? this.panel.x : this.width;
-    this.caption.x = Math.max(UI_CONFIG.margin, (available - this.caption.width) / 2);
+    this.caption.x = Math.max(UI_CONFIG.margin, (this.width - this.caption.width) / 2);
     this.caption.y = this.height - this.caption.height - UI_CONFIG.captionBottom;
   }
 
@@ -179,6 +180,7 @@ export class NSVortexDemo extends Game {
       this.positionCaption();
     }
     if (this.limitReadout) this.limitReadout.visible = !this.clean && !this.embed && !(this.compact && p.visible);
+    this.scaleInset.visible = !this.clean && !this.embed;
     for (const id of ["info", "info-toggle"]) {
       const element = document.getElementById(id);
       if (element) element.style.display = this.clean || this.embed ? "none" : "";

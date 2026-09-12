@@ -6,6 +6,9 @@ const CONFIG = {
   seed: 42, maxDt: 0.05, background: "#030910", mobileWidth: 740,
   camera: { perspective: 2200, rotationX: 0.38, rotationY: 0.2, screenRotation: -0.27 },
   drag: 0.006, orbit: 0.08, zoom: { min: 0.3, max: 3, wheel: 0.001 },
+  reference: { stride: 8, color: "rgba(112,162,180,0.22)" },
+  inset: { x: 8, width: 164, height: 145, scale: 32, minWidth: 1000, minHeight: 670,
+    initial: "#456372", current: "#70e2da", text: "#a7bec7" },
   gpu: {
     lineWidth: 1.3, visual: { ...PALETTES.copper, maxAlpha: 0.44, hueJitter: 0 },
     blink: { intensityBoost: 1.35, saturationBoost: 1.3, alphaBoost: 2.5 },
@@ -36,19 +39,37 @@ export class VortexField extends GameObject {
     this.reseed(); this.resize();
   }
 
-  reseed() { this.strands = createWeave(this.game.seed); }
+  reseed() {
+    this.strands = createWeave(this.game.seed);
+    // Freeze the initial geometry, but project it through the live camera.
+    this.referencePaths = this.strands.filter((_, i) => i % CONFIG.reference.stride < 2)
+      .map(strand => Array.from({ length: MODEL.samples }, (_, j) => filamentPoint(strand, j / (MODEL.samples - 1), 0)));
+  }
   resize() {
     this.width = this.game.width; this.height = this.game.height;
     const available = !this.game.compact && this.game.panel?.visible ? this.game.panel.x : this.width;
     this.scale = Math.min(available * 0.34, this.height * 0.28);
-    this.cx = available * 0.5; this.cy = this.height * 0.45;
+    // Controls overlay the scene; keep the artwork aligned with the canvas title.
+    this.cx = this.width * 0.5; this.cy = this.height * 0.45;
     if (this.gpu.width !== this.width || this.gpu.height !== this.height) this.gpu.resize(this.width, this.height);
   }
 
-  project(point) {
-    const v = this.game.state.view, scale = this.scale;
-    const p = this.camera.project(point.x * v.radial * scale, -point.z * v.axial * scale, point.y * v.radial * scale);
-    return { x: this.cx + p.x * this.game.zoom, y: this.cy + p.y * this.game.zoom, z: p.z };
+  project(point, radial = this.game.state.view.radial, axial = this.game.state.view.axial,
+    scale = this.scale, cx = this.cx, cy = this.cy, zoom = this.game.zoom) {
+    const p = this.camera.project(point.x * radial * scale, -point.z * axial * scale, point.y * radial * scale);
+    return { x: cx + p.x * zoom, y: cy + p.y * zoom, z: p.z };
+  }
+
+  drawReference(radial = 1, axial = 1, color = CONFIG.reference.color,
+    scale = this.scale, cx = this.cx, cy = this.cy, zoom = this.game.zoom) {
+    for (const path of this.referencePaths) {
+      let previous;
+      for (const point of path) {
+        const p = this.project(point, radial, axial, scale, cx, cy, zoom);
+        if (previous) Painter.lines.line(previous.x, previous.y, p.x, p.y, color, 1);
+        previous = p;
+      }
+    }
   }
 
   segment(a, b, color, alpha, blink) {
@@ -116,5 +137,30 @@ export class VortexField extends GameObject {
         }
       }, { saveState: true });
     }
+    // Keep the starting-view outline visible even when the live core is magnified.
+    this.drawReference();
+  }
+}
+
+/** The initial/current size comparison shares the main camera, without its zoom. */
+export class VortexScaleInset extends GameObject {
+  constructor(game) { super(game, { origin: "top-left", interactive: false }); }
+
+  draw() {
+    super.draw();
+    const game = this.game, c = CONFIG.inset;
+    if (game.width < c.minWidth || game.height < c.minHeight) return;
+    const y = (game.height - c.height) / 2;
+    Painter.shapes.roundRect(c.x, y, c.width, c.height, 8, game.theme.colors.darkerBg, game.theme.colors.subtleBorder, 1);
+    Painter.useCtx(ctx => {
+      ctx.beginPath(); ctx.rect(c.x, y + 28, c.width, c.height - 50); ctx.clip();
+      const cx = c.x + c.width / 2, cy = game.height / 2 + 8;
+      game.field.drawReference(1, 1, c.initial, c.scale, cx, cy, 1);
+      game.field.drawReference(game.scales.radius, game.scales.height, c.current, c.scale, cx, cy, 1);
+    }, { saveState: true });
+    const font = `10px ${game.theme.fonts.family}`;
+    Painter.text.fillText("FIXED SCALE", c.x + 12, y + 20, c.text, font);
+    Painter.text.fillText(game.scales.radius * c.scale < 1 ? "Core below one pixel" : "Initial / current core",
+      c.x + 12, y + c.height - 10, c.text, font);
   }
 }
