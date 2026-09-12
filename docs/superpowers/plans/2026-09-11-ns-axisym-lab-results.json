@@ -1,0 +1,153 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "initial-ring-solve",
+      "passed": true,
+      "fault": null,
+      "poisson": {
+        "converged": true,
+        "reason": "converged",
+        "sweeps": 672,
+        "residual": 0.00021490882500074804,
+        "target": 0.0002733572602272034
+      }
+    },
+    {
+      "name": "real-gpu",
+      "passed": true,
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "lovelace",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    },
+    {
+      "name": "paused-clock",
+      "passed": true
+    },
+    {
+      "name": "visible-direction-arrows",
+      "passed": true,
+      "arrowPixels": 4434
+    },
+    {
+      "name": "unchanged-field-reuses-image",
+      "passed": true
+    },
+    {
+      "name": "single-step",
+      "passed": true
+    },
+    {
+      "name": "ring-evolution",
+      "passed": true,
+      "steps": 75,
+      "time": 0.10178375278308026,
+      "wallSeconds": 3.407800000011921,
+      "relativeImageChange": 0.13246300696051377,
+      "energy": 0.1317261904478073
+    },
+    {
+      "name": "pause-stable",
+      "passed": true
+    },
+    {
+      "name": "render-gamma",
+      "passed": true,
+      "symmetry": 1,
+      "dynamicRange": 208
+    },
+    {
+      "name": "render-omega",
+      "passed": true,
+      "symmetry": 1,
+      "dynamicRange": 186
+    },
+    {
+      "name": "render-source",
+      "passed": true,
+      "symmetry": 1,
+      "dynamicRange": 250
+    },
+    {
+      "name": "render-streamlines",
+      "passed": true,
+      "symmetry": 1,
+      "dynamicRange": 246
+    },
+    {
+      "name": "render-swirl",
+      "passed": true,
+      "symmetry": 1,
+      "dynamicRange": 244
+    },
+    {
+      "name": "render-preserves-state",
+      "passed": true,
+      "fullFieldReadbacks": 0,
+      "profileReadbackBytes": 8704
+    },
+    {
+      "name": "profile-values-and-time",
+      "passed": true,
+      "profileError": 9.331852202087987e-8
+    },
+    {
+      "name": "failed-step-pauses",
+      "passed": true
+    },
+    {
+      "name": "preset-burgers",
+      "passed": true
+    },
+    {
+      "name": "preset-oseen",
+      "passed": true
+    },
+    {
+      "name": "viscosity-reset",
+      "passed": true
+    },
+    {
+      "name": "under-resolution-visible",
+      "passed": true
+    },
+    {
+      "name": "grid-reset",
+      "passed": true
+    },
+    {
+      "name": "fast-preview-reset",
+      "passed": true
+    },
+    {
+      "name": "reset-during-step",
+      "passed": true
+    },
+    {
+      "name": "unsupported-webgpu-card",
+      "passed": true
+    },
+    {
+      "name": "device-loss-pauses",
+      "passed": true
+    },
+    {
+      "name": "no-gpu-validation-errors",
+      "passed": true,
+      "errors": []
+    },
+    {
+      "name": "desktop-no-overflow",
+      "passed": true
+    },
+    {
+      "name": "mobile-instruments",
+      "passed": true
+    }
+  ],
+  "elapsedMs": 6631.0999999940395
+}

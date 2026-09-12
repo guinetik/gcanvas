@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Axisymmetric Navier–Stokes Lab · GCanvas</title>
+  <meta name="description" content="A live WebGPU Navier–Stokes solver with swirl, physical diagnostics, analytic checks, and interacting vortex rings." />
+  <link rel="stylesheet" href="demos.css" />
+  <link rel="stylesheet" href="ns-lab.css" />
+</head>
+<body class="ns-lab">
+  <header class="lab-header">
+    <div><span class="eyebrow">PHYSICS</span><h1>Axisymmetric <span>Navier–Stokes Lab</span></h1>
+    <p>Viscous flow with swirl. Computed live on your GPU.</p></div>
+    <div class="header-actions"><span id="run-state" class="badge" role="status">INITIALIZING</span><button id="panel-toggle" aria-controls="instruments" aria-expanded="false">Instruments</button></div>
+  </header>
+  <main class="lab-workspace">
+    <section class="field-panel" aria-label="Computed flow field">
+      <div class="field-heading"><span>SLICE THROUGH THE CYLINDER <small>r–z plane · mirrored at the center line</small></span><span id="clock">t = 0.00000</span></div>
+      <p id="flow-guide" class="flow-guide">Two rings, each shown twice in cross-section. Spin is around the axis, so these patches do not rotate on screen. Watch them deform and spread as simulation time advances.</p>
+      <div class="viewport">
+        <canvas id="game" aria-label="Mirrored axisymmetric flow field. Use the view selector to show angular momentum, vorticity, swirl source, or streamlines."></canvas>
+        <div id="unavailable" class="unavailable" hidden><h2 id="unavailable-title">WebGPU is needed for this lab</h2><p id="unavailable-reason"></p><button id="retry">Try again</button></div>
+      </div>
+      <div class="view-controls">
+        <label>Field <select id="view"><option value="gamma">Angular momentum Γ</option><option value="omega">Vorticity magnitude |ω|</option><option value="source">Swirl source ∂z(a²)</option><option value="streamlines">Streamlines ψ</option><option value="swirl">Regularized swirl a</option></select></label>
+        <label class="check"><input id="vectors" type="checkbox" checked /> Flow direction arrows</label>
+        <label class="check"><input id="plain" type="checkbox" /> Plain color</label>
+        <label class="range-label">Contrast <input id="contrast" type="range" min="-1" max="1" value="0" step="0.05" /></label>
+      </div>
+      <div class="legend"><span id="legend-low">−1</span><span class="colorbar"></span><span id="legend-high">+1</span><small id="legend-note">Γ = r uθ · color range held fixed during evolution</small></div>
+      <p class="field-caption">Every structure is axisymmetric. Left and right show the same radial field; arrows reverse their radial component across the axis.</p>
+    </section>
+    <aside id="instruments" class="instruments">
+      <div class="instrument-tabs" role="tablist" aria-label="Lab instruments">
+        <button id="experiment-tab" role="tab" aria-controls="experiment-pane" aria-selected="true">Experiment</button>
+        <button id="numerics-tab" role="tab" aria-controls="numerics-pane" aria-selected="false" tabindex="-1">Numerics</button>
+        <button id="charts-tab" role="tab" aria-controls="charts-pane" aria-selected="false" tabindex="-1">Charts</button>
+      </div>
+      <section id="experiment-pane" class="controls-card" role="tabpanel" aria-labelledby="experiment-tab">
+        <div class="section-heading"><h2>Experiment</h2><span id="resolution-label">32 × 64</span></div>
+        <label class="preset-label">Experiment <select id="preset"><option value="driven">Driven vortices · continuous</option><option value="rings">Decaying swirl rings</option><option value="burgers">Burgers · steady check</option><option value="oseen">Lamb–Oseen · viscous decay</option></select></label>
+        <div class="transport"><button id="play" class="primary" disabled>Pause</button><button id="step" disabled>Step</button><button id="reset" disabled>Reset ↺</button></div>
+        <div class="parameter-grid">
+          <label>Viscosity ν <output id="nu-value">0.010</output><input id="nu" type="range" min="-3" max="-1" step="0.1" value="-2" /></label>
+          <label>Grid <select id="grid"><option value="32" selected>32 × 64 · preview</option><option value="64">64 × 128</option><option value="128">128 × 256</option><option value="256">256 × 512 · slow</option></select></label>
+        </div>
+        <div class="small-controls"><label>Step budget / frame <select id="budget"><option>1</option><option>2</option><option selected>4</option></select></label><span>Space pause · R reset · V view</span></div>
+        <div id="drive-controls" class="parameter-grid drive-controls">
+          <label>Drive strength <output id="drive-strength-value">3.0</output><input id="drive-strength" type="range" min="0" max="5" step="0.25" value="3" /></label>
+          <label>Drive period · sim time <select id="drive-period"><option value="1.2">1.2 · faster</option><option value="2.4" selected>2.4 · normal</option><option value="4.8">4.8 · slower</option></select></label>
+        </div>
+        <p id="drive-note" class="muted">External swirl drive · changes restart the experiment.</p>
+        <label id="stir-control" class="stir-control">Tap / drag swirl <select id="stir-sign"><option value="1">Positive +</option><option value="-1">Negative −</option></select></label>
+        <p id="stir-note" class="muted" role="status">Tap or drag inside the field to stir. Shift reverses swirl.</p>
+        <p id="playback-note" class="playback-note">Measuring simulated-time progress…</p>
+        <button id="fast-preview" hidden>Use fast preview · resets run</button>
+        <p id="boundary-label" class="boundary">Closed cylinder · no-slip walls · Thom closure</p>
+        <p id="preset-note" class="muted">Two driven swirl regions sustain evolving vortices.</p>
+      </section>
+      <section id="numerics-pane" class="diagnostics-card" role="tabpanel" aria-labelledby="numerics-tab" hidden>
+        <div class="section-heading"><h2>Numerical status</h2><span id="accepted-step">step 0</span></div>
+        <p id="status-detail" role="status">Compiling the solver and presentation shaders…</p>
+        <dl class="metrics"><div><dt>Accepted Δt</dt><dd id="dt">—</dd></div><div><dt>Step limit</dt><dd id="limit">—</dd></div>
+          <div><dt>Poisson / target</dt><dd id="poisson">—</dd></div><div><dt>Sweeps</dt><dd id="sweeps">—</dd></div>
+          <div><dt>Divergence</dt><dd id="divergence">—</dd></div><div><dt>Wall slip</dt><dd id="slip">—</dd></div>
+          <div><dt>Steps / second</dt><dd id="steps-rate">—</dd></div><div><dt>Core width / Δr</dt><dd id="core">—</dd></div></dl>
+        <p id="resolution-note" class="muted"></p>
+      </section>
+      <section id="charts-pane" class="charts-card" role="tabpanel" aria-labelledby="charts-tab" hidden><div class="section-heading"><h2>Accepted-state diagnostics</h2><span id="chart-time">t = 0</span></div>
+        <div class="chart-host"><canvas id="charts" aria-label="Physical-time charts of maximum vorticity and speed, energy and enstrophy, and a radial swirl profile."></canvas></div>
+        <label class="slice-label">Cross-section z <input id="slice" type="range" min="-0.95" max="0.95" step="0.01" value="0.35" /><output id="slice-value">0.35</output></label>
+        <p id="profile-note" class="muted">Blue: computed uθ(r). Orange: analytic reference when available.</p>
+      </section>
+    </aside>
+  </main>
+  <footer><span>WEBGPU COMPUTE <b>·</b> GCANVAS PRESENTATION</span><a href="../test/ns-axisym/browser/index.html?debug" id="validation-link">Run solver validation ↗</a><button id="about-toggle" aria-controls="about" aria-expanded="false">What am I seeing?</button></footer>
+  <section id="about" class="demo-info" aria-label="What you are seeing and how to explore" hidden>
+    <button id="about-close" aria-label="Close experiment notes">Close ×</button>
+    <span class="eyebrow">PHYSICS</span><h2>A peek inside a swirling cylinder</h2>
+    <p>Imagine cutting a cylinder of moving fluid down the middle. You’re looking at that slice. The fluid wraps around the dashed center line, so each ring appears on both sides: the left and right patches belong to the same ring.</p>
+    <p>In the default view, orange and blue mean opposite spin directions. Brightness shows how much spin the fluid carries. The arrows show which way fluid moves within the slice. Think of them as little wind vanes: they turn in place, and their length does not measure speed. Much of the spinning motion goes around the cylinder, out of the screen.</p>
+    <p><strong>Driven vortices</strong> keeps adding spin in two moving regions. <strong>Decaying rings</strong> lets the motion gradually fade. The other two presets are reference examples: Burgers should stay steady, while Lamb–Oseen slowly spreads out.</p>
+    <p>Tap or drag in the driven experiment to add spin. The circles mark where your push is being applied. They fade over <strong>0.5 units of simulation time</strong>, which can take many real seconds. While paused, your pushes wait for Play or Step.</p>
+    <ul class="controls">
+      <li><kbd>Field</kbd> switch between spin, twisting strength and flow lines</li>
+      <li><kbd>Tap / drag</kbd> stir; hold Shift to reverse the spin</li>
+      <li><kbd>Space</kbd> pause or play</li>
+      <li><kbd>Step</kbd> advance one small simulation step</li>
+      <li><kbd>R</kbd> reset the experiment</li>
+      <li><kbd>V</kbd> cycle through views</li>
+    </ul>
+    <p>Start with the preview grid for quicker motion. Watch the time counter: simulation time advances more slowly on finer grids. Changing the experiment, viscosity, grid or drive settings starts a fresh run. Contrast only changes how it looks.</p>
+    <details>
+      <summary>The math, if you’re curious</summary>
+      <p>“Axisymmetric” means the flow looks the same as you turn around the center line. We calculate a slice and use that symmetry to describe the whole cylinder.</p>
+      <div class="math">a = u<sub>θ</sub> / r &nbsp; · &nbsp; χ = ω<sub>θ</sub> / r<br />∂<sub>t</sub>a + u·∇a = 2a∂<sub>z</sub>φ + νL₅a + S<sub>a</sub><br />∂<sub>t</sub>χ + u·∇χ = ∂<sub>z</sub>(a²) + νL₅χ<br />−L₅φ = χ<br />L₅ = ∂<sub>rr</sub> + (3/r)∂<sub>r</sub> + ∂<sub>zz</div>
+      <p>u is velocity, ω is vorticity (local twisting), ν is viscosity, and S<sub>a</sub> adds spin in the driven experiment. The helper φ gives the flow within the slice:</p>
+      <div class="math">u<sub>r</sub> = −r∂<sub>z</sub>φ<br />u<sub>z</sub> = 2φ + r∂<sub>r</sub>φ</div>
+      <p>The ring presets use stationary walls where fluid velocity is zero. Streamlines follow contours of ψ = r²φ. Color limits stay fixed during a run, making changes in strength easier to compare.</p>
+    </details>
+    <details>
+      <summary>What the checks tell us</summary>
+      <p>The reference examples compare the calculation with known solutions. Numerics shows how well each step satisfies the solver’s targets; Charts tracks motion and energy over time. Passing one target does not guarantee that every detail is resolved, especially on a coarse grid.</p>
+      <p>This lab explores a symmetric fluid model. It does not reproduce the OpenAI paper’s full construction or test its singularity result.</p>
+    </details>
+  </section>
+  <script type="module" src="./js/ns-lab.js"></script>
+</body>
+</html>

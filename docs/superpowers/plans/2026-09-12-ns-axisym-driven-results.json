@@ -1,0 +1,227 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "driven-initialization",
+      "passed": true
+    },
+    {
+      "name": "accepted-phase-0",
+      "passed": true,
+      "time": 0,
+      "step": 0
+    },
+    {
+      "name": "accepted-phase-1",
+      "passed": true,
+      "time": 0.6079835558023025,
+      "step": 448
+    },
+    {
+      "name": "accepted-phase-2",
+      "passed": true,
+      "time": 1.2159753369362734,
+      "step": 896
+    },
+    {
+      "name": "accepted-phase-3",
+      "passed": true,
+      "time": 1.8022533068404334,
+      "step": 1328
+    },
+    {
+      "name": "accepted-phase-4",
+      "passed": true,
+      "time": 2.4102447839476397,
+      "step": 1776
+    },
+    {
+      "name": "accepted-phase-5",
+      "passed": true,
+      "time": 3.018238196824654,
+      "step": 2224
+    },
+    {
+      "name": "sustained-visible-change-5",
+      "passed": true,
+      "time": 3.018238196824654,
+      "step": 2224,
+      "energy": 0.028301117941737175,
+      "maxU": 0.47205600142478943,
+      "imageChange": 0.32408570397936937
+    },
+    {
+      "name": "accepted-phase-6",
+      "passed": true,
+      "time": 3.6045175640351226,
+      "step": 2656
+    },
+    {
+      "name": "sustained-visible-change-6",
+      "passed": true,
+      "time": 3.6045175640351226,
+      "step": 2656,
+      "energy": 0.022932905703783035,
+      "maxU": 0.4343087673187256,
+      "imageChange": 0.3739071687775618
+    },
+    {
+      "name": "accepted-phase-7",
+      "passed": true,
+      "time": 4.212511483649289,
+      "step": 3104
+    },
+    {
+      "name": "sustained-visible-change-7",
+      "passed": true,
+      "time": 4.212511483649289,
+      "step": 3104,
+      "energy": 0.03212308511137962,
+      "maxU": 0.4998816251754761,
+      "imageChange": 0.40813366868477874
+    },
+    {
+      "name": "accepted-phase-8",
+      "passed": true,
+      "time": 4.8205054042627244,
+      "step": 3552
+    },
+    {
+      "name": "sustained-visible-change-8",
+      "passed": true,
+      "time": 4.8205054042627244,
+      "step": 3552,
+      "energy": 0.024001047015190125,
+      "maxU": 0.4311371445655823,
+      "imageChange": 0.3904239787067378
+    },
+    {
+      "name": "accepted-phase-9",
+      "passed": true,
+      "time": 5.406785646307915,
+      "step": 3984
+    },
+    {
+      "name": "sustained-visible-change-9",
+      "passed": true,
+      "time": 5.406785646307915,
+      "step": 3984,
+      "energy": 0.032169487327337265,
+      "maxU": 0.49582380056381226,
+      "imageChange": 0.35743001592879237
+    },
+    {
+      "name": "accepted-phase-10",
+      "passed": true,
+      "time": 6.014780374309071,
+      "step": 4432
+    },
+    {
+      "name": "sustained-visible-change-10",
+      "passed": true,
+      "time": 6.014780374309071,
+      "step": 4432,
+      "energy": 0.03971218317747116,
+      "maxU": 0.5514245629310608,
+      "imageChange": 0.39006126511535893
+    },
+    {
+      "name": "no-full-state-reads",
+      "passed": true
+    },
+    {
+      "name": "paused-drive-stays-still",
+      "passed": true
+    },
+    {
+      "name": "zero-drive-resets",
+      "passed": true
+    },
+    {
+      "name": "zero-drive-decays",
+      "passed": true,
+      "before": 0.16403836011886597,
+      "after": 0.1355668306350708
+    }
+  ],
+  "snapshots": [
+    {
+      "time": 0,
+      "step": 0,
+      "energy": 0.16403836011886597,
+      "maxU": 1.0412180423736572,
+      "imageChange": null
+    },
+    {
+      "time": 0.6079835558023025,
+      "step": 448,
+      "energy": 0.10083889961242676,
+      "maxU": 0.8632691502571106,
+      "imageChange": 0.5070663899880135
+    },
+    {
+      "time": 1.2159753369362734,
+      "step": 896,
+      "energy": 0.024727100506424904,
+      "maxU": 0.2808547616004944,
+      "imageChange": 0.40856292235716646
+    },
+    {
+      "time": 1.8022533068404334,
+      "step": 1328,
+      "energy": 0.03197323530912399,
+      "maxU": 0.40224093198776245,
+      "imageChange": 0.34243670194939463
+    },
+    {
+      "time": 2.4102447839476397,
+      "step": 1776,
+      "energy": 0.05553855746984482,
+      "maxU": 0.6176179647445679,
+      "imageChange": 0.3220736224318524
+    },
+    {
+      "time": 3.018238196824654,
+      "step": 2224,
+      "energy": 0.028301117941737175,
+      "maxU": 0.47205600142478943,
+      "imageChange": 0.32408570397936937
+    },
+    {
+      "time": 3.6045175640351226,
+      "step": 2656,
+      "energy": 0.022932905703783035,
+      "maxU": 0.4343087673187256,
+      "imageChange": 0.3739071687775618
+    },
+    {
+      "time": 4.212511483649289,
+      "step": 3104,
+      "energy": 0.03212308511137962,
+      "maxU": 0.4998816251754761,
+      "imageChange": 0.40813366868477874
+    },
+    {
+      "time": 4.8205054042627244,
+      "step": 3552,
+      "energy": 0.024001047015190125,
+      "maxU": 0.4311371445655823,
+      "imageChange": 0.3904239787067378
+    },
+    {
+      "time": 5.406785646307915,
+      "step": 3984,
+      "energy": 0.032169487327337265,
+      "maxU": 0.49582380056381226,
+      "imageChange": 0.35743001592879237
+    },
+    {
+      "time": 6.014780374309071,
+      "step": 4432,
+      "energy": 0.03971218317747116,
+      "maxU": 0.5514245629310608,
+      "imageChange": 0.39006126511535893
+    }
+  ],
+  "elapsedMs": 149686.09999999404
+}
