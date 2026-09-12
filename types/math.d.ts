@@ -627,3 +627,40 @@ export function reynoldsNumber(velocity: number, length: number, viscosity: numb
  * @param pressure - Pressure
  */
 export function pressureGradient(density: number, pressure: number): number;
+
+/** Planar MAC-grid solver. World height = 1; y points down. */
+export interface FluidGridOptions {
+  nx?: number;
+  ny?: number;
+  viscosity?: number;
+  iterations?: number;
+  relaxation?: number;
+  fade?: number;
+}
+
+export class FluidGrid2D {
+  constructor(options?: FluidGridOptions);
+  readonly nx: number;
+  readonly ny: number;
+  readonly stride: number;
+  readonly size: number;
+  readonly h: number;
+  readonly width: number;
+  viscosity: number;
+  fade: number;
+  iterations: number;
+  relaxation: number;
+  time: number;
+  readonly u: Float32Array;
+  readonly v: Float32Array;
+  readonly pressure: Float32Array;
+  readonly dye: Float32Array[];
+  clear(): void;
+  velocity(x: number, y: number): [number, number];
+  sample(field: Float32Array, x: number, y: number, xmax?: number, ymax?: number): number;
+  splat(x: number, y: number, dx: number, dy: number, radius: number, color: [number, number, number], amount?: number, spin?: number): void;
+  project(dt?: number): void;
+  divergenceRMS(): number;
+  /** Advance by a positive timestep no larger than 0.05 seconds. */
+  step(dt: number, transportDye?: boolean): void;
+}

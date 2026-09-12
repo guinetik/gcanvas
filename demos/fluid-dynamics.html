@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fluid Dynamics · GCanvas</title>
+  <meta name="description" content="Stir a living canvas of ink. Interactive planar Navier–Stokes flow, pressure projection and transported dye, built with GCanvas." />
+  <link rel="stylesheet" href="demos.css" />
+  <script type="module" src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <span class="info-eyebrow">physics</span>
+    <h1>Fluid Dynamics · Ink Flow</h1>
+    <p class="dek">Push the fluid. Watch the ink curl and mix.</p>
+    <p>The colors are ink carried by a moving fluid. Drag to push it across the screen, or hold in one spot to spin up a little whirlpool. The tiny moving streaks help you follow the current.</p>
+    <p>Automatic stirring keeps fresh ink flowing. Turn <strong>Auto stir</strong> down to zero to paint freely. Palettes recolor the ink already on screen; higher ink quality preserves finer ribbons.</p>
+    <div class="math">∂<sub>t</sub>u + (u·∇)u = −∇p + ν∇²u + f<br />∇·u = 0</div>
+    <p class="notes">The Navier–Stokes equations describe the flow: pressure keeps it from bunching up, viscosity smooths it, and your gestures add a push.</p>
+    <ul class="controls">
+      <li><kbd>Drag / swipe</kbd> push fluid and add ink</li>
+      <li><kbd>Tap / hold</kbd> add a swirl; a new stroke changes ink color</li>
+      <li><kbd>Shift</kbd> reverse the swirl</li>
+      <li><kbd>Space</kbd> pause or resume; touching the fluid also resumes</li>
+      <li><kbd>R</kbd> start with fresh ink</li>
+      <li><kbd>H</kbd> show or hide controls, at the top right</li>
+    </ul>
+    <p class="links"><a href="ns-lab.html">Axisymmetric lab</a> · <a href="nsvortex.html">Navier–Stokes Vortex artwork</a></p>
+  </div>
+  <canvas id="game" tabindex="0" aria-label="Fluid Dynamics. Drag or touch to push fluid and paint ink. Hold to spin. Space pauses, R resets, H toggles controls."></canvas>
+  <script type="module" src="./js/fluid-dynamics.js"></script>
+</body>
+</html>

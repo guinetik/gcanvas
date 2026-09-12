@@ -271,7 +271,9 @@ export {
   viscosityDrag,
   surfaceTension,
   reynoldsNumber,
-  pressureGradient
+  pressureGradient,
+  FluidGrid2D,
+  FluidGridOptions
 } from './math';
 
 // ==========================================================================
