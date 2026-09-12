@@ -7,6 +7,14 @@ import { injectSeo, needsSeoUpdate } from "../../scripts/inject-seo.js";
 const demosDir = join(dirname(fileURLToPath(import.meta.url)), "../../demos");
 const SKIP = new Set(["index.html", "home.html", "404.html"]);
 
+// The two suites below read every demo page off disk - 100+ sequential reads.
+// That is ~70ms on an idle machine, but vitest's 5s default is thin enough that
+// a saturated worker pool or a slow CI runner can starve the reads and time the
+// test out while every assertion in it would have passed. Nothing here is
+// genuinely long-running, so the ceiling is set where scheduling noise can't
+// reach it.
+const DISK_SCAN_TIMEOUT = 30000; // ms
+
 function count(html, pattern) {
   return (html.match(pattern) || []).length;
 }
@@ -180,7 +188,7 @@ describe("injectSeo", () => {
       expect(count(out, /property=["']og:url["']/gi), file).toBeLessThanOrEqual(1);
       expect(count(out, /property=["']og:description["']/gi), file).toBeLessThanOrEqual(1);
     }
-  });
+  }, DISK_SCAN_TIMEOUT);
 });
 
 describe("demo HTML on disk", () => {
@@ -193,5 +201,5 @@ describe("demo HTML on disk", () => {
       expect(count(html, /property=["']og:url["']/gi), file).toBeLessThanOrEqual(1);
       expect(count(html, /property=["']og:description["']/gi), file).toBeLessThanOrEqual(1);
     }
-  });
+  }, DISK_SCAN_TIMEOUT);
 });

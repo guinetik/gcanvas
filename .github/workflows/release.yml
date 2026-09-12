@@ -1,0 +1,162 @@
+# GCanvas release pipeline.
+#
+# There is no npm token anywhere in here. npm trusts THIS FILE in THIS repo via
+# OIDC, registered once on npmjs.com under Package settings -> Trusted publisher.
+# Renaming this file silently revokes the publish grant, so don't.
+#
+# The trusted publisher is currently scoped to `npm stage publish`, which means
+# every run lands in npm's staging area and sits there until you approve or
+# reject it on npmjs.com. Rejecting does not burn the version number. When you
+# tick "Allow npm publish" on npm and want releases to go live unattended, swap
+# the one command in the Stage job for `npm publish`.
+#
+# The release version is whatever package.json says. Bump it, merge to master,
+# approve on npm. Versions already published are skipped rather than failed, so
+# ordinary master pushes stay green instead of dying on a duplicate tag.
+
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE: "@guinetik/gcanvas"
+
+jobs:
+  guard:
+    name: Decide what needs releasing
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.pkg.outputs.version }}
+      tag: ${{ steps.pkg.outputs.tag }}
+      npm: ${{ steps.npm.outputs.needed }}
+      github: ${{ steps.gh.outputs.needed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from package.json
+        id: pkg
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Is this version already on npm?
+        id: npm
+        run: |
+          version="${{ steps.pkg.outputs.version }}"
+          if npm view "$PACKAGE@$version" version >/dev/null 2>&1; then
+            echo "::notice::$PACKAGE@$version is already on npm - skipping publish"
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Does a GitHub release already exist?
+        id: gh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.pkg.outputs.tag }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::notice::GitHub release $tag already exists - skipping"
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summary
+        run: |
+          {
+            echo "### Release plan for \`${{ steps.pkg.outputs.version }}\`"
+            echo ""
+            echo "| channel | action |"
+            echo "| --- | --- |"
+            echo "| npm | ${{ steps.npm.outputs.needed == 'true' && 'stage publish' || 'skip (already published)' }} |"
+            echo "| GitHub | ${{ steps.gh.outputs.needed == 'true' && 'create release' || 'skip (release exists)' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  stage:
+    name: Stage ${{ needs.guard.outputs.version }} on npm
+    needs: guard
+    if: needs.guard.outputs.npm == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # the OIDC token npm exchanges for a publish grant
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # Staged publishing needs npm >= 11.15.0 and Node >= 22.14.0.
+      # The Node 22 runner image ships an older npm, so upgrade it in place.
+      - name: Ensure npm supports staged publishing
+        run: |
+          npm install -g npm@latest
+          node --version
+          npm --version
+
+      - run: npm ci
+      # test:ci, not test: the full suite includes multi-minute convergence
+      # sweeps that starve the vitest worker's RPC and fail the run even when
+      # every assertion passes. See vitest.ci.config.js.
+      - run: npm run test:ci
+      - run: npm run build
+
+      - name: Stage publish
+        run: npm stage publish
+
+      - name: Point at the approval queue
+        run: |
+          {
+            echo "### Staged on npm"
+            echo ""
+            echo "\`$PACKAGE@${{ needs.guard.outputs.version }}\` is waiting for approval."
+            echo "Approve or reject it at <https://www.npmjs.com/package/$PACKAGE/access>."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Handed to the release job so the bundles shipped to GitHub are byte-for-byte
+      # the ones that were staged, rather than a second independent build.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  release:
+    name: GitHub release ${{ needs.guard.outputs.tag }}
+    needs: [guard, stage]
+    # The two channels are independent: this runs whenever GitHub is missing the
+    # release, including when npm staging was skipped because it already has the
+    # version. It only stands down if staging actually failed.
+    if: ${{ !cancelled() && needs.guard.result == 'success' && needs.stage.result != 'failure' && needs.guard.outputs.github == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        if: needs.stage.result == 'success'
+        with:
+          name: dist
+          path: dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.guard.outputs.tag }}
+          name: GCanvas ${{ needs.guard.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/gcanvas.umd.min.js
+            dist/gcanvas.es.min.js

@@ -1,0 +1,80 @@
+# Publishes the demo site to GitHub Pages at https://gcanvas.guinetik.com.
+#
+# Pages must be set to the "GitHub Actions" build type for this to work, not the
+# legacy gh-pages branch source. That is a one-time repo setting and no action
+# will do it for you - configure-pages only sets build_type on a site it creates
+# from scratch and swallows the 409 on an existing one. Flip it with:
+#
+#   gh api -X PUT repos/guinetik/gcanvas/pages -f build_type=workflow
+#
+# There is no deploy key or token: deploy-pages trades the job's OIDC token for
+# a deployment, which is why the deploy job needs `id-token: write` alongside
+# `pages: write`.
+#
+# npm run build:demo does the actual work and stays the source of truth for how
+# the site is assembled - build the library, inject SEO, copy demos/ into
+# public/, then rewrite every ../src/ import to the built ESM bundle. This
+# workflow only runs it and uploads the result, so a local `npm run build:demo`
+# still reproduces exactly what ships.
+#
+# Note that build:demo rewrites demos/*.html in place via inject-seo. That is
+# fine here because the checkout is thrown away, but it does mean a CI deploy
+# can carry SEO tags that were never committed.
+
+name: Deploy demos
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time. Queued runs collapse to the newest, but a run that
+# is already deploying is left alone to finish rather than cancelled midway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build demo site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build demo site
+        run: npm run build:demo
+
+      # public/CNAME comes from demos/CNAME and keeps the custom domain; 404.html
+      # is picked up by Pages automatically.
+      - name: Verify the custom domain survived the build
+        run: |
+          test -f public/CNAME || { echo "::error::public/CNAME is missing - the custom domain would break"; exit 1; }
+          echo "CNAME: $(cat public/CNAME)"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write # create the deployment
+      id-token: write # the OIDC token deploy-pages exchanges for it
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
