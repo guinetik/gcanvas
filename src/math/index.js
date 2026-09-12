@@ -30,3 +30,4 @@ export * from "./fluid.js";
 export * from "./hydrogen.js";
 export * from "./zeta.js";
 export * from "./kepler.js";
+export { burgersPreset, lambOseenPreset, interactingRingsPreset } from "./ns-axisym/presets.js";
