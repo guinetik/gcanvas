@@ -10,8 +10,20 @@
 
 import { Painter, Screen } from "/gcanvas.es.min.js";
 import { formatElapsed } from "./artemis2.data.js";
+import { controlsReserve } from "./artemis2.controls.js";
 
 const FONT = 'Datatype, ui-monospace, monospace';
+
+/** Title block origin — top-left, parked below HTML #info-toggle (32×32 at 8,8) */
+export function hudTitleOrigin() {
+  const m = Screen.responsive(0.75, 0.9, 1);
+  return {
+    x: Screen.responsive(14, 20, 24),
+    y: 8 + 32 + Screen.responsive(8, 10, 12),
+    m,
+    height: (16 + 34 + 20 + 20) * m,
+  };
+}
 
 // ── Ring buffer for sparkline history ──
 class History {
@@ -72,11 +84,10 @@ export const Artemis2HUD = {
     const s = this._state;
     if (!s) return;
 
-    const m = Screen.responsive(0.75, 0.9, 1); // global scale
+    const { x: tx, y: titleY, m } = hudTitleOrigin();
 
-    // ── Title block (top-left) ──
-    const tx = Screen.responsive(14, 20, 24);
-    let ty = Screen.responsive(14, 20, 24);
+    // ── Title block (top-left, below #info-toggle) ──
+    let ty = titleY;
 
     Painter.useCtx((ctx) => {
       ctx.textAlign = 'left';
@@ -118,14 +129,15 @@ export const Artemis2HUD = {
       ctx.fillText(formatElapsed(s.elapsed), tx, ty);
     }, { saveState: true });
 
-    // ── Telemetry cards (bottom-left, 2×2 grid) ──
+    // ── Telemetry cards (2×2, parked above the control panel) ──
     const cardW = Screen.responsive(135, 150, 165);
-    const cardH = Screen.responsive(68, 76, 84);
+    const cardH = Screen.responsive(52, 76, 84);
     const gap = Screen.responsive(6, 8, 10);
     const padX = Screen.responsive(10, 12, 14);
     const padY = Screen.responsive(8, 9, 10);
     const baseX = Screen.responsive(10, 18, 24);
-    const baseY = game.height - (2 * cardH + gap) - Screen.responsive(10, 18, 24);
+    const gridH = 2 * cardH + gap;
+    const baseY = game.height - controlsReserve() - gridH - Screen.responsive(56, 12, 12);
 
     const labelSize = Screen.responsive(8, 9, 10);
     const valueSize = Screen.responsive(18, 20, 24);

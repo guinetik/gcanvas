@@ -863,16 +863,31 @@ export class CaosPlayground extends Attractor3DDemo {
 
   // ─── Panel Construction ─────────────────────────────────────────────
 
-  _buildPanel() {
+  /**
+   * Single source of truth for panel geometry.
+   *
+   * `_layoutPanel()` only knows two shapes — mobile bottom sheet or fixed-width
+   * sidebar — so the width must branch on exactly the same condition. Deriving
+   * it from `Screen.responsive()` instead used to hand tablet-width viewports
+   * (768–1024px) a full-width panel that was then positioned as a 300px
+   * sidebar: everything right of the viewport edge (slider values, dropdown
+   * chevrons, button labels) fell off-canvas, and the parameter sliders — which
+   * were built against `CONFIG.panel.width` — landed off-screen entirely.
+   *
+   * @private
+   * @returns {{isMobile: boolean, panelWidth: number, padding: number, itemWidth: number}}
+   */
+  _panelMetrics() {
     const isMobile = Screen.isMobile;
-    const panelWidth = Screen.responsive(
-      this.width - 20,
-      this.width - 20,
-      CONFIG.panel.width,
-    );
+    const panelWidth = isMobile ? this.width - 20 : CONFIG.panel.width;
     const padding = isMobile
       ? CONFIG.panel.mobilePadding
       : CONFIG.panel.padding;
+    return { isMobile, panelWidth, padding, itemWidth: panelWidth - padding * 2 };
+  }
+
+  _buildPanel() {
+    const { isMobile, panelWidth, padding } = this._panelMetrics();
     const { debugColor, spacing } = CONFIG.panel;
     const cfg = this.config;
 
@@ -902,7 +917,7 @@ export class CaosPlayground extends Attractor3DDemo {
     // Position set after layoutAll() via _layoutPanel() when panel height is known
     this.pipeline.add(this.panel);
 
-    const sw = panelWidth - padding * 2; // usable item width
+    const sw = panelWidth - padding * 2; // usable item width — matches _panelMetrics().itemWidth
     this._controls = {};
 
     // ── Attractor Dropdown (always visible, not in a section) ─────
@@ -1298,16 +1313,17 @@ export class CaosPlayground extends Attractor3DDemo {
   }
 
   _layoutPanel() {
-    if (Screen.isMobile) {
+    const { isMobile, panelWidth } = this._panelMetrics();
+
+    if (isMobile) {
       // Bottom sheet: full width, anchored to bottom (AccordionGroup uses top-left origin)
-      const panelWidth = this.width - 20;
       const maxH = this.height * CONFIG.panel.mobileMaxHeight;
       const panelH = Math.min(this.panel._height || 400, maxH);
       this.panel.x = 10; // 10px left margin
       this.panel.y = this.height - panelH - 10; // 10px bottom margin
     } else {
-      // Desktop: right sidebar (top-left origin)
-      this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
+      // Desktop + tablet: right sidebar (top-left origin)
+      this.panel.x = this.width - panelWidth - CONFIG.panel.marginRight;
       this.panel.y = CONFIG.panel.marginTop;
     }
   }
@@ -1349,9 +1365,6 @@ export class CaosPlayground extends Attractor3DDemo {
   // ─── Info Overlay (attractor title card) ───────────────────────────
 
   _buildInfoOverlay() {
-    console.log("buildInfoOverlay");
-    const isMobile = Screen.isMobile;
-
     this._infoScene = new VerticalLayout(this, {
       x: 0,
       y: 0,
@@ -1493,11 +1506,7 @@ export class CaosPlayground extends Attractor3DDemo {
   // ─── Dynamic Parameter Sliders ─────────────────────────────────────
 
   _buildParamSliders(attractorKey) {
-    const panelWidth = Screen.isMobile ? this.width - 20 : CONFIG.panel.width;
-    const padding = Screen.isMobile
-      ? CONFIG.panel.mobilePadding
-      : CONFIG.panel.padding;
-    const sw = panelWidth - padding * 2;
+    const sw = this._panelMetrics().itemWidth;
 
     // Remove old sliders if any
     if (this._paramSliders.length > 0) {

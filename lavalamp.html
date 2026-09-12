@@ -33,14 +33,13 @@
 
 <body>
   <div id="info">
-    <strong>Lava Lamp</strong> — Metaball lava lamp with heat dynamics.<br/>
-    <span style="color:#CCC">
-      <li><code>ON/OFF</code> — Toggle power. Watch the wax cool and rise!</li>
-      <li><code>Heat zones</code> — Smooth thermal transitions between hot/cold.</li>
-      <li><code>Buoyancy</code> — Hot blobs rise, cold blobs sink.</li>
-      <li><code>Heat transfer</code> — Nearby blobs exchange temperature.</li>
-      <li><code>Metaballs</code> — Blobs merge and split organically.</li>
-    </span>
+    <span class="info-eyebrow">genart</span>
+    <h1>Lava Lamp</h1>
+    <p class="dek">Metaball wax on a slow thermal loop.</p>
+    <p>Blobs heat at the bottom, rise, cool at the top, and sink — trading temperature with their neighbors as they merge and split.</p>
+    <ul class="controls">
+      <li><kbd>ON/OFF</kbd> toggle the lamp's heat and watch the wax settle</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/lavalamp.js"></script>

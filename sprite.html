@@ -31,7 +31,17 @@
 
 <body>
   <div id="info">
-    <strong>Sprite Demo</strong> - Demonstrates the Sprite class, a MovieClip-style GameObject with frame-by-frame timeline animation. Each Sprite contains a collection of Shapes as frames, with timeline controls including play(), pause(), stop(), goto(), gotoAndStop(), gotoAndPlay(), and rewind(). This showcases how to create frame-by-frame animations similar to Adobe Flash MovieClips within the gcanvas engine's abstractions.
+    <span class="info-eyebrow">motion</span>
+    <h1>Sprite Timeline</h1>
+    <p class="dek">Flash-style MovieClips, rebuilt on canvas.</p>
+    <p>Eight frame-by-frame sprite animations in a grid — pulsing, shape-shifting, a pixel walker. The orange Controlled sprite answers to your keyboard.</p>
+    <p class="notes"><strong>Sprite</strong> plays <strong>Shape</strong> frames on a timeline with play, pause, gotoAndStop and rewind, laid out in a <strong>TileLayout</strong>.</p>
+    <ul class="controls">
+      <li><kbd>Space</kbd> play/pause the controlled sprite</li>
+      <li><kbd>←</kbd><kbd>→</kbd> step one frame</li>
+      <li><kbd>R</kbd> rewind</li>
+      <li><kbd>S</kbd> stop</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/sprite.js"></script>

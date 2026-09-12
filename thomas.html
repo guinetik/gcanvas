@@ -31,19 +31,22 @@
 </head>
 <body>
   <div id="info">
-    <strong>Thomas' Cyclically Symmetric Attractor</strong> (1999)<br/>
-    <span style="color:#CCC">
-      <li>dx/dt = sin(y) - bx</li>
-      <li>dy/dt = sin(z) - by</li>
-      <li>dz/dt = sin(x) - bz</li>
-      <li>b = 0.208186</li>
-      <li>Elegant three-fold symmetry</li>
-      <li>Blue = slow, Green = fast</li>
-      <li>Drag to rotate</li>
-      <li>Scroll/pinch to zoom</li>
-      <li>Double-click to reset zoom</li>
-      <li>Press R to restart</li>
-    </span>
+    <span class="info-eyebrow">math</span>
+    <h1>Thomas Attractor</h1>
+    <p class="dek">René Thomas' cyclically symmetric attractor, 1999.</p>
+    <p>Three sines, one damping term, elegant three-fold symmetry. Trails are colored by speed: blue = slow, green = fast.</p>
+    <div class="math">
+      dx/dt = sin(y) − bx<br/>
+      dy/dt = sin(z) − by<br/>
+      dz/dt = sin(x) − bz<br/>
+      b = 0.208186
+    </div>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Dbl-click</kbd> reset view</li>
+      <li><kbd>R</kbd> restart</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/thomas.js"></script>

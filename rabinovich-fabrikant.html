@@ -31,19 +31,22 @@
 </head>
 <body>
   <div id="info">
-    <strong>Rabinovich-Fabrikant Attractor</strong> (1979)<br/>
-    <span style="color:#CCC">
-      <li>dx/dt = y(z - 1 + x²) + γx</li>
-      <li>dy/dt = x(3z + 1 - x²) + γy</li>
-      <li>dz/dt = -2z(α + xy)</li>
-      <li>α = 0.14, γ = 0.10</li>
-      <li>Modulation instability in dissipative media</li>
-      <li>Violet = slow, Red = fast</li>
-      <li>Drag to rotate</li>
-      <li>Scroll/pinch to zoom</li>
-      <li>Double-click to reset zoom</li>
-      <li>Press R to restart</li>
-    </span>
+    <span class="info-eyebrow">math</span>
+    <h1>Rabinovich&ndash;Fabrikant Attractor</h1>
+    <p class="dek">Modulation instability in a dissipative medium, 1979.</p>
+    <p>A stiff system of nested petal-like loops, integrated with RK4. Cyan marks the gliding arcs, hot pink the sharp turns.</p>
+    <div class="math">
+      dx/dt = y(z &minus; 1 + x²) + γx<br/>
+      dy/dt = x(3z + 1 &minus; x²) + γy<br/>
+      dz/dt = &minus;2z(α + xy)<br/>
+      α = 0.14 &nbsp; γ = 0.10
+    </div>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Dbl-click</kbd> reset view</li>
+      <li><kbd>R</kbd> restart</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/rabinovich-fabrikant.js"></script>

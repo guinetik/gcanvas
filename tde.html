@@ -33,15 +33,16 @@
 
 <body>
   <div id="info">
-    <strong>Tidal Disruption Event</strong> — A star torn apart by a black hole.<br />
-    <span style="color:#CCC">
-      <li><code>Tidal Forces</code> — Star stretches and deforms.</li>
-      <li><code>Spaghettification</code> — Matter streams into debris.</li>
-      <li><code>Accretion</code> — Debris spirals into the black hole.</li>
-      <li><code>Flare</code> — Luminous burst at peak accretion.</li>
-      <li><code>Drag</code> — Orbit the camera around.</li>
-      <li><code>Click</code> — Restart the event.</li>
-    </span>
+    <span class="info-eyebrow">physics</span>
+    <h1>Tidal Disruption Event</h1>
+    <p class="dek">A star torn apart by a black hole.</p>
+    <p>Tidal forces stretch the star into spaghetti, the debris stream spirals inward, and accretion peaks in a luminous flare. Stylized and not to scale.</p>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> orbit (auto-rotates when idle)</li>
+      <li><kbd>&#9733; Star View</kbd> follow the star</li>
+      <li><kbd>&#9654; Replay</kbd> restart the event</li>
+    </ul>
+    <p class="links"><a href="blackhole.html">Accretion disk</a></p>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/tde/index.js"></script>

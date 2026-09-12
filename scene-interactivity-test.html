@@ -32,13 +32,15 @@
 
     <body>
         <div id="info">
-            <strong>Scene Interactivity Test</strong> — Verifies that
-            GameObjects inside Scenes receive input events correctly.<br />
-            <span style="color: #ccc">
-                <li>Click on any colored box to see event fired</li>
-                <li>Hover over boxes to see hover state change</li>
-                <li>Nested scenes work too!</li>
-            </span>
+          <span class="info-eyebrow">scene</span>
+          <h1>Scene Interactivity Test</h1>
+          <p class="dek">Proof that input events survive scene nesting.</p>
+          <p>Five clickable boxes, two of them inside a nested scene. Each one counts its clicks and brightens on hover.</p>
+          <p class="notes">Interactive <strong>GameObjects</strong> inside <strong>Scenes</strong> receive <strong>inputdown</strong>, <strong>mouseover</strong>, and <strong>mouseout</strong> events.</p>
+          <ul class="controls">
+            <li><kbd>Click</kbd> a box to bump its counter</li>
+            <li><kbd>Hover</kbd> a box to highlight it</li>
+          </ul>
         </div>
         <canvas id="game"></canvas>
 

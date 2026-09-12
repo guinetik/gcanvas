@@ -33,7 +33,11 @@
 
 <body>
   <div id="info">
-    <strong>Motion Demo</strong> - Showcases reusable animations. Each animation is implemented through a tween system that handles interpolation between values over time. The demo uses a tile-based layout to organize the animations in a grid, with each animation contained in its own box. Under the hood, the system manages animation timing through a central update loop, applying mathematical transformations to the shapes' positions based on normalized time values (0-1) that loop continuously.
+    <span class="info-eyebrow">motion</span>
+    <h1>Motion Behaviors</h1>
+    <p class="dek">Sixteen ways to move a shape, side by side.</p>
+    <p>A grid of tiles, each looping one motion behavior — hops, springs, orbits, bezier paths, waypoint patrols and more.</p>
+    <p class="notes"><strong>Motion</strong> primitives drive each tile through the <strong>Transform</strong> API, shaped by <strong>Easing</strong> curves in a <strong>TileLayout</strong> grid.</p>
   </div>
   <canvas id="game"></canvas>
   <script type="module">

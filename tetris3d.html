@@ -31,15 +31,17 @@
 </head>
 <body>
     <div id="info">
-        <strong>3D Tetris</strong> — A 3D falling block puzzle game.<br/>
-        <span style="color:#CCC">
-            <li>WASD / Arrow Keys: Move piece</li>
-            <li>Q/E: Rotate piece</li>
-            <li>SPACE: Hard drop (instant)</li>
-            <li>Mouse drag: Rotate camera view</li>
-            <li>View Button: Cycle preset camera angles</li>
-            <li>ENTER: Start/Restart | ESC: Pause</li>
-        </span>
+        <span class="info-eyebrow">games</span>
+        <h1>3D Tetris</h1>
+        <p class="dek">Tetris, but the well has three dimensions.</p>
+        <p>Pieces fall into a 6&times;6&times;16 well — fill a whole layer to clear it. The View button cycles preset camera angles.</p>
+        <ul class="controls">
+          <li><kbd>WASD</kbd> / <kbd>Arrows</kbd> move piece</li>
+          <li><kbd>Q/E</kbd> <kbd>R/F</kbd> <kbd>Z/C</kbd> rotate on each axis</li>
+          <li><kbd>Space</kbd> hard drop</li>
+          <li><kbd>Enter</kbd> start · <kbd>Esc</kbd> pause</li>
+          <li><kbd>Drag</kbd> rotate camera</li>
+        </ul>
     </div>
     <canvas id="game"></canvas>
     <script type="module" src="./js/tetris/index.js"></script>

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Shapes Demo</title>
     <link rel="stylesheet" href="demos.css" />
+    <script src="./js/info-toggle.js"></script>
 
   <!-- SEO:injected -->
   <meta name="description" content="Shapes Demo - Interactive demo built with GCanvas, a modular 2D canvas rendering and game framework." />
@@ -31,6 +32,17 @@
 </head>
 
 <body>
+    <div id="info">
+      <span class="info-eyebrow">shapes</span>
+      <h1>Shape Gallery</h1>
+      <p class="dek">Every primitive in the library, on one grid.</p>
+      <p>A scrollable tile grid of every 2D and pseudo-3D shape, each labeled in its own cell. The 3D shapes tumble on their own.</p>
+      <p class="notes">A <strong>TileLayout</strong> of <strong>Group</strong> cells wrapped by <strong>ShapeGOFactory</strong>, animated with <strong>Tweenetik</strong>.</p>
+      <ul class="controls">
+        <li><kbd>Hover</kbd> pops a tile with an elastic tween</li>
+        <li><kbd>Click</kbd> reshuffles every shape's colors</li>
+      </ul>
+    </div>
     <canvas id="game"></canvas>
     <script type="module" src="./js/shapes.js"></script>
 </body>

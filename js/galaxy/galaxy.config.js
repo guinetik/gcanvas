@@ -322,4 +322,7 @@ export const CONFIG = {
     width: 44,
     height: 44,
   },
+  hud: {
+    top: 28, // below canvas edge; #info-toggle stays top-left
+  },
 };

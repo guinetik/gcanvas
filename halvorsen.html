@@ -31,19 +31,22 @@
 </head>
 <body>
   <div id="info">
-    <strong>Halvorsen Attractor</strong><br/>
-    <span style="color:#CCC">
-      <li>dx/dt = -ax - 4y - 4z - y²</li>
-      <li>dy/dt = -ay - 4z - 4x - z²</li>
-      <li>dz/dt = -az - 4x - 4y - x²</li>
-      <li>a = 1.89</li>
-      <li>Three-fold rotational symmetry</li>
-      <li>Blue = slow, Pink = fast</li>
-      <li>Drag to rotate</li>
-      <li>Scroll/pinch to zoom</li>
-      <li>Double-click to reset zoom</li>
-      <li>Press R to restart</li>
-    </span>
+    <span class="info-eyebrow">math</span>
+    <h1>Halvorsen Attractor</h1>
+    <p class="dek">Chaos with three-fold rotational symmetry.</p>
+    <p>One parameter, three cyclic equations, three intertwined spiral arms. Blue traces the slow glides, pink the fast plunges.</p>
+    <div class="math">
+      dx/dt = &minus;ax &minus; 4y &minus; 4z &minus; y²<br/>
+      dy/dt = &minus;ay &minus; 4z &minus; 4x &minus; z²<br/>
+      dz/dt = &minus;az &minus; 4x &minus; 4y &minus; x²<br/>
+      a = 1.89
+    </div>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Dbl-click</kbd> reset view</li>
+      <li><kbd>R</kbd> restart</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/halvorsen.js"></script>

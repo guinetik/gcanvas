@@ -65,6 +65,9 @@ const CONFIG = {
     width: 44,
     height: 44,
   },
+  hud: {
+    top: 16, // orbital label; #info-toggle stays top-left
+  },
 };
 
 const COLORMAPS = {
@@ -249,9 +252,9 @@ class HydrogenOrbitalDemo extends Game {
     // Screen detection (must be before _buildPanel)
     Screen.init(this);
 
-    // FPS counter
+    // FPS counter — bottom-right so it doesn't sit on the button row
     this.fps = new FPSCounter(this, {
-      anchor: Screen.isMobile ? "bottom-left" : "bottom-right",
+      anchor: "bottom-right",
     });
     this.pipeline.add(this.fps);
 
@@ -394,7 +397,7 @@ class HydrogenOrbitalDemo extends Game {
 
   _drawInfoPanel(ctx) {
     const cx = this.width / 2;
-    const startY = CONFIG.toggle.margin + CONFIG.toggle.height + 16;
+    const startY = CONFIG.hud.top;
 
     ctx.save();
     ctx.textAlign = "center";
@@ -716,6 +719,26 @@ class HydrogenOrbitalDemo extends Game {
 
   // ─── Mobile Toggle Button ──────────────────────────────────────────
 
+  _toggleSlot(index) {
+    const { margin, width, height } = CONFIG.toggle;
+    return {
+      x: margin + index * (width + margin) + width / 2,
+      y: this.height - margin - height / 2,
+    };
+  }
+
+  _layoutToggles() {
+    const place = (btn, index) => {
+      if (!btn) return;
+      const pos = this._toggleSlot(index);
+      btn.x = pos.x;
+      btn.y = pos.y;
+    };
+    place(this._mathBtn, 0);
+    place(this._bohrBtn, 1);
+    place(this._toggleBtn, 2);
+  }
+
   _buildToggleButton() {
     this._toggleBtn = new Button(this, {
       text: "\u2699",
@@ -723,8 +746,6 @@ class HydrogenOrbitalDemo extends Game {
       height: CONFIG.toggle.height,
       onClick: () => this._togglePanel(),
     });
-    this._toggleBtn.x = CONFIG.toggle.margin + CONFIG.toggle.width * 2 +CONFIG.toggle.width;
-    this._toggleBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
     this.pipeline.add(this._toggleBtn);
     this._toggleBtn.visible = Screen.isMobile;
     this._toggleBtn.interactive = Screen.isMobile;
@@ -741,9 +762,6 @@ class HydrogenOrbitalDemo extends Game {
         }
       },
     });
-    // Position to the right of the toggle button
-    this._mathBtn.x = CONFIG.toggle.margin + CONFIG.toggle.width / 2;
-    this._mathBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
     this.pipeline.add(this._mathBtn);
   }
 
@@ -758,10 +776,8 @@ class HydrogenOrbitalDemo extends Game {
         }
       },
     });
-    // Position to the right of the math button
-    this._bohrBtn.x = CONFIG.toggle.margin * 2 + CONFIG.toggle.width + CONFIG.toggle.width / 2;
-    this._bohrBtn.y = CONFIG.toggle.margin + CONFIG.toggle.height / 2;
     this.pipeline.add(this._bohrBtn);
+    this._layoutToggles();
   }
 
   _drawBohrOverlay(ctx) {
@@ -776,12 +792,12 @@ class HydrogenOrbitalDemo extends Game {
     const panelW = size;
     const panelH = size + 40;
 
-    // Mobile: top-center below buttons. Desktop: left, vertically centered
+    // Mobile: top-center. Desktop: left, vertically centered
     const px = Screen.isMobile
       ? (this.width - panelW) / 2
       : CONFIG.panel.marginRight;
     const py = Screen.isMobile
-      ? CONFIG.toggle.margin + CONFIG.toggle.height + 12
+      ? CONFIG.hud.top
       : (this.height - panelH) / 2;
 
     // Background
@@ -920,12 +936,12 @@ class HydrogenOrbitalDemo extends Game {
     const panelW = Screen.isMobile ? this.width - 40 : 320;
     const panelH = padding * 2 + lines.length * lineHeight;
 
-    // Mobile: top-center below buttons. Desktop: left, vertically centered
+    // Mobile: top-center. Desktop: left, vertically centered
     const px = Screen.isMobile
       ? (this.width - panelW) / 2
       : CONFIG.panel.marginRight;
     const py = Screen.isMobile
-      ? CONFIG.toggle.margin + CONFIG.toggle.height + 12
+      ? CONFIG.hud.top
       : (this.height - panelH) / 2;
 
     // Background
@@ -1003,8 +1019,9 @@ class HydrogenOrbitalDemo extends Game {
     if (Screen.isMobile) {
       const maxH = this.height * CONFIG.panel.mobileMaxHeight;
       const panelH = Math.min(this.panel._height || 400, maxH);
+      const btnBar = CONFIG.toggle.margin * 2 + CONFIG.toggle.height;
       this.panel.x = 10;
-      this.panel.y = this.height - panelH - 10;
+      this.panel.y = this.height - panelH - 10 - btnBar;
     } else {
       this.panel.x = this.width - CONFIG.panel.width - CONFIG.panel.marginRight;
       this.panel.y = CONFIG.panel.marginTop;
@@ -1106,6 +1123,7 @@ class HydrogenOrbitalDemo extends Game {
     if (!this.panel) return;
 
     this._layoutPanel();
+    this._layoutToggles();
 
     // Update toggle button visibility
     if (this._toggleBtn) {

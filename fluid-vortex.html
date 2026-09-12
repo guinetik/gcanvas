@@ -37,10 +37,19 @@
 </head>
 <body>
   <div id="info">
-    <strong>Fluid Vortex</strong> — A live fluid, written in light.
-    <p>Drag to stir. Hold to spin up a local eddy. Space pauses, R resets, H hides the interface. On mobile, tap Controls for settings.</p>
-    <p>This experiment connects GCanvas's 2D SPH fluid forces to the attractor trail renderer. Pressure and viscosity couple neighboring particles; an external vortex drive keeps the liquid circulating. Every line records a particle's actual recent motion.</p>
-    <p>Try Twin currents for interacting eddies or Free ink to remove the vortex drive. This is a stylized particle simulation with a circular boundary, separate from the analytic <a href="navier-stokes.html">Navier–Stokes vortex</a>. Bloom and glow are artistic effects.</p>
+    <span class="info-eyebrow">physics</span>
+    <h1>Fluid Vortex</h1>
+    <p class="dek">A live fluid, written in light.</p>
+    <p>SPH pressure and viscosity couple the particles while a vortex drive keeps the liquid circulating; every glowing line is a particle's actual recent motion. Stylized simulation in a circular boundary — the bloom is art, not physics.</p>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> stir</li>
+      <li><kbd>Hold</kbd> spin up an eddy</li>
+      <li><kbd>Space</kbd> pause</li>
+      <li><kbd>R</kbd> reset</li>
+      <li><kbd>H</kbd> hide interface</li>
+      <li><kbd>Controls</kbd> presets &amp; settings</li>
+    </ul>
+    <p class="links"><a href="navier-stokes.html">Navier&ndash;Stokes playground</a> · <a href="nsvortex.html">Navier&ndash;Stokes Vortex</a></p>
   </div>
   <canvas id="game" style="touch-action: none" aria-label="Interactive fluid vortex. Drag to stir, hold to spin. Space pauses, R resets, H hides controls."></canvas>
   <script type="module" src="./js/fluid-vortex.js"></script>

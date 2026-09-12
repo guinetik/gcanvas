@@ -81,15 +81,16 @@
     </head>
 
     <body>
-        <div id="info" class="light">
-            <strong>Transform API Demo</strong> — The <code>Transform</code> API
-            provides a consistent, chainable interface for modifying shape
-            properties. Use
-            <code>shape.transform.x(100).y(200).rotation(45).scale(0.8)</code>
-            for fluent chaining,
-            <code>shape.transform.set({ x: 100, rotation: 45 })</code> for batch
-            updates, or <code>shape.transform.translateBy(10, 20)</code> for
-            relative transforms. Click to randomize colors.
+        <div id="info">
+          <span class="info-eyebrow">shapes</span>
+          <h1>Transform API</h1>
+          <p class="dek">Chain it, batch it, or nudge it — one interface.</p>
+          <p>Four mini-demos animated through the same Transform interface: fluent chaining, group-wide transforms, batch set() updates, and animated position, rotation, and scale.</p>
+          <p class="notes">The <strong>Transform</strong> API on <strong>Shape</strong> and <strong>Group</strong>, with colors from <strong>Painter</strong>.</p>
+          <ul class="controls">
+            <li><kbd>Click</kbd> randomizes shape colors</li>
+            <li><kbd>Debug</kbd> button outlines every shape's bounds</li>
+          </ul>
         </div>
         <button id="debug-toggle">Toggle Debug</button>
         <canvas id="game"></canvas>

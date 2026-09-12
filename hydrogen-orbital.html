@@ -31,13 +31,20 @@
 </head>
 <body>
   <div id="info">
-    <strong>Quantum Orbitals</strong> — Electron probability clouds from Schr&ouml;dinger's equation.<br/>
-    <span style="color:#CCC">
-      <li>Select orbital preset or adjust quantum numbers n, l, m</li>
-      <li>&lambda; shows live math &middot; &#9883; shows the Bohr planetary model</li>
-      <li>Click + drag to rotate, scroll/pinch to zoom</li>
-      <li>Color = rank in probability density |&psi;|&sup2;</li>
-    </span>
+    <span class="info-eyebrow">physics</span>
+    <h1>Quantum Orbitals</h1>
+    <p class="dek">Electron probability clouds, sampled point by point.</p>
+    <p>Hydrogen orbitals from Schr&ouml;dinger's equation — pick a preset or dial in n, l, m; color ranks probability density |&psi;|&sup2;.</p>
+    <div class="math">
+      &psi;(r,&theta;,&phi;) = R&#8345;,&#8343;(r) · Y&#8343;&#7504;(&theta;,&phi;)
+    </div>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom (pinch on touch)</li>
+      <li><kbd>&lambda;</kbd> live math panel</li>
+      <li><kbd>&#9883;</kbd> Bohr planetary model</li>
+      <li><kbd>Panel</kbd> presets &amp; quantum numbers</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/hydrogen-orbital.js"></script>

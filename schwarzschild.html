@@ -33,14 +33,20 @@
 
 <body>
   <div id="info">
-    <strong>Schwarzschild Metric</strong> — General relativity with tensor math.<br/>
-    <span style="color:#CCC">
-      <li><code>Metric</code> — g<sub>μν</sub> tensor components shown live.</li>
-      <li><code>Geodesic</code> — Test particle follows curved spacetime.</li>
-      <li><code>Precession</code> — Orbit rotates (like Mercury).</li>
-      <li><code>Click</code> — Shuffle mass and orbital parameters.</li>
-      <li><code>Drag</code> — Rotate the 3D view.</li>
-    </span>
+    <span class="info-eyebrow">physics</span>
+    <h1>Schwarzschild Metric</h1>
+    <p class="dek">One mass, and the spacetime it bends.</p>
+    <p>The g<sub>μν</sub> tensor components update live while a test particle rides a geodesic, its orbit precessing like Mercury's. Schematic scales, not astrophysical ones.</p>
+    <div class="math">
+      ds² = &minus;(1&minus;r&#8347;/r)dt² + (1&minus;r&#8347;/r)&#8315;¹dr² + r²dΩ²
+    </div>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Dbl-click</kbd> reset view</li>
+      <li><kbd>&#9881;</kbd> settings panel</li>
+      <li><kbd>&#8635;</kbd> shuffle mass</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/schwarzschild.js"></script>

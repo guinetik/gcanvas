@@ -33,13 +33,17 @@
 
 <body>
   <div id="info">
-    <strong>Planetarium</strong> — Solar system with Keplerian orbital mechanics.<br />
-    <span style="color:#CCC">
-      <li>Drag to rotate view</li>
-      <li>Scroll / pinch to zoom</li>
-      <li>Two-finger drag to pan</li>
-      <li>Space to pause, double-click to reset</li>
-    </span>
+    <span class="info-eyebrow">3d</span>
+    <h1>Planetarium</h1>
+    <p class="dek">A solar system on real Keplerian rails.</p>
+    <p>The sun, planets, and moons orbit with proper eccentricity, plus an optional spacetime curvature grid.</p>
+    <p class="notes">Shaded <strong>Sphere3D</strong> bodies through a <strong>Camera3D</strong>, with <strong>Gesture</strong> handling zoom.</p>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotates the view</li>
+      <li><kbd>Scroll</kbd>/<kbd>pinch</kbd> zooms</li>
+      <li><kbd>Space</kbd> pauses the simulation</li>
+      <li><kbd>Double-click</kbd> resets the view</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
 

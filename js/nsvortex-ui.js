@@ -1,5 +1,7 @@
 import { GameObject, Painter, AccordionGroup, Slider, Dropdown, Button, Text, VerticalLayout } from "/gcanvas.es.min.js";
-import { coreScales, viewScales, playbackProgress, playbackDecades, SINGULARITY_CONFIG as MODEL } from "./singularity-model.js";
+import { coreScales, viewScales, SINGULARITY_CONFIG as MODEL } from "./singularity-model.js";
+import { PALETTES } from "./navier-stokes-looks.js";
+import { activePulses } from "./nsvortex-model.js";
 
 export const UI_CONFIG = {
   panelWidth: 300, margin: 12, panelTop: 48, padding: 14, spacing: 8,
@@ -90,7 +92,7 @@ class ScaleChart extends GameObject {
   }
 }
 
-export function buildSingularityUI(game) {
+export function buildVortexUI(game) {
   const c = UI_CONFIG;
   const panel = new AccordionGroup(game, {
     width: Math.min(c.panelWidth, game.width - c.margin * 2),
@@ -110,18 +112,20 @@ export function buildSingularityUI(game) {
   const controls = game.controls = {};
   controls.timeline = new Slider(game, {
     label: "PLAYBACK TIMELINE", width: panel.itemWidth, origin: "center",
-    min: 0, max: 1, step: 0.0001, value: playbackProgress(game.decades), friction: 1,
+    min: 0, max: 1, step: 0.0001, value: game.decades / MODEL.maxDecades, friction: 1,
     formatValue: (value) => `${(value * 100).toFixed(1)}%`,
-    onChange: (value) => { if (!game.syncing) { game.paused = true; game.setTime(playbackDecades(value)); } },
+    onChange: (value) => { if (!game.syncing) { game.paused = true; game.setTime(value * MODEL.maxDecades); } },
   });
   panel.addItem(controls.timeline);
   game.pauseButton = new Button(game, { text: "Pause", width: panel.itemWidth, height: c.buttonHeight, origin: "center", onClick: () => game.togglePause() });
-  game.resetButton = new Button(game, { text: "Reset experiment", width: panel.itemWidth, height: c.buttonHeight, origin: "center", onClick: () => game.reset() });
+  game.resetButton = new Button(game, { text: "Reset time & camera", width: panel.itemWidth, height: c.buttonHeight, origin: "center", onClick: () => game.reset() });
   panel.addItem(game.pauseButton);
   panel.addItem(game.resetButton);
   const view = panel.addSection("View & motion", { expanded: !game.compact });
-  const scales = panel.addSection("Core scales", { expanded: !game.compact });
-  game.sections = [view, scales];
+  const scales = panel.addSection("Core scales", { expanded: false });
+  const artwork = panel.addSection("Palette & seed", { expanded: false });
+  const paper = panel.addSection("About the paper", { expanded: false });
+  game.sections = [view, scales, artwork, paper];
   for (const [name, label, value, options, apply] of [
     ["view", "VIEW", game.magnify ? "magnify" : "fixed", [{ label: "Collapse · fixed scale", value: "fixed" }, { label: "Follow core · magnified", value: "magnify" }], (value) => { game.magnify = value === "magnify"; }],
     ["rate", "PLAYBACK", game.rate, [{ label: "Slow", value: 0.5 }, { label: "Normal", value: 1 }, { label: "Fast", value: 2 }], (value) => { game.rate = value; }],
@@ -145,6 +149,30 @@ export function buildSingularityUI(game) {
     onChange: (value) => { if (!game.syncing) game.autoMove = value; },
   });
   view.addItem(controls.autoMove);
+  controls.palette = new Dropdown(game, {
+    label: "PALETTE", value: game.palette, width: panel.itemWidth, origin: "center",
+    options: Object.entries(PALETTES).map(([value, palette]) => ({ value, label: palette.label })),
+    onChange: value => { if (!game.syncing) game.setPalette(value); },
+  });
+  artwork.addItem(controls.palette);
+  game.seedButton = new Button(game, { text: "New seed", width: panel.itemWidth, height: c.buttonHeight, origin: "center", onClick: () => game.reseed() });
+  artwork.addItem(game.seedButton);
+  game.saveButton = new Button(game, { text: "Save artwork · PNG", width: panel.itemWidth, height: c.buttonHeight, origin: "center", onClick: () => game.save() });
+  artwork.addItem(game.saveButton);
+  for (const line of [
+    "OpenAI · Navier–Stokes · §2",
+    "A contracting core, with waves",
+    "that grow, shear, then fade.",
+    "Core scales: h = 0.005; prefactors 1.",
+    "Geometry, light and timing: art.",
+    "Not a numerical PDE solution.",
+    "The paper uses forcing; this view",
+    "does not reproduce that forcing.",
+  ]) paper.addItem(new Text(game, line, { font: `11px ${game.theme.fonts.family}`, color: c.colors.height, origin: "center", align: "center", interactive: false }));
+  paper.addItem(new Button(game, { text: "Read the paper ↗", width: panel.itemWidth, height: c.buttonHeight, origin: "center",
+    onClick: () => window.open("https://cdn.openai.com/pdf/32d9f210-8b73-45e0-91bc-82a30aef8a9a/navier-stokes.pdf", "_blank", "noopener,noreferrer") }));
+  game.hideButton = new Button(game, { text: "Hide interface · H", width: panel.itemWidth, height: c.buttonHeight, origin: "center", onClick: () => game.toggleUI() });
+  panel.addItem(game.hideButton);
   game.metrics = {};
   for (const key of ["radius", "height", "speed", "energy"]) {
     const item = new Text(game, "", { font: `12px ${game.theme.fonts.family}`, color: c.colors[key], origin: "center", align: "center", interactive: false });
@@ -182,7 +210,7 @@ export function buildSingularityUI(game) {
     captionDraw();
   };
   for (const [name, text, size, color] of [
-    ["title", "FLUID SINGULARITIES", game.compact ? 18 : 26, c.colors.speed],
+    ["title", "NAVIER–STOKES VORTEX", game.compact ? 17 : 24, c.colors.speed],
     ["magnification", "", game.compact ? 10 : 12, c.colors.radius],
     ["status", "", game.compact ? 10 : 12, c.colors.height],
     ["hint", "Schematic geometry · drag to orbit", game.compact ? 9 : 11, c.colors.muted],
@@ -198,18 +226,23 @@ export function buildSingularityUI(game) {
   game.layoutUI();
 }
 
-export function syncSingularityUI(game) {
+export function syncVortexUI(game) {
   if (!game.controls) return;
   game.syncing = true;
-  game.controls.timeline.value = playbackProgress(game.decades);
+  game.controls.timeline.value = game.decades / MODEL.maxDecades;
   game.controls.zoom.value = game.zoom;
   game.controls.autoMove.value = game.autoMove;
+  game.controls.view.value = game.magnify ? "magnify" : "fixed";
+  game.controls.rate.value = game.rate;
+  game.controls.pulses.value = game.pulses ? "on" : "off";
+  game.controls.palette.value = game.palette;
   game.syncing = false;
   for (const [key, label] of [["radius", "Radius · τ^0.5"], ["height", "Height · τ^0.495"], ["speed", "Speed · τ^-0.505"], ["energy", "Core energy · τ^0.485"]]) {
     game.metrics[key].text = `${label}  ${formatScale(game.scales[key])}`;
   }
   game.pauseButton.text = game.paused ? (game.decades === MODEL.maxDecades ? "Replay" : "Play") : "Pause";
+  game.seedButton.text = `New seed · ${String(game.seed).padStart(4, "0")}`;
   game.magnification.text = game.magnify ? `Follow core · ${formatScale(viewScales(game.scales).zoom * game.zoom)} magnification` : `Collapse · ${game.zoom.toFixed(2)}× camera zoom`;
-  game.status.text = game.atDisplayLimit ? "Playback complete · Replay to restart" : `τ = ${game.scales.tau.toExponential(2)} · time remaining`;
-  game.hint.text = game.magnify ? "Auto magnification hides contraction · wheel zooms" : "Faint outline = starting size · wheel zooms";
+  game.status.text = game.notice || (game.atDisplayLimit ? "Playback complete · Replay to restart" : `τ = ${game.scales.tau.toExponential(2)} · waves ${activePulses(game.decades).map(p => p.generation + 1).join(" / ")}`);
+  game.hint.text = game.magnify ? "Auto magnification hides contraction · wheel zooms" : "Fixed world scale · shrinking core";
 }

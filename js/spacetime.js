@@ -17,8 +17,6 @@ import {
   applyAnchor,
   Position,
   Scene,
-  verticalLayout,
-  applyLayout,
   Screen,
   Gesture,
 } from "/gcanvas.es.min.js";
@@ -89,6 +87,10 @@ const CONFIG = {
   orbiterSize: 4, // Size of orbiting body
   orbiterColor: "#4af", // Color of orbiter
   orbiterGlow: "rgba(100, 180, 255, 0.6)",
+
+  hud: {
+    top: 28, // below canvas edge; #info-toggle stays top-left
+  },
 };
 
 class SpacetimeDemo extends Game {
@@ -165,57 +167,79 @@ class SpacetimeDemo extends Game {
   }
 
   setupInfoPanel() {
-    this.infoPanel = new Scene(this, { x: 0, y: 0 });
+    this.infoPanel = new Scene(this, { x: 0, y: 0, originX: 0.5 });
     applyAnchor(this.infoPanel, {
-      anchor: Position.TOP_LEFT,
-      anchorOffsetX: Screen.responsive(10, 10, 10),
-      anchorOffsetY: Screen.responsive(10, 10, 10),
+      anchor: Position.TOP_CENTER,
+      anchorMargin: CONFIG.hud.top,
+      anchorSetTextAlign: false,
     });
     this.pipeline.add(this.infoPanel);
+
+    const textOpts = { align: "center", baseline: "middle", originX: 0.5 };
 
     this.titleText = new Text(this, "Spacetime Curvature", {
       font: `bold ${Screen.responsive(18, 24, 28)}px monospace`,
       color: "#7af",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this.equationText = new Text(
       this,
       "g\u03BC\u03BD = \u03B7\u03BC\u03BD + h\u03BC\u03BD   |   R\u03BC\u03BD - \u00BDRg\u03BC\u03BD = 8\u03C0GT\u03BC\u03BD",
       {
-        font: `${Screen.responsive(14, 18, 20)}px monospace`,
+        font: `${Screen.responsive(8, 14, 20)}px monospace`,
         color: "#fff",
-        align: "left",
-        baseline: "middle",
+        ...textOpts,
       },
     );
 
     this.statsText = new Text(this, "Blackhole | Mass: 3.0 M\u2609", {
       font: `${Screen.responsive(9, 12, 13)}px monospace`,
       color: "#6d8",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this.hintsText = new Text(this, "click to shuffle \u00B7 drag to rotate \u00B7 scroll to zoom \u00B7 dbl-click to reset", {
       font: `${Screen.responsive(8, 10, 11)}px monospace`,
       color: "#889",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this.legendText = new Text(this, "Mass curves spacetime \u00B7 Objects follow geodesics", {
       font: `${Screen.responsive(8, 10, 11)}px monospace`,
       color: "#889",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
-    const textItems = [this.titleText, this.equationText, this.statsText, this.hintsText, this.legendText];
-    const layout = verticalLayout(textItems, { spacing: Screen.responsive(18, 26, 30), align: "left" });
-    applyLayout(textItems, layout.positions);
-    textItems.forEach((item) => this.infoPanel.add(item));
+    this._hudItems = [this.titleText, this.equationText, this.statsText, this.hintsText, this.legendText];
+    this._hudItems.forEach((item) => {
+      if (item.shape) item.shape.originX = 0.5;
+      this.infoPanel.add(item);
+    });
+    this._layoutHud();
+  }
+
+  _layoutHud() {
+    if (!this.infoPanel || !this._hudItems) return;
+
+    const spacing = Screen.responsive(18, 26, 30);
+    let y = 0;
+    for (const item of this._hudItems) {
+      item.x = 0;
+      item.y = y;
+      item.align = "center";
+      item.originX = 0.5;
+      if (item.shape) item.shape.originX = 0.5;
+      y += spacing;
+    }
+
+    this.infoPanel.originX = 0.5;
+    this.infoPanel.height = y;
+    this.infoPanel.markBoundsDirty();
+  }
+
+  onResize() {
+    this._layoutHud();
   }
 
   initGrid() {

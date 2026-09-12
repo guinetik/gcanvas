@@ -28,31 +28,31 @@ import { CONFIG, GALAXY_PRESETS, GALAXY_PARAMS } from "./galaxy.config.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Creates the top-left info panel with title and stats.
+ * Creates the top-center info panel with title and stats.
  *
  * @param {Game} game - The game instance
- * @returns {{ panel: Scene, statsText: Text, updateStats: (text: string) => void }}
+ * @returns {{ panel: Scene, statsText: Text, updateStats: (text: string) => void, layoutHud: () => void }}
  */
 export function createInfoPanel(game) {
-  const panel = new Scene(game, { x: 0, y: 0 });
+  const panel = new Scene(game, { x: 0, y: 0, originX: 0.5 });
   applyAnchor(panel, {
-    anchor: Position.TOP_LEFT,
-    anchorOffsetX: Screen.responsive(10, 10, 10),
-    anchorOffsetY: Screen.responsive(66, 10, 10),
+    anchor: Position.TOP_CENTER,
+    anchorMargin: CONFIG.hud.top,
+    anchorSetTextAlign: false,
   });
+
+  const textOpts = { align: "center", baseline: "middle", originX: 0.5 };
 
   const titleText = new Text(game, "Galaxy Playground", {
     font: `bold ${Screen.responsive(18, 24, 28)}px monospace`,
     color: "#7af",
-    align: "left",
-    baseline: "middle",
+    ...textOpts,
   });
 
   const statsText = new Text(game, "Spiral (S) | 3000 stars", {
     font: `${Screen.responsive(9, 12, 13)}px monospace`,
     color: "#99a",
-    align: "left",
-    baseline: "middle",
+    ...textOpts,
   });
 
   const hintsText = new Text(
@@ -61,26 +61,38 @@ export function createInfoPanel(game) {
     {
       font: `${Screen.responsive(8, 10, 11)}px monospace`,
       color: "#889",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     }
   );
 
-  const textItems = [titleText, statsText, hintsText];
-  const spacing = Screen.responsive(18, 26, 30);
-  let y = 0;
-  for (const item of textItems) {
-    item.x = 0;
-    item.y = y;
-    y += spacing;
+  const items = [titleText, statsText, hintsText];
+  items.forEach((item) => {
+    if (item.shape) item.shape.originX = 0.5;
     panel.add(item);
-  }
+  });
+
+  const layoutHud = () => {
+    const spacing = Screen.responsive(18, 26, 30);
+    let y = 0;
+    for (const item of items) {
+      item.x = 0;
+      item.y = y;
+      item.align = "center";
+      item.originX = 0.5;
+      if (item.shape) item.shape.originX = 0.5;
+      y += spacing;
+    }
+    panel.originX = 0.5;
+    panel.height = y;
+    panel.markBoundsDirty();
+  };
+  layoutHud();
 
   const updateStats = (text) => {
     if (statsText) statsText.text = text;
   };
 
-  return { panel, statsText, titleText, updateStats };
+  return { panel, statsText, titleText, updateStats, layoutHud };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

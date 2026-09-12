@@ -31,19 +31,22 @@
 </head>
 <body>
   <div id="info">
-    <strong>Rössler Attractor</strong> (1976)<br/>
-    <span style="color:#CCC">
-      <li>dx/dt = -y - z</li>
-      <li>dy/dt = x + ay</li>
-      <li>dz/dt = b + z(x - c)</li>
-      <li>a=0.2, b=0.2, c=5.7</li>
-      <li>Simple spiral with fold-back</li>
-      <li>Purple = slow, Orange = fast</li>
-      <li>Drag to rotate</li>
-      <li>Scroll/pinch to zoom</li>
-      <li>Double-click to reset zoom</li>
-      <li>Press R to restart</li>
-    </span>
+    <span class="info-eyebrow">math</span>
+    <h1>Rössler Attractor</h1>
+    <p class="dek">Chaos from a single fold, 1976.</p>
+    <p>A flat spiral ejects upward and folds back on itself, colored by speed: purple = slow, orange = fast.</p>
+    <div class="math">
+      dx/dt = −y − z<br/>
+      dy/dt = x + ay<br/>
+      dz/dt = b + z(x − c)<br/>
+      a = 0.2 &nbsp; b = 0.2 &nbsp; c = 5.7
+    </div>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> rotate</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Dbl-click</kbd> reset view</li>
+      <li><kbd>R</kbd> restart</li>
+    </ul>
   </div>
   <canvas id="game"></canvas>
   <script type="module" src="./js/rossler.js"></script>
