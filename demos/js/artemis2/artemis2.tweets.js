@@ -9,6 +9,8 @@
  */
 
 import { Scene, Painter, Screen } from "../../../src/index.js";
+import { hudTitleOrigin } from "./artemis2.hud.js";
+import { controlsReserve } from "./artemis2.controls.js";
 
 // Swap this to your R2 URL when ready
 const MEDIA_BASE = "https://pub-e41103fb8bb348f9a45834b39105b1f7.r2.dev/media/";
@@ -154,6 +156,7 @@ export class TweetFeed extends Scene {
     this._timeline = timeline;
     this._lastIndex = -1;
     this._lastSimDay = -1;
+    this._open = null; // null = follow desktop-on / mobile-off default
 
     // Click handler for video thumbnails
     this._onClick = (e) => this._handleClick(e);
@@ -369,20 +372,34 @@ export class TweetFeed extends Scene {
     super.draw();
   }
 
-  /** Position the feed on screen — just below the HUD title block */
-  reposition(canvasW, canvasH) {
-    this.x = FEED.marginLeft();
-    // HUD header height: startY(24) + agency(16) + title(34) + phase(20) + MET(20) + gap(10)
-    const m = Screen.responsive(0.75, 0.9, 1);
-    const hudTop = Screen.responsive(14, 20, 24);
-    const hudH = (16 + 34 + 20 + 20) * m;
-    this.y = Math.round(hudTop + hudH + 10 * m);
+  setOpen(on) {
+    this._open = !!on;
+    this._applyVisibility();
+  }
 
-    // Clip height: stop above the telemetry cards (2×2 grid + margin)
-    const cardH = Screen.responsive(68, 76, 84);
+  isOpen() {
+    return this.visible;
+  }
+
+  _applyVisibility() {
+    const compact = Screen.isMobile || this.game.width <= 768;
+    if (this._open === null) this._open = !compact;
+    this.visible = compact ? this._open : true;
+    this.interactive = this.visible;
+  }
+
+  /** Position the feed on screen — just below the HUD title block. */
+  reposition(canvasW, canvasH) {
+    this._applyVisibility();
+
+    this.x = FEED.marginLeft();
+    const origin = hudTitleOrigin();
+    this.y = Math.round(origin.y + origin.height + 10 * origin.m);
+
+    const cardH = Screen.responsive(56, 76, 84);
     const cardGap = Screen.responsive(6, 8, 10);
-    const cardMargin = Screen.responsive(10, 18, 24);
-    const cardsTop = canvasH - (2 * cardH + cardGap) - cardMargin;
+    const gridH = 2 * cardH + cardGap;
+    const cardsTop = canvasH - controlsReserve() - gridH - Screen.responsive(6, 10, 12);
     this._clipH = Math.max(0, cardsTop - this.y - cardGap);
 
     this._layoutSlots();
@@ -495,6 +512,7 @@ export class TweetFeed extends Scene {
 
   /** Hit-test click against media images → open in lightbox */
   _handleClick(e) {
+    if (!this.visible) return;
     const rect = this.game.canvas.getBoundingClientRect();
     const cx = (e.clientX - rect.left) * (this.game.canvas.width / rect.width) - this.x;
     const cy = (e.clientY - rect.top) * (this.game.canvas.height / rect.height) - this.y;

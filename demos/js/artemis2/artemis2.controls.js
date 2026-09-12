@@ -20,17 +20,9 @@ import {
 import { formatElapsed, TLI_DAY, MISSION_DAYS, PHASE_LABELS } from "./artemis2.data.js";
 
 const CTRL = {
-  panelHeight:   130,
-  padding:       16,
   bg:            'rgba(0,8,20,0.78)',
   border:        'rgba(70,150,220,0.35)',
   cornerRadius:  10,
-
-  // Vertical layout: buttons → clock → slider → phases
-  btnBarY:       32,    // center of HorizontalLayout row
-  clockY:        62,    // MET text
-  sliderY:       80,    // slider track center
-  phaseY:        98,    // phase labels
 
   // Slider
   trackColor:    'rgba(70,150,220,0.3)',
@@ -54,6 +46,36 @@ const CTRL = {
   phaseActive:   '#6ec6ff',
 };
 
+/** Bottom chrome size so HUD telemetry can sit above the panel. */
+export function controlsReserve() {
+  return Screen.isMobile ? 100 + 6 : 130 + Screen.responsive(10, 14, 16);
+}
+
+function ctrlMetrics() {
+  if (Screen.isMobile) {
+    return {
+      panelHeight: 100,
+      padding: 10,
+      btnBarY: 28,
+      clockY: 0,
+      showClock: false,
+      sliderY: 58,
+      phaseY: 76,
+      margin: 6,
+    };
+  }
+  return {
+    panelHeight: 130,
+    padding: 16,
+    btnBarY: 32,
+    clockY: 62,
+    showClock: true,
+    sliderY: 80,
+    phaseY: 98,
+    margin: Screen.responsive(10, 14, 16),
+  };
+}
+
 const BTN_STYLE = {
   colorDefaultBg:     'rgba(0,8,20,0.8)',
   colorDefaultStroke:  'rgba(70,150,220,0.5)',
@@ -74,8 +96,9 @@ export class Artemis2Controls extends Scene {
     this._draggingSlider = false;
     this._panelWidth = Screen.responsive(340, 440, 520);
     this.interactive = true;
+    const m = ctrlMetrics();
     this.forceWidth = this._panelWidth;
-    this.forceHeight = CTRL.panelHeight;
+    this.forceHeight = m.panelHeight;
 
     this._buildUI();
     this._attachCanvasListeners();
@@ -125,20 +148,22 @@ export class Artemis2Controls extends Scene {
       return btn;
     });
 
+    const m = ctrlMetrics();
     this._btnBar.x = this._panelWidth / 2;
-    this._btnBar.y = CTRL.btnBarY;
+    this._btnBar.y = m.btnBarY;
     this.add(this._btnBar);
 
-    // Mission clock label
+    // Mission clock label (hidden on mobile — MET already lives in the HUD)
     this._clock = new Text(this.game, 'T+00:00:00:00', {
       x: this._panelWidth / 2,
       debug:false,
-      y: CTRL.clockY,
+      y: m.clockY,
       font: CTRL.clockFont,
       color: CTRL.clockColor,
       align: 'center',
       baseline: 'middle',
     });
+    this._clock.visible = m.showClock;
     this.add(this._clock);
   }
 
@@ -169,18 +194,28 @@ export class Artemis2Controls extends Scene {
   }
 
   reposition(canvasW, canvasH) {
-    this._panelWidth = Screen.responsive(340, 440, 520);
-    this.x = Math.round((canvasW - this._panelWidth) / 2);
-    this.y = canvasH - CTRL.panelHeight - Screen.responsive(10, 14, 16);
+    const m = ctrlMetrics();
+    this._panelWidth = Screen.isMobile
+      ? Math.max(280, canvasW - 12)
+      : Screen.responsive(340, 440, 520);
+    this.x = Screen.isMobile ? 6 : Math.round((canvasW - this._panelWidth) / 2);
+    this.y = canvasH - m.panelHeight - m.margin;
     this.forceWidth = this._panelWidth;
-    this.forceHeight = CTRL.panelHeight;
-    // Re-center layout and clock
-    if (this._btnBar) this._btnBar.x = (this._panelWidth / 2) + 10;
-    if (this._clock)  this._clock.x = (this._panelWidth / 2) - 30;
+    this.forceHeight = m.panelHeight;
+    if (this._btnBar) {
+      this._btnBar.x = this._panelWidth / 2;
+      this._btnBar.y = m.btnBarY;
+    }
+    if (this._clock) {
+      this._clock.x = this._panelWidth / 2;
+      this._clock.y = m.clockY;
+      this._clock.visible = m.showClock;
+    }
   }
 
   draw() {
     const pw = this._panelWidth;
+    const m = ctrlMetrics();
 
     // Panel background
     Painter.useCtx((ctx) => {
@@ -188,15 +223,15 @@ export class Artemis2Controls extends Scene {
       ctx.strokeStyle = CTRL.border;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(0, 0, pw, CTRL.panelHeight, CTRL.cornerRadius);
+      ctx.roundRect(0, 0, pw, m.panelHeight, CTRL.cornerRadius);
       ctx.fill();
       ctx.stroke();
     }, { saveState: true });
 
     // Slider track
-    const trackX = CTRL.padding;
-    const trackW = pw - CTRL.padding * 2;
-    const trackY = CTRL.sliderY;
+    const trackX = m.padding;
+    const trackW = pw - m.padding * 2;
+    const trackY = m.sliderY;
     Painter.useCtx((ctx) => {
       ctx.fillStyle = CTRL.trackColor;
       ctx.beginPath();
@@ -230,7 +265,7 @@ export class Artemis2Controls extends Scene {
     }, { saveState: true });
 
     // Phase labels below slider — skip pre-TLI phases, map days to slider range
-    const labelY = CTRL.phaseY;
+    const labelY = m.phaseY;
     const sliderRange = MISSION_DAYS - TLI_DAY;
     Painter.useCtx((ctx) => {
       ctx.font = CTRL.phaseFont;
@@ -325,16 +360,18 @@ export class Artemis2Controls extends Scene {
   }
 
   _hitSlider(cx, cy) {
-    const trackLeft  = this.x + CTRL.padding;
-    const trackRight = this.x + this._panelWidth - CTRL.padding;
-    const trackY     = this.y + CTRL.sliderY;
+    const m = ctrlMetrics();
+    const trackLeft  = this.x + m.padding;
+    const trackRight = this.x + this._panelWidth - m.padding;
+    const trackY     = this.y + m.sliderY;
     return cx >= trackLeft && cx <= trackRight &&
            cy >= trackY - CTRL.sliderHitRadius && cy <= trackY + CTRL.sliderHitRadius;
   }
 
   _sliderValue(cx) {
-    const trackLeft = this.x + CTRL.padding;
-    const trackW    = this._panelWidth - CTRL.padding * 2;
+    const m = ctrlMetrics();
+    const trackLeft = this.x + m.padding;
+    const trackW    = this._panelWidth - m.padding * 2;
     if (trackW <= 0) return TLI_DAY;
     const norm = Math.max(0, Math.min(1, (cx - trackLeft) / trackW));
     return this._progressToDay(norm);

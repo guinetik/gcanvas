@@ -154,18 +154,18 @@ class Artemis2Demo extends Game {
     this._focusKm = { x: 0, y: 0, z: 0 };       // current (lerped)
     this._focusTargetKm = { x: 0, y: 0, z: 0 };  // target
 
-    // Camera + zoom
-    this.camera = new Camera3D(CONFIG.camera);
+    // Camera + zoom — mobile opens top-down (orbital plane faces the camera)
+    this.camera = new Camera3D({
+      ...CONFIG.camera,
+      rotationX: this._isCompact() ? 0.08 : CONFIG.camera.rotationX,
+    });
     this.camera.enableMouseControl(this.canvas, {
       ...CONFIG.mouseControl,
       game: this,
       isOverPanel: (clientX, clientY) => this._isPointerOverUI(clientX, clientY),
     });
 
-    this.zoom = Math.min(
-      CONFIG.maxZoom,
-      Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize),
-    );
+    this.zoom = this._overviewZoom();
     this.targetZoom = this.zoom;
 
     this.gesture = new Gesture(this.canvas, {
@@ -247,25 +247,54 @@ class Artemis2Demo extends Game {
     this._tweetFeed = new TweetFeed(this, this._tweetTimeline);
     this._tweetFeed.reposition(this.width, this.height);
     this.pipeline.add(this._tweetFeed);
+    this._addFeedToggle();
 
-    // FPS counter
-    this.pipeline.add(new FPSCounter(this));
+    // FPS — keep off the #info-toggle; hide on mobile (sits on the control bar)
+    this._fps = new FPSCounter(this, { anchor: "bottom-right" });
+    this._fps.visible = !Screen.isMobile;
+    this.pipeline.add(this._fps);
 
     // Resize
     if (this.events) {
       this.events.on('screenresize', () => {
         this._stars = this._generateStars(this._starCount);
         this._positionCameraButtons();
+        this._syncFeedToggle();
         this._controls.reposition(this.width, this.height);
         this._tweetFeed.reposition(this.width, this.height);
+        if (this._fps) this._fps.visible = !Screen.isMobile;
       });
     }
   }
 
   // ── Camera mode buttons (top-right, VerticalLayout) ──
 
+  _isCompact() {
+    return Screen.isMobile || this.width <= Screen.MOBILE_BREAKPOINT;
+  }
+
+  _camBtnMetrics() {
+    return {
+      width: Screen.responsive(86, 100, 110),
+      height: Screen.responsive(26, 28, 30),
+      gap: Screen.responsive(4, 5, 6),
+      marginRight: Screen.responsive(8, 12, 14),
+      // Clear the GCanvas mobile header + #info-toggle row
+      marginTop: Screen.responsive(56, 24, 40),
+    };
+  }
+
+  _overviewZoom() {
+    // Mobile uses a larger "base" so the free-return ellipse fits in the remaining viz
+    const base = Screen.responsive(1400, 1000, CONFIG.baseScreenSize);
+    return Math.min(
+      CONFIG.maxZoom,
+      Math.max(CONFIG.minZoom, Screen.minDimension() / base),
+    );
+  }
+
   _buildCameraButtons() {
-    const B = CONFIG.camBtns;
+    const B = this._camBtnMetrics();
 
     this._camLayout = new VerticalLayout(this, {
       spacing: B.gap,
@@ -307,9 +336,42 @@ class Artemis2Demo extends Game {
     this._positionCameraButtons();
   }
 
+  _addFeedToggle() {
+    const B = this._camBtnMetrics();
+    this._feedBtn = new ToggleButton(this, {
+      width: B.width,
+      height: B.height,
+      text: "Feed",
+      font: "11px monospace",
+      startToggled: false,
+      colorDefaultBg:      "rgba(10,12,20,0.6)",
+      colorDefaultStroke:   "rgba(255,255,255,0.1)",
+      colorDefaultText:     "rgba(255,255,255,0.45)",
+      colorHoverBg:         "rgba(255,255,255,0.1)",
+      colorHoverStroke:     "rgba(255,255,255,0.2)",
+      colorHoverText:       "#fff",
+      colorActiveBg:        "rgba(110,198,255,0.12)",
+      colorActiveStroke:    "rgba(110,198,255,0.25)",
+      colorActiveText:      "#6ec6ff",
+      onToggle: (on) => this._tweetFeed.setOpen(on),
+    });
+    this._camLayout.add(this._feedBtn);
+    this._syncFeedToggle();
+  }
+
+  _syncFeedToggle() {
+    if (!this._feedBtn) return;
+    const compact = this._isCompact();
+    this._feedBtn.visible = compact;
+    this._feedBtn.interactive = compact;
+    this._positionCameraButtons();
+  }
+
   _positionCameraButtons() {
-    const B = CONFIG.camBtns;
-    const count = this._camBtns.length;
+    if (!this._camLayout || !this._camBtns) return;
+    const B = this._camBtnMetrics();
+    const extra = this._isCompact() && this._feedBtn ? 1 : 0;
+    const count = this._camBtns.length + extra;
     const totalH = count * B.height + (count - 1) * B.gap;
     this._camLayout.x = this.width - B.width / 2 - B.marginRight;
     this._camLayout.y = B.marginTop + totalH / 2;
@@ -329,10 +391,12 @@ class Artemis2Demo extends Game {
 
     switch (mode) {
       case CAM.OVERVIEW:
-        this.targetZoom = Math.min(
-          CONFIG.maxZoom,
-          Math.max(CONFIG.minZoom, Screen.minDimension() / CONFIG.baseScreenSize),
-        );
+        this.targetZoom = this._overviewZoom();
+        if (this._isCompact()) {
+          this.camera.rotationX = 0.08;
+          this.camera.rotationY = 0;
+          this.camera.rotationZ = 0;
+        }
         break;
       case CAM.FOLLOW_ORION:
         this.targetZoom = Screen.responsive(2.5, 3.5, 4.0);
