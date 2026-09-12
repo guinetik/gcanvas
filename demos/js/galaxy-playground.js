@@ -182,8 +182,9 @@ export class GalaxyPlayground extends Game {
   }
 
   _buildInfoPanel() {
-    const { panel, statsText, updateStats } = createInfoPanel(this);
+    const { panel, statsText, updateStats, layoutHud } = createInfoPanel(this);
     this.infoPanel = panel;
+    this._layoutHud = layoutHud;
     this.statsText = statsText;
     this._updateStatsText = () => {
       const preset = GALAXY_PRESETS[this._activePreset];
@@ -678,6 +679,7 @@ export class GalaxyPlayground extends Game {
     if (this.panel) {
       layoutPanel(this.panel, this.width, this.height);
     }
+    this._layoutHud?.();
 
     if (this._toggleBtn) {
       this._toggleBtn.visible = Screen.isMobile;
