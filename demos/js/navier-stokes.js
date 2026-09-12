@@ -7,9 +7,9 @@ const CONFIG = {
   camera: { perspective: 1600, rotationX: 0.22, rotationY: 0.4, screenRotation: -0.16 },
   motion: { speed: 1.3, orbit: 24, maxOrbit: 60, drag: 0.006, maxDt: 0.05, pulseWidth: 0.025 },
   appearance: { palette: "copper", look: "nebula", maxBloom: 2, maxGlow: 1.5, mobileGlowScale: 0.55 },
-  caption: { spacing: 12, paddingX: 20, paddingY: 16, offsetX: 100, background: "rgba(3,12,20,0.96)", border: "#315b72", title: "#f2c879", subtitle: "#83cfff", equation: "#b7d6e8" },
+  caption: { spacing: 12, paddingX: 20, paddingY: 16, background: "rgba(3,12,20,0.96)", border: "#315b72", title: "#f2c879", subtitle: "#83cfff", equation: "#b7d6e8" },
   ui: { panelWidth: 300, panelTop: 48, padding: 14, spacing: 8, margin: 12, buttonHeight: 36, toggleWidth: 128, captionBottom: 42, compactWidth: 900, compactHeight: 650, minZoom: 0.5, maxZoom: 2, defaultZoom: 1.5, wheelZoom: 0.001 },
-  layout: { leftX: 0.33, widthScale: 0.39, heightScale: 0.24, centerY: 0.47, offsetX: 50, embed: { widthScale: 0.42, heightScale: 0.264, centerY: 0.5 } },
+  layout: { leftX: 0.33, widthScale: 0.39, heightScale: 0.24, centerY: 0.47, embed: { widthScale: 0.42, heightScale: 0.264, centerY: 0.5 } },
   gpu: {
     lineWidth: 2.4,
     visual: { minHue: 26, maxHue: 210, saturation: 58, lightness: 58, maxAlpha: 0.48, hueJitter: 0 },
@@ -105,7 +105,7 @@ class VortexField extends GameObject {
     this.scale = Math.min(availableWidth * layout.widthScale, this.height * layout.heightScale) * this.game.zoom;
     this.gpu.lineWidth = CONFIG.gpu.lineWidth * Math.max(0.3, Math.min(1, this.scale / 180));
     this.gpu.setGlowConfig({ radius: LOOKS[this.game.activeLook].glow.radius * (this.game.compact ? CONFIG.appearance.mobileGlowScale : 1) });
-    this.centerX = this.game.focusLeft && !this.game.compact ? this.width * CONFIG.layout.leftX : availableWidth / 2 + CONFIG.layout.offsetX;
+    this.centerX = this.game.focusLeft && !this.game.compact ? this.width * CONFIG.layout.leftX : this.width / 2;
     this.centerY = this.height * layout.centerY;
     if (this.gpu.width !== this.width || this.gpu.height !== this.height) this.gpu.resize(this.width, this.height);
     this.rebuild();
@@ -422,8 +422,7 @@ export class NavierStokesDemo extends Game {
 
   positionCaption() {
     if (!this.caption) return;
-    const availableWidth = !this.compact && this.panel.visible ? this.panel.x : this.width;
-    this.caption.x = (availableWidth - this.caption.width) / 2 + CONFIG.caption.offsetX;
+    this.caption.x = (this.width - this.caption.width) / 2;
     this.caption.y = this.height - this.caption.height - CONFIG.ui.captionBottom;
   }
 
