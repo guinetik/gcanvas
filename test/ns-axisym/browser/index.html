@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Axisymmetric solver validation</title>
+<style>body{background:#09121c;color:#dceafb;font:16px system-ui;max-width:1000px;margin:3rem auto;padding:1rem}button{padding:.7rem 1rem;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}a{color:#83caff}</style></head>
+<body><h1>Axisymmetric solver validation</h1>
+<p>Compare the WebGPU solver with the Float64 CPU reference on matched steps.</p>
+<p><label><input id="extended" type="checkbox"> Include refinement and 256×512 checks (slower)</label></p>
+<button id="run">Run validation</button><p id="status" role="status">Ready. WebGPU is required.</p>
+<pre id="results"></pre>
+<script type="module">
+document.querySelector('#run').onclick=async()=>{
+  const button=document.querySelector('#run'),status=document.querySelector('#status');button.disabled=true;
+  try{const {runValidation}=await import('./validation.js');const extended=document.querySelector('#extended').checked;
+  const r=await runValidation({performance:extended,progress:t=>status.textContent=t});
+  status.textContent=r.passed?'PASS — configured parity checks passed. '+(extended?'See the separate large-grid and tolerance results below.':'Large-grid checks were not run.'):'FAIL — see results';
+  document.querySelector('#results').textContent=JSON.stringify(r,null,2);}
+  catch(e){status.textContent='Validation unavailable: '+e.message;}finally{button.disabled=false;}
+};
+</script></body></html>

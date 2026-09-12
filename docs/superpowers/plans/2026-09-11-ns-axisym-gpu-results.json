@@ -1,0 +1,2253 @@
+{
+  "passed": true,
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+  "configuration": {
+    "nr": 16,
+    "nz": 32,
+    "R": 1,
+    "Z": 0.5,
+    "steps": 20,
+    "dt": 0.0002,
+    "poisson": {
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "maxSweeps": 12000,
+      "checkEvery": 32
+    },
+    "tolerances": {
+      "a": {
+        "atol": 0.000002,
+        "rtol": 0.0002,
+        "scale": 0.1
+      },
+      "chi": {
+        "atol": 0.00002,
+        "rtol": 0.002,
+        "scale": 0.1
+      },
+      "phi": {
+        "atol": 0.000002,
+        "rtol": 0.0002,
+        "scale": 0.01
+      },
+      "ur": {
+        "atol": 0.00001,
+        "rtol": 0.002,
+        "scale": 0.1
+      },
+      "uz": {
+        "atol": 0.00001,
+        "rtol": 0.002,
+        "scale": 0.1
+      },
+      "energy": {
+        "atol": 2e-7,
+        "rtol": 0.002,
+        "scale": 0.001
+      },
+      "enstrophy": {
+        "atol": 0.000002,
+        "rtol": 0.002,
+        "scale": 0.01
+      },
+      "maxOmega": {
+        "atol": 0.00002,
+        "rtol": 0.002,
+        "scale": 0.1
+      },
+      "maxU": {
+        "atol": 0.00001,
+        "rtol": 0.002,
+        "scale": 0.1
+      },
+      "maxA": {
+        "atol": 0.000002,
+        "rtol": 0.0002,
+        "scale": 0.1
+      },
+      "maxWallSlip": {
+        "atol": 0.00002,
+        "rtol": 0.002,
+        "scale": 0.01
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "zero closed cylinder",
+      "passed": true,
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "lovelace",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      },
+      "initial": {
+        "passed": true,
+        "fields": {
+          "a": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "chi": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "phi": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "ur": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "uz": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "energy": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "enstrophy": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "maxOmega": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "maxU": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "maxA": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "maxWallSlip": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "divergence": {
+            "passed": true,
+            "maximum": 0
+          },
+          "poisson": {
+            "passed": true,
+            "independentResidual": 0,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0,
+              "target": 0.0002
+            }
+          },
+          "time": {
+            "passed": true,
+            "cpu": 0,
+            "gpu": 0
+          },
+          "axisParity": {
+            "passed": true
+          }
+        }
+      },
+      "final": {
+        "passed": true,
+        "fields": {
+          "a": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "chi": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "phi": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "ur": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "uz": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "energy": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "enstrophy": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "maxOmega": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "maxU": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "maxA": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "maxWallSlip": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "divergence": {
+            "passed": true,
+            "maximum": 0
+          },
+          "poisson": {
+            "passed": true,
+            "independentResidual": 0,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0,
+              "target": 0.0002
+            }
+          },
+          "time": {
+            "passed": true,
+            "cpu": 0.004000000000000001,
+            "gpu": 0.004000000000000001
+          },
+          "axisParity": {
+            "passed": true
+          }
+        }
+      },
+      "firstFailedStep": -1,
+      "atomicRejection": true,
+      "steps": 20,
+      "maxResidual": 0,
+      "time": 0.004000000000000001,
+      "maxStepMs": 14.700000002980232,
+      "meanStepMs": 12.76000000089407,
+      "dispatches": 600,
+      "memoryBytes": 220032,
+      "readbackBytes": 1065088
+    },
+    {
+      "name": "Burgers",
+      "passed": true,
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "lovelace",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      },
+      "initial": {
+        "passed": true,
+        "fields": {
+          "a": {
+            "passed": true,
+            "maximum": 2.89994587232556e-8,
+            "ratio": 0.0001872972514762664,
+            "index": 1
+          },
+          "chi": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "phi": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "ur": {
+            "passed": true,
+            "maximum": 2.9802322387695312e-8,
+            "ratio": 0.000034907551845031114,
+            "index": 13
+          },
+          "uz": {
+            "passed": true,
+            "maximum": 2.9802322387695312e-8,
+            "ratio": 0.000049362024658708594,
+            "index": 3
+          },
+          "energy": {
+            "passed": true,
+            "maximum": 1.4019385041752486e-8,
+            "ratio": 0.000015173433955090761,
+            "index": 0
+          },
+          "enstrophy": {
+            "passed": true,
+            "maximum": 1.875198774037301e-9,
+            "ratio": 0.0000011800853215562626,
+            "index": 0
+          },
+          "maxOmega": {
+            "passed": true,
+            "maximum": 6.041262556877314e-8,
+            "ratio": 0.000018906346511632493,
+            "index": 0
+          },
+          "maxU": {
+            "passed": true,
+            "maximum": 1.7255412210204213e-8,
+            "ratio": 0.000011478011739992517,
+            "index": 0
+          },
+          "maxA": {
+            "passed": true,
+            "maximum": 4.604483128112236e-9,
+            "ratio": 0.000028606235501186918,
+            "index": 0
+          },
+          "divergence": {
+            "passed": true,
+            "maximum": 0
+          },
+          "poisson": {
+            "passed": true,
+            "independentResidual": 0,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0,
+              "target": 0.0002
+            }
+          },
+          "time": {
+            "passed": true,
+            "cpu": 0,
+            "gpu": 0
+          },
+          "axisParity": {
+            "passed": true
+          }
+        }
+      },
+      "final": {
+        "passed": true,
+        "fields": {
+          "a": {
+            "passed": true,
+            "maximum": 4.2988451576242426e-8,
+            "ratio": 0.0003454064249216064,
+            "index": 7
+          },
+          "chi": {
+            "passed": true,
+            "maximum": 1.1601535723360506e-9,
+            "ratio": 0.00000527342532880023,
+            "index": 3
+          },
+          "phi": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "ur": {
+            "passed": true,
+            "maximum": 2.9802322387695312e-8,
+            "ratio": 0.000034907551845031114,
+            "index": 13
+          },
+          "uz": {
+            "passed": true,
+            "maximum": 2.9802322387695312e-8,
+            "ratio": 0.000049362024658708594,
+            "index": 3
+          },
+          "energy": {
+            "passed": true,
+            "maximum": 2.6487728066459937e-8,
+            "ratio": 0.000028668173642476673,
+            "index": 0
+          },
+          "enstrophy": {
+            "passed": true,
+            "maximum": 4.318621482646279e-8,
+            "ratio": 0.000027177626261226292,
+            "index": 0
+          },
+          "maxOmega": {
+            "passed": true,
+            "maximum": 6.008196540285837e-8,
+            "ratio": 0.00001880254397778224,
+            "index": 0
+          },
+          "maxU": {
+            "passed": true,
+            "maximum": 2.898313034016553e-9,
+            "ratio": 0.00000192791050035969,
+            "index": 0
+          },
+          "maxA": {
+            "passed": true,
+            "maximum": 2.0589902671730442e-8,
+            "ratio": 0.00012791653923573075,
+            "index": 0
+          },
+          "divergence": {
+            "passed": true,
+            "maximum": 0
+          },
+          "poisson": {
+            "passed": true,
+            "independentResidual": 5.393889068727731e-7,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 5.393889068727731e-7,
+              "target": 0.0002000000539388907
+            }
+          },
+          "time": {
+            "passed": true,
+            "cpu": 0.004000000000000001,
+            "gpu": 0.004000000000000001
+          },
+          "axisParity": {
+            "passed": true
+          }
+        }
+      },
+      "firstFailedStep": -1,
+      "atomicRejection": true,
+      "steps": 20,
+      "maxResidual": 5.393889068727731e-7,
+      "time": 0.004000000000000001,
+      "maxStepMs": 15.799999997019768,
+      "meanStepMs": 12.180000001192093,
+      "dispatches": 440,
+      "memoryBytes": 220032,
+      "readbackBytes": 1065088
+    },
+    {
+      "name": "Lamb–Oseen",
+      "passed": true,
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "lovelace",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      },
+      "initial": {
+        "passed": true,
+        "fields": {
+          "a": {
+            "passed": true,
+            "maximum": 5.698520921804118e-8,
+            "ratio": 0.00020034747860290053,
+            "index": 2
+          },
+          "chi": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "phi": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "ur": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "uz": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "energy": {
+            "passed": true,
+            "maximum": 1.0084327178860875e-8,
+            "ratio": 0.000057878381088882805,
+            "index": 0
+          },
+          "enstrophy": {
+            "passed": true,
+            "maximum": 6.736552071728852e-8,
+            "ratio": 0.000041654272842213095,
+            "index": 0
+          },
+          "maxOmega": {
+            "passed": true,
+            "maximum": 3.128792336326569e-9,
+            "ratio": 4.946614532756948e-7,
+            "index": 0
+          },
+          "maxU": {
+            "passed": true,
+            "maximum": 7.192216266993512e-9,
+            "ratio": 0.000011032342307641639,
+            "index": 0
+          },
+          "maxA": {
+            "passed": true,
+            "maximum": 1.3521941566452256e-8,
+            "ratio": 0.000042420355364839555,
+            "index": 0
+          },
+          "divergence": {
+            "passed": true,
+            "maximum": 0
+          },
+          "poisson": {
+            "passed": true,
+            "independentResidual": 0,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0,
+              "target": 0.0002
+            }
+          },
+          "time": {
+            "passed": true,
+            "cpu": 0,
+            "gpu": 0
+          },
+          "axisParity": {
+            "passed": true
+          }
+        }
+      },
+      "final": {
+        "passed": true,
+        "fields": {
+          "a": {
+            "passed": true,
+            "maximum": 7.630874954145384e-8,
+            "ratio": 0.0003903990972267749,
+            "index": 18
+          },
+          "chi": {
+            "passed": true,
+            "maximum": 6.37396438459833e-9,
+            "ratio": 0.000028972565384537866,
+            "index": 2
+          },
+          "phi": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "ur": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "uz": {
+            "passed": true,
+            "maximum": 0,
+            "ratio": 0,
+            "index": 0
+          },
+          "energy": {
+            "passed": true,
+            "maximum": 3.5178037566252485e-9,
+            "ratio": 0.00002026390477561652,
+            "index": 0
+          },
+          "enstrophy": {
+            "passed": true,
+            "maximum": 2.356565464989302e-8,
+            "ratio": 0.000014688525773065995,
+            "index": 0
+          },
+          "maxOmega": {
+            "passed": true,
+            "maximum": 5.5282163735626e-8,
+            "ratio": 0.00000880761259755851,
+            "index": 0
+          },
+          "maxU": {
+            "passed": true,
+            "maximum": 3.443171636696718e-9,
+            "ratio": 0.000005303215018562255,
+            "index": 0
+          },
+          "maxA": {
+            "passed": true,
+            "maximum": 4.6187506930195354e-8,
+            "ratio": 0.00014601796106534644,
+            "index": 0
+          },
+          "divergence": {
+            "passed": true,
+            "maximum": 0
+          },
+          "poisson": {
+            "passed": true,
+            "independentResidual": 0.00002430581662338227,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0.00002430581662338227,
+              "target": 0.00020000243058166235
+            }
+          },
+          "time": {
+            "passed": true,
+            "cpu": 0.004000000000000001,
+            "gpu": 0.004000000000000001
+          },
+          "axisParity": {
+            "passed": true
+          }
+        }
+      },
+      "firstFailedStep": -1,
+      "atomicRejection": true,
+      "steps": 20,
+      "maxResidual": 0.00002430581662338227,
+      "time": 0.004000000000000001,
+      "maxStepMs": 15.899999991059303,
+      "meanStepMs": 12.544999999552966,
+      "dispatches": 440,
+      "memoryBytes": 220032,
+      "readbackBytes": 1065088
+    },
+    {
+      "name": "axis-sensitive coupled",
+      "passed": true,
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "lovelace",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      },
+      "initial": {
+        "passed": true,
+        "fields": {
+          "a": {
+            "passed": true,
+            "maximum": 1.4781951940268101e-8,
+            "ratio": 0.00027180912371626295,
+            "index": 445
+          },
+          "chi": {
+            "passed": true,
+            "maximum": 1.4781951940268101e-8,
+            "ratio": 0.000027444661327621612,
+            "index": 157
+          },
+          "phi": {
+            "passed": true,
+            "maximum": 2.220446049250313e-16,
+            "ratio": 8.18409269839081e-12,
+            "index": 409
+          },
+          "ur": {
+            "passed": true,
+            "maximum": 7.32302664223361e-7,
+            "ratio": 0.0034871555439207665,
+            "index": 318
+          },
+          "uz": {
+            "passed": true,
+            "maximum": 4.0578842136484994e-7,
+            "ratio": 0.0006307565462139018,
+            "index": 334
+          },
+          "energy": {
+            "passed": true,
+            "maximum": 2.505190638268928e-9,
+            "ratio": 0.000007540333040526409,
+            "index": 0
+          },
+          "enstrophy": {
+            "passed": true,
+            "maximum": 3.739414444758893e-9,
+            "ratio": 0.0000032118640793872367,
+            "index": 0
+          },
+          "maxOmega": {
+            "passed": true,
+            "maximum": 1.0981511344709816e-7,
+            "ratio": 0.00006210599575858979,
+            "index": 0
+          },
+          "maxU": {
+            "passed": true,
+            "maximum": 4.087972893529468e-8,
+            "ratio": 0.000040543421779453236,
+            "index": 0
+          },
+          "maxA": {
+            "passed": true,
+            "maximum": 8.106231685900411e-9,
+            "ratio": 0.00012469191409779089,
+            "index": 0
+          },
+          "divergence": {
+            "passed": true,
+            "maximum": 7.629394644936838e-7
+          },
+          "poisson": {
+            "passed": true,
+            "independentResidual": 1.4782301605009707e-8,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 2.408651198493317e-7,
+              "target": 0.00023490234315395357
+            }
+          },
+          "time": {
+            "passed": true,
+            "cpu": 0,
+            "gpu": 0
+          },
+          "axisParity": {
+            "passed": true
+          }
+        }
+      },
+      "final": {
+        "passed": true,
+        "fields": {
+          "a": {
+            "passed": true,
+            "maximum": 2.3691678507908875e-8,
+            "ratio": 0.0004501752117960713,
+            "index": 488
+          },
+          "chi": {
+            "passed": true,
+            "maximum": 2.435279938817203e-8,
+            "ratio": 0.0000444243924099672,
+            "index": 198
+          },
+          "phi": {
+            "passed": true,
+            "maximum": 1.1048852943673637e-9,
+            "ratio": 0.00004906739874981176,
+            "index": 274
+          },
+          "ur": {
+            "passed": true,
+            "maximum": 0.0000012086465315114259,
+            "ratio": 0.005755459673863933,
+            "index": 462
+          },
+          "uz": {
+            "passed": true,
+            "maximum": 3.532133892591993e-7,
+            "ratio": 0.0005459473866625035,
+            "index": 287
+          },
+          "energy": {
+            "passed": true,
+            "maximum": 8.326330680485938e-9,
+            "ratio": 0.000025070683345260872,
+            "index": 0
+          },
+          "enstrophy": {
+            "passed": true,
+            "maximum": 1.3070940330095482e-8,
+            "ratio": 0.000011205229306060222,
+            "index": 0
+          },
+          "maxOmega": {
+            "passed": true,
+            "maximum": 2.0834930425372988e-7,
+            "ratio": 0.00011772715078405166,
+            "index": 0
+          },
+          "maxU": {
+            "passed": true,
+            "maximum": 7.458451700692592e-8,
+            "ratio": 0.00007397479536589048,
+            "index": 0
+          },
+          "maxA": {
+            "passed": true,
+            "maximum": 1.0725603072359036e-8,
+            "ratio": 0.00016479187804858283,
+            "index": 0
+          },
+          "divergence": {
+            "passed": true,
+            "maximum": 7.629394644936838e-7
+          },
+          "poisson": {
+            "passed": true,
+            "independentResidual": 0.0002072489951387979,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0.0002072489878628403,
+              "target": 0.000234874427318573
+            }
+          },
+          "time": {
+            "passed": true,
+            "cpu": 0.004000000000000001,
+            "gpu": 0.004000000000000001
+          },
+          "axisParity": {
+            "passed": true
+          }
+        }
+      },
+      "firstFailedStep": -1,
+      "atomicRejection": true,
+      "steps": 20,
+      "maxResidual": 0.00021355116041377187,
+      "time": 0.004000000000000001,
+      "maxStepMs": 23,
+      "meanStepMs": 19.804999998211862,
+      "dispatches": 3014,
+      "memoryBytes": 220032,
+      "readbackBytes": 1067584
+    },
+    {
+      "name": "coupled Thom walls",
+      "passed": true,
+      "adapter": {
+        "vendor": "nvidia",
+        "architecture": "lovelace",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false
+      },
+      "initial": {
+        "passed": true,
+        "fields": {
+          "a": {
+            "passed": true,
+            "maximum": 5.960464483090178e-9,
+            "ratio": 0.00021720528515429104,
+            "index": 210
+          },
+          "chi": {
+            "passed": true,
+            "maximum": 2.726912495809586e-8,
+            "ratio": 0.000025828972584328206,
+            "index": 0
+          },
+          "phi": {
+            "passed": true,
+            "maximum": 6.892089676746593e-10,
+            "ratio": 0.00013185834885222388,
+            "index": 256
+          },
+          "ur": {
+            "passed": true,
+            "maximum": 2.9834219201010925e-8,
+            "ratio": 0.0001420677104810044,
+            "index": 246
+          },
+          "uz": {
+            "passed": true,
+            "maximum": 1.821610682260777e-8,
+            "ratio": 0.00008674336582194176,
+            "index": 215
+          },
+          "energy": {
+            "passed": true,
+            "maximum": 2.0969700585335427e-11,
+            "ratio": 0.0000054924160294607035,
+            "index": 0
+          },
+          "enstrophy": {
+            "passed": true,
+            "maximum": 4.0416802543630226e-10,
+            "ratio": 0.0000038005540536644475,
+            "index": 0
+          },
+          "maxOmega": {
+            "passed": true,
+            "maximum": 2.240894264593507e-8,
+            "ratio": 0.000036066069431812726,
+            "index": 0
+          },
+          "maxU": {
+            "passed": true,
+            "maximum": 7.650480110532598e-10,
+            "ratio": 0.0000036430857669202845,
+            "index": 0
+          },
+          "maxA": {
+            "passed": true,
+            "maximum": 5.960464455334602e-9,
+            "ratio": 0.00018660603324229555,
+            "index": 0
+          },
+          "maxWallSlip": {
+            "passed": true,
+            "maximum": 2.755269293969187e-10,
+            "ratio": 0.0000068881732349229666,
+            "index": 0
+          },
+          "divergence": {
+            "passed": true,
+            "maximum": 7.947286206899662e-8
+          },
+          "poisson": {
+            "passed": true,
+            "independentResidual": 0.00016734655218897387,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 192,
+              "residual": 0.0001673465594649315,
+              "target": 0.0002637347102165222
+            }
+          },
+          "time": {
+            "passed": true,
+            "cpu": 0,
+            "gpu": 0
+          },
+          "axisParity": {
+            "passed": true
+          }
+        }
+      },
+      "final": {
+        "passed": true,
+        "fields": {
+          "a": {
+            "passed": true,
+            "maximum": 1.1803569344159826e-8,
+            "ratio": 0.000415348810519002,
+            "index": 261
+          },
+          "chi": {
+            "passed": true,
+            "maximum": 6.690775200546284e-8,
+            "ratio": 0.000060273743009201423,
+            "index": 2
+          },
+          "phi": {
+            "passed": true,
+            "maximum": 7.474906561777406e-10,
+            "ratio": 0.00013140387117602592,
+            "index": 256
+          },
+          "ur": {
+            "passed": true,
+            "maximum": 2.99067540697473e-8,
+            "ratio": 0.00014241311461784428,
+            "index": 328
+          },
+          "uz": {
+            "passed": true,
+            "maximum": 1.7042499241698428e-8,
+            "ratio": 0.00008115475829380203,
+            "index": 200
+          },
+          "energy": {
+            "passed": true,
+            "maximum": 3.759740782594001e-12,
+            "ratio": 9.855106343882216e-7,
+            "index": 0
+          },
+          "enstrophy": {
+            "passed": true,
+            "maximum": 3.6780767528887814e-9,
+            "ratio": 0.0000346507758943371,
+            "index": 0
+          },
+          "maxOmega": {
+            "passed": true,
+            "maximum": 6.918295936131358e-10,
+            "ratio": 0.0000011139319925722657,
+            "index": 0
+          },
+          "maxU": {
+            "passed": true,
+            "maximum": 3.027628668605953e-9,
+            "ratio": 0.00001441727937431406,
+            "index": 0
+          },
+          "maxA": {
+            "passed": true,
+            "maximum": 9.117906984990043e-9,
+            "ratio": 0.00028556228958671393,
+            "index": 0
+          },
+          "maxWallSlip": {
+            "passed": true,
+            "maximum": 7.761475155068295e-10,
+            "ratio": 0.00001940368788767074,
+            "index": 0
+          },
+          "divergence": {
+            "passed": true,
+            "maximum": 7.947286206899662e-8
+          },
+          "poisson": {
+            "passed": true,
+            "independentResidual": 0.00015901681035757065,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0.00015901681035757065,
+              "target": 0.00026368533968925475
+            }
+          },
+          "time": {
+            "passed": true,
+            "cpu": 0.004000000000000001,
+            "gpu": 0.004000000000000001
+          },
+          "axisParity": {
+            "passed": true
+          }
+        }
+      },
+      "firstFailedStep": -1,
+      "atomicRejection": true,
+      "steps": 20,
+      "maxResidual": 0.0002559050917625427,
+      "time": 0.004000000000000001,
+      "maxStepMs": 20.099999994039536,
+      "meanStepMs": 15.935000000149012,
+      "dispatches": 1524,
+      "memoryBytes": 220032,
+      "readbackBytes": 1066368
+    }
+  ],
+  "studies": {
+    "passed": true,
+    "failures": {
+      "passed": true,
+      "checks": [
+        {
+          "mode": "poisson-trial",
+          "passed": true,
+          "result": {
+            "accepted": false,
+            "reason": "poisson-trial",
+            "dt": 0,
+            "attemptedDt": 0.0001,
+            "attempts": 1,
+            "poisson": {
+              "converged": false,
+              "reason": "budget",
+              "sweeps": 0,
+              "residual": 0.00009999999747378752,
+              "target": 1e-10
+            }
+          }
+        },
+        {
+          "mode": "nonfinite-source",
+          "passed": true,
+          "result": {
+            "accepted": false,
+            "reason": "invalid-state",
+            "message": "Nonfinite source or corner data",
+            "dt": 0,
+            "attemptedDt": 0.0001,
+            "attempts": 1,
+            "poisson": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0,
+              "target": 1e-10
+            }
+          }
+        },
+        {
+          "mode": "poisson-candidate",
+          "passed": true,
+          "result": {
+            "accepted": false,
+            "reason": "poisson-candidate",
+            "dt": 0,
+            "attemptedDt": 0.0001,
+            "attempts": 1,
+            "poisson": {
+              "converged": false,
+              "reason": "injected-budget"
+            }
+          }
+        },
+        {
+          "mode": "concurrent-operation",
+          "passed": true,
+          "result": {
+            "accepted": true,
+            "reason": "accepted",
+            "dt": 0.0001,
+            "attemptedDt": 0.0001,
+            "attempts": 1,
+            "poisson": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0,
+              "target": 1e-10
+            },
+            "dispatches": 30,
+            "elapsedMs": 13
+          }
+        },
+        {
+          "mode": "nonfinite-gpu",
+          "passed": true,
+          "result": {
+            "accepted": false,
+            "reason": "invalid-state",
+            "message": "Nonfinite GPU state",
+            "dt": 0,
+            "attemptedDt": 0.0001,
+            "attempts": 1,
+            "poisson": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0,
+              "target": 1e-10
+            }
+          }
+        },
+        {
+          "mode": "nonfinite-potential-correction",
+          "passed": true,
+          "result": {
+            "accepted": false,
+            "reason": "invalid-state",
+            "message": "Nonfinite GPU state",
+            "dt": 0,
+            "attemptedDt": 0.0001,
+            "attempts": 1,
+            "poisson": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0,
+              "target": 1e-10
+            }
+          }
+        },
+        {
+          "mode": "poisson-initial",
+          "passed": true,
+          "result": {
+            "accepted": false,
+            "reason": "poisson-initial",
+            "poisson": {
+              "converged": false,
+              "reason": "budget",
+              "sweeps": 0,
+              "residual": 1,
+              "target": 0.00030000000000000003
+            }
+          }
+        },
+        {
+          "mode": "adaptive-retry",
+          "passed": true,
+          "result": {
+            "accepted": true,
+            "reason": "accepted",
+            "dt": 0.00005,
+            "attemptedDt": 0.00005,
+            "attempts": 2,
+            "poisson": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 6.666665917226533e-13,
+              "target": 0.0002000000000000667
+            },
+            "dispatches": 44,
+            "elapsedMs": 21.299999997019768
+          }
+        },
+        {
+          "mode": "device-loss",
+          "passed": true
+        },
+        {
+          "mode": "sub-ulp-accumulation",
+          "passed": true,
+          "actual": 1.0000003576278687,
+          "expected": 1.0000003576278687
+        }
+      ]
+    },
+    "refinement": [
+      {
+        "name": "Burgers",
+        "passed": true,
+        "rows": [
+          {
+            "name": "Burgers",
+            "n": 16,
+            "nz": 32,
+            "accepted": true,
+            "time": 0.01,
+            "steps": 20,
+            "initial": {
+              "accepted": true,
+              "poisson": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 0,
+                "residual": 0,
+                "target": 0.0002
+              }
+            },
+            "coldStart": false,
+            "poisson": {
+              "atol": 0.0002,
+              "rtol": 0.0001,
+              "maxSweeps": 2048,
+              "checkEvery": 32
+            },
+            "maxResidual": 0.000002482822992533329,
+            "dtMin": 0.0004999999999999952,
+            "dtMax": 0.0005,
+            "residualCheck": {
+              "passed": true,
+              "independentResidual": 0.000002482822992533329,
+              "highOnlyResidual": 0.000002482822992533329,
+              "gpu": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 0,
+                "residual": 0.000002482822992533329,
+                "target": 0.00020000024828229927
+              }
+            },
+            "meanStepMs": 13.98999999910593,
+            "maxStepMs": 17.099999994039536,
+            "elapsedMs": 420.90000000596046,
+            "memoryBytes": 220032,
+            "readbackBytes": 51328,
+            "dispatches": 449,
+            "errors": {
+              "a": {
+                "l2": 0.000009317557466341082,
+                "max": 0.000033910438394069153,
+                "axis": 0.000033910438394069153,
+                "boundary": 0.000024254485940455872
+              },
+              "chi": {
+                "l2": 1.7438636358499386e-7,
+                "max": 0.000002482822992533329,
+                "axis": 0.000002482822992533329,
+                "boundary": 0.000002482822992533329
+              },
+              "phi": {
+                "l2": 0,
+                "max": 0,
+                "axis": 0,
+                "boundary": 0
+              },
+              "ur": {
+                "l2": 1.3938759963117321e-8,
+                "max": 2.9802322387695312e-8,
+                "axis": 0,
+                "boundary": 2.9802322387695312e-8
+              },
+              "uz": {
+                "l2": 6.674873259139547e-9,
+                "max": 2.9802322387695312e-8,
+                "axis": 0,
+                "boundary": 2.9802322387695312e-8
+              }
+            },
+            "diagnostics": {
+              "energy": 0.46187037229537964,
+              "enstrophy": 0.7935171723365784,
+              "maxOmega": 1.5877485275268555,
+              "maxU": 0.7466716766357422,
+              "maxA": 0.794838011264801,
+              "maxDiv": 0,
+              "time": 0.01,
+              "stepIndex": 20
+            }
+          },
+          {
+            "name": "Burgers",
+            "n": 32,
+            "nz": 64,
+            "accepted": true,
+            "time": 0.01,
+            "steps": 29,
+            "initial": {
+              "accepted": true,
+              "poisson": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 0,
+                "residual": 0,
+                "target": 0.0002
+              }
+            },
+            "coldStart": false,
+            "poisson": {
+              "atol": 0.0002,
+              "rtol": 0.0001,
+              "maxSweeps": 2048,
+              "checkEvery": 32
+            },
+            "maxResidual": 5.971845098429185e-7,
+            "dtMin": 0.0002537132393973622,
+            "dtMax": 0.00034808167002152283,
+            "residualCheck": {
+              "passed": true,
+              "independentResidual": 5.971845098429185e-7,
+              "highOnlyResidual": 5.971845098429185e-7,
+              "gpu": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 0,
+                "residual": 5.971845098429185e-7,
+                "target": 0.000200000059718451
+              }
+            },
+            "meanStepMs": 13.686206896243425,
+            "maxStepMs": 19.5,
+            "elapsedMs": 447.69999998807907,
+            "memoryBytes": 747264,
+            "readbackBytes": 164224,
+            "dispatches": 647,
+            "errors": {
+              "a": {
+                "l2": 0.0000024103103807275484,
+                "max": 0.000008657523122179711,
+                "axis": 0.000008657523122179711,
+                "boundary": 0.000004008360829699242
+              },
+              "chi": {
+                "l2": 4.4344550718082617e-8,
+                "max": 5.971845098429185e-7,
+                "axis": 5.971845098429185e-7,
+                "boundary": 5.936976776865777e-7
+              },
+              "phi": {
+                "l2": 0,
+                "max": 0,
+                "axis": 0,
+                "boundary": 0
+              },
+              "ur": {
+                "l2": 3.4846899907793303e-9,
+                "max": 1.4901161193847656e-8,
+                "axis": 0,
+                "boundary": 1.4901161193847656e-8
+              },
+              "uz": {
+                "l2": 1.0287042690661551e-8,
+                "max": 2.9802322387695312e-8,
+                "axis": 0,
+                "boundary": 2.9802322387695312e-8
+              }
+            },
+            "diagnostics": {
+              "energy": 0.46225130558013916,
+              "enstrophy": 0.7911881804466248,
+              "maxOmega": 1.5905964374542236,
+              "maxU": 0.7558658123016357,
+              "maxA": 0.7955405712127686,
+              "maxDiv": 0,
+              "time": 0.01,
+              "stepIndex": 29
+            }
+          },
+          {
+            "name": "Burgers",
+            "n": 64,
+            "nz": 128,
+            "accepted": true,
+            "time": 0.01,
+            "steps": 113,
+            "initial": {
+              "accepted": true,
+              "poisson": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 0,
+                "residual": 0,
+                "target": 0.0002
+              }
+            },
+            "coldStart": false,
+            "poisson": {
+              "atol": 0.0002,
+              "rtol": 0.0001,
+              "maxSweeps": 2048,
+              "checkEvery": 32
+            },
+            "maxResidual": 1.605577466534669e-7,
+            "dtMin": 0.000006345564698129885,
+            "dtMax": 0.00008922905745805238,
+            "residualCheck": {
+              "passed": true,
+              "independentResidual": 1.605577466534669e-7,
+              "highOnlyResidual": 1.605577466534669e-7,
+              "gpu": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 0,
+                "residual": 1.605577466534669e-7,
+                "target": 0.00020000001605577467
+              }
+            },
+            "meanStepMs": 15.544247787610619,
+            "maxStepMs": 21.099999994039536,
+            "elapsedMs": 1829.5999999940395,
+            "memoryBytes": 2738688,
+            "readbackBytes": 603520,
+            "dispatches": 2495,
+            "errors": {
+              "a": {
+                "l2": 6.140351915863853e-7,
+                "max": 0.000002195900203783019,
+                "axis": 0.0000021607415279234488,
+                "boundary": 6.110207637632925e-7
+              },
+              "chi": {
+                "l2": 1.1201196642938734e-8,
+                "max": 1.605577466534669e-7,
+                "axis": 1.605577466534669e-7,
+                "boundary": 1.0459580579436079e-7
+              },
+              "phi": {
+                "l2": 0,
+                "max": 0,
+                "axis": 0,
+                "boundary": 0
+              },
+              "ur": {
+                "l2": 5.1958285282415796e-9,
+                "max": 2.9802322387695312e-8,
+                "axis": 0,
+                "boundary": 2.9802322387695312e-8
+              },
+              "uz": {
+                "l2": 1.2065998128332454e-8,
+                "max": 2.9802322387695312e-8,
+                "axis": 0,
+                "boundary": 2.9802322387695312e-8
+              }
+            },
+            "diagnostics": {
+              "energy": 0.46234655380249023,
+              "enstrophy": 0.790606677532196,
+              "maxOmega": 1.591310977935791,
+              "maxU": 0.760475754737854,
+              "maxA": 0.7957161664962769,
+              "maxDiv": 0,
+              "time": 0.01,
+              "stepIndex": 113
+            }
+          }
+        ],
+        "orders": [
+          1.950732874563706,
+          1.97282569046757
+        ]
+      },
+      {
+        "name": "Thom",
+        "passed": true,
+        "rows": [
+          {
+            "name": "Thom",
+            "n": 16,
+            "nz": 32,
+            "accepted": true,
+            "time": 0.01,
+            "steps": 23,
+            "initial": {
+              "accepted": true,
+              "poisson": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 192,
+                "residual": 0.0001673465594649315,
+                "target": 0.0002637347102165222
+              }
+            },
+            "coldStart": false,
+            "poisson": {
+              "atol": 0.0002,
+              "rtol": 0.0001,
+              "maxSweeps": 2048,
+              "checkEvery": 32
+            },
+            "maxResidual": 0.0002543439040891826,
+            "dtMin": 0.00042473609841243466,
+            "dtMax": 0.00043523926825398025,
+            "residualCheck": {
+              "passed": true,
+              "independentResidual": 0.00019876139413099736,
+              "highOnlyResidual": 0.00019925832748413086,
+              "gpu": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 0,
+                "residual": 0.00019876139413099736,
+                "target": 0.0002636102855205536
+              }
+            },
+            "meanStepMs": 16.68260869578175,
+            "maxStepMs": 23.5,
+            "elapsedMs": 479.40000000596046,
+            "memoryBytes": 220032,
+            "readbackBytes": 53504,
+            "dispatches": 2155,
+            "errors": {
+              "a": {
+                "l2": 2.880080614360267e-7,
+                "max": 0.000003840673940963546,
+                "axis": 0.000003840673940963546,
+                "boundary": 5.252488271493411e-7
+              },
+              "chi": {
+                "l2": 0.0008715567236525506,
+                "max": 0.006155106596328452,
+                "axis": 0.006155106596328452,
+                "boundary": 0.006155106596328452
+              },
+              "phi": {
+                "l2": 0.00003810797491456351,
+                "max": 0.00009577741910494347,
+                "axis": 0.00009577741910494347,
+                "boundary": 0.0000036774405205331363
+              },
+              "ur": {
+                "l2": 0.0000758306978109627,
+                "max": 0.0002101022784753825,
+                "axis": 0.000006879742522615008,
+                "boundary": 0.0002101022784753825
+              },
+              "uz": {
+                "l2": 0.000039161958725985455,
+                "max": 0.00014798547612272477,
+                "axis": 0.00014798547612272477,
+                "boundary": 0.00014798547612272477
+              }
+            },
+            "diagnostics": {
+              "energy": 0.0018051040824502707,
+              "enstrophy": 0.051974695175886154,
+              "maxOmega": 0.3003377914428711,
+              "maxU": 0.05758214369416237,
+              "maxA": 0.14955903589725494,
+              "maxDiv": 9.536743306171047e-8,
+              "maxWallSlip": 0.0007040029740892351,
+              "time": 0.01,
+              "stepIndex": 23
+            }
+          },
+          {
+            "name": "Thom",
+            "n": 32,
+            "nz": 64,
+            "accepted": true,
+            "time": 0.01,
+            "steps": 92,
+            "initial": {
+              "accepted": true,
+              "poisson": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 384,
+                "residual": 0.00026275275740772486,
+                "target": 0.0002639336168766022
+              }
+            },
+            "coldStart": false,
+            "poisson": {
+              "atol": 0.0002,
+              "rtol": 0.0001,
+              "maxSweeps": 2048,
+              "checkEvery": 32
+            },
+            "maxResidual": 0.00026340640033595264,
+            "dtMin": 0.00004982599662008494,
+            "dtMax": 0.0001093425730338625,
+            "residualCheck": {
+              "passed": true,
+              "independentResidual": 0.0002503529249224812,
+              "highOnlyResidual": 0.0002587437629699707,
+              "gpu": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 0,
+                "residual": 0.0002503529249224812,
+                "target": 0.00026380638480186464
+              }
+            },
+            "meanStepMs": 17.05652173916283,
+            "maxStepMs": 36.3999999910593,
+            "elapsedMs": 1671.300000011921,
+            "memoryBytes": 747264,
+            "readbackBytes": 184384,
+            "dispatches": 6931,
+            "errors": {
+              "a": {
+                "l2": 5.2058553918422885e-8,
+                "max": 7.244055124644433e-7,
+                "axis": 7.244055124644433e-7,
+                "boundary": 7.741946717390591e-8
+              },
+              "chi": {
+                "l2": 0.000279400734360888,
+                "max": 0.0016530031128352274,
+                "axis": 0.0016530031128352274,
+                "boundary": 0.0016530031128352274
+              },
+              "phi": {
+                "l2": 0.000011007846851347861,
+                "max": 0.000028078941882621333,
+                "axis": 0.000028078941882621333,
+                "boundary": 7.084519135081855e-7
+              },
+              "ur": {
+                "l2": 0.000020263200501550112,
+                "max": 0.00005711747127610517,
+                "axis": 9.034591511498686e-7,
+                "boundary": 0.00005711747127610517
+              },
+              "uz": {
+                "l2": 0.000010180549014685699,
+                "max": 0.00003833726836286385,
+                "axis": 0.00003833726836286385,
+                "boundary": 0.00003833726836286385
+              }
+            },
+            "diagnostics": {
+              "energy": 0.0018051107181236148,
+              "enstrophy": 0.05225400626659393,
+              "maxOmega": 0.3143064081668854,
+              "maxU": 0.057666655629873276,
+              "maxA": 0.14977706968784332,
+              "maxDiv": 1.9073486612342094e-7,
+              "maxWallSlip": 0.00020211147784721106,
+              "time": 0.01,
+              "stepIndex": 92
+            }
+          },
+          {
+            "name": "Thom",
+            "n": 64,
+            "nz": 128,
+            "accepted": true,
+            "time": 0.01,
+            "steps": 365,
+            "initial": {
+              "accepted": true,
+              "poisson": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 32,
+                "residual": 0.00025148785789497197,
+                "target": 0.0002639833986759186
+              }
+            },
+            "coldStart": false,
+            "poisson": {
+              "atol": 0.0002,
+              "rtol": 0.0001,
+              "maxSweeps": 2048,
+              "checkEvery": 32
+            },
+            "maxResidual": 0.0002639158337842673,
+            "dtMin": 0.00002600249464110478,
+            "dtMax": 0.000027401092047689316,
+            "residualCheck": {
+              "passed": true,
+              "independentResidual": 0.00025614493642933667,
+              "highOnlyResidual": 0.0003046393394470215,
+              "gpu": {
+                "converged": true,
+                "reason": "converged",
+                "sweeps": 0,
+                "residual": 0.00025614493642933667,
+                "target": 0.000263855654001236
+              }
+            },
+            "meanStepMs": 18.657260273988932,
+            "maxStepMs": 41.599999994039536,
+            "elapsedMs": 6878.4000000059605,
+            "memoryBytes": 2738688,
+            "readbackBytes": 680384,
+            "dispatches": 23701,
+            "errors": {
+              "a": {
+                "l2": 1.1151872542492847e-8,
+                "max": 1.0473797573684607e-7,
+                "axis": 1.008441421479489e-7,
+                "boundary": 1.0566895978451202e-8
+              },
+              "chi": {
+                "l2": 0.00005727931437689052,
+                "max": 0.0003632533792797821,
+                "axis": 0.00015411105367557631,
+                "boundary": 0.0003632533792797821
+              },
+              "phi": {
+                "l2": 0.0000036192094062109633,
+                "max": 0.000009751134758689134,
+                "axis": 0.000009751134758689134,
+                "boundary": 1.0318914805525296e-7
+              },
+              "ur": {
+                "l2": 0.000005568698234638924,
+                "max": 0.000014737779067596377,
+                "axis": 1.9116568392369885e-7,
+                "boundary": 0.000014737779067596377
+              },
+              "uz": {
+                "l2": 0.0000031649971146511715,
+                "max": 0.000009850971180837189,
+                "axis": 0.000009850971180837189,
+                "boundary": 0.000009694996863961861
+              }
+            },
+            "diagnostics": {
+              "energy": 0.0018050943035632372,
+              "enstrophy": 0.052331261336803436,
+              "maxOmega": 0.3270769715309143,
+              "maxU": 0.0576656349003315,
+              "maxA": 0.14983178675174713,
+              "maxDiv": 3.814697322468419e-7,
+              "maxWallSlip": 0.00005227664951235056,
+              "time": 0.01,
+              "stepIndex": 365
+            }
+          }
+        ],
+        "orders": [
+          2.4679020514654226,
+          2.2228492596465883
+        ]
+      }
+    ],
+    "calibration": {
+      "name": "Thom",
+      "n": 64,
+      "nz": 128,
+      "accepted": true,
+      "time": 0.01,
+      "steps": 365,
+      "initial": {
+        "accepted": true,
+        "poisson": {
+          "converged": true,
+          "reason": "converged",
+          "sweeps": 1696,
+          "residual": 0.00005633848923025653,
+          "target": 0.00005639833986759186
+        }
+      },
+      "coldStart": false,
+      "poisson": {
+        "atol": 0.00005,
+        "rtol": 0.00001,
+        "maxSweeps": 2048,
+        "checkEvery": 32
+      },
+      "maxResidual": 0.000056389602832496166,
+      "dtMin": 0.00002600249464110478,
+      "dtMax": 0.000027401092047689316,
+      "residualCheck": {
+        "passed": true,
+        "independentResidual": 0.00005456496000988409,
+        "highOnlyResidual": 0.00010264547245242284,
+        "gpu": {
+          "converged": true,
+          "reason": "converged",
+          "sweeps": 0,
+          "residual": 0.00005456496000988409,
+          "target": 0.00005638556599617005
+        }
+      },
+      "meanStepMs": 27.856164383479992,
+      "maxStepMs": 63.6000000089407,
+      "elapsedMs": 10504.70000000298,
+      "memoryBytes": 2738688,
+      "readbackBytes": 735552,
+      "dispatches": 80593,
+      "errors": {
+        "a": {
+          "l2": 1.1616425758874414e-8,
+          "max": 1.0473797573684607e-7,
+          "axis": 1.008441421479489e-7,
+          "boundary": 1.0591680144923787e-8
+        },
+        "chi": {
+          "l2": 0.00007323110749012874,
+          "max": 0.00044758363529995293,
+          "axis": 0.00044758363529995293,
+          "boundary": 0.00044758363529995293
+        },
+        "phi": {
+          "l2": 0.0000027361931297281397,
+          "max": 0.000006830218471514521,
+          "axis": 0.000006830218471514521,
+          "boundary": 1.0082606549315863e-7
+        },
+        "ur": {
+          "l2": 0.000005217413896293729,
+          "max": 0.000014725184384966226,
+          "axis": 1.653287584357335e-7,
+          "boundary": 0.000014725184384966226
+        },
+        "uz": {
+          "l2": 0.000002789284895805359,
+          "max": 0.000009686140204555997,
+          "axis": 0.000009686140204555997,
+          "boundary": 0.000009686140204555997
+        }
+      },
+      "diagnostics": {
+        "energy": 0.001805023057386279,
+        "enstrophy": 0.052329469472169876,
+        "maxOmega": 0.3270438313484192,
+        "maxU": 0.0576656311750412,
+        "maxA": 0.14983178675174713,
+        "maxDiv": 3.814697322468419e-7,
+        "maxWallSlip": 0.00005225068161962554,
+        "time": 0.01,
+        "stepIndex": 365
+      }
+    },
+    "coldStart": {
+      "name": "Thom",
+      "n": 32,
+      "nz": 64,
+      "accepted": true,
+      "time": 0.00002,
+      "steps": 1,
+      "initial": {
+        "accepted": true,
+        "poisson": {
+          "converged": true,
+          "reason": "converged",
+          "sweeps": 1728,
+          "residual": 0.00022691952472086996,
+          "target": 0.0002639336168766022
+        }
+      },
+      "coldStart": true,
+      "poisson": {
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "maxSweeps": 12000,
+        "checkEvery": 32
+      },
+      "maxResidual": 0.0002381601370871067,
+      "dtMin": 0.00002,
+      "dtMax": 0.00002,
+      "residualCheck": {
+        "passed": true,
+        "independentResidual": 0.00023810797714907128,
+        "highOnlyResidual": 0.00023812800645828247,
+        "gpu": {
+          "converged": true,
+          "reason": "converged",
+          "sweeps": 0,
+          "residual": 0.0002381601370871067,
+          "target": 0.00026393336653709413
+        }
+      },
+      "meanStepMs": 18.5,
+      "maxStepMs": 18.5,
+      "elapsedMs": 292.70000000298023,
+      "memoryBytes": 747264,
+      "readbackBytes": 160512,
+      "dispatches": 3607,
+      "errors": {
+        "a": {
+          "l2": 1.9792446034669055e-9,
+          "max": 1.3656945296869338e-8,
+          "axis": 1.3071151411248039e-8,
+          "boundary": 7.201764054901028e-10
+        },
+        "chi": {
+          "l2": 0.000015886959076553852,
+          "max": 0.0002263300972571436,
+          "axis": 0.0002263300972571436,
+          "boundary": 0.0002263300972571436
+        },
+        "phi": {
+          "l2": 0.000007890407426355608,
+          "max": 0.000019212276898144393,
+          "axis": 0.000019212276898144393,
+          "boundary": 3.341755805761341e-7
+        },
+        "ur": {
+          "l2": 0.000018504623206733748,
+          "max": 0.00005529598134385905,
+          "axis": 0.0000010206573486878662,
+          "boundary": 0.00005529598134385905
+        },
+        "uz": {
+          "l2": 0.000011146805069535957,
+          "max": 0.00003754703518667798,
+          "axis": 0.000037353789483755144,
+          "boundary": 0.00003754703518667798
+        }
+      },
+      "diagnostics": {
+        "energy": 0.0018089725635945797,
+        "enstrophy": 0.05240432173013687,
+        "maxOmega": 0.3153380751609802,
+        "maxU": 0.0577242411673069,
+        "maxA": 0.14992646872997284,
+        "maxDiv": 1.5894572413799324e-7,
+        "maxWallSlip": 0.00013991986634209752,
+        "time": 0.00002,
+        "stepIndex": 1
+      }
+    },
+    "labSize": {
+      "burgers": {
+        "name": "Burgers",
+        "n": 256,
+        "nz": 512,
+        "accepted": true,
+        "time": 0.00001,
+        "steps": 2,
+        "initial": {
+          "accepted": true,
+          "poisson": {
+            "converged": true,
+            "reason": "converged",
+            "sweeps": 0,
+            "residual": 0,
+            "target": 0.0002
+          }
+        },
+        "coldStart": false,
+        "poisson": {
+          "atol": 0.0002,
+          "rtol": 0.0001,
+          "maxSweeps": 512,
+          "checkEvery": 32
+        },
+        "maxResidual": 0,
+        "dtMin": 0.00000431496626583889,
+        "dtMax": 0.000005685033734161111,
+        "residualCheck": {
+          "passed": true,
+          "independentResidual": 0,
+          "highOnlyResidual": 0,
+          "gpu": {
+            "converged": true,
+            "reason": "converged",
+            "sweeps": 0,
+            "residual": 0,
+            "target": 0.0002
+          }
+        },
+        "meanStepMs": 48.20000000298023,
+        "maxStepMs": 49.900000005960464,
+        "elapsedMs": 249.6000000089407,
+        "memoryBytes": 40922112,
+        "readbackBytes": 8586880,
+        "dispatches": 53,
+        "errors": {
+          "a": {
+            "l2": 1.2554870544687401e-8,
+            "max": 2.9786561217548524e-8,
+            "axis": 2.224282502627517e-8,
+            "boundary": 2.9786561217548524e-8
+          },
+          "chi": {
+            "l2": 0,
+            "max": 0,
+            "axis": 0,
+            "boundary": 0
+          },
+          "phi": {
+            "l2": 0,
+            "max": 0,
+            "axis": 0,
+            "boundary": 0
+          },
+          "ur": {
+            "l2": 8.36311114580906e-9,
+            "max": 2.9802322387695312e-8,
+            "axis": 0,
+            "boundary": 2.9802322387695312e-8
+          },
+          "uz": {
+            "l2": 1.0162769081700214e-8,
+            "max": 2.9802322387695312e-8,
+            "axis": 0,
+            "boundary": 2.9802322387695312e-8
+          }
+        },
+        "diagnostics": {
+          "energy": 0.46237629652023315,
+          "enstrophy": 0.7904249429702759,
+          "maxOmega": 1.5915342569351196,
+          "maxU": 0.7639391422271729,
+          "maxA": 0.7957709431648254,
+          "maxDiv": 0,
+          "time": 0.00001,
+          "stepIndex": 2
+        }
+      },
+      "thom": [
+        {
+          "name": "Thom",
+          "n": 256,
+          "nz": 512,
+          "accepted": true,
+          "time": 0.00002,
+          "steps": 20,
+          "initial": {
+            "accepted": true,
+            "poisson": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 32,
+              "residual": 0.000016039004549384117,
+              "target": 0.0002639989614486695
+            }
+          },
+          "coldStart": false,
+          "poisson": {
+            "atol": 0.0002,
+            "rtol": 0.0001,
+            "maxSweeps": 512,
+            "checkEvery": 32
+          },
+          "maxResidual": 0.0002321075735380873,
+          "dtMin": 9.999999999999972e-7,
+          "dtMax": 0.000001,
+          "residualCheck": {
+            "passed": true,
+            "independentResidual": 0.00014077760715736076,
+            "highOnlyResidual": 0.001085016201614053,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0.00014077761443331838,
+              "target": 0.0002639987051486969
+            }
+          },
+          "meanStepMs": 56.425,
+          "maxStepMs": 67.90000000596046,
+          "elapsedMs": 1294.7999999970198,
+          "memoryBytes": 40922112,
+          "readbackBytes": 8591744,
+          "dispatches": 877,
+          "errors": {
+            "a": {
+              "l2": 1.8943529426214223e-9,
+              "max": 1.3670684723132709e-8,
+              "axis": 1.024781662306573e-8,
+              "boundary": 6.70153815253427e-11
+            },
+            "chi": {
+              "l2": 0.000032525264878596634,
+              "max": 0.0010575188728577656,
+              "axis": 0.0010575188728577656,
+              "boundary": 0.0010575188728577656
+            },
+            "phi": {
+              "l2": 2.390507468559437e-8,
+              "max": 8.239221518241413e-8,
+              "axis": 8.239221518241413e-8,
+              "boundary": 8.132918673191139e-10
+            },
+            "ur": {
+              "l2": 3.2117553336234584e-7,
+              "max": 0.0000010178760642860774,
+              "axis": 7.40174401467114e-9,
+              "boundary": 9.279671418081895e-7
+            },
+            "uz": {
+              "l2": 3.2066505581750134e-7,
+              "max": 0.0000010334689596765948,
+              "axis": 7.547014697836807e-7,
+              "boundary": 0.0000010334689596765948
+            }
+          },
+          "diagnostics": {
+            "energy": 0.0018090738449245691,
+            "enstrophy": 0.05248098447918892,
+            "maxOmega": 0.3367975056171417,
+            "maxU": 0.05773448944091797,
+            "maxA": 0.14999856054782867,
+            "maxDiv": 0.0000015258789289873675,
+            "maxWallSlip": 0.000002135636350431014,
+            "time": 0.00002,
+            "stepIndex": 20
+          }
+        },
+        {
+          "name": "Thom",
+          "n": 256,
+          "nz": 512,
+          "accepted": true,
+          "time": 0.00002,
+          "steps": 20,
+          "initial": {
+            "accepted": true,
+            "poisson": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 32,
+              "residual": 0.000016039004549384117,
+              "target": 0.0002639989614486695
+            }
+          },
+          "coldStart": false,
+          "poisson": {
+            "atol": 0.0002,
+            "rtol": 0.0001,
+            "maxSweeps": 2048,
+            "checkEvery": 32
+          },
+          "maxResidual": 0.0002321075735380873,
+          "dtMin": 9.999999999999972e-7,
+          "dtMax": 0.000001,
+          "residualCheck": {
+            "passed": true,
+            "independentResidual": 0.00014077760715736076,
+            "highOnlyResidual": 0.001085016201614053,
+            "gpu": {
+              "converged": true,
+              "reason": "converged",
+              "sweeps": 0,
+              "residual": 0.00014077761443331838,
+              "target": 0.0002639987051486969
+            }
+          },
+          "meanStepMs": 57.65500000119209,
+          "maxStepMs": 66.8999999910593,
+          "elapsedMs": 1400.0999999940395,
+          "memoryBytes": 40922112,
+          "readbackBytes": 8591744,
+          "dispatches": 877,
+          "errors": {
+            "a": {
+              "l2": 1.8943529426214223e-9,
+              "max": 1.3670684723132709e-8,
+              "axis": 1.024781662306573e-8,
+              "boundary": 6.70153815253427e-11
+            },
+            "chi": {
+              "l2": 0.000032525264878596634,
+              "max": 0.0010575188728577656,
+              "axis": 0.0010575188728577656,
+              "boundary": 0.0010575188728577656
+            },
+            "phi": {
+              "l2": 2.390507468559437e-8,
+              "max": 8.239221518241413e-8,
+              "axis": 8.239221518241413e-8,
+              "boundary": 8.132918673191139e-10
+            },
+            "ur": {
+              "l2": 3.2117553336234584e-7,
+              "max": 0.0000010178760642860774,
+              "axis": 7.40174401467114e-9,
+              "boundary": 9.279671418081895e-7
+            },
+            "uz": {
+              "l2": 3.2066505581750134e-7,
+              "max": 0.0000010334689596765948,
+              "axis": 7.547014697836807e-7,
+              "boundary": 0.0000010334689596765948
+            }
+          },
+          "diagnostics": {
+            "energy": 0.0018090738449245691,
+            "enstrophy": 0.05248098447918892,
+            "maxOmega": 0.3367975056171417,
+            "maxU": 0.05773448944091797,
+            "maxA": 0.14999856054782867,
+            "maxDiv": 0.0000015258789289873675,
+            "maxWallSlip": 0.000002135636350431014,
+            "time": 0.00002,
+            "stepIndex": 20
+          }
+        }
+      ]
+    },
+    "precisionRegression": true,
+    "liveDefaultValidated": false
+  },
+  "elapsedMs": 29448.59999999404
+}
