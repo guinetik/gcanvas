@@ -3,13 +3,17 @@
  * inject-seo.js
  *
  * Batch-injects SEO meta tags and Google Analytics into all demo HTML files.
- * Skips files that already have SEO (index.html, home.html, 404.html).
+ * Skips files that already have full hand-managed SEO (index.html, home.html, 404.html).
+ *
+ * Re-runs replace the previous injected block. Existing description / canonical /
+ * Open Graph / Twitter tags are reused instead of duplicated.
  *
  * Usage:  node scripts/inject-seo.js
  */
 
 import { readdir, readFile, writeFile } from "node:fs/promises";
-import { join, basename } from "node:path";
+import { join, basename, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const DEMOS_DIR = join(import.meta.dirname, "..", "demos");
 const BASE_URL = "https://gcanvas.guinetik.com";
@@ -17,15 +21,16 @@ const OG_IMAGE = `${BASE_URL}/og_image.png`;
 const GA_ID = "G-1GHJD0LM4Z";
 const TWITTER_CREATOR = "@guinetik";
 
-// Files that already have full SEO — skip them
 const SKIP_FILES = new Set(["index.html", "home.html", "404.html"]);
-
-// Marker comment so we never double-inject
 const SEO_MARKER = "<!-- SEO:injected -->";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /** Strip HTML tags from a string */
 function stripHtml(html) {
@@ -67,28 +72,50 @@ function extractInfoText(html) {
   return stripHtml(m[1]);
 }
 
-// ---------------------------------------------------------------------------
-// SEO + GA snippet builders
-// ---------------------------------------------------------------------------
+function hasTag(html, { tag, attr, value }) {
+  const re = new RegExp(
+    `<${tag}\\b[^>]*\\s${attr}\\s*=\\s*["']${escapeRegExp(value)}["']`,
+    "i"
+  );
+  return re.test(html);
+}
 
-function buildSeoBlock(filename, title, description) {
-  const canonicalUrl = `${BASE_URL}/${filename}`;
-  const safeTitle = escAttr(title);
-  const safeDesc = escAttr(description);
+function extractTagAttr(html, { tag, attr, value, capture }) {
+  const re = new RegExp(
+    `<${tag}\\b[^>]*\\s${attr}\\s*=\\s*["']${escapeRegExp(value)}["'][^>]*>`,
+    "i"
+  );
+  const m = html.match(re);
+  if (!m) return null;
+  const cap = m[0].match(new RegExp(`${capture}\\s*=\\s*["']([^"']*)["']`, "i"));
+  return cap ? cap[1] : null;
+}
 
-  return `${SEO_MARKER}
-  <meta name="description" content="${safeDesc}" />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="${canonicalUrl}" />
-  <meta property="og:title" content="${safeTitle}" />
-  <meta property="og:description" content="${safeDesc}" />
-  <meta property="og:image" content="${OG_IMAGE}" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="${safeTitle}" />
-  <meta name="twitter:description" content="${safeDesc}" />
-  <meta name="twitter:image" content="${OG_IMAGE}" />
-  <meta name="twitter:creator" content="${TWITTER_CREATOR}" />
-  <link rel="canonical" href="${canonicalUrl}" />`;
+function hasGa(html) {
+  return /googletagmanager\.com\/gtag\/js\?id=G-1GHJD0LM4Z/i.test(html);
+}
+
+function countAttr(html, pattern) {
+  return (html.match(pattern) || []).length;
+}
+
+/** True when a page is missing SEO, or has duplicate description/canonical/OG tags. */
+export function needsSeoUpdate(html) {
+  const descriptions = countAttr(html, /<meta\b[^>]*\sname\s*=\s*["']description["']/gi);
+  const canonicals = countAttr(html, /<link\b[^>]*\srel\s*=\s*["']canonical["']/gi);
+  const ogUrls = countAttr(html, /property\s*=\s*["']og:url["']/gi);
+  const ogDescriptions = countAttr(html, /property\s*=\s*["']og:description["']/gi);
+  if (descriptions > 1 || canonicals > 1 || ogUrls > 1 || ogDescriptions > 1) return true;
+  if (!html.includes(SEO_MARKER)) return true;
+  if (!hasGa(html)) return true;
+  if (descriptions === 0 || canonicals === 0) return true;
+  return false;
+}
+
+export function stripInjectedBlock(html) {
+  return html
+    .replace(/\r?\n?[ \t]*<!-- SEO:injected -->[\s\S]*?(?=\s*<\/head>)/i, "")
+    .replace(/\s*(<\/head>)/i, "\n$1");
 }
 
 function buildGaSnippet() {
@@ -102,8 +129,76 @@ function buildGaSnippet() {
   </script>`;
 }
 
+function fallbackDescription(title, infoText) {
+  return infoText
+    ? truncate(`${title} - ${infoText}`, 160)
+    : `${title} - Interactive demo built with GCanvas, a modular 2D canvas rendering and game framework.`;
+}
+
+/**
+ * Insert or refresh the injected SEO/GA block without duplicating tags
+ * that already exist on the page.
+ */
+export function injectSeo(html, filename) {
+  const descBeforeStrip = extractTagAttr(html, {
+    tag: "meta",
+    attr: "name",
+    value: "description",
+    capture: "content",
+  });
+  const page = stripInjectedBlock(html);
+  const title = extractTitle(page) || filename.replace(/\.html$/i, "");
+  const existingDesc =
+    extractTagAttr(page, {
+      tag: "meta",
+      attr: "name",
+      value: "description",
+      capture: "content",
+    }) || descBeforeStrip;
+  const existingCanonical = extractTagAttr(page, {
+    tag: "link",
+    attr: "rel",
+    value: "canonical",
+    capture: "href",
+  });
+  const description = existingDesc || fallbackDescription(title, extractInfoText(page));
+  const canonicalUrl = existingCanonical || `${BASE_URL}/${filename}`;
+
+  const lines = [SEO_MARKER];
+
+  const addMeta = (attr, value, content) => {
+    if (hasTag(page, { tag: "meta", attr, value })) return;
+    lines.push(`  <meta ${attr}="${value}" content="${escAttr(content)}" />`);
+  };
+
+  addMeta("name", "description", description);
+  addMeta("property", "og:type", "website");
+  addMeta("property", "og:url", canonicalUrl);
+  addMeta("property", "og:title", title);
+  addMeta("property", "og:description", description);
+  addMeta("property", "og:image", OG_IMAGE);
+  addMeta("name", "twitter:card", "summary_large_image");
+  addMeta("name", "twitter:title", title);
+  addMeta("name", "twitter:description", description);
+  addMeta("name", "twitter:image", OG_IMAGE);
+  addMeta("name", "twitter:creator", TWITTER_CREATOR);
+
+  if (!hasTag(page, { tag: "link", attr: "rel", value: "canonical" })) {
+    lines.push(`  <link rel="canonical" href="${escAttr(canonicalUrl)}" />`);
+  }
+
+  if (!hasGa(page)) {
+    lines.push(`  ${buildGaSnippet()}`);
+  }
+
+  if (!/<\/head>/i.test(page)) return page;
+
+  const injection = `\n  ${lines.join("\n")}\n`;
+  return page.replace(/<\/head>/i, `${injection}</head>`);
+}
+
 // ---------------------------------------------------------------------------
-// Main
+// CLI
 // ---------------------------------------------------------------------------
 
 async function main() {
@@ -119,43 +214,44 @@ async function main() {
 
   for (const file of htmlFiles) {
     const filepath = join(DEMOS_DIR, file);
-    let html = await readFile(filepath, "utf-8");
-
-    // Already injected?
-    if (html.includes(SEO_MARKER)) {
-      console.log(`  SKIP (already injected): ${file}`);
+    const html = await readFile(filepath, "utf-8");
+    if (!needsSeoUpdate(html)) {
+      console.log(`  SKIP (clean): ${file}`);
       skipped++;
       continue;
     }
 
-    const title = extractTitle(html) || file.replace(".html", "");
-    const infoText = extractInfoText(html);
-    const description = infoText
-      ? truncate(`${title} - ${infoText}`, 160)
-      : `${title} - Interactive demo built with GCanvas, a modular 2D canvas rendering and game framework.`;
-
-    const seoBlock = buildSeoBlock(file, title, description);
-    const gaBlock = buildGaSnippet();
-    const injection = `\n  ${seoBlock}\n  ${gaBlock}\n`;
-
-    // Insert right before </head>
-    if (html.includes("</head>")) {
-      html = html.replace("</head>", `${injection}</head>`);
-    } else {
-      console.warn(`  WARN: no </head> in ${file}, skipping.`);
+    const next = injectSeo(html, file);
+    if (next === html) {
+      console.log(`  SKIP (unchanged): ${file}`);
       skipped++;
       continue;
     }
 
-    await writeFile(filepath, html, "utf-8");
-    console.log(`  DONE: ${file}  (title: "${title}")`);
+    await writeFile(filepath, next, "utf-8");
+    console.log(`  DONE: ${file}  (title: "${extractTitle(next) || basename(file)}")`);
     injected++;
   }
 
-  console.log(`\nComplete: ${injected} injected, ${skipped} skipped.`);
+  console.log(`\nComplete: ${injected} updated, ${skipped} unchanged.`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+function isDirectRun() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return (
+      resolve(fileURLToPath(import.meta.url)).toLowerCase() ===
+      resolve(entry).toLowerCase()
+    );
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectRun()) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
