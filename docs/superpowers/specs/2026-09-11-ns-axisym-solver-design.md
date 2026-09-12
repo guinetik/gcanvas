@@ -1,8 +1,9 @@
 # Axisymmetric Navier–Stokes Solver — Design
 
 **Date:** 2026-09-11
-**Status:** Revised after paper and numerical design review; CPU validation
-required before the GPU port.
+**Status:** CPU reference, Thom walls, GPU solver, and first interactive 2D
+lab implemented. Numerical and browser results are linked below; long-time
+physical-flow validation remains separate from this initial release.
 **Purpose:** A numerically honest lab for axisymmetric viscous vortex
 amplification, motivated by OpenAI's *Finite time blowup for Navier–Stokes*.
 Axisymmetry with swirl retains genuine three-dimensional vortex stretching
@@ -86,8 +87,11 @@ stored `a`, never by dividing a differentiated `Γ²` by `r⁴`.
 
 ### Grid and axis
 
-Domain `[0, R] × [−Z, Z]`, uniform spacing, default 256×512 cells,
-config-driven. Scalar samples start at `r = Δr/2`; meridional velocity
+Domain `[0, R] × [−Z, Z]`, uniform spacing, config-driven. The first live
+lab starts at a 32×64 interactive preview with R = Z = 1; 64×128 and higher
+are available for refinement. 256×512 remains an optional heavier
+setting pending longer physical-flow/performance acceptance. Scalar samples
+start at `r = Δr/2`; meridional velocity
 fluxes live on cell faces. Document scalar, face, and corner indices in
 the CPU reference before porting its stencils.
 
@@ -213,12 +217,36 @@ solution error or an error bar on a blowup estimate.
 
 ## 2. WGSL pipeline
 
-New module `src/webgpu/ns-axisym-solver.js`, following the existing pipeline
-contract: self-contained class owning its GPUDevice and offscreen canvas,
-`init() → Promise<bool>`, per-step compute, `compositeOnto(ctx)`, `destroy()`.
+Module `src/webgpu/ns-axisym-solver.js` owns its GPUDevice and compute
+buffers: `init() → Promise<bool>`, awaited `initialize()` and `step()`,
+timestamped `diagnostics()`, debug `readback()`, and `destroy()`. Phase 3
+keeps rendering separate from numerical acceptance. Phase 4 implements
+`NSAxisymView` in `src/webgpu/ns-axisym-view.js`, with an offscreen canvas
+and `compositeOnto(ctx)`, consuming accepted GPU buffers without a full
+field readback each frame. `presentationState()` lends buffers only for
+immediate read-only command submission; later solver steps can recycle them.
+A timestamped radial profile uses 16×nr bytes of readback at most four
+times per second, independently of the 64-byte numerical acceptance checks.
+Presentation caches its rendered image until the accepted state, view
+settings, or canvas size changes, so idle frames do not submit field draws.
+The UI reports simulated-time progress per real second and offers a fast
+preview reset; the numerical timestep is never enlarged for playback.
 Shaders in `src/webgpu/shaders/ns/`, one `.wgsl?raw` file per pass. Exported
 via `src/webgpu/index.js`. No WebGL fallback; the page shows a
 "needs WebGPU" card.
+
+The implemented f32 RK2 uses compensated accumulation of the two evolved
+fields to retain increments smaller than one state ulp. The potential uses
+two f32 components, a main value and a small correction, to resolve the
+measured 256×512 elliptic residual floor. Residuals, boundaries, and derived
+fields consume both components. Every shader operation remains f32; this
+limited representation does not implement full IEEE binary64 arithmetic.
+Debug readback reconstructs their sum in a Float64 array for independent
+CPU validation; GPU acceptance uses the two stored components directly.
+Two reduction dispatches produce a 64-byte result for each awaited check.
+The [GPU validation report](../plans/2026-09-11-ns-axisym-gpu-validation.md)
+records the passing strict-tolerance, cold-start, and 20-step 256×512 wall
+regressions. Long-time physical-flow and live-performance validation remain.
 
 Compute passes use 8×8 workgroups:
 
@@ -333,6 +361,13 @@ R reset, view-mode cycle, steps-per-frame. Show boundary policy and
 validation status alongside the preset. Mobile: panel toggle like
 navier-stokes.
 
+The first lab is available at `demos/ns-lab.html`, linked under Physics.
+See the [lab validation report](../plans/2026-09-11-ns-axisym-lab-validation.md)
+for implemented controls, browser checks, and limits. Reciprocal-vorticity
+extrapolation and the optional revolve view remain deferred. Ring runs
+label their initial support width; a unique evolving core width is not
+assumed. Analytic runs fit the Gaussian vorticity width when resolved.
+
 ## 4. Validation and implementation order
 
 Implement `src/math/ns-axisym.js` first as the CPU Float64 reference.
@@ -388,7 +423,9 @@ visible run states, not evidence of blowup.
 - Full non-axisymmetric 3D dynamics, the paper's oscillatory stress
   construction, and proof verification.
 - Reproduction of the Luo–Hou Euler boundary-singularity scenario.
-- Pseudo-spectral methods, f64 GPU emulation, and adaptive mesh refinement.
+- Pseudo-spectral methods, full IEEE binary64 GPU emulation, and adaptive
+  mesh refinement. The measured need for a two-f32 potential correction
+  above is a limited precision measure within scope.
 - Claims of observed or excluded finite-time blowup from this lab.
 
 ## References
