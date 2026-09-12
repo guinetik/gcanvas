@@ -22,6 +22,7 @@
     "docs": "jsdoc -c jsdoc.json --verbose",
     "deploy:demo": "gh-pages --dist public --branch gh-pages",
     "test": "vitest --no-watch",
+    "test:ci": "vitest --no-watch --config vitest.ci.config.js",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage"
   },
