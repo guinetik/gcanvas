@@ -7,7 +7,7 @@
  * Ψ(x,t) = A * e^(-(x-vt)²/4a²) * e^(i(kx-ωt))
  */
 
-import { Game, Painter, Camera3D, Text, applyAnchor, Position, Scene, verticalLayout, applyLayout, Gesture, Screen } from "../../src/index.js";
+import { Game, Painter, Camera3D, Text, applyAnchor, Position, Scene, Gesture, Screen } from "../../src/index.js";
 import { gaussianWavePacket } from "../../src/math/quantum.js";
 
 // Configuration
@@ -55,6 +55,10 @@ const CONFIG = {
   gridColor: "rgba(60, 80, 120, 0.4)",
   axisColor: "rgba(100, 150, 200, 0.6)",
   envelopeColor: "rgba(255, 100, 100, 0.5)", // Red envelope line
+
+  hud: {
+    top: 28, // below canvas edge; #info-toggle stays top-left
+  },
 };
 
 class SchrodingerDemo extends Game {
@@ -67,6 +71,7 @@ class SchrodingerDemo extends Game {
   init() {
     super.init();
     this.time = 0;
+    Screen.init(this);
 
     // Calculate initial zoom based on screen size to fill canvas better
     const initialZoom = Math.min(
@@ -121,67 +126,86 @@ class SchrodingerDemo extends Game {
     // Setup collapse detection (hold without dragging = measure/collapse)
     this.setupCollapseInteraction();
 
-    // Create info panel container anchored to top left
-    this.infoPanel = new Scene(this, { x: 0, y: 0 });
+    this.setupInfoPanel();
+  }
+
+  setupInfoPanel() {
+    this.infoPanel = new Scene(this, { x: 0, y: 0, originX: 0.5 });
     applyAnchor(this.infoPanel, {
-      anchor: Position.TOP_LEFT,
-      anchorOffsetX: Screen.responsive(10, 10, 10),
-      anchorOffsetY: Screen.responsive(10, 10, 10),
+      anchor: Position.TOP_CENTER,
+      anchorMargin: CONFIG.hud.top,
+      anchorSetTextAlign: false,
     });
     this.pipeline.add(this.infoPanel);
 
-    // Create all text items
     const { amplitude, sigma, k, omega, velocity } = CONFIG;
+    const textOpts = { align: "center", baseline: "middle", originX: 0.5 };
 
     this.titleText = new Text(this, "Gaussian Wave Packet", {
       font: `bold ${Screen.responsive(18, 24, 28)}px monospace`,
       color: "#7af",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this.equationText = new Text(this, "\u03A8(x,t) = A\u00B7e^(-(x-vt)\u00B2/4\u03C3\u00B2) \u00B7 e^(i(kx-\u03C9t))", {
       font: `${Screen.responsive(7, 9, 10)}px monospace`,
       color: "#fff",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this.paramsText = new Text(this, `A=${amplitude}  \u03C3=${sigma}  k=${k}  \u03C9=${omega}  v=${velocity}`, {
       font: `${Screen.responsive(9, 12, 13)}px monospace`,
       color: "#6d8",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this.liveText = new Text(this, "t=0.00s  x\u2080=0.00", {
       font: `${Screen.responsive(9, 12, 13)}px monospace`,
       color: "#fa6",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this.hintsText = new Text(this, "drag to rotate \u00B7 scroll to zoom \u00B7 hold to collapse \u00B7 dbl-click to reset", {
       font: `${Screen.responsive(8, 10, 11)}px monospace`,
       color: "#889",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
     this.legendText = new Text(this, "Helix = \u03A8  \u00B7  Blue = Re(\u03A8)  \u00B7  Red = |\u03A8|\u00B2", {
       font: `${Screen.responsive(8, 10, 11)}px monospace`,
       color: "#889",
-      align: "left",
-      baseline: "middle",
+      ...textOpts,
     });
 
-    // Use vertical layout to position items
-    const textItems = [this.titleText, this.equationText, this.paramsText, this.liveText, this.hintsText, this.legendText];
-    const layout = verticalLayout(textItems, { spacing: Screen.responsive(18, 26, 30), align: "left" });
-    applyLayout(textItems, layout.positions);
+    this._hudItems = [this.titleText, this.equationText, this.paramsText, this.liveText, this.hintsText, this.legendText];
+    this._hudItems.forEach((item) => {
+      if (item.shape) item.shape.originX = 0.5;
+      this.infoPanel.add(item);
+    });
+    this._layoutHud();
+  }
 
-    // Add all to panel
-    textItems.forEach(item => this.infoPanel.add(item));
+  _layoutHud() {
+    if (!this.infoPanel || !this._hudItems) return;
+
+    const spacing = Screen.responsive(18, 26, 30);
+    let y = 0;
+    for (const item of this._hudItems) {
+      item.x = 0;
+      item.y = y;
+      item.align = "center";
+      item.originX = 0.5;
+      if (item.shape) item.shape.originX = 0.5;
+      y += spacing;
+    }
+
+    this.infoPanel.originX = 0.5;
+    this.infoPanel.height = y;
+    this.infoPanel.markBoundsDirty();
+  }
+
+  onResize() {
+    this._layoutHud();
   }
 
   /**
