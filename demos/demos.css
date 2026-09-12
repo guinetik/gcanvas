@@ -356,7 +356,7 @@ iframe {
 }
 
 /* Compact math block for attractors & simulations */
-#info .math {
+:is(#info, .demo-info) .math {
     margin: 10px 0 0;
     padding: 8px 10px;
     background: var(--tv-bg-2);
@@ -375,7 +375,7 @@ iframe {
 }
 
 /* Controls — kbd chip + muted verb */
-#info .controls {
+:is(#info, .demo-info) .controls {
     list-style: none;
     margin: 12px 0 0;
     padding: 10px 0 0;
@@ -384,14 +384,14 @@ iframe {
     gap: 6px;
 }
 
-#info .controls li {
+:is(#info, .demo-info) .controls li {
     display: flex;
     align-items: baseline;
     gap: 8px;
 }
 
-#info kbd,
-#info code {
+:is(#info, .demo-info) kbd,
+:is(#info, .demo-info) code {
     display: inline-block;
     padding: 1px 6px;
     background: var(--tv-surface);
