@@ -377,7 +377,7 @@ export class NavierStokesDemo extends Game {
 
     this.toggleButton = new Button(this, {
       text: "Controls", width: CONFIG.ui.toggleWidth, height: CONFIG.ui.buttonHeight,
-      origin: "center", x: CONFIG.ui.margin + CONFIG.ui.toggleWidth / 2, y: CONFIG.ui.margin + CONFIG.ui.buttonHeight / 2,
+      origin: "center", x: this.width - CONFIG.ui.margin - CONFIG.ui.toggleWidth / 2, y: CONFIG.ui.margin + CONFIG.ui.buttonHeight / 2,
       onClick: () => { this.ambient = false; this.panelOpen = !this.panelOpen; this.layoutUI(); },
     });
     this.pipeline.add(this.toggleButton);
@@ -439,6 +439,7 @@ export class NavierStokesDemo extends Game {
       this.toggleButton.visible = !this.embed && (this.compact || this.ambient);
       this.toggleButton.interactive = this.toggleButton.visible;
       this.toggleButton.text = this.panel.visible ? "Close controls" : "Controls";
+      this.toggleButton.x = this.width - CONFIG.ui.margin - CONFIG.ui.toggleWidth / 2;
     }
     if (this.caption) {
       this.caption.visible = !this.ambient && !this.embed && !(this.compact && this.panel.visible);
