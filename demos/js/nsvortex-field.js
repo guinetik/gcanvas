@@ -1,14 +1,17 @@
 import { GameObject, Painter, Camera3D, WebGLAttractorPipeline } from "../../src/index.js";
 import { PALETTES, LOOKS } from "./navier-stokes-looks.js";
-import { LOOM_CONFIG as MODEL, createWeave, loomState, filamentPoint, activePulses, pulsePoint } from "./nsvortex-model.js";
+import { LOOM_CONFIG as MODEL, createWeave, filamentPoint, unstablePoint, activePulses, pulsePoint } from "./nsvortex-model.js";
 
 const CONFIG = {
   seed: 42, maxDt: 0.05, background: "#030910", mobileWidth: 740,
   camera: { perspective: 2200, rotationX: 0.38, rotationY: 0.2, screenRotation: -0.27 },
+  fit: { height: 0.36, width: 0.5, centerY: 0.52 },
   drag: 0.006, orbit: 0.08, zoom: { min: 0.3, max: 3, wheel: 0.001 },
   reference: { stride: 8, color: "rgba(112,162,180,0.22)" },
   inset: { x: 8, width: 164, height: 145, scale: 32, minWidth: 1000, minHeight: 670,
     initial: "#456372", current: "#70e2da", text: "#a7bec7" },
+  crescendo: { pushIn: 0.1, motion: 12, packetPhase: 18, extraPackets: 3,
+    bloom: 0.1, glow: 0.13, glowRadius: 14, exposure: 0.04, lineWidth: 0.03, blink: 0.1, alpha: -0.1 },
   gpu: {
     lineWidth: 1.3, visual: { ...PALETTES.copper, maxAlpha: 0.44, hueJitter: 0 },
     blink: { intensityBoost: 1.35, saturationBoost: 1.3, alphaBoost: 2.5 },
@@ -47,15 +50,16 @@ export class VortexField extends GameObject {
   }
   resize() {
     this.width = this.game.width; this.height = this.game.height;
-    const available = !this.game.compact && this.game.panel?.visible ? this.game.panel.x : this.width;
-    this.scale = Math.min(available * 0.34, this.height * 0.28);
+    // Fit the opening vortex to the viewport height; only narrow screens limit width.
+    this.scale = Math.min(this.width * CONFIG.fit.width, this.height * CONFIG.fit.height);
     // Controls overlay the scene; keep the artwork aligned with the canvas title.
-    this.cx = this.width * 0.5; this.cy = this.height * 0.45;
+    this.cx = this.width * 0.5; this.cy = this.height * CONFIG.fit.centerY;
     if (this.gpu.width !== this.width || this.gpu.height !== this.height) this.gpu.resize(this.width, this.height);
   }
 
   project(point, radial = this.game.state.view.radial, axial = this.game.state.view.axial,
-    scale = this.scale, cx = this.cx, cy = this.cy, zoom = this.game.zoom) {
+    scale = this.scale * (1 + CONFIG.crescendo.pushIn * this.game.state.crescendo),
+    cx = this.cx, cy = this.cy, zoom = this.game.zoom) {
     const p = this.camera.project(point.x * radial * scale, -point.z * axial * scale, point.y * radial * scale);
     return { x: cx + p.x * zoom, y: cy + p.y * zoom, z: p.z };
   }
@@ -84,7 +88,8 @@ export class VortexField extends GameObject {
 
   collect() {
     this.segments.length = 0;
-    const { motion, decades } = this.game.state;
+    const { decades, crescendo, surge } = this.game.state, c = CONFIG.crescendo;
+    const motion = this.game.state.motion + c.motion * surge;
     const mobile = this.width < CONFIG.mobileWidth;
     for (let k = 0; k < this.strands.length; k++) {
       if (mobile && k % 4 >= 2) continue;
@@ -92,12 +97,12 @@ export class VortexField extends GameObject {
       let previous;
       for (let j = 0; j < MODEL.samples; j++) {
         const s = j / (MODEL.samples - 1);
-        const point = this.project(filamentPoint(strand, s, motion));
+        const point = this.project(unstablePoint(filamentPoint(strand, s, motion), motion, crescendo));
         const edge = Math.min(1, s * 12, (1 - s) * 14);
-        const comb = 3 * s - motion * 0.32 - strand.offset;
-        const light = Math.exp(-(((comb - Math.round(comb)) / 0.1) ** 2));
+        const comb = (3 + c.extraPackets * crescendo) * s - motion * 0.32 - c.packetPhase * surge - strand.offset;
+        const light = Math.exp(-(((comb - Math.round(comb)) / (0.1 - 0.025 * crescendo)) ** 2));
         if (previous) this.segment(previous, point, strand.branch > 0 ? 0.96 : 0.06,
-          edge * (0.35 + light * 0.65), light * edge);
+          edge * (0.35 - 0.15 * crescendo + light * (0.65 + 0.15 * crescendo)), light * edge);
         previous = point;
       }
     }
@@ -109,7 +114,7 @@ export class VortexField extends GameObject {
         let previous;
         for (let j = 0; j <= MODEL.ringSamples; j++) {
           const theta = j / MODEL.ringSamples * Math.PI * 2;
-          const point = this.project(pulsePoint(pulse, theta, band, motion));
+          const point = this.project(unstablePoint(pulsePoint(pulse, theta, band, motion), motion, crescendo));
           if (previous) this.segment(previous, point, pulse.family ? 0.04 : 0.98, alpha,
             alpha * (0.5 + 0.5 * Math.sin(theta * pulse.modes - motion)));
           previous = point;
@@ -120,7 +125,15 @@ export class VortexField extends GameObject {
 
   draw() {
     super.draw(); this.collect();
+    const intensity = this.game.state.crescendo, c = CONFIG.crescendo;
     if (this.gpu.isAvailable()) {
+      this.gpu.setBloomConfig({ strength: CONFIG.gpu.bloom.strength + c.bloom * intensity });
+      this.gpu.setGlowConfig({ intensity: CONFIG.gpu.glow.intensity + c.glow * intensity,
+        radius: CONFIG.gpu.glow.radius + c.glowRadius * intensity });
+      this.gpu.setColorGradingConfig({ exposure: CONFIG.gpu.colorGrading.exposure + c.exposure * intensity });
+      this.gpu.setVisualConfig({ maxAlpha: CONFIG.gpu.visual.maxAlpha + c.alpha * intensity });
+      this.gpu.blinkConfig.intensityBoost = CONFIG.gpu.blink.intensityBoost + c.blink * intensity;
+      this.gpu.lineWidth = CONFIG.gpu.lineWidth + c.lineWidth * intensity;
       this.gpu.beginFrame(this.game.seconds);
       this.gpu.updateLines(this.segments);
       this.gpu.renderLines(this.segments.length, this.game.seconds, 0);
@@ -130,9 +143,10 @@ export class VortexField extends GameObject {
       const palette = PALETTES[this.game.palette];
       Painter.useCtx(ctx => {
         ctx.globalCompositeOperation = "lighter";
+        ctx.lineWidth = CONFIG.gpu.lineWidth + c.lineWidth * intensity;
         for (const s of this.segments) {
           const hue = palette.maxHue + (palette.minHue - palette.maxHue) * s.speedNorm;
-          ctx.strokeStyle = `hsla(${hue},${palette.saturation}%,65%,${Math.max(0, 1 - s.age) * 0.7})`;
+          ctx.strokeStyle = `hsla(${hue},${palette.saturation}%,65%,${Math.max(0, 1 - s.age) * (0.7 - 0.2 * intensity)})`;
           ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
         }
       }, { saveState: true });

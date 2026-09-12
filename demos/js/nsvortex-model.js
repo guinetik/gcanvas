@@ -3,9 +3,10 @@ import { coreScales, viewScales } from "./singularity-model.js";
 // The paper supplies the core exponents; all filament geometry, pulse timing,
 // envelopes and visual tempo below are an artistic construction, not PDE data.
 export const LOOM_CONFIG = {
-  duration: 96, decades: 12, spacing: 0.6, lifetime: 1.5,
+  duration: 20, decades: 12, spacing: 0.6, lifetime: 1.5,
   strands: 64, samples: 112, tracks: 12, ringSamples: 160,
   turns: 2.8, coreRadius: 0.17, pulseRadius: 1.03,
+  crescendoStart: 0.3,
 };
 const TAU = Math.PI * 2;
 
@@ -39,7 +40,12 @@ export function loomState(seconds, follow = true) {
   // Integral of a gently accelerating artistic tempo, independent of frame rate.
   const displayTime = progress * LOOM_CONFIG.duration;
   const motion = 0.7 * displayTime + 0.012 * displayTime * displayTime;
-  return { progress, decades, scales, view: viewScales(scales, follow), motion };
+  // A presentation envelope, independent of the paper's core scales. Deriving it
+  // from the timeline keeps scrubbing and replay independent of frame history.
+  const approach = follow ? Math.max(0, (progress - LOOM_CONFIG.crescendoStart) / (1 - LOOM_CONFIG.crescendoStart)) : 0;
+  const crescendo = approach * approach * (3 - 2 * approach);
+  const surge = approach ** 3;
+  return { progress, decades, scales, view: viewScales(scales, follow), motion, crescendo, surge };
 }
 
 export function filamentPoint(strand, s, motion) {
@@ -48,6 +54,20 @@ export function filamentPoint(strand, s, motion) {
   const angle = strand.phase + TAU * strand.twist * s + motion * (0.25 + s * 0.3);
   return { x: radius * Math.cos(angle), y: radius * Math.sin(angle),
     z: strand.branch * (0.015 + 1.3 * s * s) };
+}
+
+/** Decorative buckling and corrugation; the fixed-scale references bypass this. */
+export function unstablePoint(point, motion, intensity) {
+  if (intensity === 0) return point;
+  const { x, y, z } = point, theta = Math.atan2(y, x), phase = motion * 0.6;
+  const twist = 0.18 * intensity * Math.sin(z * 11 + phase);
+  const ripple = 1 + 0.09 * intensity * Math.sin(z * 24 - phase * 2 + theta * 3);
+  const c = Math.cos(twist), s = Math.sin(twist);
+  return {
+    x: (x * c - y * s) * ripple + 0.12 * intensity * Math.sin(z * 6 + phase * 1.5),
+    y: (x * s + y * c) * ripple + 0.08 * intensity * Math.cos(z * 8 - phase),
+    z: z + 0.035 * intensity * Math.sin(theta * 4 + z * 16 + phase * 2),
+  };
 }
 
 export function pulseAt(decades, generation) {

@@ -1,4 +1,4 @@
-import { Game, Screen, THEMES } from "../../src/index.js";
+import { Game, Painter, Screen, THEMES } from "../../src/index.js";
 import { coreScales, SINGULARITY_CONFIG as MODEL } from "./singularity-model.js";
 import { LOOM_CONFIG, loomState } from "./nsvortex-model.js";
 import { PALETTES } from "./navier-stokes-looks.js";
@@ -9,6 +9,7 @@ const CONFIG = {
   background: "#030910", compactWidth: 900, compactHeight: 650, maxDt: 0.05,
   drag: 0.006, motion: { autoMove: 4.6, maxAutoMove: 60 },
   zoom: { min: 0.3, max: 3, wheel: 0.001, linePixels: 16 },
+  finale: { bleedStart: 0.86, spread: 4, hold: 0.12, fade: 1.2 },
 };
 
 export class NSVortexDemo extends Game {
@@ -19,7 +20,10 @@ export class NSVortexDemo extends Game {
     this.embed = query.get("embed") === "1";
     this.clean = this.embed || query.get("ambient") === "1";
     this.backgroundColor = CONFIG.background;
-    this.paused = Screen.prefersReducedMotion() || query.get("paused") === "1";
+    this.reducedMotion = Screen.prefersReducedMotion();
+    this.paused = this.reducedMotion || query.get("paused") === "1";
+    this.flashRemaining = 0;
+    this.bleed = 0; this.resumeAfterFlash = false;
     this.seed = Number(query.get("seed") ?? 42) >>> 0;
     this.palette = "copper"; this.seconds = 0; this.state = loomState(0);
     this.decades = 0; this.scales = coreScales(0); this.rate = 1;
@@ -90,14 +94,24 @@ export class NSVortexDemo extends Game {
   }
 
   setTime(decades) {
-    this.scales = coreScales(decades); this.decades = this.scales.decades;
+    const playing = !this.paused, previous = this.decades;
+    const requested = coreScales(decades);
+    const restart = playing && previous < MODEL.maxDecades && requested.decades === MODEL.maxDecades && this.magnify;
+    // Rewind beneath the opaque peak, so the reveal always shows the intact core.
+    this.scales = restart ? coreScales(0) : requested; this.decades = this.scales.decades;
     this.seconds = this.decades / MODEL.maxDecades * LOOM_CONFIG.duration;
     this.state = loomState(this.seconds, this.magnify);
-    if (this.decades === MODEL.maxDecades) this.paused = true;
+    this.flashRemaining = restart && !this.reducedMotion ? CONFIG.finale.hold + CONFIG.finale.fade : 0;
+    this.resumeAfterFlash = this.flashRemaining > 0;
+    if (restart) this.paused = this.resumeAfterFlash;
+    else if (this.decades === MODEL.maxDecades) this.paused = true;
+    this.bleed = playing && this.magnify && !this.reducedMotion ?
+      Math.max(0, (this.state.progress - CONFIG.finale.bleedStart) / (1 - CONFIG.finale.bleedStart)) : 0;
     this.syncUI();
   }
 
   togglePause() {
+    this.flashRemaining = 0; this.resumeAfterFlash = false;
     if (this.paused && this.decades === MODEL.maxDecades) this.setTime(0);
     this.paused = !this.paused; this.syncUI();
   }
@@ -204,6 +218,12 @@ export class NSVortexDemo extends Game {
   }
 
   update(dt) {
+    this.flashRemaining = Math.max(0, this.flashRemaining - dt);
+    if (this.resumeAfterFlash && this.flashRemaining === 0) {
+      this.resumeAfterFlash = false;
+      this.paused = false;
+      this.syncUI();
+    }
     if (!this.paused) {
       const elapsed = Math.min(dt, CONFIG.maxDt) * this.rate;
       this.setTime((this.seconds + elapsed) / LOOM_CONFIG.duration * MODEL.maxDecades);
@@ -211,6 +231,30 @@ export class NSVortexDemo extends Game {
     }
     super.update(dt);
     this.positionCaption();
+  }
+  render() {
+    super.render();
+    if (this.flashRemaining <= 0 && (!this.magnify || this.bleed <= 0)) return;
+    Painter.useCtx(ctx => {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      if (this.flashRemaining > 0) {
+        const alpha = Math.min(1, this.flashRemaining / CONFIG.finale.fade);
+        ctx.fillStyle = `rgba(255,255,255,${alpha * alpha})`;
+      } else {
+        const { cx, cy } = this.field;
+        const reach = Math.hypot(Math.max(cx, this.width - cx), Math.max(cy, this.height - cy));
+        const radius = this.field.scale * 0.2 + reach * CONFIG.finale.spread * this.bleed ** 3;
+        const alpha = this.bleed ** 2, glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+        glow.addColorStop(0, `rgba(255,255,255,${alpha})`);
+        glow.addColorStop(0.35, `rgba(255,255,255,${alpha})`);
+        glow.addColorStop(0.7, `rgba(255,255,255,${alpha * 0.45})`);
+        glow.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = glow;
+      }
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }, { saveState: true });
   }
   destroy() { this.stop(); this.listeners.abort(); this.disableFluidSize(); this.field?.gpu.destroy(); }
 }

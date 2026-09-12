@@ -3,7 +3,7 @@ import { createWeave, loomState, activePulses, pulseAt, pulsePoint, filamentPoin
 
 describe("Navier–Stokes Vortex artwork", () => {
   it("reproduces seeded geometry at a scrubbed time without frame history", () => {
-    const weave = createWeave(42), motion = loomState(37).motion;
+    const weave = createWeave(42), motion = loomState(LOOM_CONFIG.duration * 0.4).motion;
     const snapshot = seed => createWeave(seed).map(s => filamentPoint(s, 0.4, motion));
     expect(weave).toEqual(createWeave(42));
     expect(snapshot(42)).toEqual(snapshot(42));
@@ -43,7 +43,7 @@ describe("Navier–Stokes Vortex artwork", () => {
     }
   });
   it("preserves the paper's aspect ratio while the follow camera magnifies contraction", () => {
-    const world = loomState(48, false), follow = loomState(48, true);
+    const world = loomState(LOOM_CONFIG.duration / 2, false), follow = loomState(LOOM_CONFIG.duration / 2, true);
     expect(follow.view.axial / follow.view.radial).toBeCloseTo(world.scales.aspect, 12);
     expect(follow.view.zoom).toBeGreaterThan(900);
     expect(world.scales.energy).toBeLessThan(loomState(0).scales.energy);
