@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Navier–Stokes Vortex · GCanvas</title>
+  <meta name="description" content="A generative vortex inspired by OpenAI’s Navier–Stokes construction. Explore a contracting core and successive waves with GCanvas controls." />
+  <link rel="stylesheet" href="demos.css" />
+  <script type="module" src="./js/info-toggle.js"></script>
+</head>
+<body>
+  <div id="info">
+    <span class="info-eyebrow">math</span>
+    <h1>Navier–Stokes Vortex</h1>
+    <p class="dek">A shrinking vortex, wrapped in glowing waves.</p>
+    <p>The bright core tightens while ribbons around it stretch, twist and fade. This is a generative artwork inspired by OpenAI’s Navier–Stokes paper.</p>
+    <p><strong>Follow core</strong> keeps zooming in so you can see the shrinking center. Switch to <strong>Collapse</strong> to watch it get smaller in a fixed view. The timeline lets you explore the same moment from different angles.</p>
+    <div class="math">Core radius ∝ τ<sup>0.5</sup><br />Core speed ∝ τ<sup>−0.505</sup></div>
+    <p class="notes">τ means time remaining before the paper’s limiting event. These scales guide the artwork; the ribbons are drawn, not computed by a fluid solver.</p>
+    <ul class="controls">
+      <li><kbd>Drag</kbd> orbit the vortex</li>
+      <li><kbd>Scroll</kbd> zoom</li>
+      <li><kbd>Space</kbd> pause or resume</li>
+      <li><kbd>R</kbd> restart the timeline</li>
+      <li><kbd>H</kbd> hide or show the interface</li>
+      <li><kbd>Controls</kbd> open settings on a small screen</li>
+    </ul>
+    <p class="links"><a href="https://cdn.openai.com/pdf/32d9f210-8b73-45e0-91bc-82a30aef8a9a/navier-stokes.pdf" target="_blank" rel="noopener noreferrer">Read the paper ↗</a> · <a href="fluid-dynamics.html">Stir some ink</a> · <a href="ns-lab.html">Explore the lab</a></p>
+  </div>
+  <canvas id="game" tabindex="0" aria-label="Navier–Stokes Vortex. Drag to orbit, scroll to zoom, Space to pause, R to reset, H to hide controls. Artistic interpretation of the paper’s core scales and pulses."></canvas>
+  <script type="module" src="./js/nsvortex.js"></script>
+</body>
+</html>
