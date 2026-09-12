@@ -5,7 +5,7 @@ const CONFIG = {
   background: "#060909",
   strands: { mobile: 36, desktop: 64, samples: 260, radius: 1.25, axialSeed: 0.012, axialSpread: 0.065, extent: 1.85 },
   camera: { perspective: 1600, rotationX: 0.22, rotationY: 0.4, screenRotation: -0.16 },
-  motion: { speed: 1.3, orbit: 24, maxOrbit: 60, drag: 0.006, maxDt: 0.05, pulseWidth: 0.025 },
+  motion: { speed: 1.3, fiberSpeed: 3.5, orbit: 24, maxOrbit: 60, drag: 0.006, maxDt: 0.05, pulseWidth: 0.04 },
   appearance: { palette: "copper", look: "nebula", maxBloom: 2, maxGlow: 1.5, mobileGlowScale: 0.55 },
   caption: { spacing: 12, paddingX: 20, paddingY: 16, background: "rgba(3,12,20,0.96)", border: "#315b72", title: "#f2c879", subtitle: "#83cfff", equation: "#b7d6e8" },
   ui: { panelWidth: 300, panelTop: 48, padding: 14, spacing: 8, margin: 12, buttonHeight: 36, toggleWidth: 128, captionBottom: 42, compactWidth: 900, compactHeight: 650, minZoom: 0.5, maxZoom: 2, defaultZoom: 1.5, wheelZoom: 0.001 },
@@ -18,6 +18,7 @@ const CONFIG = {
     background: { baseColor: [0.012, 0.023, 0.02], fogDensity: 0.045, noiseScale: 2, animSpeed: 0.025 },
     // Physical travel highlights are separate from the optional decorative shimmer.
     energyFlow: { intensity: 0, speed: 0, sparkThreshold: 1.1 },
+    fiberOptics: { enabled: true },
     depthFog: { enabled: true, density: 0.8, energyFalloff: 0.4 },
     iridescence: { enabled: false },
     colorGrading: { enabled: true, exposure: 1.1, vignetteStrength: 0.3, vignetteRadius: 0.85, grainIntensity: 0.008, warmth: 0.06, bleach: 0.15 },
@@ -121,7 +122,7 @@ class VortexField extends GameObject {
   collectSegments() {
     let index = 0;
     for (const path of this.paths) {
-      const travel = (this.time / path.duration + path.phase) % 1;
+      const travel = (this.time * CONFIG.motion.fiberSpeed / path.duration + path.phase) % 1;
       let previous;
       for (let i = 0; i < path.points.length; i++) {
         const point = path.points[i];
@@ -399,7 +400,7 @@ export class NavierStokesDemo extends Game {
       captionDraw();
     };
     const fontSize = this.compact ? 17 : 26;
-    this.title = new Text(this, "NAVIER–STOKES", { font: `bold ${fontSize}px ${UI_THEME.fonts.family}`, color: CONFIG.caption.title, align: "center", origin: "center" });
+    this.title = new Text(this, "NAVIER–STOKES STABLE", { font: `bold ${fontSize}px ${UI_THEME.fonts.family}`, color: CONFIG.caption.title, align: "center", origin: "center" });
     this.subtitle = new Text(this, this.compact ? "Burgers vortex · drag to orbit" : "Inward spiraling, axial stretching, viscous balance", {
       font: `${this.compact ? 10 : 14}px ${UI_THEME.fonts.family}`, color: CONFIG.caption.subtitle, align: "center", origin: "center",
     });

@@ -84,6 +84,7 @@ uniform float uAlphaBoost;
 uniform float uEnergyIntensity;
 uniform float uEnergySpeed;
 uniform float uSparkThreshold;
+uniform float uFiberOpticsEnabled;
 
 // Depth fog uniforms
 uniform float uDepthFogEnabled;
@@ -158,6 +159,15 @@ void main() {
     // Convert to RGB first — energy modulation applied in RGB for HDR range
     vec3 color = hsl2rgb(hue, sat, lit);
 
+    // Streamline-local pulses are independent of the selected palette and look.
+    // Their white center keeps a fiber bright as it travels: blue → white → blue,
+    // instead of dimming its wake toward black.
+    float fiber = smoothstep(0.04, 0.5, vBlink);
+    if (uFiberOpticsEnabled > 0.5) {
+        color = mix(color, vec3(1.0), fiber * 0.92);
+        color *= 1.0 + fiber * 0.85;
+    }
+
     // Iridescence: rainbow color shifting along the trail
     if (uIridescenceEnabled > 0.5) {
         vec3 iri = iridescence(vSegIdx, uTime, uIridescenceScale, uIridescenceSpeed);
@@ -191,14 +201,18 @@ void main() {
     // A faint continuous filament connects bright heads to long fading wakes.
     float alpha = (1.0 - vAge) * uMaxAlpha * (1.0 + vBlink * (uAlphaBoost - 1.0));
     float wake = pow(max(0.0, 1.0 - vAge), 0.65);
-    alpha *= mix(1.0, wake * (0.09 + packet * 0.65 + head * 0.8), flow);
+    // Fiber packets add light; they never remove opacity from the base strand.
+    // The legacy energy wake remains available to the other renderer clients.
+    if (uFiberOpticsEnabled > 0.5) alpha *= 1.0 + fiber * 1.4;
+    else alpha *= mix(1.0, wake * (0.09 + packet * 0.65 + head * 0.8), flow);
     alpha = clamp(alpha, 0.0, 1.0);
 
     // Narrow hot core surrounded by a saturated sheath, within the same draw call.
     float core = exp(-vSide * vSide * 24.0);
     float sheath = exp(-vSide * vSide * 4.0);
-    color = mix(color, vec3(1.0), core * flow * min(0.65, head * 0.45 + packet * 0.55));
-    alpha *= mix(1.0, core * 0.8 + sheath * 0.2, flow);
+    float hotCore = max(fiber, flow * min(0.65, head * 0.45 + packet * 0.55));
+    color = mix(color, vec3(1.0), core * hotCore);
+    if (uFiberOpticsEnabled <= 0.5) alpha *= mix(1.0, core * 0.8 + sheath * 0.2, flow);
     float edgeAA = 1.0 - smoothstep(0.55, 1.0, abs(vSide));
     alpha *= edgeAA;
 

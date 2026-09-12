@@ -40,6 +40,7 @@ export class WebGLAttractorPipeline {
    * @param {Object} [options.visual]               - { minHue, maxHue, saturation, lightness, maxAlpha }
    * @param {Object} [options.blink]                - { intensityBoost, saturationBoost, alphaBoost }
    * @param {Object} [options.energyFlow]           - { intensity, speed, sparkThreshold }
+   * @param {Object} [options.fiberOptics]          - { enabled } — white packet flow, independent of color looks
    * @param {Object} [options.depthFog]             - { enabled, density, energyFalloff }
    * @param {Object} [options.iridescence]          - { enabled, intensity, speed, scale }
    * @param {Object} [options.chromaticAberration]  - { enabled, strength, falloff }
@@ -96,6 +97,11 @@ export class WebGLAttractorPipeline {
       speed: 1.0,
       sparkThreshold: 0.98,
       ...options.energyFlow,
+    };
+
+    this.fiberOpticsConfig = {
+      enabled: false,
+      ...options.fiberOptics,
     };
 
     this.depthFogConfig = {
@@ -311,6 +317,7 @@ export class WebGLAttractorPipeline {
       uEnergyIntensity: gl.getUniformLocation(lp, "uEnergyIntensity"),
       uEnergySpeed: gl.getUniformLocation(lp, "uEnergySpeed"),
       uSparkThreshold: gl.getUniformLocation(lp, "uSparkThreshold"),
+      uFiberOpticsEnabled: gl.getUniformLocation(lp, "uFiberOpticsEnabled"),
       // Depth fog
       uDepthFogEnabled: gl.getUniformLocation(lp, "uDepthFogEnabled"),
       uDepthFogDensity: gl.getUniformLocation(lp, "uDepthFogDensity"),
@@ -613,6 +620,7 @@ export class WebGLAttractorPipeline {
     gl.uniform1f(ll.uEnergyIntensity, this.energyConfig.intensity);
     gl.uniform1f(ll.uEnergySpeed, this.energyConfig.speed);
     gl.uniform1f(ll.uSparkThreshold, this.energyConfig.sparkThreshold);
+    gl.uniform1f(ll.uFiberOpticsEnabled, this.fiberOpticsConfig.enabled ? 1.0 : 0.0);
 
     // Depth fog config
     gl.uniform1f(ll.uDepthFogEnabled, this.depthFogConfig.enabled ? 1.0 : 0.0);
